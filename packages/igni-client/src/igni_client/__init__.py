@@ -15,6 +15,7 @@ through its gateway, or on this machine — and run work there:
 any of igni's methods.
 """
 
+from igni_client.approvals import ApprovalRequested, Decision
 from igni_client.auth.app import App
 from igni_client.auth.person import ApiKey, Person
 from igni_client.auth.spaces import Space, SpaceRecord, Spaces
@@ -62,7 +63,7 @@ from igni_client.events import (
     Unknown,
     UserMessageReceived,
 )
-from igni_client.runs import ApprovalRequested, Decision, Reply
+from igni_client.replies import Reply
 from igni_client.sessions import ModelCatalogue, Models, Session, Sessions
 from igni_client.targets import Fleet, Local, Target
 

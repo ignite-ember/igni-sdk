@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from igni_client.approvals import ApprovalRequested, Approver, Policy
 from igni_client.connection import Connection
 from igni_client.errors import RpcError
 from igni_client.events import (
@@ -18,7 +19,8 @@ from igni_client.events import (
     StatusUpdate,
 )
 from igni_client.frames import Cancel, QueueMessage, UserMessage
-from igni_client.runs import ApprovalRequested, Policy, Reply, Run, collect
+from igni_client.replies import Reply
+from igni_client.runs import Run
 
 
 class Session:
@@ -59,7 +61,7 @@ class Session:
         returns a `bool` or a `Decision`, and may be async. Without it, a
         pause raises `ApprovalRequired`. A failed run raises `RunFailed`.
         """
-        return await collect(self.send(text, files=files), approve)
+        return await Reply.collect(self.send(text, files=files), Approver(approve))
 
     async def queue(self, text: str) -> None:
         """Add a prompt for after the run that is going; it starts nothing now."""

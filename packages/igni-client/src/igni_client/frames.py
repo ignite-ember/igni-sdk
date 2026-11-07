@@ -72,6 +72,12 @@ class Cancel(Frame):
     session_id: str
 
 
+#: How far an approval answer reaches: this call (`once`), every identical
+#: call (`always`), similar calls (`similar`), or — for a refusal — `deny`
+#: to refuse such calls from now on.
+Scope = Literal["once", "always", "similar", "deny"]
+
+
 class HitlDecision(BaseModel):
     """The answer to one tool call waiting for approval."""
 
@@ -80,7 +86,7 @@ class HitlDecision(BaseModel):
     type: Literal["hitl_decision"] = "hitl_decision"
     requirement_id: str
     action: Literal["confirm", "reject"]
-    choice: str
+    choice: Scope
     set_permission_mode: str = ""
 
 
