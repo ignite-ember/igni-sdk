@@ -118,6 +118,31 @@ describe("Split", () => {
     expect(order()).toEqual(["main", "handle", "aside"]);
   });
 
+  it("steps from the aside's width when the aside is last", () => {
+    // With side="end" the first child is the main pane; measuring it
+    // would step from the document's width instead of the aside's.
+    const onResize = vi.fn();
+    const { container } = split({ side: "end", onResize });
+    const width = (selector: string, px: number) =>
+      vi
+        .spyOn(container.querySelector(selector)!, "getBoundingClientRect")
+        .mockReturnValue({ width: px } as DOMRect);
+    width(".ui-split-main", 900);
+    width(".ui-split-aside", 300);
+
+    fireEvent.keyDown(screen.getByRole("separator"), { key: "ArrowLeft" });
+    expect(onResize).toHaveBeenLastCalledWith(312);
+  });
+
+  it("renders without a missing-key warning", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    split({ side: "end" });
+    expect(
+      error.mock.calls.filter((args) => String(args[0]).includes("key")),
+    ).toEqual([]);
+    error.mockRestore();
+  });
+
   it("gives each instance its own width variable", () => {
     // Two splits on one page would otherwise fight over a single
     // custom property.
