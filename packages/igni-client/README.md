@@ -91,7 +91,7 @@ from igni_client import App
 
 App.generate_key("app-key.pem")
 app = App("app-review-bot", server="https://igni.acme.internal", key_file="app-key.pem")
-print(app.public_jwks())           # what the org admin registers
+print(app.public_jwks().model_dump_json())  # what the org admin registers
 ```
 
 <!-- continues -->

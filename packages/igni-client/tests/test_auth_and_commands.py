@@ -21,6 +21,7 @@ from igni_client import (
     NotSupported,
     Person,
 )
+from igni_client.auth.keys import JwkSet
 from igni_client.events import Unknown, parse_event
 from igni_client.testing import CommandResult, FakeIgni
 
@@ -31,7 +32,7 @@ class IgniServer:
     """igni server's discovery, token endpoint and spaces, as an `httpx.MockTransport`."""
 
     def __init__(self, app: dict[str, Any] | None = None) -> None:
-        self.jwks: dict[str, Any] | None = None
+        self.jwks: JwkSet | None = None
         self.token_requests: list[dict[str, str]] = []
         self.spaces: dict[str, dict[str, Any]] = {}
         self.calls: list[httpx.Request] = []
@@ -46,7 +47,7 @@ class IgniServer:
             self.token_requests.append(form)
             if form["grant_type"] == "client_credentials":
                 header = jwt.get_unverified_header(form["client_assertion"])
-                key = jwt.PyJWK(self.jwks["keys"][0]) if self.jwks else None
+                key = jwt.PyJWK(self.jwks.keys[0].model_dump()) if self.jwks else None
                 if key is None or header.get("kid") != key.key_id:
                     return httpx.Response(401, json={"error": "invalid_client"})
                 # Signature, key and audience are checked; time is the test's own clock.

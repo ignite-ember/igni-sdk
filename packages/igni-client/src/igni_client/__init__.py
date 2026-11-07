@@ -15,7 +15,10 @@ through its gateway, or on this machine — and run work there:
 any of igni's methods.
 """
 
-from igni_client.auth import ApiKey, App, Person, Space, SpaceRecord, Spaces, TokenSource
+from igni_client.auth.app import App
+from igni_client.auth.person import ApiKey, Person
+from igni_client.auth.spaces import Space, SpaceRecord, Spaces
+from igni_client.auth.tokens import TokenSource
 from igni_client.client import IgniClient
 from igni_client.commands import CommandFinished, CommandOutput, CommandRun, Commands, Me
 from igni_client.errors import (

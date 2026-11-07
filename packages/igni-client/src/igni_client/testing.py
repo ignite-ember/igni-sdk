@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.http11 import Request, Response
 
-from igni_client.auth import TokenSource
+from igni_client.auth.tokens import TokenSource
 from igni_client.connection import UNBOUND
 from igni_client.events import Event, Requirement
 from igni_client.targets import TOKEN_PROTOCOL_PREFIX, Fleet, Local

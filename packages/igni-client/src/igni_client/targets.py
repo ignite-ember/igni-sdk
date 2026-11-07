@@ -18,7 +18,7 @@ from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import InvalidHandshake, InvalidStatus
 from websockets.typing import Subprotocol
 
-from igni_client.auth import TokenSource
+from igni_client.auth.tokens import TokenSource
 from igni_client.errors import AuthError, NotAllowed, NotSupported, Unavailable
 
 #: The subprotocol igni speaks, locally and through the gateway.
