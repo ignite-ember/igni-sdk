@@ -36,7 +36,7 @@ from pathlib import Path
 import httpx
 
 from igni_service.app import IgniApp
-from igni_service.bundle import BundleArchive
+from igni_service.bundle.archive import BundleArchive
 from igni_service.clock import Clock
 from igni_service.crypto import RsaKeyPair
 from igni_service.keystore import KeyStore, MemoryKeyStore, StoredKey

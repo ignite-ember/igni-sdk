@@ -26,7 +26,9 @@ from igni_service.assets import (
     BundleAssets,
     BundleLayout,
 )
-from igni_service.bundle import PLATFORMS, BundleArchive, BundleBuilder
+from igni_service.bundle.archive import BundleArchive
+from igni_service.bundle.builder import BundleBuilder
+from igni_service.bundle.platforms import PLATFORMS
 from igni_service.registration import ASSET_SIGNATURE_HEADER, ExtensionBundle
 from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.urls import IgniPaths

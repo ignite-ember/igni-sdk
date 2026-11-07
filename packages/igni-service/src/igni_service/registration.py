@@ -29,7 +29,7 @@ import httpx
 from pydantic import BaseModel, Field, ValidationError
 
 from igni_service.assets import BundleAsset, BundleAssets, BundleLayout, FileDigest
-from igni_service.bundle import BundleArchive
+from igni_service.bundle.archive import BundleArchive
 from igni_service.crypto import AssetClaim, BundleClaim, Jwk
 from igni_service.errors import BundleError, IgniError, IgniUnavailable
 from igni_service.server import IgniServer

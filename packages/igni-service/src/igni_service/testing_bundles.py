@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from igni_service.bundle import BundleArchive
+from igni_service.bundle.archive import BundleArchive
 from igni_service.errors import BundleError
 from igni_service.registration import ExtensionBundle, PublishedExtension
 from igni_service.testing_wire import DetailError

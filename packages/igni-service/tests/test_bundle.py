@@ -19,14 +19,12 @@ from pathlib import Path
 import pytest
 
 from igni_service import BundleError
-from igni_service.bundle import (
-    PLATFORMS,
-    AgentTool,
-    BundleBuilder,
-    BundleCommand,
-    CodeTools,
-    HashedRequirements,
-)
+from igni_service.bundle.builder import BundleBuilder
+from igni_service.bundle.code_tools import CodeTools, CodeToolsRead
+from igni_service.bundle.command import BundleCommand
+from igni_service.bundle.manifest import AgentTool
+from igni_service.bundle.platforms import PLATFORMS
+from igni_service.bundle.requirements import HashedRequirements
 from igni_service.registration import ExtensionBundle
 
 PLATFORM_NAMES = ("macOS arm64", "Linux x86_64", "Windows x86_64")
@@ -130,11 +128,12 @@ def members(archive: Path) -> list[str]:
 class StubTools(CodeTools):
     """The tools the extension's code registers, as `python -m igni_extension.manifest` says."""
 
-    def __init__(self, tools: list[dict[str, object]] | None = None) -> None:
+    def __init__(self, tools: list[dict[str, object]] | None = None, problem: str = "") -> None:
         self.tools = None if tools is None else [AgentTool.model_validate(t) for t in tools]
+        self.problem = problem
 
-    def read(self, wheels: Path, package: str, module: str) -> list[AgentTool] | None:
-        return self.tools
+    def read(self, wheels: Path, package: str, module: str) -> CodeToolsRead:
+        return CodeToolsRead(tools=self.tools, problem=self.problem)
 
 
 def builder(
@@ -405,9 +404,12 @@ class TestPermissionsToolsComeFromTheCode:
             tmp_path / "bundle.tar.gz"
         )
 
-        permissions = bundled_manifest(report.out)["permissions"]
+        bundled = bundled_manifest(report.out)
+        permissions = bundled.pop("permissions")
         assert isinstance(permissions, dict)
         assert permissions["tools"] == [LOOKUP]
+        # Everything else the author wrote travels as written, defaults not added.
+        assert bundled == json.loads((extension / "manifest.json").read_text())
         assert any("written from the code" in note for note in report.notes)
         # The author's own file is left as it was.
         assert "permissions" not in json.loads((extension / "manifest.json").read_text())
@@ -451,6 +453,19 @@ class TestPermissionsToolsComeFromTheCode:
         )
 
         assert bundled_manifest(report.out) == manifest
+
+    def test_code_that_could_not_be_read_is_said_and_the_manifest_kept(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        extension = write_extension(tmp_path / "extension", dependencies=[])
+
+        report = builder(extension, index, code_tools=StubTools(problem="no wheel here")).build(
+            tmp_path / "bundle.tar.gz"
+        )
+
+        [note] = report.notes
+        assert "no wheel here" in note and "offered none of its tools" in note
+        assert "permissions" not in bundled_manifest(report.out)
 
     def test_an_extension_not_written_with_the_sdk_is_read_from_its_manifest_only(
         self, tmp_path: Path, index: Path

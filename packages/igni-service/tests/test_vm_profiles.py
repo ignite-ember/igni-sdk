@@ -19,7 +19,7 @@ from igni_service import (
     VmProfileRefused,
     VmProfileRequest,
 )
-from igni_service.bundle import BundleArchive
+from igni_service.bundle.archive import BundleArchive
 from igni_service.testing import FakeIgni, SettingsOverrides, VmProfileSubject
 from igni_service.urls import IgniPaths
 

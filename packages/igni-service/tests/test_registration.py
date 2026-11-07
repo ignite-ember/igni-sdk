@@ -17,7 +17,7 @@ from fastapi import FastAPI
 
 import igni_service
 from igni_service import IgniService, MemoryKeyStore
-from igni_service.bundle import BundleArchive
+from igni_service.bundle.archive import BundleArchive
 from igni_service.registration import SIGNATURE_HEADER
 from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.urls import IgniPaths
