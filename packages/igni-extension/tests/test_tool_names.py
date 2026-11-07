@@ -32,7 +32,7 @@ def tickets() -> IgniExtension:
 
 
 def test_every_name_a_tool_goes_by() -> None:
-    names = tickets().tool_names("lookup_ticket")
+    names = tickets().tools.names("lookup_ticket")
 
     assert names == ToolNames(
         tool="lookup_ticket",
@@ -44,7 +44,7 @@ def test_every_name_a_tool_goes_by() -> None:
 
 def test_a_tool_igni_does_not_have_is_said_so() -> None:
     with pytest.raises(KeyError, match="lookup_tickets"):
-        tickets().tool_names("lookup_tickets")
+        tickets().tools.names("lookup_tickets")
 
 
 def test_the_decorated_function_knows_its_manifest_name() -> None:
@@ -58,7 +58,7 @@ def test_the_decorated_function_knows_its_manifest_name() -> None:
 
 
 def test_the_manifest_s_tools_come_from_the_code() -> None:
-    assert tickets().manifest_tools() == [
+    assert [line.wire() for line in tickets().tools.manifest()] == [
         {
             "name": "acme.tickets.close",
             "annotations": {
@@ -145,3 +145,37 @@ def test_a_host_error_s_code_is_an_enum_and_still_a_string() -> None:
     assert known.code == "not_granted"
     assert known.code is HostErrorCode.NOT_GRANTED
     assert unknown.code == "something_new"
+
+
+def test_a_bound_method_registers_whole_and_knows_its_manifest_name() -> None:
+    class Desk:
+        def lookup(self, ticket_id: str) -> str:
+            return ticket_id
+
+    ext = IgniExtension("acme.tickets", environ={})
+    desk = Desk()
+
+    registered = ext.tool(hints=READS)(desk.lookup)
+
+    assert registered.manifest_name == "acme.tickets.lookup"  # type: ignore[attr-defined]
+    assert ext.tools.names("lookup").manifest == "acme.tickets.lookup"
+
+
+def test_a_callable_that_takes_no_attributes_still_registers() -> None:
+    ext = IgniExtension("acme.tickets", environ={})
+
+    ext.tool(hints=READS, name="length")(len)
+
+    assert ext.tools.names("length").manifest == "acme.tickets.length"
+
+
+async def test_the_0_1_0_names_still_answer() -> None:
+    from igni_extension.extension import ToolNames as Released
+
+    ext = tickets()
+
+    assert Released is ToolNames
+    assert ext.tool_names("close") == ext.tools.names("close")
+    assert ext.manifest_tools() == [line.wire() for line in ext.tools.manifest()]
+    assert ext.manifest_tools()[0]["annotations"] == WRITES.wire()
+    await ext.check_tools()

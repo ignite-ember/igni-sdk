@@ -230,7 +230,7 @@ class HostHarness:
         ):
             await self._stack.enter_async_context(stream)
         self._tasks = await self._stack.enter_async_context(anyio.create_task_group())
-        self._tasks.start_soon(self._ext.serve, to_server_receive, from_server_send)
+        self._tasks.start_soon(self._ext.process.serve, to_server_receive, from_server_send)
         self._tasks.start_soon(self._tap, from_server_receive, to_client_send)
         self._session = await self._stack.enter_async_context(
             ClientSession(
@@ -686,7 +686,7 @@ class ConcurrencyHarness:
                 ConcurrencyHarness.compare(leaks, tool, "as it ended", expected)
 
         stack = contextlib.ExitStack()
-        stack.enter_context(self._ext.observing(watched))
+        stack.enter_context(self._ext.tools.observing(watched))
         return stack.close
 
     @staticmethod

@@ -66,7 +66,7 @@ async def test_a_tool_that_leaves_a_hint_unstated_stops_the_extension_serving() 
     ext.mcp.add_tool(unstated, name="unstated")
 
     with pytest.raises(ToolHintsMissing) as raised:
-        await ext.check_tools()
+        await ext.tools.check()
     assert raised.value.tools == ["unstated"]
 
 

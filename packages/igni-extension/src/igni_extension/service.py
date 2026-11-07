@@ -28,6 +28,9 @@ import httpx
 from websockets.asyncio.client import ClientConnection, connect
 
 from igni_extension.caller import Caller
+from igni_extension.clock import Clock
+from igni_extension.environment import ServiceEndpoint
+from igni_extension.errors import NotConfigured
 from igni_extension.tokens import HostTokenAuth, HostTokens
 
 
@@ -132,4 +135,43 @@ class ServiceClient(httpx.AsyncClient):
         await super().aclose()
 
 
-__all__ = ["ServiceClient", "ServiceWebSocket"]
+class ServiceAccess:
+    """The extension's `ServiceClient`, opened on first use and closed with the extension."""
+
+    def __init__(
+        self,
+        extension_id: str,
+        endpoint: ServiceEndpoint,
+        *,
+        token_transport: httpx.AsyncBaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        clock: Clock | None = None,
+    ) -> None:
+        self._extension_id = extension_id
+        self._endpoint = endpoint
+        #: The person's tokens for the service, which the client attaches.
+        self.tokens = HostTokens(endpoint, transport=token_transport, clock=clock)
+        self._transport = transport
+        self._client: ServiceClient | None = None
+
+    @property
+    def client(self) -> ServiceClient:
+        """`NotConfigured` when the process was not started with its service's URL."""
+        if self._client is None:
+            if not self._endpoint.configured:
+                raise NotConfigured(
+                    f"{self._extension_id} was not started with its service's URL "
+                    "(IGNI_SERVICE_URL)"
+                )
+            self._client = ServiceClient(
+                base_url=self._endpoint.url, tokens=self.tokens, transport=self._transport
+            )
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+
+__all__ = ["ServiceAccess", "ServiceClient", "ServiceWebSocket"]

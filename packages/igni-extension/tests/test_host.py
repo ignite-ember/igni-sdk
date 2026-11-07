@@ -293,16 +293,42 @@ async def test_busy_takes_renews_and_lets_go_of_a_lease() -> None:
     }
     async with FakeHost(answers={"self.busy": lease}) as fake:
         ext = IgniExtension("acme.example", environ=fake.environment())
-        taken = await ext.busy("indexing", 120)
+        taken = await ext.busy.take("indexing", 120)
         assert taken.reason == "indexing" and taken.expires_at
-        await ext.done("indexing")
-        async with ext.busy_while("syncing", ttl=0.05):
+        await ext.busy.release("indexing")
+        async with ext.busy.during("syncing", ttl=0.05):
             await asyncio.sleep(0.06)
         paths = [(c.path, c.params.get("reason")) for c in fake.calls]
         assert paths[:2] == [("self.busy", "indexing"), ("self.done", "indexing")]
         assert paths[2] == ("self.busy", "syncing")
         assert ("self.busy", "syncing") in paths[3:-1], "renewed while the block ran"
         assert paths[-1] == ("self.done", "syncing")
+        await ext.aclose()
+
+
+async def test_busy_keeps_its_0_1_0_spelling() -> None:
+    lease = {
+        "id": "busy-1",
+        "kind": "extension",
+        "holder": "acme.example",
+        "reason": "indexing",
+        "since": "2026-10-26T12:00:00Z",
+        "expires_at": "2026-10-26T12:02:00Z",
+    }
+    async with FakeHost(answers={"self.busy": lease}) as fake:
+        ext = IgniExtension("acme.example", environ=fake.environment())
+        taken = await ext.busy("indexing", 120)
+        assert taken.reason == "indexing"
+        await ext.done("indexing")
+        async with ext.busy_while("syncing", ttl=60):
+            pass
+        paths = [(c.path, c.params.get("reason")) for c in fake.calls]
+        assert paths == [
+            ("self.busy", "indexing"),
+            ("self.done", "indexing"),
+            ("self.busy", "syncing"),
+            ("self.done", "syncing"),
+        ]
         await ext.aclose()
 
 

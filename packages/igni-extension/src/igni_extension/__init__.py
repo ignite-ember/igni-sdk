@@ -27,7 +27,7 @@ from igni_extension.errors import (
     NotConfigured,
     NotSignedIn,
 )
-from igni_extension.extension import IgniExtension, ToolNames
+from igni_extension.extension import IgniExtension
 from igni_extension.hints import ToolHints, ToolHintsMissing
 from igni_extension.hooks import Allow, HookEvent, Hooks, Modify, Reject
 from igni_extension.host import Host, Notifications
@@ -38,6 +38,7 @@ from igni_extension.prompt import PromptConditions
 from igni_extension.service import ServiceClient
 from igni_extension.service_events import ServiceEvent
 from igni_extension.tokens import SignedIn
+from igni_extension.tools import ManifestTool, ToolNames
 
 __all__ = [
     "Allow",
@@ -55,6 +56,7 @@ __all__ = [
     "IgniExtension",
     "IgniExtensionError",
     "LocalNotification",
+    "ManifestTool",
     "Modify",
     "NoCaller",
     "NotConfigured",

@@ -97,7 +97,7 @@ and it checks them against the code, refusing a difference. A tool the
 code registers and the manifest does not list is never offered to the
 agent — what you want for one only your page calls. To see what the code
 implies: `python -m igni_extension.manifest acme_example` (your module),
-or `ext.manifest_tools()`.
+or `ext.tools.manifest()`.
 
 ### One tool, five names
 
@@ -114,7 +114,7 @@ Anthropic's tool names allow only letters, digits, `_` and `-`; igni maps
 the model's call back to its own name, so nothing you write ever sees it.
 A hook is handed both of the names it may want: `tool_name`, igni's
 (`read_file` for one of igni's own), and `tool_manifest_name`, the
-manifest's (empty for igni's own). `ext.tool_names("lookup_ticket")`
+manifest's (empty for igni's own). `ext.tools.names("lookup_ticket")`
 answers the first four, and a decorated tool carries its manifest name
 as `lookup_ticket.manifest_name`.
 
@@ -471,12 +471,12 @@ async def index_everything() -> None: ...   # your own work
 
 @ext.on_start
 async def index() -> None:
-    async with ext.busy_while("indexing"):
+    async with ext.busy.during("indexing"):
         await index_everything()
 ```
 
-`ext.busy(reason, ttl)` takes a lease (at most 600 s) and renews it when
-called again; `ext.done(reason)` lets it go; `busy_while` does both and
+`ext.busy.take(reason, ttl)` takes a lease (at most 600 s) and renews it
+when called again; `ext.busy.release(reason)` lets it go; `during` does both and
 renews in between. A lease nobody renews expires, so a stuck process
 cannot keep the VM up.
 
