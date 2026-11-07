@@ -126,7 +126,7 @@ class NpmAudit:
     def findings(self) -> list[Finding]:
         # npm exits non-zero whenever it finds anything; the JSON is the answer.
         run = subprocess.run(
-            ["npm", "audit", "--omit=dev", "--json"],
+            ["npm", "audit", "--omit=dev", "--json"],  # noqa: S607 — npm from PATH, as the developer and CI run it
             cwd=self.directory,
             capture_output=True,
             text=True,
@@ -184,7 +184,7 @@ class CargoAudit:
 
     def findings(self) -> list[Finding]:
         run = subprocess.run(
-            ["cargo", "audit", "--json"],
+            ["cargo", "audit", "--json"],  # noqa: S607 — cargo from PATH, as the developer and CI run it
             cwd=self.directory,
             capture_output=True,
             text=True,
