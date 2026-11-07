@@ -9,8 +9,10 @@ What `FakeIgni.vm_profiles` keeps, with igni server's rules
   per organisation, appearing the first time anything asks;
 * a request over the platform's caps is refused (400);
 * nothing changes what a VM gets until a test, playing the org admin,
-  calls `approve` — which makes the profile (or replaces the one an
-  earlier approval made) and, for an app, assigns it — or `reject`.
+  calls `approve(org_id, VmProfileSubject.app(app_id))` (or
+  `VmProfileSubject.extension(extension_id)`) — which makes the profile
+  (or replaces the one an earlier approval made) and, for an app,
+  assigns it — or `reject`.
 """
 
 from __future__ import annotations
@@ -90,13 +92,14 @@ class VmProfileSubject(BaseModel):
     subject_id: str
 
     @classmethod
-    def of(cls, app: str | None, extension: str | None) -> VmProfileSubject:
-        """The one of `app` and `extension` that is named."""
-        if (app is None) == (extension is None):
-            raise ValueError("name exactly one of app= and extension=")
-        if app is not None:
-            return cls(kind="app", subject_id=app)
-        return cls(kind="extension", subject_id=str(extension))
+    def app(cls, app_id: str) -> VmProfileSubject:
+        """An app's own request."""
+        return cls(kind="app", subject_id=app_id)
+
+    @classmethod
+    def extension(cls, extension_id: str) -> VmProfileSubject:
+        """An extension's request: its uploaded manifest's `vm` section."""
+        return cls(kind="extension", subject_id=extension_id)
 
 
 class FakeCaps(BaseModel):
@@ -144,39 +147,45 @@ class FakeVmProfiles:
 
     # ── Playing the org admin ───────────────────────────────────────
 
-    def request(self, org_id: str, kind: str, subject_id: str) -> VmProfileRequestRecord:
-        """The request `subject_id` made in `org_id`. `NoVmProfileRequest` if it made none."""
+    def request(self, org_id: str, subject: VmProfileSubject) -> VmProfileRequestRecord:
+        """The request `subject` made in `org_id`. `NoVmProfileRequest` if it made none."""
         try:
-            return self.requests[(org_id, kind, subject_id)]
+            return self.requests[(org_id, subject.kind, subject.subject_id)]
         except KeyError:
-            raise NoVmProfileRequest(org_id, kind, subject_id) from None
+            raise NoVmProfileRequest(org_id, subject.kind, subject.subject_id) from None
 
     def approve(
-        self, org_id: str, kind: str, subject_id: str, *, by: str = "u-admin"
+        self, org_id: str, subject: VmProfileSubject, *, by: str = "u-admin"
     ) -> VmProfileRequestRecord:
-        """Approve it, as an org admin: the profile is made or replaced, an app's assigned."""
-        record = self.request(org_id, kind, subject_id)
+        """Approve it, as an org admin: the profile is made or replaced, an app's assigned.
+
+        The request must exist: an app's once it asked
+        (`app.vm_profile.request`), an extension's once its bundle is
+        uploaded and the service asked after it
+        (`host.extension_vm_profile()`). `NoVmProfileRequest` (a
+        `LookupError`) otherwise, saying so.
+        """
+        record = self.request(org_id, subject)
         profile_id = record.profile_id or str(uuid.uuid4())
         self.profiles[(org_id, profile_id)] = FakeProfile(
             id=profile_id,
-            name=record.subject.name or subject_id,
+            name=record.subject.name or subject.subject_id,
             settings=Resolved.model_validate(record.requested.model_dump()),
         )
-        if kind == "app":
-            self.app_profiles[(org_id, subject_id)] = profile_id
+        if subject.kind == "app":
+            self.app_profiles[(org_id, subject.subject_id)] = profile_id
         return self._decide(record, "approved", by, profile_id=profile_id)
 
     def reject(
         self,
         org_id: str,
-        kind: str,
-        subject_id: str,
+        subject: VmProfileSubject,
         *,
         reason: str | None = None,
         by: str = "u-admin",
     ) -> VmProfileRequestRecord:
         """Reject it, as an org admin: what the VM gets is untouched."""
-        record = self.request(org_id, kind, subject_id)
+        record = self.request(org_id, subject)
         return self._decide(record, "rejected", by, reason=reason)
 
     def assign(self, org_id: str, profile_id: str, *, groups: int = 0, apps: int = 0) -> None:

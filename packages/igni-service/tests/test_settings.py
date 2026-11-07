@@ -74,3 +74,7 @@ def test_a_public_url_that_is_not_one_is_said_at_start() -> None:
 def test_with_nowhere_to_keep_the_key_the_service_says_so() -> None:
     with pytest.raises(ConfigurationError, match="IGNI_KEY_DATABASE_URL"):
         IgniService.from_settings(FakeIgni().settings())
+
+
+def test_a_test_can_override_every_setting() -> None:
+    assert set(SettingsOverrides.model_fields) == set(IgniSettings.model_fields)

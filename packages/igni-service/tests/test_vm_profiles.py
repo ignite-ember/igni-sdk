@@ -20,7 +20,7 @@ from igni_service import (
     VmProfileRequest,
 )
 from igni_service.bundle import BundleArchive
-from igni_service.testing import FakeIgni, SettingsOverrides
+from igni_service.testing import FakeIgni, SettingsOverrides, VmProfileSubject
 from igni_service.urls import IgniPaths
 
 from .conftest import ORG, OTHER_ORG
@@ -64,7 +64,7 @@ class TestAnAppAsksForItsOwnVm:
         before = await app.vm_profile.effective()
         assert before.profile_name == "Standard" and before.packages.apt == []
 
-        fake.approve_vm_profile(ORG, app=app.app_id)
+        fake.vm_profiles.approve(ORG, VmProfileSubject.app(app.app_id))
         after = await app.vm_profile.effective()
         record = await app.vm_profile.status()
 
@@ -78,7 +78,7 @@ class TestAnAppAsksForItsOwnVm:
         self, app: IgniApp, fake: FakeIgni
     ) -> None:
         first = await app.vm_profile.request(BROWSER)
-        fake.approve_vm_profile(ORG, app=app.app_id)
+        fake.vm_profiles.approve(ORG, VmProfileSubject.app(app.app_id))
 
         again = await app.vm_profile.request(BROWSER)
         assert again.is_approved and again.version == first.version
@@ -92,7 +92,9 @@ class TestAnAppAsksForItsOwnVm:
         self, app: IgniApp, fake: FakeIgni
     ) -> None:
         await app.vm_profile.request(BROWSER)
-        fake.reject_vm_profile(ORG, app=app.app_id, reason="No browsers in production")
+        fake.vm_profiles.reject(
+            ORG, VmProfileSubject.app(app.app_id), reason="No browsers in production"
+        )
 
         record = await app.vm_profile.status()
 
@@ -205,7 +207,7 @@ class TestAServiceReadsItsExtensionsRequest:
         assert here.request.requested.vcpus == 2
         assert here.profile is None
 
-        approved = fake.approve_vm_profile(ORG, extension="acme.browser")
+        approved = fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.browser"))
         assert approved.profile_id is not None
         fake.vm_profiles.assign(ORG, approved.profile_id, groups=2)
         here = await igni.host(ORG).extension_vm_profile()
@@ -258,14 +260,14 @@ class TestInternetIsAskedForAndInternalByDefault:
         assert put.json_body() == {"internet": True}
         assert (await app.vm_profile.effective()).internet is False
 
-        fake.approve_vm_profile(ORG, app=app.app_id)
+        fake.vm_profiles.approve(ORG, VmProfileSubject.app(app.app_id))
         assert (await app.vm_profile.effective()).internet is True
 
     async def test_asking_for_internet_after_an_approval_is_pending_again(
         self, app: IgniApp, fake: FakeIgni
     ) -> None:
         await app.vm_profile.request(BROWSER)
-        fake.approve_vm_profile(ORG, app=app.app_id)
+        fake.vm_profiles.approve(ORG, VmProfileSubject.app(app.app_id))
 
         again = await app.vm_profile.request(BROWSER.model_copy(update={"internet": True}))
 
@@ -279,7 +281,7 @@ class TestInternetIsAskedForAndInternalByDefault:
 
         here = await igni.host(ORG).extension_vm_profile()
         assert here.request is not None and here.request.requested.internet is True
-        fake.approve_vm_profile(ORG, extension="acme.browser")
+        fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.browser"))
         here = await igni.host(ORG).extension_vm_profile()
         assert here.profile is not None and here.profile.internet is True
 
@@ -290,7 +292,7 @@ class TestInternetIsAskedForAndInternalByDefault:
 
         here = await igni.host(ORG).extension_vm_profile()
         assert here.request is not None and here.request.requested.internet is False
-        fake.approve_vm_profile(ORG, extension="acme.browser")
+        fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.browser"))
         here = await igni.host(ORG).extension_vm_profile()
         assert here.profile is not None and here.profile.internet is False
 
@@ -324,7 +326,7 @@ class TestTheNamesSayWhichThingTheyAnswer:
 class TestPlayingTheOrgAdmin:
     def test_approving_a_request_nobody_made_says_how_one_is_made(self, fake: FakeIgni) -> None:
         with pytest.raises(LookupError) as missing:
-            fake.approve_vm_profile(ORG, extension="acme.example")
+            fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.example"))
 
         said = str(missing.value)
         assert "acme.example" in said and ORG in said
@@ -333,7 +335,7 @@ class TestPlayingTheOrgAdmin:
 
     def test_rejecting_one_says_the_same(self, fake: FakeIgni) -> None:
         with pytest.raises(LookupError, match="no VM profile request"):
-            fake.reject_vm_profile(ORG, app="app-nobody")
+            fake.vm_profiles.reject(ORG, VmProfileSubject.app("app-nobody"))
 
 
 class TestUploadingInATest:
@@ -354,7 +356,7 @@ class TestUploadingInATest:
         assert held.extension_id == "acme.example" and held.version == "1.0.0"
         answer = await igni.host(ORG).extension_vm_profile()
         assert answer.request is not None and answer.request.is_pending
-        approved = fake.approve_vm_profile(ORG, extension="acme.example")
+        approved = fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.example"))
         assert approved.is_approved
 
     async def test_a_built_bundle_is_uploaded_too(

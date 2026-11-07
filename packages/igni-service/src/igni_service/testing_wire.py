@@ -89,6 +89,16 @@ class DetailError(BaseModel):
     detail: str
     status: int = Field(default=400, exclude=True)
 
+    @classmethod
+    def not_found(cls) -> DetailError:
+        """igni's 404 for a path or a method nothing serves."""
+        return cls(detail="Not Found", status=404)
+
+    @classmethod
+    def not_authenticated(cls) -> DetailError:
+        """igni's 401 for a missing, unknown or revoked bearer token."""
+        return cls(detail="Not authenticated", status=401)
+
     def to_response(self) -> httpx.Response:
         return httpx.Response(self.status, json=self.model_dump())
 

@@ -10,7 +10,13 @@ from __future__ import annotations
 import pytest
 
 from igni_service import IgniService
+from igni_service.crypto import RsaKeyPair
 from igni_service.testing import FakeIgni
+from igni_service.testing_bearers import BearerTokens, TokenHolder
+from igni_service.testing_clients import FakeClientRegistry
+from igni_service.testing_router import RouteGuard
+from igni_service.testing_routes import RouteAuth
+from igni_service.testing_wire import DetailError, SeenRequest
 from igni_service.urls import IgniPaths
 
 from .conftest import ORG, bearer
@@ -120,3 +126,16 @@ async def test_nothing_uploaded_is_said(fake: FakeIgni) -> None:
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Nothing uploaded for this client"}
+
+
+def test_an_apps_token_is_not_a_services() -> None:
+    clients = FakeClientRegistry()
+    clients.add_app("app-1", ORG, "Bot", RsaKeyPair.generate())
+    bearers = BearerTokens()
+    token = bearers.issue_app(TokenHolder(client_id="app-1", org_id=ORG))
+    headers = {"authorization": f"Bearer {token}"}
+    seen = SeenRequest(method="GET", path="/", headers=headers, body=b"")
+    guard = RouteGuard(bearers, clients)
+
+    assert guard.holder_for(seen, RouteAuth.SERVICE) == DetailError.not_authenticated()
+    assert guard.holder_for(seen, RouteAuth.APP) == TokenHolder(client_id="app-1", org_id=ORG)

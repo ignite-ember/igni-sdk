@@ -127,14 +127,14 @@ class VmProfileRoutes:
         """`/v1/apps/{app_id}/...`: only the app itself asks for its VM."""
         path = AppPath.parse(call.seen.path)
         if path is None:
-            return DetailError(detail="Not Found", status=404).to_response()
+            return DetailError.not_found().to_response()
         if path.app_id != call.holder.client_id:
             return DetailError(
                 detail="Only the app itself asks for its VM", status=403
             ).to_response()
         handler = self._app_routes.get((path.what, call.seen.method))
         if handler is None:
-            return DetailError(detail="Not Found", status=404).to_response()
+            return DetailError.not_found().to_response()
         return handler(call)
 
     def _app_put(self, call: RoutedCall) -> httpx.Response:

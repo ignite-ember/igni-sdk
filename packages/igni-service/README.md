@@ -317,7 +317,7 @@ app's **public** key; the private half never leaves the app.
 
 ```python
 from igni_service import IgniApp, MemoryKeyStore, VmPackages, VmProfileRequest
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, VmProfileSubject
 
 fake = FakeIgni()  # igni, in-process, for this example; below, what production writes
 APP_ID = "app-review-bot"
@@ -331,7 +331,7 @@ async with app:
     assert record.state == "pending"
     assert (await app.vm_profile.effective()).profile_name == "Standard"  # until approved
 
-    fake.approve_vm_profile("org-1", app=APP_ID)     # the org admin, on the portal
+    fake.vm_profiles.approve("org-1", VmProfileSubject.app(APP_ID))  # the org admin
     status = await app.vm_profile.status()
     assert status is not None and status.state == "approved"
     assert (await app.vm_profile.effective()).packages.apt == ["jq"]
@@ -440,8 +440,9 @@ URL, not igni's. Automation that holds an admin's credentials calls the
 portal API directly (igni server's `docs/service-identity.md` §12).
 
 In tests, `fake.app(app_id, org_id=...)` is an `IgniApp` wired to the
-fake; `fake.approve_vm_profile(org_id, app=...)` (or `extension=...`) and
-`fake.reject_vm_profile(..., reason=...)` play the org admin;
+fake; `fake.vm_profiles.approve(org_id, VmProfileSubject.app(app_id))` (or
+`VmProfileSubject.extension(extension_id)`) and
+`fake.vm_profiles.reject(org_id, subject, reason=...)` play the org admin;
 `fake.vm_profiles.caps` are the platform's caps. The request has to exist
 first, as on the portal: an app's once it has asked
 (`app.vm_profile.request`), an extension's once its bundle is on the fake

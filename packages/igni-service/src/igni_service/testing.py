@@ -22,7 +22,10 @@ its keys), `fake.oauth` (grants, revoked refresh tokens, the portal's
 sign-in as `fake.oauth.sign_ins.authorize`), `fake.extensions` (bundles,
 assets, `hold`), `fake.notifications` (each call as sent, each person
 told), `fake.revocations` (`publish`), `fake.traffic` (every request,
-`fail` and `heal`), `fake.agents` and `fake.vm_profiles`.
+`fail` and `heal`), `fake.agents` and `fake.vm_profiles` (an org
+admin's decisions as `fake.vm_profiles.approve(org_id,
+VmProfileSubject.app(app_id))`). `fake.router` answers every request the
+service sends, as igni's router does.
 """
 
 from __future__ import annotations
@@ -31,7 +34,6 @@ from collections.abc import Collection
 from pathlib import Path
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
 
 from igni_service.app import IgniApp
 from igni_service.bundle import BundleArchive
@@ -43,7 +45,7 @@ from igni_service.registration import ExtensionBundle
 from igni_service.service import IgniService
 from igni_service.settings import IgniSettings
 from igni_service.testing_assertions import ClientAssertionVerifier
-from igni_service.testing_bearers import BearerTokens, TokenHolder
+from igni_service.testing_bearers import BearerTokens
 from igni_service.testing_bundles import BundleSource, HeldExtension
 from igni_service.testing_claims import PersonClaims, SpaceClaims, TokenOverrides
 from igni_service.testing_clients import FakeClientRegistry
@@ -53,9 +55,11 @@ from igni_service.testing_items import FakeAgents, SentEvent
 from igni_service.testing_notifications import Delivery, FakeNotifications, NotifyCall
 from igni_service.testing_oauth import FakeTokenEndpoint
 from igni_service.testing_revocations import FakeRevocations
+from igni_service.testing_router import FakeRouter, RouteGuard, RouteTable
 from igni_service.testing_routes import AgentRoutes, Route, RouteAuth, VmProfileRoutes
 from igni_service.testing_seams import HeldKeyStore, ManualClock, no_sleep
 from igni_service.testing_sessions import PortalRefused, SignIns
+from igni_service.testing_settings import SettingsOverrides
 from igni_service.testing_signer import FakeSigner
 from igni_service.testing_vm_profiles import (
     FakeCaps,
@@ -67,40 +71,12 @@ from igni_service.testing_wire import (
     BASE,
     ISSUER,
     SERVICE_URL,
-    DetailError,
     IgniAddresses,
     RecordedTraffic,
-    RoutedCall,
     SeenRequest,
 )
 from igni_service.tokens import PEOPLE_ONLY, CallerKind
 from igni_service.urls import IgniPaths
-from igni_service.vm_profiles import VmProfileRequestRecord
-
-NOT_AUTHENTICATED = DetailError(detail="Not authenticated", status=401)
-NOT_FOUND = DetailError(detail="Not Found", status=404)
-
-
-class SettingsOverrides(BaseModel):
-    """What a test changes about the settings a service is wired to the fake with.
-
-    Only the fields a test sets are applied (`exclude_unset`): every other
-    one is the fake's address, its URL for the service, or `IgniSettings`'
-    own default. A field `IgniSettings` lacks is refused, not ignored.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    igni_server_url: str = ""
-    public_base_url: str = ""
-    service_name: str = ""
-    client_kind: str = "service"
-    redirect_uris: list[str] = Field(default_factory=list)
-    key_encryption_key: str = ""
-    key_database_url: str = ""
-    extension_bundle_path: str = ""
-    revocations_max_staleness: float = 30.0
-    timeout: float = 10.0
 
 
 class FakeIgni:
@@ -151,7 +127,12 @@ class FakeIgni:
         self.agents = FakeAgents(is_member=self.directory.is_member, clock=self.clock.wall)
         #: VM profiles: requests, an org admin's decisions, what a VM gets.
         self.vm_profiles = FakeVmProfiles()
-        self._routes = self._route_table()
+        self.router = FakeRouter(
+            addresses=self.addresses,
+            traffic=self.traffic,
+            guard=RouteGuard(self.oauth.bearers, self.clients),
+            table=self._route_table(),
+        )
 
     def reset(self) -> None:
         """Forget what happened, keep who exists.
@@ -215,13 +196,7 @@ class FakeIgni:
 
     def settings(self, overrides: SettingsOverrides | None = None) -> IgniSettings:
         """Settings that reach this fake, with what `overrides` sets."""
-        defaults = SettingsOverrides(
-            igni_server_url=self.addresses.base_url,
-            public_base_url=self.addresses.service_url,
-            service_name="Service under test",
-        ).model_dump(exclude_unset=True)
-        changes = (overrides or SettingsOverrides()).model_dump(exclude_unset=True)
-        return IgniSettings.model_validate(defaults | changes)
+        return (overrides or SettingsOverrides()).settings_for(self.addresses)
 
     async def upload(
         self, bundle: str | Path | ExtensionBundle, service: IgniService
@@ -240,89 +215,20 @@ class FakeIgni:
         await service.registration.ship(bundle)
         return self.extensions.latest(await service.registration.client_id())
 
-    def approve_vm_profile(
-        self, org_id: str, *, app: str | None = None, extension: str | None = None
-    ) -> VmProfileRequestRecord:
-        """Play an org admin approving an app's or an extension's VM profile request.
-
-        The request must exist: an app's once it asked
-        (`app.vm_profile.request`), an extension's once its bundle is
-        uploaded and the service asked after it
-        (`host.extension_vm_profile()`). `NoVmProfileRequest` (a
-        `LookupError`) otherwise, saying so.
-        """
-        subject = VmProfileSubject.of(app, extension)
-        return self.vm_profiles.approve(org_id, subject.kind, subject.subject_id)
-
-    def reject_vm_profile(
-        self,
-        org_id: str,
-        *,
-        app: str | None = None,
-        extension: str | None = None,
-        reason: str | None = None,
-    ) -> VmProfileRequestRecord:
-        """Play an org admin rejecting an app's or an extension's VM profile request."""
-        subject = VmProfileSubject.of(app, extension)
-        return self.vm_profiles.reject(org_id, subject.kind, subject.subject_id, reason=reason)
-
     # ── The wire ────────────────────────────────────────────────────
 
     def transport(self) -> httpx.MockTransport:
-        return httpx.MockTransport(self.handle)
+        return httpx.MockTransport(self.router.handle)
 
     def http_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(transport=self.transport())
 
-    def handle(self, request: httpx.Request) -> httpx.Response:
-        """Answer `request` as igni would: failures a test asked for first, then the route.
-
-        The first route serving the path says which token it needs; that
-        token is checked before the method is. An authenticated path no
-        route takes is the directory's, as igni's router has it.
-        """
-        if not self.addresses.reaches(str(request.url)):
-            raise httpx.ConnectError(f"{request.url.host} is not igni", request=request)
-        seen = self.traffic.record(request)
-        failure = self.traffic.failure_for(seen.path)
-        if failure is not None:
-            return failure
-        family = next((route for route in self._routes if route.serves(seen.path)), None)
-        if family is None:
-            return NOT_FOUND.to_response()
-        holder = self._authorise(seen, family.auth)
-        if isinstance(holder, DetailError):
-            return holder.to_response()
-        call = RoutedCall(seen=seen, holder=holder)
-        route = next((route for route in self._routes if route.takes(seen)), None)
-        if route is not None:
-            return route.handler(call)
-        if family.auth.is_service:
-            return self.directory.route(call)
-        return NOT_FOUND.to_response()
-
-    def _authorise(self, seen: SeenRequest, auth: RouteAuth) -> TokenHolder | DetailError:
-        """Whom the request's bearer token stands for, when `auth` needs one."""
-        if auth is RouteAuth.NONE:
-            return TokenHolder()
-        bearers = self.oauth.bearers
-        if auth is RouteAuth.APP:
-            holder = bearers.app_holder(seen.bearer())
-        else:
-            holder = bearers.service_holder(seen.bearer())
-        client = self.clients.get(holder.client_id) if holder else None
-        if holder is None or client is None or client.is_revoked:
-            return NOT_AUTHENTICATED
-        if auth is RouteAuth.SERVICE and not holder.org_id:
-            return NOT_AUTHENTICATED
-        return holder
-
-    def _route_table(self) -> tuple[Route, ...]:
+    def _route_table(self) -> RouteTable:
         """Every path igni serves a service, in the order they are matched."""
         agents = AgentRoutes(self.agents)
         vm = VmProfileRoutes(self.vm_profiles, self.clients, self.extensions)
         service, any_org = RouteAuth.SERVICE, RouteAuth.SERVICE_ANY_ORG
-        return (
+        routes = (
             Route(path=IgniPaths.DISCOVERY, handler=self.signer.discovery),
             Route(path=IgniPaths.JWKS, handler=self.signer.jwks),
             Route(path=IgniPaths.CLIENTS, method="POST", handler=self.clients.register),
@@ -358,6 +264,7 @@ class FakeIgni:
                 handler=self.directory.route,
             ),
         )
+        return RouteTable(routes=routes, fallback=self.directory.route)
 
 
 #: What a service's tests import: the fake, every type its public methods
