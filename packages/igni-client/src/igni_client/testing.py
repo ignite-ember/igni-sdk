@@ -499,7 +499,7 @@ class FakeIgni:
                         "state": "running",
                     }
                 },
-                {"woken": {"how": "paused", "node": "n1", "ms": 30}},
+                {"woken": {"how": "paused", "node": "n1", "ms": 12.345}},
             ]
             if played.stdout:
                 lines.append(

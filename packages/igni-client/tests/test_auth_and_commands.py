@@ -249,7 +249,8 @@ async def test_a_command_streams_its_output_and_ends_with_its_exit_code() -> Non
 
     assert run.stdout == "ok\n" and run.stderr == "warn\n"
     assert finished.exit_code == 2 and not finished.ok
-    assert run.woken["how"] == "paused" and run.record["command"] == "make test"
+    assert run.woken is not None and run.woken.how == "paused"
+    assert run.record is not None and run.record.command == "make test"
     assert fake.commands_run[0]["producer"] == {"kind": "person", "id": "u-ada"}
     assert (me.kind, me.id, me.org) == ("person", "u-ada", "org-acme")
 
