@@ -163,12 +163,12 @@ carries on with the resumed run:
 
 ```python
 from igni_client import ApprovalRequested, IgniClient
-from igni_client.testing import FakeIgni
+from igni_client.testing import FakeIgni, Steps
 
 async with FakeIgni() as fake:
-    fake.script = lambda text: [
-        FakeIgni.approval("run_shell_command", command="rm -rf build"),
-        *FakeIgni.answer("Cleaned the build directory."),
+    fake.runs.script = lambda text: [
+        Steps.approval("run_shell_command", command="rm -rf build"),
+        *Steps.answer("Cleaned the build directory."),
     ]
     async with IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
@@ -240,10 +240,11 @@ may run what, and audits every command.
 
 ```python
 from igni_client import IgniClient, Person
-from igni_client.testing import CommandResult, FakeIgni
+from igni_client.testing import FakeGateway, FakeIgni, PlayedCommand
 
-async with FakeIgni(gateway=True, tokens={"t-ada": "person:u-ada"}) as fake:
-    fake.commands["pytest -q"] = CommandResult(stdout="12 passed\n")
+gateway = FakeGateway({"t-ada": "person:u-ada"})
+gateway.commands["pytest -q"] = PlayedCommand(stdout="12 passed\n")
+async with FakeIgni(gateway=gateway) as fake:
     async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
         run = await igni.commands.run("pytest -q", timeout_s=300)
         async for output in run:
@@ -268,7 +269,7 @@ from igni_client import IgniClient
 from igni_client.testing import FakeIgni
 
 async with FakeIgni() as fake:
-    fake.rpc_answers["get_scheduled_tasks"] = [{"task_id": "t-1", "description": "nightly review"}]
+    fake.methods.answers["get_scheduled_tasks"] = [{"task_id": "t-1", "description": "nightly review"}]
     async with IgniClient(fake.local()) as igni:
         print(await igni.rpc("get_scheduled_tasks", include_done=False))
 ```
@@ -296,12 +297,12 @@ run. A person with igni open on their VM sees your runs as they happen.
 
 ```python
 from igni_client import IgniClient, Person
-from igni_client.testing import FakeIgni
+from igni_client.testing import FakeGateway, FakeIgni
 
-async with FakeIgni(gateway=True, tokens={"t-ada": "person:u-ada"}) as fake:
-    fake.busy_next(1)                       # the first connection is told "busy, retry"
+async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
+    fake.socket.busy_next(1)                # the first connection is told "busy, retry"
     async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
-        print("connected on attempt", fake.connections)
+        print("connected on attempt", fake.socket.connections)
 ```
 
 A local igni is not retried: one that closed has stopped, and the client
@@ -309,13 +310,17 @@ raises `Unavailable`.
 
 ## Testing your code
 
-`igni_client.testing.FakeIgni` is igni on a loopback socket, scripted:
-`script` decides what each prompt runs (`FakeIgni.answer(text)`,
-`FakeIgni.approval(tool, **args)`, `Delay(seconds)`, or any message), and
-`rpc_answers`, `models`, `history` and `commands` answer the rest. With
-`gateway=True` it plays Fleet's gateway too: bearer tokens on
-`/v1/connect`, `/v1/me` and `/v1/commands` through `fake.fleet(auth)`.
+`igni_client.testing.FakeIgni` is igni on a loopback socket, scripted.
+Each part is a collaborator a test talks to: `fake.runs.script` decides
+what each prompt runs (`Steps.answer(text)`, `Steps.approval(tool,
+**args)`, `Delay(seconds=...)`, or any typed message), and `fake.methods`
+answers the rest (`answers`, `models`, `history`). Given
+`gateway=FakeGateway(tokens)` it plays Fleet's gateway too: bearer tokens
+on `/v1/connect`, `/v1/me` and `/v1/commands` through `fake.fleet(auth)`,
+with `gateway.commands` deciding what each command prints.
 
-It records what your code did — `received`, `decisions`, `commands_run`,
-`sessions` — and plays what Fleet does under you: `move()`,
-`drop(code)`, `busy_next(n)` and `unbound_for(n)`.
+It records what your code did — `fake.socket.received` (the typed frames
+it sent), `fake.runs.decisions`, `gateway.commands_run`,
+`fake.methods.sessions` — and plays what Fleet does under you:
+`fake.socket.move()`, `drop(code)`, `busy_next(n)` and
+`fake.methods.unbound_for(n)`.

@@ -22,8 +22,9 @@ from igni_client import (
     Person,
 )
 from igni_client.auth.keys import JwkSet
+from igni_client.commands.wire import ProducerRef
 from igni_client.events import Unknown, parse_event
-from igni_client.testing import CommandResult, FakeIgni
+from igni_client.testing import FakeGateway, FakeIgni, PlayedCommand
 
 ISSUER = "https://igni.example.test"
 
@@ -240,24 +241,27 @@ def test_an_expired_or_missing_session_says_to_sign_in(tmp_path: Path) -> None:
 
 
 async def test_a_command_streams_its_output_and_ends_with_its_exit_code() -> None:
-    async with FakeIgni(gateway=True, tokens={"t-ada": "person:u-ada"}) as fake:
-        fake.commands["make test"] = CommandResult(stdout="ok\n", stderr="warn\n", exit_code=2)
-        async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
-            run = await igni.commands.run("make test", timeout_s=30)
-            finished = await run.wait()
-            me = await igni.me()
+    gateway = FakeGateway({"t-ada": "person:u-ada"})
+    gateway.commands["make test"] = PlayedCommand(stdout="ok\n", stderr="warn\n", exit_code=2)
+    async with (
+        FakeIgni(gateway=gateway) as fake,
+        IgniClient(fake.fleet(Person("t-ada"))) as igni,
+    ):
+        run = await igni.commands.run("make test", timeout_s=30)
+        finished = await run.wait()
+        me = await igni.me()
 
     assert run.stdout == "ok\n" and run.stderr == "warn\n"
     assert finished.exit_code == 2 and not finished.ok
     assert run.woken is not None and run.woken.how == "paused"
     assert run.record is not None and run.record.command == "make test"
-    assert fake.commands_run[0]["producer"] == {"kind": "person", "id": "u-ada"}
+    assert gateway.commands_run[0].producer == ProducerRef(kind="person", id="u-ada")
     assert (me.kind, me.id, me.org) == ("person", "u-ada", "org-acme")
 
 
 async def test_a_command_in_somebody_elses_vm_is_refused() -> None:
     async with (
-        FakeIgni(gateway=True, tokens={"t-ada": "person:u-ada"}) as fake,
+        FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake,
         IgniClient(fake.fleet(Person("t-ada"))) as igni,
     ):
         run = await igni.commands.run("id", producer="person:u-bob")

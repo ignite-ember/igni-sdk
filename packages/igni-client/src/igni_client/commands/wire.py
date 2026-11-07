@@ -7,6 +7,7 @@ this version does not know arrives as `UnknownLine` and is passed over.
 
 from __future__ import annotations
 
+import base64
 from typing import Annotated, Any, Literal
 
 import httpx
@@ -76,6 +77,11 @@ class OutputLine(BaseModel):
 
     stream: Literal["stdout", "stderr"]
     data_b64: Base64Bytes = b""
+
+    @classmethod
+    def of(cls, output: CommandOutput) -> OutputLine:
+        """The line that carries `output`."""
+        return cls(stream=output.stream, data_b64=base64.b64encode(output.data))
 
     def output(self) -> CommandOutput:
         return CommandOutput(stream=self.stream, data=self.data_b64)

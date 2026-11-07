@@ -20,8 +20,10 @@ from igni_client import (
     RunStarted,
     ToolCompleted,
 )
-from igni_client.methods import HISTORY
-from igni_client.testing import Delay, FakeIgni
+from igni_client.events import RunError
+from igni_client.frames import HitlDecision, QueueMessage
+from igni_client.methods import HISTORY, HistoryTurn
+from igni_client.testing import Delay, FakeIgni, Steps
 
 
 async def test_a_prompt_streams_typed_events_to_its_end() -> None:
@@ -51,7 +53,7 @@ async def test_another_clients_run_never_reaches_this_one() -> None:
         IgniClient(fake.local()) as mine,
         IgniClient(fake.local()) as theirs,
     ):
-        fake.script = lambda text: [Delay(seconds=0.05), *FakeIgni.answer(text)]
+        fake.runs.script = lambda text: [Delay(seconds=0.05), *Steps.answer(text)]
         ours = await mine.sessions.create()
         other = await theirs.sessions.create()
         mine_reply, _ = await asyncio.gather(ours.ask("mine"), other.ask("theirs"))
@@ -61,9 +63,9 @@ async def test_another_clients_run_never_reaches_this_one() -> None:
 
 async def test_an_approval_is_answered_in_the_loop_and_the_run_resumes() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [
-            FakeIgni.approval("run_shell_command", command="rm -rf build"),
-            *FakeIgni.answer("cleaned"),
+        fake.runs.script = lambda text: [
+            Steps.approval("run_shell_command", command="rm -rf build"),
+            *Steps.answer("cleaned"),
         ]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
@@ -79,22 +81,14 @@ async def test_an_approval_is_answered_in_the_loop_and_the_run_resumes() -> None
 
     assert len(seen) == 1 and seen[0].answered
     assert text == "cleaned"
-    assert fake.decisions == [
-        [
-            {
-                "type": "hitl_decision",
-                "requirement_id": "req-run_shell_command",
-                "action": "confirm",
-                "choice": "once",
-                "set_permission_mode": "",
-            }
-        ]
+    assert fake.runs.decisions == [
+        [HitlDecision(requirement_id="req-run_shell_command", action="confirm", choice="once")]
     ]
 
 
 async def test_a_refusal_resumes_the_run_with_the_call_rejected() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [FakeIgni.approval("deploy"), *FakeIgni.answer("deployed")]
+        fake.runs.script = lambda text: [Steps.approval("deploy"), *Steps.answer("deployed")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             events = []
@@ -103,14 +97,14 @@ async def test_a_refusal_resumes_the_run_with_the_call_rejected() -> None:
                     await event.reject(remember=True)
                 events.append(event)
 
-    assert fake.decisions[0][0]["action"] == "reject"
-    assert fake.decisions[0][0]["choice"] == "deny"
+    assert fake.runs.decisions[0][0].action == "reject"
+    assert fake.runs.decisions[0][0].choice == "deny"
     assert any(isinstance(e, ToolCompleted) and e.is_rejected for e in events)
 
 
 async def test_every_call_of_a_pause_must_be_answered() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [FakeIgni.approval("deploy")]
+        fake.runs.script = lambda text: [Steps.approval("deploy")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             async for event in session.send("deploy"):
@@ -122,18 +116,18 @@ async def test_every_call_of_a_pause_must_be_answered() -> None:
 
 async def test_a_loop_that_does_not_answer_ends_and_leaves_the_run_waiting() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [FakeIgni.approval("deploy"), *FakeIgni.answer("never")]
+        fake.runs.script = lambda text: [Steps.approval("deploy"), *Steps.answer("never")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             events = [event async for event in session.send("deploy")]
 
     assert isinstance(events[-1], ApprovalRequested) and not events[-1].answered
-    assert fake.decisions == []
+    assert fake.runs.decisions == []
 
 
 async def test_ask_without_a_policy_raises_at_an_approval() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [FakeIgni.approval("deploy")]
+        fake.runs.script = lambda text: [Steps.approval("deploy")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             with pytest.raises(ApprovalRequired) as raised:
@@ -147,21 +141,21 @@ async def test_ask_answers_approvals_with_an_async_policy() -> None:
         return Decision.allow("always") if requirement.tool_name == "read_file" else Decision.deny()
 
     async with FakeIgni() as fake:
-        fake.script = lambda text: [
-            FakeIgni.approval("read_file", path="a.py"),
-            *FakeIgni.answer("read"),
+        fake.runs.script = lambda text: [
+            Steps.approval("read_file", path="a.py"),
+            *Steps.answer("read"),
         ]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             reply = await session.ask("read it", approve=policy)
 
     assert str(reply) == "read"
-    assert fake.decisions[0][0]["choice"] == "always"
+    assert fake.runs.decisions[0][0].choice == "always"
 
 
 async def test_a_failed_run_raises() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [{"type": "run_error", "error": "model unreachable"}]
+        fake.runs.script = lambda text: [RunError(error="model unreachable")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             with pytest.raises(RunFailed, match="model unreachable"):
@@ -170,7 +164,7 @@ async def test_a_failed_run_raises() -> None:
 
 async def test_cancel_ends_the_run() -> None:
     async with FakeIgni() as fake:
-        fake.script = lambda text: [Delay(seconds=30), *FakeIgni.answer("too late")]
+        fake.runs.script = lambda text: [Delay(seconds=30), *Steps.answer("too late")]
         async with IgniClient(fake.local()) as igni:
             session = await igni.sessions.create()
             follow = asyncio.ensure_future(_collect(session.send("long")))
@@ -187,8 +181,8 @@ async def test_queue_sends_a_prompt_for_later() -> None:
         await session.queue("and then the tests")
         await _until(lambda: _sent(fake, "queue_message") == 1)
 
-    frame = next(r.frame for r in fake.received if r.frame.get("type") == "queue_message")
-    assert frame["text"] == "and then the tests" and frame["session_id"] == session.id
+    frame = next(r.frame for r in fake.socket.received if isinstance(r.frame, QueueMessage))
+    assert frame.text == "and then the tests" and frame.session_id == session.id
 
 
 async def test_sessions_are_created_opened_listed_and_switched() -> None:
@@ -212,9 +206,9 @@ async def test_sessions_are_created_opened_listed_and_switched() -> None:
 async def test_a_session_reads_its_history_as_turns() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
-        fake.history[session.id] = [
-            {"role": "user", "content": "hello", "created_at": 1},
-            {"role": "tool", "tool_name": "read_file", "content": "ok"},
+        fake.methods.history[session.id] = [
+            HistoryTurn(role="user", content="hello", created_at=1),
+            HistoryTurn.model_validate({"role": "tool", "tool_name": "read_file", "content": "ok"}),
         ]
         history = await session.history()
 
@@ -224,7 +218,7 @@ async def test_a_session_reads_its_history_as_turns() -> None:
 
 async def test_an_answer_not_shaped_as_the_method_returns_raises() -> None:
     async with FakeIgni() as fake:
-        fake.rpc_answers["get_turns"] = {"not": "a list"}
+        fake.methods.answers["get_turns"] = {"not": "a list"}
         async with IgniClient(fake.local()) as igni:
             with pytest.raises(RpcError, match="get_turns"):
                 await igni._conn.rpc("get_turns", HISTORY)
@@ -232,7 +226,7 @@ async def test_an_answer_not_shaped_as_the_method_returns_raises() -> None:
 
 async def test_any_method_is_reachable_and_an_error_raises() -> None:
     async with FakeIgni() as fake:
-        fake.rpc_answers["get_todos"] = lambda args: [{"text": "write tests", "done": False}]
+        fake.methods.answers["get_todos"] = lambda args: [{"text": "write tests", "done": False}]
         async with IgniClient(fake.local()) as igni:
             todos = await igni.rpc("get_todos")
             with pytest.raises(RpcError, match="Unknown RPC method"):
@@ -243,10 +237,10 @@ async def test_any_method_is_reachable_and_an_error_raises() -> None:
 
 async def test_a_vm_not_yet_bound_is_asked_again() -> None:
     async with FakeIgni() as fake:
-        fake.rpc_answers["get_todos"] = []
+        fake.methods.answers["get_todos"] = []
         async with IgniClient(fake.local()) as igni:
             igni._conn.UNBOUND_RETRY_SECONDS = 0.01
-            fake.unbound_for(3)
+            fake.methods.unbound_for(3)
             assert await igni.rpc("get_todos") == []
 
 
@@ -265,7 +259,7 @@ async def _collect(run: object) -> list[object]:
 
 
 def _sent(fake: FakeIgni, kind: str) -> int:
-    return sum(1 for r in fake.received if r.frame.get("type") == kind)
+    return sum(1 for r in fake.socket.received if r.frame.type == kind)
 
 
 async def _until(condition: object, timeout: float = 5.0) -> None:
