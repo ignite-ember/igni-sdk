@@ -52,6 +52,8 @@ function hello(over: Record<string, unknown> = {}) {
     nonce: NONCE,
     extensionId: "acme.scanner",
     params: {},
+    settings: {},
+    serviceUrl: null,
     theme: "dark",
     tokens: { "--bg": "#262624", "--fg": "#f0efea" },
     ...over,

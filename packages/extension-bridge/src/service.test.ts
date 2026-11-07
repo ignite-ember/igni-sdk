@@ -202,7 +202,7 @@ describe("websocket", () => {
 });
 
 describe("through the bridge", () => {
-  function frameWith(serviceUrl: string | null | undefined) {
+  function frameWith(serviceUrl: string | null) {
     const posted: Record<string, unknown>[] = [];
     const host = {
       postMessage: (message: Record<string, unknown>) => posted.push(message),
@@ -219,9 +219,10 @@ describe("through the bridge", () => {
       nonce: "n",
       extensionId: "acme.notes",
       params: {},
+      settings: {},
+      serviceUrl,
       theme: "dark",
       tokens: {},
-      ...(serviceUrl === undefined ? {} : { serviceUrl }),
     });
     return { posted, send, pending };
   }
@@ -249,8 +250,8 @@ describe("through the bridge", () => {
     await expect(token).rejects.toThrow(/signed in/);
   });
 
-  it("has no service when the host named none — an older host included", async () => {
-    const bridge = await frameWith(undefined).pending;
+  it("has no service when the host named none", async () => {
+    const bridge = await frameWith(null).pending;
     expect(bridge.service.url).toBeNull();
     await expect(bridge.service.token()).rejects.toMatchObject({ code: "no_service" });
   });

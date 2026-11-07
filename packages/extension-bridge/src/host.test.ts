@@ -44,6 +44,8 @@ function framedPage() {
         nonce: NONCE,
         extensionId: "acme.reviewer",
         params: {},
+        settings: {},
+        serviceUrl: null,
         theme: "dark",
         tokens: {},
       });
@@ -53,7 +55,10 @@ function framedPage() {
 }
 
 afterEach(() => {
-  Object.defineProperty(window, "parent", { value: window, configurable: true });
+  Object.defineProperty(window, "parent", {
+    value: window,
+    configurable: true,
+  });
 });
 
 describe("bridge.host", () => {
@@ -93,7 +98,9 @@ describe("bridge.host", () => {
   it("asks igni's decision model at the root, and an unloadable model is unavailable", async () => {
     const page = framedPage();
     const bridge = await page.connected();
-    const questions = [{ id: "urgent", kind: "noul", question: "Is `text` urgent?" }];
+    const questions = [
+      { id: "urgent", kind: "noul", question: "Is `text` urgent?" },
+    ];
 
     const deciding = bridge.host.decide({ text: "It is down" }, questions);
     const [request] = page.posted;
@@ -119,7 +126,10 @@ describe("bridge.host", () => {
     const again = bridge.host.decide({ text: "x" }, questions);
     page.reply(page.posted[1].id, {
       ok: false,
-      error: { code: "unavailable", message: "igni's decision model could not be loaded" },
+      error: {
+        code: "unavailable",
+        message: "igni's decision model could not be loaded",
+      },
     });
     await expect(again).rejects.toMatchObject({ code: "unavailable" });
   });
@@ -144,7 +154,9 @@ describe("bridge.host", () => {
     const page = framedPage();
     const bridge = await page.connected();
 
-    const posting = bridge.host.sessions.chat("s-2").post("The index is ready.");
+    const posting = bridge.host.sessions
+      .chat("s-2")
+      .post("The index is ready.");
     const [request] = page.posted;
     expect(request).toMatchObject({
       op: "call",
@@ -176,7 +188,10 @@ describe("bridge.host", () => {
       // …the dialog is still waiting, and gets its answer.
       const [dialog] = page.posted;
       expect(dialog).toMatchObject({ op: "call", path: "ui.show_dialog" });
-      page.reply(dialog.id, { ok: true, result: { button: "ok", value: null } });
+      page.reply(dialog.id, {
+        ok: true,
+        result: { button: "ok", value: null },
+      });
       await expect(asking).resolves.toEqual({ button: "ok", value: null });
     } finally {
       vi.useRealTimers();
@@ -190,7 +205,10 @@ describe("bridge.host", () => {
     const reading = bridge.host.mcp.servers.get();
     page.reply(page.posted[0].id, {
       ok: false,
-      error: { code: "not_granted", message: "'acme.reviewer' is not granted 'mcp'" },
+      error: {
+        code: "not_granted",
+        message: "'acme.reviewer' is not granted 'mcp'",
+      },
     });
 
     const error = await reading.catch((e: unknown) => e);
@@ -244,5 +262,26 @@ describe("bridge.on", () => {
     expect(page.posted.map((p) => p.op)).toEqual(["subscribe"]);
     offAgain();
     expect(page.posted.map((p) => p.op)).toEqual(["subscribe", "unsubscribe"]);
+  });
+
+  it("reports a refused subscription rather than swallowing it", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const refused: HostError[] = [];
+
+    bridge.on(
+      bridge.host.chat.run_completed,
+      () => {},
+      (error) => refused.push(error),
+    );
+    const [subscribe] = page.posted;
+    page.reply(subscribe.id, {
+      ok: false,
+      error: { code: "not_granted", message: "chat is not granted" },
+    });
+
+    await vi.waitFor(() => expect(refused).toHaveLength(1));
+    expect(refused[0]).toBeInstanceOf(HostError);
+    expect(refused[0].code).toBe("not_granted");
   });
 });
