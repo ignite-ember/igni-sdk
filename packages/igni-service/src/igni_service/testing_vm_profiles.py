@@ -20,54 +20,28 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Literal
 
 import httpx
-from pydantic import BaseModel, ValidationError, model_validator
+from pydantic import BaseModel, ValidationError
 
 from igni_service.testing_bundles import HeldExtension
+from igni_service.testing_vm_rules import FakeCaps, FakeProfile, ManifestVm, Resolved
+from igni_service.testing_wire import DetailError
 from igni_service.vm_profiles import (
+    AppVmProfile,
     Assigned,
     Decider,
-    EffectiveVmProfile,
     RequestedVmProfile,
     Requester,
+    RequestState,
     RequestSubject,
-    VmPackages,
+    ServiceVmProfile,
     VmProfileRequest,
     VmProfileRequestRecord,
 )
-
-#: The deployment's Standard profile, as igni server ships it.
-STANDARD: dict[str, Any] = {
-    "memory_mib": 4096,
-    "normal_memory_mib": 1024,
-    "expected_memory_mib": None,
-    "vcpus": 1,
-    "idle_before_pause_s": 10,
-    "packages": {"apt": [], "pip": [], "npm": []},
-    "setup_script": None,
-    "volume_gib": 10,
-    "volume_max_gib": 50,
-    "erase_after_idle_days": None,
-    "internet": False,
-}
-
-#: The manifest's spelling of each field (camelCase, as the rest of it).
-MANIFEST_FIELDS: dict[str, str] = {
-    "memoryMib": "memory_mib",
-    "normalMemoryMib": "normal_memory_mib",
-    "expectedMemoryMib": "expected_memory_mib",
-    "vcpus": "vcpus",
-    "idleBeforePauseS": "idle_before_pause_s",
-    "packages": "packages",
-    "setupScript": "setup_script",
-    "volumeGib": "volume_gib",
-    "volumeMaxGib": "volume_max_gib",
-    "eraseAfterIdleDays": "erase_after_idle_days",
-    "internet": "internet",
-}
 
 
 class NoVmProfileRequest(LookupError):
@@ -102,39 +76,11 @@ class VmProfileSubject(BaseModel):
         return cls(kind="extension", subject_id=extension_id)
 
 
-class FakeCaps(BaseModel):
-    """The platform's caps; igni server's defaults."""
-
-    max_memory_mib: int = 8192
-    max_vcpus: int = 4
-    max_idle_before_pause_s: int | None = 3600
-    max_volume_gib: int = 200
-
-
-class Resolved(RequestedVmProfile):
-    """A request with the Standard values filled in, checked as igni checks a profile."""
-
-    @model_validator(mode="after")
-    def _fits(self) -> Resolved:
-        if self.normal_memory_mib > self.memory_mib:
-            raise ValueError("normal_memory_mib may not exceed memory_mib")
-        if self.expected_memory_mib is not None and self.expected_memory_mib > self.memory_mib:
-            raise ValueError("expected_memory_mib may not exceed memory_mib")
-        if self.volume_gib > self.volume_max_gib:
-            raise ValueError("volume_gib may not exceed volume_max_gib")
-        return self
-
-
-class FakeProfile(BaseModel):
-    id: str
-    name: str
-    settings: Resolved
-
-
 class FakeVmProfiles:
     """One deployment's VM profiles and the requests for them, per organisation."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, clock: Callable[[], float]) -> None:
+        self._clock = clock
         self.caps = FakeCaps()
         #: Every request, by `(org_id, kind, subject_id)`.
         self.requests: dict[tuple[str, str, str], VmProfileRequestRecord] = {}
@@ -195,7 +141,7 @@ class FakeVmProfiles:
     def _decide(
         self,
         record: VmProfileRequestRecord,
-        state: str,
+        state: RequestState,
         by: str,
         *,
         profile_id: str | None = None,
@@ -205,7 +151,7 @@ class FakeVmProfiles:
             update={
                 "state": state,
                 "decided_by": Decider(kind="person", id=by, acting_as="org_admin"),
-                "decided_at": datetime.now(UTC),
+                "decided_at": self._now(),
                 "reason": reason,
                 "profile_id": profile_id or record.profile_id,
             }
@@ -217,85 +163,67 @@ class FakeVmProfiles:
 
     def app_put(self, org_id: str, app_id: str, name: str, body: bytes) -> httpx.Response:
         try:
-            wanted = VmProfileRequest.model_validate_json(body or b"{}")
-            resolved = self._resolve(wanted.body())
-        except (ValidationError, ValueError) as exc:
-            return httpx.Response(422, json={"detail": str(exc)})
-        over = self._over_caps(resolved)
+            resolved = Resolved.of(VmProfileRequest.model_validate_json(body or b"{}"))
+        except ValidationError as exc:
+            return DetailError(detail=str(exc), status=422).to_response()
+        over = self.caps.refusal(resolved)
         if over:
-            return httpx.Response(400, json={"detail": over})
+            return DetailError(detail=over).to_response()
         record, changed = self._file(
-            org_id, "app", app_id, name, resolved, requested_by={"kind": "app", "id": app_id}
+            org_id,
+            RequestSubject(kind="app", id=app_id, name=name),
+            resolved,
+            requested_by=Requester(kind="app", id=app_id),
         )
         return httpx.Response(201 if changed else 200, json=record.model_dump(mode="json"))
 
     def app_get(self, org_id: str, app_id: str) -> httpx.Response:
         record = self.requests.get((org_id, "app", app_id))
         if record is None:
-            return httpx.Response(404, json={"detail": "This app has asked for no VM profile"})
+            return DetailError(
+                detail="This app has asked for no VM profile", status=404
+            ).to_response()
         return httpx.Response(200, json=record.model_dump(mode="json"))
 
     def app_profile(self, org_id: str, app_id: str) -> httpx.Response:
         profile = self._profile(org_id, self.app_profiles.get((org_id, app_id)))
-        served = self._served(profile)
-        return httpx.Response(
-            200, json={**served.model_dump(mode="json"), "volume_gib": profile.settings.volume_gib}
+        served = AppVmProfile(
+            **self.caps.serve(profile).model_dump(), volume_gib=profile.settings.volume_gib
         )
+        return httpx.Response(200, json=served.model_dump(mode="json"))
 
     def service(self, org_id: str, client_id: str, shipped: HeldExtension | None) -> httpx.Response:
         """What `GET /v1/service-vm-profile` answers a service for one organisation."""
         vm = shipped.manifest.vm if shipped else None
         if shipped is None or vm is None:
-            return httpx.Response(200, json={"org_id": org_id, "extension_id": None})
+            return httpx.Response(200, json=ServiceVmProfile(org_id=org_id).model_dump(mode="json"))
         extension_id = shipped.extension_id
         try:
-            resolved = self._resolve(
-                {MANIFEST_FIELDS[key]: value for key, value in vm.items() if key in MANIFEST_FIELDS}
-            )
-        except (ValidationError, ValueError) as exc:
-            return httpx.Response(422, json={"detail": str(exc)})
+            resolved = Resolved.of(ManifestVm.model_validate(vm))
+        except ValidationError as exc:
+            return DetailError(detail=str(exc), status=422).to_response()
         record, _ = self._file(
             org_id,
-            "extension",
-            extension_id,
-            shipped.manifest.name or extension_id,
+            RequestSubject(
+                kind="extension", id=extension_id, name=shipped.manifest.name or extension_id
+            ),
             resolved,
-            requested_by={"kind": "service", "id": client_id},
+            requested_by=Requester(kind="service", id=client_id),
         )
         profile = self.profiles.get((org_id, record.profile_id)) if record.profile_id else None
-        return httpx.Response(
-            200,
-            json={
-                "org_id": org_id,
-                "extension_id": extension_id,
-                "request": record.model_dump(mode="json"),
-                "profile": self._served(profile).model_dump(mode="json") if profile else None,
-                "assigned": self.assigned.get(
-                    (org_id, profile.id) if profile else ("", ""), Assigned()
-                ).model_dump(),
-            },
+        answer = ServiceVmProfile(
+            org_id=org_id,
+            extension_id=extension_id,
+            request=record,
+            profile=self.caps.serve(profile) if profile else None,
+            assigned=self.assigned.get((org_id, profile.id), Assigned()) if profile else Assigned(),
         )
+        return httpx.Response(200, json=answer.model_dump(mode="json"))
 
     # ── igni's rules ────────────────────────────────────────────────
 
-    @staticmethod
-    def _resolve(fields: dict[str, Any]) -> Resolved:
-        return Resolved.model_validate({**STANDARD, **fields})
-
-    def _over_caps(self, wanted: Resolved) -> str | None:
-        caps = self.caps
-        if wanted.memory_mib > caps.max_memory_mib:
-            return f"The memory ceiling may be at most {caps.max_memory_mib} MiB on this platform"
-        if wanted.vcpus > caps.max_vcpus:
-            return f"At most {caps.max_vcpus} vCPUs on this platform"
-        longest = caps.max_idle_before_pause_s
-        if longest is not None and (
-            wanted.idle_before_pause_s is None or wanted.idle_before_pause_s > longest
-        ):
-            return f"A VM may stay awake idle for at most {longest} seconds on this platform"
-        if wanted.volume_max_gib > caps.max_volume_gib:
-            return f"A volume may grow to at most {caps.max_volume_gib} GiB on this platform"
-        return None
+    def _now(self) -> datetime:
+        return datetime.fromtimestamp(self._clock(), UTC)
 
     @staticmethod
     def _digest(value: object) -> str:
@@ -305,70 +233,38 @@ class FakeVmProfiles:
     def _file(
         self,
         org_id: str,
-        kind: str,
-        subject_id: str,
-        name: str,
+        subject: RequestSubject,
         resolved: Resolved,
         *,
-        requested_by: dict[str, str],
+        requested_by: Requester,
     ) -> tuple[VmProfileRequestRecord, bool]:
         """Store the request; whether it is new or changed (and so pending)."""
-        values = resolved.model_dump(mode="json")
-        version = self._digest(values)
-        held = self.requests.get((org_id, kind, subject_id))
+        key = (org_id, subject.kind, subject.id)
+        version = self._digest(resolved.model_dump(mode="json"))
+        held = self.requests.get(key)
         if held is not None and held.version == version:
             return held, False
         record = VmProfileRequestRecord(
             id=held.id if held else str(uuid.uuid4()),
             org_id=org_id,
-            subject=RequestSubject.model_validate({"kind": kind, "id": subject_id, "name": name}),
+            subject=subject,
             state="pending",
-            requested=RequestedVmProfile.model_validate(values),
+            requested=RequestedVmProfile.model_validate(resolved.model_dump()),
             version=version,
             packages_version=self._digest(
-                {"packages": values["packages"], "setup_script": values["setup_script"]}
+                resolved.model_dump(mode="json", include={"packages", "setup_script"})
             ),
-            within_caps=self._over_caps(resolved) is None,
-            requested_by=Requester.model_validate(requested_by),
-            requested_at=datetime.now(UTC),
+            within_caps=self.caps.refusal(resolved) is None,
+            requested_by=requested_by,
+            requested_at=self._now(),
             profile_id=held.profile_id if held else None,
         )
-        self.requests[(org_id, kind, subject_id)] = record
+        self.requests[key] = record
         return record, True
 
     def _profile(self, org_id: str, profile_id: str | None) -> FakeProfile:
         found = self.profiles.get((org_id, profile_id)) if profile_id else None
-        return found or FakeProfile(
-            id=f"default-{org_id}", name="Standard", settings=self._resolve({})
-        )
-
-    def _served(self, profile: FakeProfile) -> EffectiveVmProfile:
-        s = profile.settings
-        caps = self.caps
-        memory = min(s.memory_mib, caps.max_memory_mib)
-        idle = s.idle_before_pause_s
-        if caps.max_idle_before_pause_s is not None:
-            idle = (
-                caps.max_idle_before_pause_s
-                if idle is None
-                else min(idle, caps.max_idle_before_pause_s)
-            )
-        return EffectiveVmProfile(
-            profile_id=profile.id,
-            profile_name=profile.name,
-            memory_mib=memory,
-            normal_memory_mib=min(s.normal_memory_mib, memory),
-            expected_memory_mib=None
-            if s.expected_memory_mib is None
-            else min(s.expected_memory_mib, memory),
-            vcpus=min(s.vcpus, caps.max_vcpus),
-            idle_before_pause_s=idle,
-            packages=VmPackages.model_validate(s.packages.model_dump()),
-            setup_script=s.setup_script,
-            volume_max_gib=min(s.volume_max_gib, caps.max_volume_gib),
-            erase_after_idle_days=s.erase_after_idle_days,
-            internet=s.internet,
-        )
+        return found or FakeProfile.default(org_id)
 
 
-__all__ = ["FakeCaps", "FakeVmProfiles", "NoVmProfileRequest", "VmProfileSubject"]
+__all__ = ["FakeVmProfiles", "NoVmProfileRequest", "VmProfileSubject"]

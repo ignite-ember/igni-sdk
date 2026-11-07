@@ -62,11 +62,11 @@ from igni_service.testing_sessions import PortalRefused, SignIns
 from igni_service.testing_settings import SettingsOverrides
 from igni_service.testing_signer import FakeSigner
 from igni_service.testing_vm_profiles import (
-    FakeCaps,
     FakeVmProfiles,
     NoVmProfileRequest,
     VmProfileSubject,
 )
+from igni_service.testing_vm_rules import FakeCaps
 from igni_service.testing_wire import (
     BASE,
     ISSUER,
@@ -126,7 +126,7 @@ class FakeIgni:
         #: The agent channel: items, uploaded files, their states.
         self.agents = FakeAgents(is_member=self.directory.is_member, clock=self.clock.wall)
         #: VM profiles: requests, an org admin's decisions, what a VM gets.
-        self.vm_profiles = FakeVmProfiles()
+        self.vm_profiles = FakeVmProfiles(clock=self.clock.wall)
         self.router = FakeRouter(
             addresses=self.addresses,
             traffic=self.traffic,
