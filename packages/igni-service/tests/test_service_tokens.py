@@ -19,9 +19,9 @@ async def test_a_token_is_kept_per_organisation(igni: IgniService, fake: FakeIgn
 
     assert first == again
     assert other != first
-    forms = [seen.form() for seen in fake.requests_to(IgniPaths.TOKEN)]
-    assert [form["organisation"] for form in forms] == [ORG, OTHER_ORG]
-    assert all(form["grant_type"] == "client_credentials" for form in forms)
+    forms = [seen.form() for seen in fake.traffic.requests_to(IgniPaths.TOKEN)]
+    assert [form.organisation for form in forms] == [ORG, OTHER_ORG]
+    assert all(form.grant_type == "client_credentials" for form in forms)
 
 
 async def test_a_token_is_renewed_a_minute_before_it_expires(
@@ -34,7 +34,7 @@ async def test_a_token_is_renewed_a_minute_before_it_expires(
     clock.advance(2)
 
     assert await igni.tokens.token(ORG) != first
-    assert len(fake.requests_to(IgniPaths.TOKEN)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 2
 
 
 async def test_each_assertion_is_signed_by_the_service_key_for_igni_and_used_once(
@@ -43,7 +43,9 @@ async def test_each_assertion_is_signed_by_the_service_key_for_igni_and_used_onc
     await igni.tokens.token(ORG)
     await igni.tokens.token(OTHER_ORG)
 
-    assertions = [seen.form()["client_assertion"] for seen in fake.requests_to(IgniPaths.TOKEN)]
+    assertions = [
+        seen.form().client_assertion for seen in fake.traffic.requests_to(IgniPaths.TOKEN)
+    ]
     client_id = await igni.registration.client_id()
     claims = [jwt.decode(a, options={"verify_signature": False}) for a in assertions]
     headers = [jwt.get_unverified_header(a) for a in assertions]
@@ -59,17 +61,17 @@ async def test_a_token_igni_stops_honouring_is_replaced_once(
     igni: IgniService, fake: FakeIgni
 ) -> None:
     await igni.host(ORG).directory.organisation()
-    fake.expire_service_tokens()
+    fake.oauth.bearers.expire_service()
 
     organisation = await igni.host(ORG).directory.organisation()
 
     assert organisation.org_id == ORG
-    assert len(fake.requests_to(IgniPaths.TOKEN)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 2
 
 
 async def test_a_revoked_service_gets_no_token(igni: IgniService, fake: FakeIgni) -> None:
     await igni.tokens.token(ORG)
-    fake.revoke()
+    fake.clients.revoke()
     igni.tokens.forget()
 
     with pytest.raises(IgniUnavailable, match="invalid_client"):
@@ -83,7 +85,7 @@ async def test_an_unapproved_service_is_told_so_in_igni_words(clock: ManualClock
     with pytest.raises(IgniUnavailable, match="invalid_client"):
         await igni.tokens.token(ORG)
 
-    fake.approve()
+    fake.clients.approve()
     assert await igni.tokens.token(ORG)
 
 
@@ -103,7 +105,7 @@ async def test_a_service_waiting_for_approval_is_told_it_is_not_approved(
 
 async def test_a_revoked_service_is_told_it_is_revoked(igni: IgniService, fake: FakeIgni) -> None:
     await igni.tokens.token(ORG)
-    fake.revoke()
+    fake.clients.revoke()
     igni.tokens.forget()
 
     with pytest.raises(ServiceRevoked, match="revoked") as refused:

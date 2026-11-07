@@ -21,8 +21,8 @@ import pytest
 from fastapi import Depends, FastAPI
 
 from igni_service import IgniService, Person
-from igni_service.revocations import RevocationFeed, RevocationsStale, Revoked
-from igni_service.testing import FakeIgni, ManualClock
+from igni_service.revocations import RevocationFeed, RevocationsStale, Revoked, RevokedKind
+from igni_service.testing import FakeIgni, ManualClock, SettingsOverrides, SpaceClaims
 
 from .conftest import ORG, OTHER_ORG, bearer
 
@@ -87,19 +87,19 @@ async def http(igni: IgniService) -> AsyncIterator[httpx.AsyncClient]:
 async def test_a_removed_member_is_refused_at_once(
     feed: Feed, fake: FakeIgni, http: httpx.AsyncClient, clock: ManualClock
 ) -> None:
-    ada = fake.person_token("u-ada", org_id=ORG)
+    ada = fake.signer.person_token("u-ada", org_id=ORG)
     assert (await http.get("/me", headers=bearer(ada))).status_code == 200
 
     clock.advance(5)
-    fake.publish_revocation("u-ada", org_id=ORG)
+    fake.revocations.publish("u-ada", org_id=ORG)
     await feed.settle()
 
     assert (await http.get("/me", headers=bearer(ada))).status_code == 401
-    max_ = fake.person_token("u-max", org_id=ORG)
+    max_ = fake.signer.person_token("u-max", org_id=ORG)
     assert (await http.get("/me", headers=bearer(max_))).status_code == 200
 
     clock.advance(0.001)  # a millisecond later is after the watermark
-    added_back = fake.person_token("u-ada", org_id=ORG)
+    added_back = fake.signer.person_token("u-ada", org_id=ORG)
     assert (await http.get("/me", headers=bearer(added_back))).status_code == 200, (
         "signed in again, after the watermark"
     )
@@ -108,15 +108,15 @@ async def test_a_removed_member_is_refused_at_once(
 async def test_only_in_its_organisation_unless_every_one(
     feed: Feed, fake: FakeIgni, igni: IgniService, clock: ManualClock
 ) -> None:
-    eve_here = fake.person_token("u-eve", org_id=ORG)
-    eve_there = fake.person_token("u-eve", org_id=OTHER_ORG)
-    fake.publish_revocation("u-eve", org_id=OTHER_ORG)
+    eve_here = fake.signer.person_token("u-eve", org_id=ORG)
+    eve_there = fake.signer.person_token("u-eve", org_id=OTHER_ORG)
+    fake.revocations.publish("u-eve", org_id=OTHER_ORG)
     await feed.settle()
     with pytest.raises(Revoked):
         await igni.verifier.person(eve_there)
     assert (await igni.verifier.person(eve_here)).user_id == "u-eve"
 
-    fake.publish_revocation("u-eve", org_id=None, reason="sessions_withdrawn")
+    fake.revocations.publish("u-eve", org_id=None, reason="sessions_withdrawn")
     await feed.settle()
     with pytest.raises(Revoked):
         await igni.verifier.person(eve_here)
@@ -125,9 +125,11 @@ async def test_only_in_its_organisation_unless_every_one(
 async def test_an_app_and_a_space_are_revoked_by_kind(
     feed: Feed, fake: FakeIgni, igni: IgniService
 ) -> None:
-    app = fake.app_token("reporter", org_id=ORG, name="Reporter")
-    space = fake.space_token("s-42", org_id=ORG, app_id="reporter", external_id="cust-9")
-    fake.publish_revocation("reporter", org_id=ORG, kind="app", reason="removed")
+    app = fake.signer.app_token("reporter", org_id=ORG, name="Reporter")
+    space = fake.signer.space_token(
+        "s-42", SpaceClaims(org=ORG, app="reporter", external_id="cust-9")
+    )
+    fake.revocations.publish("reporter", org_id=ORG, kind=RevokedKind.APP, reason="removed")
     await feed.settle()
     with pytest.raises(Revoked):
         await igni.verifier.claims(app, use="app")
@@ -137,8 +139,8 @@ async def test_an_app_and_a_space_are_revoked_by_kind(
 async def test_it_fails_closed_until_read_and_when_stale(
     fake: FakeIgni, igni: IgniService, clock: ManualClock
 ) -> None:
-    ada = fake.person_token("u-ada", org_id=ORG)
-    fake.failing["/v1/revocations"] = 503
+    ada = fake.signer.person_token("u-ada", org_id=ORG)
+    fake.traffic.fail("/v1/revocations", 503)
     igni.revocations.max_staleness = 0.05
     await igni.registration.start()
     feed = Feed(igni)
@@ -147,11 +149,11 @@ async def test_it_fails_closed_until_read_and_when_stale(
     with pytest.raises(RevocationsStale):
         await igni.verifier.person(ada)  # never read: refused
 
-    fake.failing.clear()
+    fake.traffic.heal()
     await feed.settle()
     assert (await igni.verifier.person(ada)).user_id == "u-ada"
 
-    fake.failing["/v1/revocations"] = 503
+    fake.traffic.fail("/v1/revocations", 503)
     clock.advance(1)  # past the bound with nothing heard
     await feed.settle()
     with pytest.raises(RevocationsStale):
@@ -166,7 +168,7 @@ async def test_waiting_for_approval_is_said_once_not_every_poll(
     """Pending, the feed retries every two seconds; INFO says so when it
     starts and when it ends, the retries in between are DEBUG."""
     caplog.set_level(logging.DEBUG, logger="igni_service.revocations")
-    fake.require_approval = True
+    fake.oauth.verifier.require_approval = True
     await igni.registration.start()
     feed = Feed(igni)
     task = asyncio.create_task(igni.revocation_feed.run(feed.stop))
@@ -184,7 +186,7 @@ async def test_waiting_for_approval_is_said_once_not_every_poll(
     assert len(said(logging.INFO)) == 1
     assert "waiting for a super admin" in said(logging.INFO)[0]
 
-    fake.approve()
+    fake.clients.approve()
     await feed.settle()
     assert len(said(logging.INFO)) == 2
     assert "refreshed" in said(logging.INFO)[1]
@@ -195,13 +197,13 @@ async def test_waiting_for_approval_is_said_once_not_every_poll(
 async def test_a_service_that_does_not_run_the_feed_checks_nothing(
     fake: FakeIgni, igni: IgniService
 ) -> None:
-    fake.publish_revocation("u-ada", org_id=ORG)
-    ada = fake.person_token("u-ada", org_id=ORG)
+    fake.revocations.publish("u-ada", org_id=ORG)
+    ada = fake.signer.person_token("u-ada", org_id=ORG)
     assert (await igni.verifier.person(ada)).user_id == "u-ada"
 
 
 def test_the_bound_is_configurable(fake: FakeIgni) -> None:
-    service = fake.service(fake.settings(revocations_max_staleness=5))
+    service = fake.service(fake.settings(SettingsOverrides(revocations_max_staleness=5)))
     assert service.revocations.max_staleness == 5
 
 
@@ -209,7 +211,7 @@ async def test_one_long_poll_for_every_organisation_and_a_304_when_nothing_is_ne
     feed: Feed, fake: FakeIgni, igni: IgniService
 ) -> None:
     await feed.settle()
-    pulls = fake.requests_to("/v1/revocations")
+    pulls = fake.traffic.requests_to("/v1/revocations")
     assert pulls and all(p.query.get("scope") == ["served"] for p in pulls)
     assert any(p.headers.get("if-none-match") for p in pulls[1:]), "asked with its cursor"
     assert {o.org_id for o in igni.revocation_feed.served} == {ORG, OTHER_ORG}
@@ -219,12 +221,14 @@ async def test_it_follows_from_start_up_with_a_token_for_no_organisation(
     feed: Feed, fake: FakeIgni
 ) -> None:
     await feed.settle()
-    pulls = fake.requests_to("/v1/revocations") + fake.requests_to("/v1/organisations/served")
+    pulls = fake.traffic.requests_to("/v1/revocations") + fake.traffic.requests_to(
+        "/v1/organisations/served"
+    )
     tokens = {p.headers["authorization"].removeprefix("Bearer ") for p in pulls}
     assert tokens and all(t.startswith("revocations-") for t in tokens), "no organisation's"
-    grants = [s.form() for s in fake.requests_to("/v1/oauth/token")]
-    assert {"grant_type": "client_credentials", "scope": "revocations"} in [
-        {k: v for k, v in g.items() if k in ("grant_type", "scope", "organisation")} for g in grants
+    grants = [s.form() for s in fake.traffic.requests_to("/v1/oauth/token")]
+    assert ("client_credentials", "revocations", "") in [
+        (g.grant_type, g.scope, g.organisation) for g in grants
     ]
 
 

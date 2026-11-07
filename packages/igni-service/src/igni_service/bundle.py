@@ -371,6 +371,28 @@ class BundleArchive:
         out.write_bytes(zipped.getvalue())
         return zipped.getvalue()
 
+    @staticmethod
+    def read_manifest(archive: bytes) -> dict[str, object]:
+        """The `manifest.json` at an archive's root, read without unpacking it.
+
+        Raises `BundleError` when the archive is unreadable, has no
+        manifest at its root, or its manifest is not a JSON object.
+        """
+        try:
+            with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
+                for member in tar:
+                    if member.isfile() and member.name.removeprefix("./") == "manifest.json":
+                        extracted = tar.extractfile(member)
+                        if extracted is None:
+                            break
+                        manifest = json.loads(extracted.read())
+                        if not isinstance(manifest, dict):
+                            raise ValueError("manifest.json is not an object")
+                        return manifest
+        except (tarfile.TarError, OSError, EOFError, ValueError) as exc:
+            raise BundleError(f"the extension bundle is unreadable: {exc}") from exc
+        raise BundleError("the extension bundle has no manifest.json at its root")
+
 
 class BundleBuilder:
     """Builds one extension directory into a bundle."""

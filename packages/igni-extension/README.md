@@ -717,7 +717,7 @@ from igni_service.testing import FakeIgni
 
 igni = FakeIgni()
 host_tokens = FakeHostTokenEndpoint(
-    minter=lambda claims: igni.person_token(claims.sub, org_id=claims.org)
+    minter=lambda claims: igni.signer.person_token(claims.sub, org_id=claims.org)
 )
 ```
 

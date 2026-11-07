@@ -14,7 +14,7 @@ from igni_service import (
     SqlKeyStore,
     SqlWebSessionStore,
 )
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SettingsOverrides
 
 
 async def test_the_environment_names_igni_the_service_and_its_key(
@@ -41,8 +41,10 @@ async def test_the_environment_names_igni_the_service_and_its_key(
 async def test_the_key_from_settings_is_kept_in_the_database(tmp_path: Path) -> None:
     fake = FakeIgni()
     settings = fake.settings(
-        key_encryption_key=KeyCipher.generate(),
-        key_database_url=f"sqlite+aiosqlite:///{tmp_path / 'k.db'}",
+        SettingsOverrides(
+            key_encryption_key=KeyCipher.generate(),
+            key_database_url=f"sqlite+aiosqlite:///{tmp_path / 'k.db'}",
+        )
     )
 
     first = IgniService.from_settings(settings, http=fake.http_client())
@@ -56,7 +58,7 @@ async def test_the_key_from_settings_is_kept_in_the_database(tmp_path: Path) -> 
 @pytest.mark.parametrize("missing", ["igni_server_url", "public_base_url", "service_name"])
 def test_a_service_without_its_addresses_does_not_start(missing: str) -> None:
     fake = FakeIgni()
-    settings = fake.settings(**{missing: ""})
+    settings = fake.settings(SettingsOverrides.model_validate({missing: ""}))
 
     with pytest.raises(ConfigurationError):
         fake.service(settings)
@@ -66,7 +68,7 @@ def test_a_public_url_that_is_not_one_is_said_at_start() -> None:
     fake = FakeIgni()
 
     with pytest.raises(ConfigurationError, match="PUBLIC_BASE_URL"):
-        fake.service(fake.settings(public_base_url="artifacts.example.test"))
+        fake.service(fake.settings(SettingsOverrides(public_base_url="artifacts.example.test")))
 
 
 def test_with_nowhere_to_keep_the_key_the_service_says_so() -> None:

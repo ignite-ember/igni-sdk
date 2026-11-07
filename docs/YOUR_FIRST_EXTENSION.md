@@ -603,7 +603,8 @@ sys.path.insert(0, str(HERE.parent / "extension" / "src"))
 
 from igni_extension import Caller, CallerKind  # noqa: E402
 from igni_extension.testing import ConcurrencyHarness, ConcurrentCall, HostHarness  # noqa: E402
-from igni_service.testing import FakeIgni  # noqa: E402
+from igni_service import Member  # noqa: E402
+from igni_service.testing import FakeIgni, IgniAddresses  # noqa: E402
 
 pytestmark = pytest.mark.anyio
 
@@ -640,17 +641,17 @@ async def test_many_callers_at_once() -> None:
 async def test_the_service_takes_a_person_and_answers_export_and_erasure() -> None:
     from service import create_app
 
-    fake = FakeIgni(service_url="http://tickets.test")
-    fake.add_member("org-1", "u-ada", email="ada@acme.test", name="Ada")
+    fake = FakeIgni(addresses=IgniAddresses(service_url="http://tickets.test"))
+    fake.directory.add_member("org-1", Member(user_id="u-ada", email="ada@acme.test", name="Ada"))
     app = create_app(fake.service())
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://tickets.test") as http:
-        person = {"Authorization": f"Bearer {fake.person_token('u-ada', org_id='org-1')}"}
+        person = {"Authorization": f"Bearer {fake.signer.person_token('u-ada', org_id='org-1')}"}
         r = await http.get("/v1/tickets/T-1001", headers=person)
         assert r.status_code == 200, r.text
         assert r.json()["looked_up_by"] == "ada@acme.test"
 
-        igni = {"Authorization": f"Bearer {fake.igni_token('org-1')}"}
+        igni = {"Authorization": f"Bearer {fake.signer.igni_token('org-1')}"}
         r = await http.get("/v1/igni/subjects/u-ada/export", headers=igni)
         assert r.status_code == 200, r.text
         assert "T-1001" in r.text

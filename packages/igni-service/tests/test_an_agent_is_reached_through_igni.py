@@ -35,7 +35,7 @@ async def test_a_message_goes_on_the_wire_as_igni_reads_it(
         )
     )
 
-    [seen] = fake.requests_to(IgniPaths.SERVICE_ITEMS)
+    [seen] = fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS)
     assert seen.json_body() == {
         "producer": {"kind": "person", "id": "u-max"},
         "kind": "message",
@@ -44,7 +44,7 @@ async def test_a_message_goes_on_the_wire_as_igni_reads_it(
         "start_run": True,
         "event_key": "claim:1:new",
     }
-    assert accepted.event_id == fake.events[0].event_id
+    assert accepted.event_id == fake.agents.items[0].event_id
 
 
 async def test_files_are_uploaded_first_and_named_by_id(
@@ -62,7 +62,7 @@ async def test_files_are_uploaded_first_and_named_by_id(
         )
     )
 
-    photo, pdf = fake.requests_to(IgniPaths.SERVICE_ATTACHMENTS)
+    photo, pdf = fake.traffic.requests_to(IgniPaths.SERVICE_ATTACHMENTS)
     assert (photo.query["filename"], photo.headers["content-type"], photo.body) == (
         ["damage.png"],
         "image/png",
@@ -72,7 +72,7 @@ async def test_files_are_uploaded_first_and_named_by_id(
         ["claim form.pdf"],
         "application/pdf",
     )
-    [item] = fake.events
+    [item] = fake.agents.items
     assert item.attachments == ["att-1", "att-2"]
     assert fake.agents.uploads["att-1"].event_id == item.event_id
 
@@ -86,7 +86,7 @@ async def test_a_new_chat_is_a_handle_on_its_thread(igni: IgniService, fake: Fak
     await chat.rename("Claim CL-20431 (paid)")
     await chat.cancel()
 
-    bodies = [s.json_body() for s in fake.requests_to(IgniPaths.SERVICE_ITEMS)]
+    bodies = [s.json_body() for s in fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS)]
     assert [(b["kind"], b["thread"]) for b in bodies] == [("chat", "claim:CL-20431")] + [
         (kind, "claim:CL-20431") for kind in ("message", "message", "action", "action", "action")
     ]
@@ -110,7 +110,7 @@ async def test_an_event_is_the_extensions_and_host_send_event_is_the_same_call(
     await host.agent(MARIEKE).send_event("claim.created", {"id": "CL-20431"})
     await host.send_event(MARIEKE, "claim.created", {"id": "CL-20431"})
 
-    first, second = fake.requests_to(IgniPaths.SERVICE_EVENTS)
+    first, second = fake.traffic.requests_to(IgniPaths.SERVICE_EVENTS)
     assert (
         first.json_body()
         == second.json_body()
@@ -120,7 +120,7 @@ async def test_an_event_is_the_extensions_and_host_send_event_is_the_same_call(
             "payload": {"id": "CL-20431"},
         }
     )
-    assert fake.requests_to(IgniPaths.SERVICE_ITEMS) == []
+    assert fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS) == []
 
 
 async def test_what_became_of_an_item_is_polled(igni: IgniService, fake: FakeIgni) -> None:
@@ -159,7 +159,7 @@ async def test_what_the_extension_does_not_declare_is_refused(
     assert message.value.status == upload.value.status == 403
     assert "service.messages" in message.value.detail
     assert "service.attachments" in upload.value.detail
-    assert [e.kind for e in fake.events] == ["event"], "a plain event needs no grant"
+    assert [e.kind for e in fake.agents.items] == ["event"], "a plain event needs no grant"
 
 
 def test_a_mistake_is_caught_before_it_is_sent() -> None:

@@ -1,7 +1,7 @@
 """`FakeIgni`'s side of the agent channel: items, files and statuses (service-identity §15).
 
 What `FakeIgni.agents` keeps, so a service's tests can assert exactly what
-reached igni: every item (`items`, also `FakeIgni.events`), every
+reached igni: every item (`items`), every
 uploaded file (`uploads`), and each item's state, which a test moves with
 `settle` to play the producer's igni taking it. igni's rules are kept:
 the producer must be in the organisation, an `event_key` is stored once

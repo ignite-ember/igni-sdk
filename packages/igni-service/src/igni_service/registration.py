@@ -21,10 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import io
-import json
 import logging
-import tarfile
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -32,6 +29,7 @@ import httpx
 from pydantic import BaseModel, Field, ValidationError
 
 from igni_service.assets import BundleAsset, BundleAssets, BundleLayout, FileDigest
+from igni_service.bundle import BundleArchive
 from igni_service.crypto import AssetClaim, BundleClaim, Jwk
 from igni_service.errors import BundleError, IgniError, IgniUnavailable
 from igni_service.server import IgniServer
@@ -95,7 +93,7 @@ class ExtensionBundle:
     def __init__(self, archive: bytes, *, assets_dir: Path | None = None) -> None:
         self.archive = archive
         self.sha256 = hashlib.sha256(archive).hexdigest()
-        manifest = self._manifest(archive)
+        manifest = BundleArchive.read_manifest(archive)
         try:
             self.extension_id, self.version = str(manifest["id"]), str(manifest["version"])
             self.assets = BundleAssets.model_validate(
@@ -130,23 +128,6 @@ class ExtensionBundle:
                 "SHA-256 the manifest pins; build the bundle again"
             )
         return path
-
-    @staticmethod
-    def _manifest(archive: bytes) -> dict[str, object]:
-        try:
-            with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:
-                for member in tar:
-                    if member.isfile() and member.name.removeprefix("./") == "manifest.json":
-                        extracted = tar.extractfile(member)
-                        if extracted is None:
-                            break
-                        manifest = json.loads(extracted.read())
-                        if not isinstance(manifest, dict):
-                            raise ValueError("manifest.json is not an object")
-                        return manifest
-        except (tarfile.TarError, OSError, EOFError, ValueError) as exc:
-            raise BundleError(f"the extension bundle is unreadable: {exc}") from exc
-        raise BundleError("the extension bundle has no manifest.json at its root")
 
 
 class AssetBody:

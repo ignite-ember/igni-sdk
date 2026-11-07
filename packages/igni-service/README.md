@@ -91,22 +91,23 @@ igni in-process instead (*Testing a service*, below):
 ```python
 import httpx
 
+from igni_service import Member
 from igni_service.testing import FakeIgni
 
 fake = FakeIgni()
-fake.add_member("org-1", "u-ada", email="ada@acme.test", name="Ada")
-fake.add_member("org-1", "u-max", email="max@acme.test", name="Max")
+fake.directory.add_member("org-1", Member(user_id="u-ada", email="ada@acme.test", name="Ada"))
+fake.directory.add_member("org-1", Member(user_id="u-max", email="max@acme.test", name="Max"))
 app = create_app(fake.service())
 
-ada = {"Authorization": f"Bearer {fake.person_token('u-ada', org_id='org-1')}"}
-igni_itself = {"Authorization": f"Bearer {fake.igni_token('org-1')}"}
+ada = {"Authorization": f"Bearer {fake.signer.person_token('u-ada', org_id='org-1')}"}
+igni_itself = {"Authorization": f"Bearer {fake.signer.igni_token('org-1')}"}
 transport = httpx.ASGITransport(app=app)
-async with httpx.AsyncClient(transport=transport, base_url=fake.service_url) as http:
+async with httpx.AsyncClient(transport=transport, base_url=fake.addresses.service_url) as http:
     sent = await http.post(
         "/comments", json={"doc": "runbook", "text": "Looks good", "watchers": ["u-max"]}, headers=ada
     )
     assert sent.status_code == 200, sent.text
-    assert [d.user_id for d in fake.deliveries] == ["u-max"]
+    assert [d.user_id for d in fake.notifications.deliveries] == ["u-max"]
 
     exported = await http.get("/v1/igni/subjects/u-ada/export", headers=igni_itself)
     assert exported.json()["sections"][0]["rows"] == [{"doc": "runbook", "text": "Looks good"}]
@@ -265,7 +266,7 @@ async def notes(caller: Caller = Depends(igni.caller)) -> list[str]:
 service accepts, and a 401 for any other; `igni.person` stays people only
 whatever the service accepts, so a route meant for people never takes an
 app for one. `igni.caller_of(token)` is the same outside a request, and
-`FakeIgni.app_token` / `space_token` make tokens for tests.
+`fake.signer.app_token` / `space_token` make tokens for tests.
 
 ## What a VM needs: VM profile requests
 
@@ -469,8 +470,9 @@ The check **fails closed**: tokens are answered with a 503 until the
 revocations have been read once, and whenever they go unrefreshed for
 `IGNI_REVOCATIONS_MAX_STALENESS` seconds (30 by default). A service that
 never runs `igni.lifespan` checks nothing. In tests,
-`FakeIgni.publish_revocation("u-ada", org_id=…)` (`org_id=None` for every
-organisation, `kind="app"` or `"space"` for those) publishes one.
+`fake.revocations.publish("u-ada", org_id=…)` (`org_id=None` for every
+organisation, `kind=RevokedKind.APP` or `RevokedKind.SPACE` for those)
+publishes one.
 
 ## Calls from the extension's page
 
@@ -544,11 +546,11 @@ when the extension should decide — look something up in the producer's
 igni, choose a chat, post or not.
 
 ```python
-from igni_service import Attachment, Producer
+from igni_service import Attachment, Member, Producer
 from igni_service.testing import FakeIgni
 
 fake = FakeIgni()  # igni, in-process: what a service holds in production is its IgniService
-fake.add_member("org-1", "u-marieke", email="marieke@acme.test")
+fake.directory.add_member("org-1", Member(user_id="u-marieke", email="marieke@acme.test"))
 igni, org_id = fake.service(), "org-1"
 pdf = b"%PDF-1.7 the claim form"
 with open("damage.jpg", "wb") as photo:
@@ -639,7 +641,7 @@ about one person, each with a token igni signs for this service
 | `GET /v1/igni/subjects/{user_id}/export` | `@igni.on_export` | 200, `{"sections": [{"name": …, "rows": [{…}]}]}` |
 
 Without a handler the route answers 501, which igni reports as
-unconfirmed under the service's name. In a test, `fake.igni_token(org_id)`
+unconfirmed under the service's name. In a test, `fake.signer.igni_token(org_id)`
 is the token igni sends (the opening example calls both).
 
 `@igni.on_erase` and `@igni.on_export` receive a `Subject`: the person's
@@ -660,9 +662,9 @@ time hears about it when it is back. A token for one organisation is
 refused for another's path, and a service without a handler answers 501
 — unconfirmed, so igni keeps asking.
 
-In tests, `fake.delete_organisation(org_id)` removes the organisation from
-the fake's directory and returns the call igni owes the service; `await
-deletion.send(http)` delivers it.
+In tests, `fake.directory.delete_organisation(org_id, fake.signer.igni_token(org_id))`
+removes the organisation from the fake's directory and returns the call
+igni owes the service; `await deletion.send(http)` delivers it.
 
 ## Deploying
 
@@ -777,20 +779,28 @@ records notifications.
 `require_approval=False` by default, so a service registering with it
 gets service tokens at once. `FakeIgni(require_approval=True)` plays a
 deployment whose super admin has not approved it yet — service tokens
-raise `ServiceNotApproved` — until the test calls `fake.approve()`;
-`fake.revoke()` plays them revoking it. `fake.hold_uploads = "reason"`
+raise `ServiceNotApproved` — until the test calls `fake.clients.approve()`;
+`fake.clients.revoke()` plays them revoking it. `fake.extensions.hold("reason")`
 plays igni holding a new version for a super admin.
+
+Each part of igni is a collaborator on the fake: `fake.directory`,
+`fake.clients`, `fake.signer` (tokens, keys), `fake.oauth` (grants,
+revoked refresh tokens, the portal's sign-in), `fake.extensions`,
+`fake.notifications`, `fake.revocations`, `fake.traffic` (every request;
+`fail(path, status)` and `heal()` play igni failing), `fake.agents` and
+`fake.vm_profiles`. `fake.reset()` forgets what happened and keeps who
+exists, for a fake shared across a session.
 
 ```python
 import httpx
 from fastapi import Depends, FastAPI
 
-from igni_service import Notification, Person
-from igni_service.testing import FakeIgni
+from igni_service import Member, Notification, Person
+from igni_service.testing import FakeIgni, SettingsOverrides
 
 fake = FakeIgni()
-fake.add_member("org-1", "u-ada", email="ada@acme.test", name="Ada")
-igni = fake.service(fake.settings(public_base_url="https://service.test"))  # wired to the fake
+fake.directory.add_member("org-1", Member(user_id="u-ada", email="ada@acme.test", name="Ada"))
+igni = fake.service(fake.settings(SettingsOverrides(public_base_url="https://service.test")))
 app = FastAPI()
 igni.install(app)
 
@@ -800,21 +810,22 @@ async def settings(person: Person = Depends(igni.web.person)) -> dict[str, str]:
     return {"hello": person.name}
 
 
-token = fake.person_token("u-ada", org_id="org-1")   # what the extension would send
-igni_call = fake.igni_token("org-1")                 # what igni sends for erasure/export
+token = fake.signer.person_token("u-ada", org_id="org-1")  # what the extension would send
+igni_call = fake.signer.igni_token("org-1")                # what igni sends for erasure/export
 
 transport = httpx.ASGITransport(app=app)
 async with httpx.AsyncClient(transport=transport, base_url="https://service.test") as browser:
     login = await browser.get(igni.web.login_path)   # a person opening the service's pages
-    back = fake.authorize(login.headers["location"], user_id="u-ada", org_id="org-1")  # the portal
+    location = login.headers["location"]             # the portal signs Ada in
+    back = fake.oauth.sign_ins.authorize(location, user_id="u-ada", org_id="org-1")
     await browser.get(back)                          # the service keeps a session
     assert (await browser.get("/settings")).json() == {"hello": "Ada"}
     await browser.post(igni.web.logout_path)
 
-assert len(fake.revoked) == 1                        # the refresh token /auth/logout revoked
+assert len(fake.oauth.revoked) == 1                  # the refresh token /auth/logout revoked
 
 await igni.host("org-1").notify(Notification(kind="comment", title="Runbook", recipients=["u-ada"]))
-assert [d.user_id for d in fake.deliveries] == ["u-ada"]
+assert [d.user_id for d in fake.notifications.deliveries] == ["u-ada"]
 ```
 
 `await fake.upload(bundle, igni)` uploads an extension as the service does
@@ -823,7 +834,7 @@ at start-up — signed, over the fake's wire — from a built
 a test that needs it on igni (its VM profile request, say) without a
 lifespan or a wheelhouse.
 
-What a service sent producers' agents is `fake.events` (every kind) and
+What a service sent producers' agents is `fake.agents.items` (every kind) and
 `fake.agents.uploads`; `fake.agents.settle(event_id, "delivered")` plays
 the producer's igni taking one, so `agent.status` reads it, and
 `fake.agents.grants = {"messages"}` plays an extension that declares

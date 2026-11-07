@@ -19,11 +19,12 @@ import hashlib
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from pydantic import BaseModel, ValidationError, model_validator
 
+from igni_service.testing_bundles import HeldExtension
 from igni_service.vm_profiles import (
     Assigned,
     Decider,
@@ -80,6 +81,22 @@ class NoVmProfileRequest(LookupError):
         app = "An app's appears once it asks: `await app.vm_profile.request(...)`."
         how = f"{extension} {app}" if kind == "extension" else f"{app} {extension}"
         super().__init__(f"no VM profile request from {kind} {subject_id} in {org_id}. {how}")
+
+
+class VmProfileSubject(BaseModel):
+    """Whose VM profile request: an app's, or an extension's."""
+
+    kind: Literal["app", "extension"]
+    subject_id: str
+
+    @classmethod
+    def of(cls, app: str | None, extension: str | None) -> VmProfileSubject:
+        """The one of `app` and `extension` that is named."""
+        if (app is None) == (extension is None):
+            raise ValueError("name exactly one of app= and extension=")
+        if app is not None:
+            return cls(kind="app", subject_id=app)
+        return cls(kind="extension", subject_id=str(extension))
 
 
 class FakeCaps(BaseModel):
@@ -216,13 +233,12 @@ class FakeVmProfiles:
             200, json={**served.model_dump(mode="json"), "volume_gib": profile.settings.volume_gib}
         )
 
-    def service(
-        self, org_id: str, client_id: str, extension_id: str | None, manifest: dict[str, Any] | None
-    ) -> httpx.Response:
+    def service(self, org_id: str, client_id: str, shipped: HeldExtension | None) -> httpx.Response:
         """What `GET /v1/service-vm-profile` answers a service for one organisation."""
-        vm = (manifest or {}).get("vm")
-        if extension_id is None or not isinstance(vm, dict):
+        vm = shipped.manifest.vm if shipped else None
+        if shipped is None or vm is None:
             return httpx.Response(200, json={"org_id": org_id, "extension_id": None})
+        extension_id = shipped.extension_id
         try:
             resolved = self._resolve(
                 {MANIFEST_FIELDS[key]: value for key, value in vm.items() if key in MANIFEST_FIELDS}
@@ -233,7 +249,7 @@ class FakeVmProfiles:
             org_id,
             "extension",
             extension_id,
-            str((manifest or {}).get("name") or extension_id),
+            shipped.manifest.name or extension_id,
             resolved,
             requested_by={"kind": "service", "id": client_id},
         )
@@ -346,4 +362,4 @@ class FakeVmProfiles:
         )
 
 
-__all__ = ["FakeCaps", "FakeVmProfiles"]
+__all__ = ["FakeCaps", "FakeVmProfiles", "NoVmProfileRequest", "VmProfileSubject"]

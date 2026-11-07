@@ -19,7 +19,7 @@ import igni_service
 from igni_service import IgniService, MemoryKeyStore
 from igni_service.bundle import BundleArchive
 from igni_service.registration import SIGNATURE_HEADER
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.urls import IgniPaths
 
 
@@ -49,11 +49,15 @@ async def run_lifespan(igni: IgniService) -> None:
 
 
 async def test_starting_registers_the_service_with_its_own_public_key(fake: FakeIgni) -> None:
-    igni = fake.service(fake.settings(public_base_url="https://Service.test/", service_name="Acme"))
+    igni = fake.service(
+        fake.settings(
+            SettingsOverrides(public_base_url="https://Service.test/", service_name="Acme")
+        )
+    )
 
     await run_lifespan(igni)
 
-    [seen] = fake.requests_to(IgniPaths.CLIENTS)
+    [seen] = fake.traffic.requests_to(IgniPaths.CLIENTS)
     body = seen.json_body()
     assert body["client_name"] == "Acme"
     assert body["client_uri"] == "https://service.test"
@@ -85,23 +89,23 @@ async def test_a_restart_with_the_same_key_finds_the_same_registration(fake: Fak
     await run_lifespan(first)
     await run_lifespan(second)
 
-    assert len(fake.clients) == 1
+    assert len(fake.clients.clients) == 1
     assert await first.registration.client_id() == await second.registration.client_id()
 
 
 async def test_registration_retries_until_igni_answers(fake: FakeIgni) -> None:
-    fake.failing[IgniPaths.CLIENTS] = 503
+    fake.traffic.fail(IgniPaths.CLIENTS, 503)
     igni = fake.service()
     app = FastAPI(lifespan=igni.lifespan)
 
     async with app.router.lifespan_context(app):
-        while len(fake.requests_to(IgniPaths.CLIENTS)) < 2:
+        while len(fake.traffic.requests_to(IgniPaths.CLIENTS)) < 2:
             await asyncio.sleep(0.01)
         assert not igni.registration.registered.is_set()
-        fake.failing.clear()
+        fake.traffic.heal()
         await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
 
-    assert len(fake.clients) == 1
+    assert len(fake.clients.clients) == 1
 
 
 async def test_the_bundle_is_uploaded_signed_and_only_when_it_changed(
@@ -109,47 +113,61 @@ async def test_the_bundle_is_uploaded_signed_and_only_when_it_changed(
 ) -> None:
     bundle = write_bundle(tmp_path)
     store = MemoryKeyStore()
-    igni = fake.service(fake.settings(extension_bundle_path=str(bundle)), key_store=store)
+    igni = fake.service(
+        fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))), key_store=store
+    )
 
     await run_lifespan(igni)
 
     client_id = await igni.registration.client_id()
-    [upload] = [s for s in fake.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"]
+    [upload] = [
+        s for s in fake.traffic.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"
+    ]
     assert upload.headers["content-type"] == "application/gzip"
     assert upload.headers[SIGNATURE_HEADER.lower()]
-    assert fake.extensions[client_id].extension_id == "acme.example"
-    assert fake.extensions[client_id].version == "1.0.0"
+    assert fake.extensions.extensions[client_id].extension_id == "acme.example"
+    assert fake.extensions.extensions[client_id].version == "1.0.0"
 
-    again = fake.service(fake.settings(extension_bundle_path=str(bundle)), key_store=store)
+    again = fake.service(
+        fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))), key_store=store
+    )
     await run_lifespan(again)
-    puts = [s for s in fake.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"]
+    puts = [
+        s for s in fake.traffic.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"
+    ]
     assert len(puts) == 1
 
     bundle.unlink()
     changed = write_bundle(tmp_path, version="1.0.1")
-    third = fake.service(fake.settings(extension_bundle_path=str(changed)), key_store=store)
+    third = fake.service(
+        fake.settings(SettingsOverrides(extension_bundle_path=str(changed))), key_store=store
+    )
     await run_lifespan(third)
-    puts = [s for s in fake.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"]
+    puts = [
+        s for s in fake.traffic.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"
+    ]
     assert len(puts) == 2
-    assert fake.extensions[client_id].version == "1.0.1"
+    assert fake.extensions.extensions[client_id].version == "1.0.1"
 
 
 async def test_a_refused_bundle_is_logged_and_not_retried(
     fake: FakeIgni, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     bundle = write_bundle(tmp_path)
-    shipper = fake.service(fake.settings(extension_bundle_path=str(bundle)))
+    shipper = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))))
     await shipper.registration.keep_trying()
-    fake.approve(await shipper.registration.client_id())
+    fake.clients.approve(await shipper.registration.client_id())
     bundle.unlink()
-    rival = fake.service(fake.settings(extension_bundle_path=str(write_bundle(tmp_path))))
+    rival = fake.service(
+        fake.settings(SettingsOverrides(extension_bundle_path=str(write_bundle(tmp_path))))
+    )
 
     with caplog.at_level(logging.ERROR, logger="igni_service"):
         assert await asyncio.wait_for(rival.registration.keep_trying(), timeout=5) is not None
 
     assert "refused extension acme.example" in caplog.text
     assert "409" in caplog.text
-    assert len(fake.requests_to(IgniPaths.CLIENTS)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 2
 
 
 async def test_an_unreadable_bundle_leaves_the_registration_standing(
@@ -157,14 +175,14 @@ async def test_an_unreadable_bundle_leaves_the_registration_standing(
 ) -> None:
     broken = tmp_path / "broken.tar.gz"
     broken.write_bytes(b"not a tarball")
-    igni = fake.service(fake.settings(extension_bundle_path=str(broken)))
+    igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(broken))))
 
     with caplog.at_level(logging.ERROR, logger="igni_service"):
         registration = await asyncio.wait_for(igni.registration.keep_trying(), timeout=5)
 
     assert registration is not None
     assert "unreadable" in caplog.text
-    assert fake.extensions == {}
+    assert fake.extensions.extensions == {}
 
 
 async def test_callers_during_start_up_share_the_one_registration(fake: FakeIgni) -> None:
@@ -197,7 +215,7 @@ async def test_callers_during_start_up_share_the_one_registration(fake: FakeIgni
         igni.registration.client_id(),
     )
 
-    assert len(fake.requests_to(IgniPaths.CLIENTS)) == 1
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1
     assert ids[1] == ids[2] == ids[0].client_id
 
 
@@ -209,7 +227,7 @@ class TestTheStartUpSaysWhatComesNext:
     ) -> None:
         store = MemoryKeyStore()
         await run_lifespan(fake.service(key_store=store))
-        fake.approve()
+        fake.clients.approve()
 
         caplog.clear()
         with caplog.at_level(logging.INFO, logger="igni_service"):
@@ -224,7 +242,7 @@ class TestTheStartUpSaysWhatComesNext:
     ) -> None:
         store = MemoryKeyStore()
         await run_lifespan(fake.service(key_store=store))
-        fake.revoke()
+        fake.clients.revoke()
 
         caplog.clear()
         with caplog.at_level(logging.INFO, logger="igni_service"):
@@ -239,16 +257,21 @@ class TestTheStartUpSaysWhatComesNext:
         store = MemoryKeyStore()
         first = write_bundle(tmp_path)
         await run_lifespan(
-            fake.service(fake.settings(extension_bundle_path=str(first)), key_store=store)
+            fake.service(
+                fake.settings(SettingsOverrides(extension_bundle_path=str(first))), key_store=store
+            )
         )
-        fake.approve()
-        fake.hold_uploads = "it asks for more than the approved version"
+        fake.clients.approve()
+        fake.extensions.hold("it asks for more than the approved version")
         first.unlink()
         wider = write_bundle(tmp_path, version="1.1.0")
 
         with caplog.at_level(logging.INFO, logger="igni_service"):
             await run_lifespan(
-                fake.service(fake.settings(extension_bundle_path=str(wider)), key_store=store)
+                fake.service(
+                    fake.settings(SettingsOverrides(extension_bundle_path=str(wider))),
+                    key_store=store,
+                )
             )
 
         assert "held" in caplog.text
@@ -267,14 +290,14 @@ def test_its_lines_show_under_uvicorn_which_configures_only_its_own_loggers(
             f"""
             import asyncio, logging
             from fastapi import FastAPI
-            from igni_service.testing import FakeIgni
+            from igni_service.testing import FakeIgni, SettingsOverrides
 
             # What uvicorn's LOGGING_CONFIG does: its own loggers, not the root.
             logging.getLogger("uvicorn").addHandler(logging.StreamHandler())
 
             async def main():
                 fake = FakeIgni()
-                igni = fake.service(fake.settings(extension_bundle_path={str(bundle)!r}))
+                igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path={str(bundle)!r})))
                 app = FastAPI(lifespan=igni.lifespan)
                 async with app.router.lifespan_context(app):
                     await asyncio.wait_for(igni.registration.registered.wait(), 5)

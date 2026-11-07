@@ -6,9 +6,9 @@ import httpx
 import pytest
 from fastapi import Depends, FastAPI
 
-from igni_service import IgniService, Person
+from igni_service import IgniService, Member, Person
 from igni_service.crypto import RsaKeyPair
-from igni_service.testing import FakeIgni, ManualClock
+from igni_service.testing import FakeIgni, ManualClock, SettingsOverrides, TokenOverrides
 from igni_service.tokens import TokenRefused
 from igni_service.urls import IgniPaths
 
@@ -18,7 +18,7 @@ from .conftest import ORG, OTHER_ORG, bearer
 async def test_a_person_token_names_the_person_and_their_organisation(
     http: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
-    response = await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    response = await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
 
     assert response.status_code == 200
     assert response.json() == {
@@ -42,14 +42,14 @@ async def test_no_token_is_refused_with_a_bearer_challenge(http: httpx.AsyncClie
 @pytest.mark.parametrize(
     "overrides",
     [
-        {"aud": "http://another-service.test"},
-        {"aud": FakeIgni.ISSUER},
-        {"iss": "https://not-igni.test"},
-        {"use": "refresh"},
-        {"use": "session"},
-        {"use": "service"},
-        {"use": "igni"},
-        {"org": ""},
+        TokenOverrides(aud="http://another-service.test"),
+        TokenOverrides(aud=FakeIgni.ISSUER),
+        TokenOverrides(iss="https://not-igni.test"),
+        TokenOverrides(use="refresh"),
+        TokenOverrides(use="session"),
+        TokenOverrides(use="service"),
+        TokenOverrides(use="igni"),
+        TokenOverrides(org=""),
     ],
     ids=[
         "other-service",
@@ -63,9 +63,9 @@ async def test_no_token_is_refused_with_a_bearer_challenge(http: httpx.AsyncClie
     ],
 )
 async def test_a_token_that_is_not_for_this_service_or_not_a_person_is_refused(
-    http: httpx.AsyncClient, fake: FakeIgni, overrides: dict[str, str]
+    http: httpx.AsyncClient, fake: FakeIgni, overrides: TokenOverrides
 ) -> None:
-    token = fake.person_token("u-ada", org_id=ORG, **overrides)
+    token = fake.signer.person_token("u-ada", org_id=ORG, overrides=overrides)
 
     response = await http.get("/me", headers=bearer(token))
 
@@ -76,7 +76,7 @@ async def test_a_token_that_is_not_for_this_service_or_not_a_person_is_refused(
 async def test_an_expired_token_is_refused(
     http: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
-    token = fake.person_token("u-ada", org_id=ORG)
+    token = fake.signer.person_token("u-ada", org_id=ORG)
     assert (await http.get("/me", headers=bearer(token))).status_code == 200
 
     clock.advance(601)
@@ -89,8 +89,10 @@ async def test_a_token_signed_by_a_key_igni_does_not_publish_is_refused(
 ) -> None:
     impostor = RsaKeyPair.generate()
 
-    same_kid = fake.person_token("u-ada", org_id=ORG, key=impostor)
-    own_kid = fake.person_token("u-ada", org_id=ORG, key=impostor, kid="made-up")
+    same_kid = fake.signer.person_token("u-ada", org_id=ORG, overrides=TokenOverrides(key=impostor))
+    own_kid = fake.signer.person_token(
+        "u-ada", org_id=ORG, overrides=TokenOverrides(key=impostor, kid="made-up")
+    )
 
     assert (await http.get("/me", headers=bearer(same_kid))).status_code == 401
     assert (await http.get("/me", headers=bearer(own_kid))).status_code == 401
@@ -113,49 +115,56 @@ async def test_igni_keys_are_kept_for_max_age(
     http: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
     for _ in range(3):
-        token = fake.person_token("u-ada", org_id=ORG)
+        token = fake.signer.person_token("u-ada", org_id=ORG)
         assert (await http.get("/me", headers=bearer(token))).status_code == 200
-    assert len(fake.requests_to(IgniPaths.JWKS)) == 1
+    assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 1
 
-    clock.advance(fake.max_age + 1)
-    await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    clock.advance(fake.signer.max_age + 1)
+    await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
 
-    assert len(fake.requests_to(IgniPaths.JWKS)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 2
 
 
 async def test_a_new_key_is_fetched_at_once_when_a_token_names_it(
     http: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
-    await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
-    fake.rotate()
+    await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
+    fake.signer.keys.rotate()
 
-    response = await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    response = await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
 
     assert response.status_code == 200
-    assert len(fake.requests_to(IgniPaths.JWKS)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 2
 
 
 async def test_made_up_key_ids_do_not_become_a_stream_of_requests_to_igni(
     http: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
-    await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
     for n in range(5):
-        token = fake.person_token("u-ada", org_id=ORG, kid=f"made-up-{n}")
+        token = fake.signer.person_token(
+            "u-ada", org_id=ORG, overrides=TokenOverrides(kid=f"made-up-{n}")
+        )
         assert (await http.get("/me", headers=bearer(token))).status_code == 401
-    assert len(fake.requests_to(IgniPaths.JWKS)) == 2
+    assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 2
 
     clock.advance(31)
-    await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG, kid="again")))
+    await http.get(
+        "/me",
+        headers=bearer(
+            fake.signer.person_token("u-ada", org_id=ORG, overrides=TokenOverrides(kid="again"))
+        ),
+    )
 
-    assert len(fake.requests_to(IgniPaths.JWKS)) == 3
+    assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 3
 
 
 async def test_a_token_that_cannot_be_checked_is_503_not_401(
     http: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
-    fake.failing[IgniPaths.JWKS] = 500
+    fake.traffic.fail(IgniPaths.JWKS, 500)
 
-    response = await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    response = await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
 
     assert response.status_code == 503
 
@@ -163,19 +172,19 @@ async def test_a_token_that_cannot_be_checked_is_503_not_401(
 async def test_cached_keys_keep_answering_while_igni_is_away(
     http: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
-    await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
-    fake.failing[IgniPaths.JWKS] = 500
-    clock.advance(fake.max_age + 1)
+    await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
+    fake.traffic.fail(IgniPaths.JWKS, 500)
+    clock.advance(fake.signer.max_age + 1)
 
-    response = await http.get("/me", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    response = await http.get("/me", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG)))
 
     assert response.status_code == 200
 
 
 async def test_the_audience_is_the_service_url_as_igni_normalises_it(fake: FakeIgni) -> None:
-    igni = fake.service(fake.settings(public_base_url="HTTP://Service.TEST/"))
+    igni = fake.service(fake.settings(SettingsOverrides(public_base_url="HTTP://Service.TEST/")))
 
-    person = await igni.verifier.person(fake.person_token("u-max", org_id=ORG))
+    person = await igni.verifier.person(fake.signer.person_token("u-max", org_id=ORG))
 
     assert person.user_id == "u-max"
     assert igni.server.own_url == "http://service.test"
@@ -184,22 +193,26 @@ async def test_the_audience_is_the_service_url_as_igni_normalises_it(fake: FakeI
 async def test_igni_calling_is_an_igni_token_naming_igni_as_its_subject(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    call = await igni.verifier.igni_call(fake.igni_token(ORG))
+    call = await igni.verifier.igni_call(fake.signer.igni_token(ORG))
     assert call.org_id == ORG
 
     with pytest.raises(TokenRefused):
-        await igni.verifier.igni_call(fake.igni_token(ORG, sub="someone-else"))
+        await igni.verifier.igni_call(
+            fake.signer.igni_token(ORG, TokenOverrides(sub="someone-else"))
+        )
     with pytest.raises(TokenRefused):
-        await igni.verifier.igni_call(fake.person_token("u-ada", org_id=ORG))
+        await igni.verifier.igni_call(fake.signer.person_token("u-ada", org_id=ORG))
     with pytest.raises(TokenRefused):
-        await igni.verifier.igni_call(fake.igni_token(""))
+        await igni.verifier.igni_call(fake.signer.igni_token(""))
 
 
 async def test_org_admin_is_an_admin_of_the_organisation_the_token_is_for(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    fake.add_member(ORG, "u-root", email="root@acme.test", super_admin=True)
-    fake.add_member(OTHER_ORG, "u-max", role="admin")
+    fake.directory.add_member(
+        ORG, Member(user_id="u-root", email="root@acme.test", super_admin=True)
+    )
+    fake.directory.add_member(OTHER_ORG, Member(user_id="u-max", role="admin"))
     app = FastAPI()
 
     @app.get("/admin")
@@ -209,12 +222,18 @@ async def test_org_admin_is_an_admin_of_the_organisation_the_token_is_for(
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://service.test"
     ) as http:
-        ada = await http.get("/admin", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
-        max_here = await http.get("/admin", headers=bearer(fake.person_token("u-max", org_id=ORG)))
-        max_there = await http.get(
-            "/admin", headers=bearer(fake.person_token("u-max", org_id=OTHER_ORG))
+        ada = await http.get(
+            "/admin", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG))
         )
-        root = await http.get("/admin", headers=bearer(fake.person_token("u-root", org_id=ORG)))
+        max_here = await http.get(
+            "/admin", headers=bearer(fake.signer.person_token("u-max", org_id=ORG))
+        )
+        max_there = await http.get(
+            "/admin", headers=bearer(fake.signer.person_token("u-max", org_id=OTHER_ORG))
+        )
+        root = await http.get(
+            "/admin", headers=bearer(fake.signer.person_token("u-root", org_id=ORG))
+        )
         nobody = await http.get("/admin")
 
     assert ada.json() == {"admin": "u-ada", "org": ORG}
@@ -241,9 +260,9 @@ class TestARefusalSaysWhy:
     @pytest.mark.parametrize(
         ("overrides", "said"),
         [
-            ({"aud": "http://another-service.test"}, "audience"),
-            ({"use": "refresh"}, "kind of token"),
-            ({"org": ""}, "organisation"),
+            (TokenOverrides(aud="http://another-service.test"), "audience"),
+            (TokenOverrides(use="refresh"), "kind of token"),
+            (TokenOverrides(org=""), "organisation"),
         ],
         ids=["wrong-audience", "wrong-kind", "no-org"],
     )
@@ -252,10 +271,10 @@ class TestARefusalSaysWhy:
         http: httpx.AsyncClient,
         fake: FakeIgni,
         caplog: pytest.LogCaptureFixture,
-        overrides: dict[str, str],
+        overrides: TokenOverrides,
         said: str,
     ) -> None:
-        token = fake.person_token("u-ada", org_id=ORG, **overrides)
+        token = fake.signer.person_token("u-ada", org_id=ORG, overrides=overrides)
 
         with caplog.at_level("INFO", logger="igni_service"):
             response = await http.get("/me", headers=bearer(token))
@@ -271,7 +290,7 @@ class TestARefusalSaysWhy:
         self, http: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
     ) -> None:
         garbage = await http.get("/me", headers=bearer("not a jwt"))
-        token = fake.person_token("u-ada", org_id=ORG)
+        token = fake.signer.person_token("u-ada", org_id=ORG)
         clock.advance(601)
         expired = await http.get("/me", headers=bearer(token))
 

@@ -8,7 +8,7 @@ import httpx
 import pytest
 from fastapi import Depends, FastAPI
 
-from igni_service import IgniService, Person
+from igni_service import IgniService, Member, Organisation, Person
 from igni_service.testing import FakeIgni, ManualClock
 
 ORG = "org-acme"
@@ -23,12 +23,23 @@ def clock() -> ManualClock:
 @pytest.fixture
 def fake(clock: ManualClock) -> FakeIgni:
     fake = FakeIgni(clock=clock)
-    fake.add_organisation(ORG, name="Acme", slug="acme", tenant_number=7, domains=["acme.test"])
-    fake.add_member(ORG, "u-ada", email="ada@acme.test", name="Ada Lovelace", role="admin")
-    fake.add_member(ORG, "u-max", email="max@acme.test", name="Max Planck")
-    fake.add_member(ORG, "u-sam", email="sam@acme.test", name="Sam Patel")
-    fake.add_member(ORG, "u-gone", email="gone@acme.test", name="Gone Person", status="deactivated")
-    fake.add_member(OTHER_ORG, "u-eve", email="eve@other.test", name="Eve")
+    fake.directory.add_organisation(
+        Organisation(org_id=ORG, name="Acme", slug="acme", tenant_number=7, domains=["acme.test"])
+    )
+    fake.directory.add_member(
+        ORG, Member(user_id="u-ada", email="ada@acme.test", name="Ada Lovelace", role="admin")
+    )
+    fake.directory.add_member(
+        ORG, Member(user_id="u-max", email="max@acme.test", name="Max Planck")
+    )
+    fake.directory.add_member(ORG, Member(user_id="u-sam", email="sam@acme.test", name="Sam Patel"))
+    fake.directory.add_member(
+        ORG,
+        Member(user_id="u-gone", email="gone@acme.test", name="Gone Person", status="deactivated"),
+    )
+    fake.directory.add_member(
+        OTHER_ORG, Member(user_id="u-eve", email="eve@other.test", name="Eve")
+    )
     return fake
 
 

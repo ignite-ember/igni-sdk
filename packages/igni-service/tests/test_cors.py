@@ -104,7 +104,7 @@ async def test_a_bearer_route_answers_a_preflight_for_any_origin(page: httpx.Asy
 async def test_a_call_with_a_token_is_readable_cross_origin(
     page: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
-    token = fake.person_token("u-max", org_id=ORG)
+    token = fake.signer.person_token("u-max", org_id=ORG)
     response = await page.get("/v1/notes", headers=bearer(token))
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "*"
@@ -123,7 +123,7 @@ async def test_the_services_own_dependency_on_igni_person_counts(
     page: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
     assert (await page.options("/v1/gated", headers=preflight("GET"))).status_code == 204
-    token = fake.person_token("u-max", org_id=ORG)
+    token = fake.signer.person_token("u-max", org_id=ORG)
     response = await page.get("/v1/gated", headers=bearer(token))
     assert response.headers["access-control-allow-origin"] == "*"
 
@@ -158,7 +158,7 @@ async def test_a_preflight_for_another_method_is_refused(page: httpx.AsyncClient
 async def test_the_answer_from_a_cookie_or_open_route_stays_unreadable(
     page: httpx.AsyncClient, fake: FakeIgni, path: str
 ) -> None:
-    token = fake.person_token("u-max", org_id=ORG)
+    token = fake.signer.person_token("u-max", org_id=ORG)
     called = await page.get(path, headers=bearer(token))
     assert "access-control-allow-origin" not in called.headers
 
@@ -179,7 +179,7 @@ async def test_igni_calls_answer_are_unreadable(page: httpx.AsyncClient, fake: F
 
 
 async def test_a_same_origin_call_is_untouched(fake: FakeIgni, cors_app: FastAPI) -> None:
-    token = fake.person_token("u-max", org_id=ORG)
+    token = fake.signer.person_token("u-max", org_id=ORG)
     transport = httpx.ASGITransport(app=cors_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://service.test") as client:
         response = await client.get("/v1/notes", headers=bearer(token))
@@ -191,7 +191,7 @@ async def test_a_same_origin_call_is_untouched(fake: FakeIgni, cors_app: FastAPI
 async def test_a_route_holding_the_bare_token_is_a_bearer_route(
     page: httpx.AsyncClient, fake: FakeIgni, path: str
 ) -> None:
-    token = fake.person_token("u-max", org_id=ORG)
+    token = fake.signer.person_token("u-max", org_id=ORG)
     response = await page.get(path, headers=bearer(token))
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "*"

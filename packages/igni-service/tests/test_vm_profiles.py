@@ -20,7 +20,7 @@ from igni_service import (
     VmProfileRequest,
 )
 from igni_service.bundle import BundleArchive
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.urls import IgniPaths
 
 from .conftest import ORG, OTHER_ORG
@@ -50,7 +50,7 @@ class TestAnAppAsksForItsOwnVm:
         assert record.requested.packages.npm == ["@playwright/mcp"]
         # What was left out is the Standard value, filled in by igni.
         assert record.requested.volume_gib == 10
-        [put] = [s for s in fake.requests_to(IgniPaths.app_vm_profile_request(app.app_id))]
+        [put] = [s for s in fake.traffic.requests_to(IgniPaths.app_vm_profile_request(app.app_id))]
         assert put.method == "PUT"
         assert put.headers["authorization"].startswith("Bearer app-")
         assert "volume_gib" not in put.json_body()
@@ -128,7 +128,7 @@ class TestAnAppAsksForItsOwnVm:
 
     async def test_an_app_igni_does_not_know_gets_no_token(self, fake: FakeIgni) -> None:
         stranger = fake.app("app-gone", org_id=ORG)
-        del fake.clients["app-gone"]
+        del fake.clients.clients["app-gone"]
 
         with pytest.raises(IgniUnavailable, match="refused this app a token"):
             await stranger.vm_profile.request(BROWSER)
@@ -138,11 +138,11 @@ class TestAnAppAsksForItsOwnVm:
     ) -> None:
         await app.vm_profile.effective()
         await app.vm_profile.effective()
-        assert fake.grants == ["client_credentials"]
+        assert fake.oauth.grants == ["client_credentials"]
 
         fake.clock.advance(600)  # type: ignore[attr-defined]
         await app.vm_profile.effective()
-        assert fake.grants == ["client_credentials", "client_credentials"]
+        assert fake.oauth.grants == ["client_credentials", "client_credentials"]
 
     async def test_the_public_key_is_what_the_org_admin_pastes(
         self, app: IgniApp, fake: FakeIgni
@@ -151,8 +151,8 @@ class TestAnAppAsksForItsOwnVm:
 
         [key] = jwks["keys"]
         assert "d" not in key
-        assert key["n"] == fake.clients["app-review-bot"].jwk.n
-        assert await app.thumbprint() == fake.clients["app-review-bot"].thumbprint
+        assert key["n"] == fake.clients.clients["app-review-bot"].jwk.n
+        assert await app.thumbprint() == fake.clients.clients["app-review-bot"].thumbprint
 
     async def test_it_closes_as_a_context_manager(self, fake: FakeIgni) -> None:
         async with fake.app("app-short", org_id=ORG) as short:
@@ -172,13 +172,16 @@ def write_bundle(tmp_path: Path, vm: dict[str, object] | None, *, version: str =
 
 
 async def shipped(fake: FakeIgni, bundle: Path) -> IgniService:
-    igni = fake.service(fake.settings(extension_bundle_path=str(bundle)))
+    igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))))
     app = FastAPI(lifespan=igni.lifespan)
     async with app.router.lifespan_context(app):
         await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
         await asyncio.sleep(0.05)
-    fake.approve()
-    return fake.service(fake.settings(extension_bundle_path=str(bundle)), key_store=igni.key.store)
+    fake.clients.approve()
+    return fake.service(
+        fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))),
+        key_store=igni.key.store,
+    )
 
 
 MANIFEST_VM: dict[str, object] = {
@@ -212,7 +215,7 @@ class TestAServiceReadsItsExtensionsRequest:
         assert here.profile is not None and here.profile.packages.npm == ["@playwright/mcp"]
         assert here.assigned.groups == 2
         assert there.request is not None and there.request.is_pending
-        [seen, *_] = fake.requests_to(IgniPaths.SERVICE_VM_PROFILE)
+        [seen, *_] = fake.traffic.requests_to(IgniPaths.SERVICE_VM_PROFILE)
         assert seen.headers["authorization"].startswith("Bearer service-")
 
     async def test_a_service_whose_extension_asks_for_nothing_has_no_request(
@@ -251,7 +254,7 @@ class TestInternetIsAskedForAndInternalByDefault:
         record = await app.vm_profile.request(VmProfileRequest(internet=True))
 
         assert record.is_pending and record.requested.internet is True
-        [put] = fake.requests_to(IgniPaths.app_vm_profile_request(app.app_id))
+        [put] = fake.traffic.requests_to(IgniPaths.app_vm_profile_request(app.app_id))
         assert put.json_body() == {"internet": True}
         assert (await app.vm_profile.effective()).internet is False
 
