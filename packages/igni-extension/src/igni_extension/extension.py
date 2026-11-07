@@ -37,6 +37,7 @@ from igni_extension.hooks import HookEvent, HookHandler, HookHandlers
 from igni_extension.host import Host
 from igni_extension.host_model import BusyLease
 from igni_extension.members import Signal
+from igni_extension.offline import OfflineHost
 from igni_extension.prompt import PromptConditions
 from igni_extension.service import ServiceClient
 from igni_extension.service_events import ServiceEventHandler, ServiceEventHandlers
@@ -119,10 +120,13 @@ class IgniExtension:
         self._service_events = ServiceEventHandlers()
         #: The socket to the igni host that `ext.host` travels on.
         self.connection = HostConnection(
-            self.environment.host, self._signals, self._session, self._hooks, self._service_events
+            self.environment.host, self._signals, self._hooks, self._service_events
         )
         #: igni, as this extension sees it: `ext.host.chat`, `ext.host.ui`, …
-        self.host = Host(self.connection)
+        #: Without the socket, only `notifications.notify` reaches it (`igni_extension.offline`).
+        self.host = Host(
+            self.connection if self.connection.configured else OfflineHost(self._session)
+        )
         #: Which of the conditions its prompt contributions wait on hold.
         self.prompt = PromptConditions(self._session)
         self.tokens = HostTokens(self.environment.service, transport=token_transport, clock=clock)

@@ -39,6 +39,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from igni_extension.caller import Caller, CallerScope
 from igni_extension.threads import OffTheLoop
+from igni_extension.wire import HookAnswer, Outcome
 
 logger = logging.getLogger(__name__)
 
@@ -87,28 +88,30 @@ class ServiceEventHandlers:
 
         return register
 
-    async def answer(self, hook_id: str, raw: Any, principal: Any = None) -> dict[str, Any]:
+    async def answer(self, hook_id: str, raw: Any, principal: Any = None) -> HookAnswer:
         """The `answer` request's parameters: handled (`allow`), no handler (`reject`), or `failed`."""
         try:
             event = ServiceEvent.model_validate(raw)
         except Exception as exc:
-            return {"hook": hook_id, "outcome": "failed", "reason": f"not an event: {exc}"}
+            return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=f"not an event: {exc}")
         handler = self._handlers.get(event.type) or self._handlers.get(self.ANY)
         if handler is None:
-            return {"hook": hook_id, "outcome": "reject", "reason": f"no handler for {event.type}"}
+            return HookAnswer(
+                hook=hook_id, outcome=Outcome.REJECT, reason=f"no handler for {event.type}"
+            )
         try:
             with CallerScope.of(Caller.of(principal)):
                 returned = await OffTheLoop.call(handler, event)
         except Exception as exc:
             logger.exception("igni: the handler of service event %s failed", event.type)
-            return {"hook": hook_id, "outcome": "failed", "reason": str(exc)}
+            return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=str(exc))
         if returned is not None:
             logger.warning(
                 "igni: the handler of service event %s returned a value; igni no longer posts "
                 "what a handler returns — post it with ext.host.sessions.chat(id).post",
                 event.type,
             )
-        return {"hook": hook_id, "outcome": "allow"}
+        return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
 
 
 __all__ = ["SERVICE_EVENT", "ServiceEvent", "ServiceEventHandler", "ServiceEventHandlers"]

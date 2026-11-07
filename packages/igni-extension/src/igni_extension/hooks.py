@@ -39,10 +39,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-from pydantic_core import to_jsonable_python
 
 from igni_extension.caller import Caller, CallerScope
 from igni_extension.threads import OffTheLoop
+from igni_extension.wire import HookAnswer, Outcome
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +180,9 @@ class Allow(BaseModel):
 
     outcome: Literal["allow"] = "allow"
 
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
+
 
 class Reject(BaseModel):
     """Stop it. `reason` reaches the agent or the person, so write it for them."""
@@ -190,6 +193,9 @@ class Reject(BaseModel):
     def __init__(self, reason: str, **data: Any) -> None:
         super().__init__(reason=reason, **data)
 
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        return HookAnswer(hook=hook_id, outcome=Outcome.REJECT, reason=self.reason)
+
 
 class Modify(BaseModel):
     """Let it happen, changed: the whole value, with only the fields it may change changed."""
@@ -199,6 +205,9 @@ class Modify(BaseModel):
 
     def __init__(self, value: Any, **data: Any) -> None:
         super().__init__(value=value, **data)
+
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        return HookAnswer(hook=hook_id, outcome=Outcome.MODIFY, value=self.value)
 
 
 type Answer = Allow | Reject | Modify
@@ -248,9 +257,7 @@ class HookHandlers:
         except Exception:
             logger.exception("igni: the handler of %s failed", name)
 
-    async def answer(
-        self, hook_id: str, name: str, raw: Any, principal: Any = None
-    ) -> dict[str, Any]:
+    async def answer(self, hook_id: str, name: str, raw: Any, principal: Any = None) -> HookAnswer:
         """The `answer` request's parameters for one deciding event."""
         found = self._handlers.get(name)
         if found is None:
@@ -259,21 +266,18 @@ class HookHandlers:
                 "Add a handler, or take it out of permissions.hooks",
                 name,
             )
-            return {"hook": hook_id, "outcome": "allow"}
+            return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
         event, handler = found
         try:
-            answer = await self._call(handler, event.parse(raw), Caller.of(principal))
+            answer: Answer | None = await self._call(
+                handler, event.parse(raw), Caller.of(principal)
+            )
         except Exception as exc:
             logger.exception("igni: the handler of %s failed", name)
-            return {"hook": hook_id, "outcome": "failed", "reason": str(exc)}
+            return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=str(exc))
         if answer is None:
             answer = Allow()
-        body: dict[str, Any] = {"hook": hook_id, "outcome": answer.outcome}
-        if isinstance(answer, Reject):
-            body["reason"] = answer.reason
-        elif isinstance(answer, Modify):
-            body["value"] = to_jsonable_python(answer.value)
-        return body
+        return answer.for_hook(hook_id)
 
 
 __all__ = [
