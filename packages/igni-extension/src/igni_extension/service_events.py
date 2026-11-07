@@ -17,9 +17,8 @@ wants through its host calls, and the agent runs only if it posts:
 
 An event with no handler for its type, or that reaches no running
 extension, or whose handler raises, is *not handled*: the service reads
-`not_handled` when it polls the event. A handler that returned text used
-to have igni post it; it no longer does — the text is ignored, with a
-warning in the log. Post it yourself.
+`not_handled` when it polls the event. A handler returns nothing: what
+it wants posted, it posts through `ext.host.sessions`.
 
 A handler should be quick — igni waits on it (10 s at most) — and may be
 handed the same event twice (delivery is at least once; igni drops the
@@ -35,7 +34,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from igni_extension.caller import Caller, CallerScope
 from igni_extension.threads import OffTheLoop
@@ -63,7 +62,7 @@ class ServiceEvent(BaseModel):
     expires_at: str | None = None
 
 
-ServiceEventHandler = Callable[[ServiceEvent], Awaitable[object] | object]
+ServiceEventHandler = Callable[[ServiceEvent], Awaitable[None] | None]
 
 
 class ServiceEventHandlers:
@@ -88,11 +87,11 @@ class ServiceEventHandlers:
 
         return register
 
-    async def answer(self, hook_id: str, raw: Any, caller: Caller | None = None) -> HookAnswer:
+    async def answer(self, hook_id: str, raw: object, caller: Caller | None = None) -> HookAnswer:
         """The `answer` request's parameters: handled (`allow`), no handler (`reject`), or `failed`."""
         try:
             event = ServiceEvent.model_validate(raw)
-        except Exception as exc:
+        except ValidationError as exc:
             return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=f"not an event: {exc}")
         handler = self._handlers.get(event.type) or self._handlers.get(self.ANY)
         if handler is None:
@@ -101,16 +100,10 @@ class ServiceEventHandlers:
             )
         try:
             with CallerScope.of(caller):
-                returned = await OffTheLoop.call(handler, event)
+                await OffTheLoop.call(handler, event)
         except Exception as exc:
             logger.exception("igni: the handler of service event %s failed", event.type)
             return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=str(exc))
-        if returned is not None:
-            logger.warning(
-                "igni: the handler of service event %s returned a value; igni no longer posts "
-                "what a handler returns — post it with ext.host.sessions.chat(id).post",
-                event.type,
-            )
         return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
 
 

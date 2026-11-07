@@ -8,7 +8,6 @@ The answer only says whether a handler took it — `allow` — or not:
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -93,19 +92,20 @@ async def test_a_catch_all_handles_any_other_type(host: FakeHost) -> None:
     assert seen == ["index.ready"] and answer["outcome"] == "allow"
 
 
-async def test_returned_text_is_no_longer_posted_and_says_so(
-    host: FakeHost, caplog: pytest.LogCaptureFixture
-) -> None:
+async def test_an_event_that_does_not_validate_is_reported_failed(host: FakeHost) -> None:
     ext = IgniExtension("acme.example", environ=host.environment())
 
-    @ext.on_service_event("index.ready")
-    def old_style(event: ServiceEvent) -> str:
-        return "Re-run the review."
+    @ext.on_service_event()
+    def anything(event: ServiceEvent) -> None:
+        return None
 
-    with caplog.at_level(logging.WARNING):
-        answer = await _answer(ext, host)
-    assert answer["outcome"] == "allow" and "value" not in answer
-    assert "no longer posts" in caplog.text
+    task = await _connected(ext)
+    try:
+        answer = await host.hook("ServiceEvent", {"event_id": "evt-2"})
+    finally:
+        task.cancel()
+        await ext.aclose()
+    assert answer["outcome"] == "failed" and answer["reason"].startswith("not an event")
 
 
 def test_a_type_has_one_handler() -> None:

@@ -427,8 +427,8 @@ no other handler names. An event with no handler for its type, one that
 reaches no running extension, or one whose handler raises is *not
 handled*: your service reads `not_handled`, with the reason, when it
 polls. igni waits up to 10 s; delivery is at least once, and igni drops a
-repeat by `event_id`. A handler that returns text used to have igni post
-it; igni no longer does — the text is ignored, with a warning in the log.
+repeat by `event_id`. A handler returns nothing; what it wants posted, it
+posts through `ext.host.sessions`.
 
 **A message is the agent's** (`agent.send_message`, `new_chat`,
 `chat(thread)`). igni posts it exactly as sent, labelled as this
