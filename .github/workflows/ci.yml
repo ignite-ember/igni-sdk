@@ -97,7 +97,7 @@ jobs:
       - name: Unit tests
         env:
           IGNI_APP_DIR: ${{ github.workspace }}/.siblings/igni-app
-        run: npx vitest run
+        run: npx vitest run --coverage
 
   # Each Python SDK's lock, and the npm workspace's. pip-audit fails on any
   # advisory; npm prints every advisory and fails on critical, with named
