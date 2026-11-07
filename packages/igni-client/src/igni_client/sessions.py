@@ -17,6 +17,7 @@ from igni_client.events import (
     SessionListResult,
     StatusUpdate,
 )
+from igni_client.frames import Cancel, QueueMessage, UserMessage
 from igni_client.runs import ApprovalRequested, Policy, Reply, Run, collect
 
 
@@ -38,15 +39,14 @@ class Session:
         session before starting. A run that pauses for approval yields an
         `ApprovalRequested`; answer it in the loop and the loop continues.
         """
-        frame = {
-            "type": "user_message",
-            "id": self._conn.new_id("run"),
-            "session_id": self.id,
-            "text": text,
-            "file_contents": dict(files or {}),
-            "client_id": self._conn.client_id,
-            "force": force,
-        }
+        frame = UserMessage(
+            id=self._conn.router.new_id("run"),
+            session_id=self.id,
+            text=text,
+            file_contents=dict(files or {}),
+            client_id=self._conn.client_id,
+            force=force,
+        )
         return Run(self._conn, self.id).stream(frame)
 
     async def ask(
@@ -64,17 +64,12 @@ class Session:
     async def queue(self, text: str) -> None:
         """Add a prompt for after the run that is going; it starts nothing now."""
         await self._conn.send(
-            {
-                "type": "queue_message",
-                "session_id": self.id,
-                "text": text,
-                "client_id": self._conn.client_id,
-            }
+            QueueMessage(session_id=self.id, text=text, client_id=self._conn.client_id)
         )
 
     async def cancel(self) -> None:
         """Stop the run that is going. Its stream ends with "Run cancelled by user."."""
-        await self._conn.send({"type": "cancel", "session_id": self.id})
+        await self._conn.send(Cancel(session_id=self.id))
 
     async def history(self) -> list[dict[str, Any]]:
         """The session's messages so far, as igni stores them."""

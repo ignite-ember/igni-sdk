@@ -21,11 +21,11 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from igni_client.connection import Connection, Interruption
+from igni_client.connection import Connection
 from igni_client.errors import ApprovalRequired, NotAllowed, RunFailed
 from igni_client.events import (
     ContentDelta,
@@ -39,6 +39,8 @@ from igni_client.events import (
     StreamEnd,
     ToolCompleted,
 )
+from igni_client.frames import HitlDecision, HitlResponseBatch, UserMessage
+from igni_client.routing import Interruption
 
 Choice = Literal["once", "always", "similar"]
 
@@ -73,7 +75,7 @@ class ApprovalRequested:
     """The run paused: these tool calls wait for a yes or a no."""
 
     def __init__(
-        self, paused: RunPaused, answer: Callable[[list[dict[str, Any]]], Awaitable[None]]
+        self, paused: RunPaused, answer: Callable[[list[HitlDecision]], Awaitable[None]]
     ) -> None:
         self.paused = paused
         self._answer = answer
@@ -106,13 +108,11 @@ class ApprovalRequested:
             raise ValueError(f"every call needs an answer; missing {missing}")
         await self._answer(
             [
-                {
-                    "type": "hitl_decision",
-                    "requirement_id": r.requirement_id,
-                    "action": decisions[r.requirement_id].action,
-                    "choice": decisions[r.requirement_id].choice,
-                    "set_permission_mode": "",
-                }
+                HitlDecision(
+                    requirement_id=r.requirement_id,
+                    action=decisions[r.requirement_id].action,
+                    choice=decisions[r.requirement_id].choice,
+                )
                 for r in self.requirements
             ]
         )
@@ -150,7 +150,7 @@ class Run:
         self._answers: set[str] = set()
         self._pending: ApprovalRequested | None = None
 
-    async def stream(self, frame: dict[str, Any]) -> AsyncIterator[Event | ApprovalRequested]:
+    async def stream(self, frame: UserMessage) -> AsyncIterator[Event | ApprovalRequested]:
         """Send `frame` (a `user_message`) and yield the run until it ends or waits unanswered."""
         try:
             await self._start(frame)
@@ -163,7 +163,7 @@ class Run:
                     raise NotAllowed(item.text or "igni refused the approval")
                 if isinstance(item, StreamEnd):
                     self._open.discard(item.id)
-                    self._conn.close_stream(item.id)
+                    self._conn.router.close_stream(item.id)
                     continue
                 if isinstance(item, RunPaused):
                     self._pending = ApprovalRequested(item, self._answer)
@@ -177,25 +177,19 @@ class Run:
                 yield item
         finally:
             for request_id in self._open:
-                self._conn.close_stream(request_id)
+                self._conn.router.close_stream(request_id)
             self._open.clear()
 
-    async def _start(self, frame: dict[str, Any]) -> None:
-        request_id = str(frame["id"])
-        self._conn.open_stream(request_id, self._queue)
-        self._open.add(request_id)
+    async def _start(self, frame: UserMessage | HitlResponseBatch) -> None:
+        self._conn.router.open_stream(frame.id, self._queue)
+        self._open.add(frame.id)
         await self._conn.send(frame)
 
-    async def _answer(self, decisions: list[dict[str, Any]]) -> None:
-        request_id = self._conn.new_id("hitl")
+    async def _answer(self, decisions: list[HitlDecision]) -> None:
+        request_id = self._conn.router.new_id("hitl")
         self._answers.add(request_id)
         await self._start(
-            {
-                "type": "hitl_response_batch",
-                "id": request_id,
-                "session_id": self._session_id,
-                "decisions": decisions,
-            }
+            HitlResponseBatch(id=request_id, session_id=self._session_id, decisions=decisions)
         )
 
 

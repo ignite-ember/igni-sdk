@@ -10,6 +10,7 @@ import pytest
 
 from igni_client import (
     AuthError,
+    Backoff,
     IgniClient,
     Local,
     NotAllowed,
@@ -17,9 +18,11 @@ from igni_client import (
     RunInterrupted,
     Unavailable,
 )
+from igni_client.lifecycle import Phase
 from igni_client.testing import Delay, FakeIgni
 
 TOKENS = {"t-ada": "person:u-ada"}
+FAST = Backoff(first=0.01)
 
 
 async def test_a_local_igni_is_found_from_its_lockfile(tmp_path: Path) -> None:
@@ -95,8 +98,7 @@ async def test_the_gateway_refuses_a_token_it_does_not_know() -> None:
 async def test_busy_is_tried_again() -> None:
     async with FakeIgni(gateway=True, tokens=TOKENS) as fake:
         fake.busy_next(2)
-        client = IgniClient(fake.fleet(Person("t-ada")))
-        client._conn._backoff = 0.01
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=FAST)
         async with client:
             assert fake.connections == 3
 
@@ -104,8 +106,7 @@ async def test_busy_is_tried_again() -> None:
 async def test_busy_for_too_long_is_unavailable() -> None:
     async with FakeIgni(gateway=True, tokens=TOKENS) as fake:
         fake.busy_next(10)
-        client = IgniClient(fake.fleet(Person("t-ada")), reconnect_attempts=2)
-        client._conn._backoff = 0.01
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=Backoff(attempts=2, first=0.01))
         with pytest.raises(Unavailable, match="busy"):
             await client.connect()
 
@@ -134,8 +135,7 @@ async def test_a_dropped_connection_is_opened_again_with_a_fresh_token() -> None
             return "t-ada"
 
     async with FakeIgni(gateway=True, tokens=TOKENS) as fake:
-        client = IgniClient(fake.fleet(Counting()))
-        client._conn._backoff = 0.01
+        client = IgniClient(fake.fleet(Counting()), backoff=FAST)
         async with client as igni:
             session = await igni.sessions.create()
             await fake.drop(1011)
@@ -148,11 +148,10 @@ async def test_a_dropped_connection_is_opened_again_with_a_fresh_token() -> None
 
 async def test_a_producer_no_longer_active_is_final() -> None:
     async with FakeIgni(gateway=True, tokens=TOKENS) as fake:
-        client = IgniClient(fake.fleet(Person("t-ada")))
-        client._conn._backoff = 0.01
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=FAST)
         async with client as igni:
             await fake.drop(1008, "not an active producer")
-            await _until(lambda: igni._conn._failure is not None)
+            await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
             with pytest.raises(NotAllowed, match="not an active producer"):
                 await igni.rpc("get_todos")
         assert fake.connections == 1
@@ -161,7 +160,7 @@ async def test_a_producer_no_longer_active_is_final() -> None:
 async def test_a_local_igni_that_closed_is_not_reopened() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         await fake.drop(1001, "going away")
-        await _until(lambda: igni._conn._failure is not None)
+        await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
         with pytest.raises(Unavailable):
             await igni.rpc("get_todos")
         assert fake.connections == 1

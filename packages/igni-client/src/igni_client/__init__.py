@@ -19,6 +19,7 @@ from igni_client.auth.app import App
 from igni_client.auth.person import ApiKey, Person
 from igni_client.auth.spaces import Space, SpaceRecord, Spaces
 from igni_client.auth.tokens import TokenSource
+from igni_client.backoff import Backoff
 from igni_client.client import IgniClient
 from igni_client.commands import CommandFinished, CommandOutput, CommandRun, Commands, Me
 from igni_client.errors import (
@@ -71,6 +72,7 @@ __all__ = [
     "Fleet",
     "Local",
     "Target",
+    "Backoff",
     # Who
     "Person",
     "ApiKey",

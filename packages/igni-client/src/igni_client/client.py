@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
+from igni_client.backoff import Backoff
 from igni_client.commands import Commands, Me
 from igni_client.connection import Connection
 from igni_client.events import Event
+from igni_client.routing import Router
 from igni_client.sessions import Models, Sessions, _result
 from igni_client.targets import Target, require_fleet
 
@@ -24,9 +26,10 @@ class IgniClient:
     that was going when it moved ends with `RunInterrupted`.
     """
 
-    def __init__(self, target: Target, *, reconnect_attempts: int = 5) -> None:
+    def __init__(self, target: Target, *, backoff: Backoff | None = None) -> None:
+        """`backoff` paces opening the socket again after Fleet said busy or it dropped."""
         self.target = target
-        self._conn = Connection(target, reconnect_attempts=reconnect_attempts)
+        self._conn = Connection(target, backoff or Backoff(), Router())
         self.sessions = Sessions(self._conn)
         self.models = Models(self._conn)
         self._commands: Commands | None = None
@@ -79,9 +82,9 @@ class IgniClient:
         this sees theirs. Use it to watch an igni, not to follow your own run
         — `Session.send()` does that.
         """
-        queue = self._conn.listen()
+        queue = self._conn.router.listen()
         try:
             while True:
                 yield await queue.get()
         finally:
-            self._conn.unlisten(queue)
+            self._conn.router.unlisten(queue)
