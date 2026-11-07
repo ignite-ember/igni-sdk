@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from igni_service import IgniService, KeyCipher, Member, Person, SqlWebSessionStore, WebSession
+from igni_service.grants import RefreshTokenGrant
 from igni_service.tables import IgniTables
 from igni_service.testing import FakeIgni, ManualClock, SettingsOverrides
 from igni_service.token_endpoint import GrantRefused, TokenEndpoint
@@ -295,7 +296,7 @@ async def test_logout_ends_the_sign_in_at_igni_too(
     assert revocation.form().token_type_hint == "refresh_token"
     endpoint = TokenEndpoint(igni.server, igni.registration, igni.key)
     with pytest.raises(GrantRefused):
-        await endpoint.grant({"grant_type": "refresh_token", "refresh_token": refresh})
+        await endpoint.grant(RefreshTokenGrant(refresh_token=refresh))
 
 
 async def test_logout_revokes_the_token_the_session_holds_after_a_renewal(

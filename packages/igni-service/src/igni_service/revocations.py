@@ -44,6 +44,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from igni_service.clock import Clock
 from igni_service.errors import IgniUnavailable
+from igni_service.grants import ClientCredentialsGrant
 from igni_service.token_endpoint import GrantRefused
 from igni_service.tokens import TokenRefused
 from igni_service.urls import IgniPaths
@@ -323,9 +324,7 @@ class RevocationFeed:
     async def _read_token(self) -> str:
         if self._token is None or self._clock.monotonic() >= self._token_expires:
             try:
-                issued = await self._endpoint.grant(
-                    {"grant_type": "client_credentials", "scope": self.SCOPE}
-                )
+                issued = await self._endpoint.grant(ClientCredentialsGrant(scope=self.SCOPE))
             except GrantRefused as exc:
                 raise IgniUnavailable(f"igni server refused a revocations token: {exc}") from exc
             self._token = issued.access_token

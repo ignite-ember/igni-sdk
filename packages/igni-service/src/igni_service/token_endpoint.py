@@ -15,6 +15,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from igni_service.errors import IgniError, IgniUnavailable
+from igni_service.grants import Grant
 from igni_service.server import IgniServer
 from igni_service.signing import SigningKey
 from igni_service.urls import IgniPaths
@@ -55,9 +56,9 @@ class TokenEndpoint:
         self._registration = registration
         self._key = key
 
-    async def grant(self, form: dict[str, str]) -> IssuedTokens:
+    async def grant(self, grant: Grant) -> IssuedTokens:
         """Ask for tokens. Raises `GrantRefused` or `IgniUnavailable`."""
-        response = await self._post(IgniPaths.TOKEN, form, what="a token request")
+        response = await self._post(IgniPaths.TOKEN, grant.form(), what="a token request")
         try:
             return IssuedTokens.model_validate(response.json())
         except (ValidationError, ValueError) as exc:

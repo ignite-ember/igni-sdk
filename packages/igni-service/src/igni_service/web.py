@@ -40,6 +40,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 
 from igni_service.clock import Clock
 from igni_service.errors import IgniError, IgniUnavailable
+from igni_service.grants import AuthorizationCodeGrant, RefreshTokenGrant
 from igni_service.registration import ServiceRegistration
 from igni_service.server import IgniServer
 from igni_service.signing import SigningKey
@@ -208,12 +209,9 @@ class WebSignIn:
             return self._failed("This sign-in was not started here, or has expired.")
         try:
             issued = await self._endpoint.grant(
-                {
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "code_verifier": attempt.verifier,
-                    "redirect_uri": self.redirect_uri,
-                }
+                AuthorizationCodeGrant(
+                    code=code, code_verifier=attempt.verifier, redirect_uri=self.redirect_uri
+                )
             )
             person = await self._person_of(issued)
         except GrantRefused as exc:
@@ -341,7 +339,7 @@ class WebSignIn:
             return current
         try:
             issued = await self._endpoint.grant(
-                {"grant_type": "refresh_token", "refresh_token": current.refresh_token}
+                RefreshTokenGrant(refresh_token=current.refresh_token)
             )
             person = await self._person_of(issued)
         except GrantRefused:

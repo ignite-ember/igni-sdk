@@ -275,9 +275,8 @@ app for one. `igni.caller_of(token)` is the same outside a request, and
 > (`pending`, `approved`, `rejected` with a reason), and
 > `app.vm_profile.effective()` is what its VM gets now. A service:
 > `igni.host(org_id).extension_vm_profile()` is what became of its
-> extension's request in that organisation. The older names —
-> `request_vm_profile`, `vm_profile_request`, `app.vm_profile()` and
-> `host.vm_profile()` — still work and raise a `DeprecationWarning`
+> extension's request in that organisation. The older
+> `host.vm_profile()` still works and raises a `DeprecationWarning`
 > naming the new call.
 
 In igni's cloud every producer — a person, an app, an app's space — runs
@@ -326,7 +325,7 @@ app = fake.app(APP_ID, org_id="org-1")
 #   app = IgniApp(APP_ID, igni_server_url="https://igni.bank.internal", key_store=store)
 
 async with app:
-    print(await app.public_jwks())                   # once, for the admin to paste
+    print((await app.public_jwks()).model_dump_json())  # once, for the admin to paste
     record = await app.vm_profile.request(VmProfileRequest(packages=VmPackages(apt=["jq"])))
     assert record.state == "pending"
     assert (await app.vm_profile.effective()).profile_name == "Standard"  # until approved

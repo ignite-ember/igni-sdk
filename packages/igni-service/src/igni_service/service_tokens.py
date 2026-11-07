@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from igni_service.clock import Clock
 from igni_service.errors import IgniUnavailable, ServiceNotApproved, ServiceRevoked
+from igni_service.grants import ClientCredentialsGrant
 from igni_service.registration import ServiceRegistration
 from igni_service.server import IgniServer
 from igni_service.signing import SigningKey
@@ -85,9 +86,7 @@ class ServiceTokens:
 
     async def _issue(self, org_id: str) -> IssuedTokens:
         try:
-            return await self._endpoint.grant(
-                {"grant_type": "client_credentials", "organisation": org_id}
-            )
+            return await self._endpoint.grant(ClientCredentialsGrant(organisation=org_id))
         except GrantRefused as exc:
             # `invalid_client` while a super admin has not approved this
             # service yet, or after they revoked it. Said in igni's own

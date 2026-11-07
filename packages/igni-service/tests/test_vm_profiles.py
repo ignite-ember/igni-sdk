@@ -151,9 +151,9 @@ class TestAnAppAsksForItsOwnVm:
     ) -> None:
         jwks = await app.public_jwks()
 
-        [key] = jwks["keys"]
-        assert "d" not in key
-        assert key["n"] == fake.clients.clients["app-review-bot"].jwk.n
+        [key] = jwks.keys
+        assert "d" not in key.as_dict()
+        assert key.n == fake.clients.clients["app-review-bot"].jwk.n
         assert await app.thumbprint() == fake.clients.clients["app-review-bot"].thumbprint
 
     async def test_it_closes_as_a_context_manager(self, fake: FakeIgni) -> None:
@@ -300,21 +300,9 @@ class TestInternetIsAskedForAndInternalByDefault:
 class TestTheNamesSayWhichThingTheyAnswer:
     """`request`, `status` and `effective` for an app; `extension_vm_profile` for a service.
 
-    The old names asked a reader to remember that `vm_profile()` was the
-    profile in effect while `host.vm_profile()` was a request's status.
-    They still work, and say what to call instead.
+    The old service name asked a reader to remember that `host.vm_profile()`
+    was a request's status. It still works, and says what to call instead.
     """
-
-    async def test_the_old_app_names_still_answer_and_warn(self, app: IgniApp) -> None:
-        with pytest.warns(DeprecationWarning, match=r"app\.vm_profile\.request"):
-            record = await app.request_vm_profile(BROWSER)
-        with pytest.warns(DeprecationWarning, match=r"app\.vm_profile\.status"):
-            again = await app.vm_profile_request()
-        with pytest.warns(DeprecationWarning, match=r"app\.vm_profile\.effective"):
-            effective = await app.vm_profile()
-
-        assert record.is_pending and again is not None and again.id == record.id
-        assert effective.profile_name == "Standard"
 
     async def test_the_old_service_name_still_answers_and_warns(self, igni: IgniService) -> None:
         with pytest.warns(DeprecationWarning, match="extension_vm_profile"):
