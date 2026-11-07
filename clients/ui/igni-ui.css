@@ -1142,6 +1142,12 @@
   border-color: var(--border, #4a4a45);
 }
 
+/* A blocked clipboard says so rather than looking like it worked. */
+.diagram-copy[data-state="failed"] {
+  color: var(--danger, #ef6a5a);
+  border-color: var(--danger, #ef6a5a);
+}
+
 /* The source, not a blank box. A diagram that does not parse is
    usually a diagram somebody is halfway through writing, and hiding
    what they wrote is the least helpful response to that. */
