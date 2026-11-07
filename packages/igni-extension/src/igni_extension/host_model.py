@@ -1,4 +1,4 @@
-"""GENERATED from the igni host schema 1.11.0 by ember_code.extensions.host.codegen — do not edit. Run `make host-sdks` after changing the schema.
+"""GENERATED from the igni host schema 1.11.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 
 `ext.host` as an extension's process sees it. Read
 `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.

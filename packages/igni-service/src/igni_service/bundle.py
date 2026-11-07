@@ -137,10 +137,10 @@ PLATFORMS: tuple[Platform, ...] = (
 #: What to do while the SDKs are not on PyPI. Said when a resolution
 #: fails because one of them cannot be found.
 CHECKOUT_HINT = """\
-The igni SDKs are not on PyPI yet. Build them from an igni checkout and
+The igni SDKs are not on PyPI yet. Build them from an igni-sdk checkout and
 point the builder at the wheels:
 
-  uv build --wheel --out-dir ./sdk-wheels <igni checkout>/packages/igni-extension
+  uv build --wheel --out-dir ./sdk-wheels <igni-sdk checkout>/packages/igni-extension
   igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels"""
 
 #: The SDKs a resolution may fail to find before they are published.

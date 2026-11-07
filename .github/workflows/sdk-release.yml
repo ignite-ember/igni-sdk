@@ -2,16 +2,16 @@ name: SDK release
 
 # Publishes igni's SDKs to the public registries:
 #
-#   PyPI    igni-service, igni-extension
+#   PyPI    igni-service, igni-extension, igni-client
 #   npmjs   @ignite-ember/extension-bridge, @ignite-ember/ui-react,
 #           @ignite-ember/ui-css
 #
-# One version for all five, one tag: pushing `sdk-v<version>` (say
+# One version for all six, one tag: pushing `sdk-v<version>` (say
 # `sdk-v0.2.0`, or `sdk-v0.2.0-rc.1`) publishes that version to PyPI and
 # npmjs, then attaches every wheel, sdist and tarball to the GitHub Release
 # for the tag, where the offline bundle and air-gapped builds take them
 # from. The tag must name the version the manifests already carry —
-# `make sdk-version VERSION=…` sets all five — or the release stops
+# `make sdk-version VERSION=…` sets all six — or the release stops
 # before building anything.
 #
 # Run by hand (Actions -> SDK release -> Run workflow), from any branch,
@@ -115,9 +115,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "SDK $version: $mode (npm dist-tag \`$npm_dist_tag\`)" >> "$GITHUB_STEP_SUMMARY"
 
-  # The checks the packages' own CI jobs run (ci.yml `packages` and `web`),
-  # on the commit being released. Not the whole of ci.yml: the desktop and
-  # browser suites test igni, not its SDKs, and must not hold one up.
+  # The checks ci.yml runs on every push, on the commit being released.
   verify-python:
     name: Verify Python SDKs
     needs: authorize
@@ -135,30 +133,38 @@ jobs:
       - name: Lint, type-check and test the SDKs
         run: make packages-check
 
-  # @ignite-ember/ui-react's and @ignite-ember/extension-bridge's tests run
-  # in clients/web, whose vitest and tsconfig include packages/.
+  # The npm SDKs' tests, from the workspace at the root. One holds the
+  # stylesheet's fallbacks to igni's theme, which is igni-app's: it reads a
+  # checkout of igni-app (IGNI_APP_DIR).
   verify-npm:
     name: Verify npm SDKs
     needs: authorize
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: clients/web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: igni-app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ignite-ember/igni-app
+          path: .siblings/igni-app
+          persist-credentials: false
+
+      # Node 24: vitest 5 wants ^22.12 and jsdom 30 ^22.22.2.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
-          cache-dependency-path: clients/web/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - run: npm ci
 
       - name: Typecheck
-        run: npx tsc -b --noEmit
+        run: npx tsc --noEmit -p .
 
       - name: Unit tests
+        env:
+          IGNI_APP_DIR: ${{ github.workspace }}/.siblings/igni-app
         run: npx vitest run
 
   build:
@@ -193,7 +199,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/sdk/sbom
-          for pkg in igni-service igni-extension; do
+          for pkg in igni-service igni-extension igni-client; do
             uv export --frozen --directory "packages/$pkg" --no-dev --all-extras \
               --format cyclonedx1.5 --preview-features sbom-export \
               -o "$PWD/dist/sdk/sbom/$pkg-$VERSION.cdx.json"
@@ -464,7 +470,7 @@ jobs:
             if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
             gh release create "$TAG" --repo "$REPO" --verify-tag "${flags[@]}" \
               --title "SDK $VERSION" \
-              --notes "igni SDK $VERSION: \`igni-service\` and \`igni-extension\` on PyPI; \`@ignite-ember/extension-bridge\`, \`@ignite-ember/ui-react\` and \`@ignite-ember/ui-css\` on npmjs. The files below are the same bytes, for builds that cannot reach either registry; SHA256SUMS lists their digests, every file has GitHub build provenance (the bundle is attached for offline checks), the *.cdx.json files are CycloneDX SBOMs, and SHA256SUMS.sig, when present, is a cosign signature. See docs/VERIFYING_RELEASES.md."
+              --notes "igni SDK $VERSION: \`igni-service\`, \`igni-extension\` and \`igni-client\` on PyPI; \`@ignite-ember/extension-bridge\`, \`@ignite-ember/ui-react\` and \`@ignite-ember/ui-css\` on npmjs. The files below are the same bytes, for builds that cannot reach either registry; SHA256SUMS lists their digests, every file has GitHub build provenance (the bundle is attached for offline checks), the *.cdx.json files are CycloneDX SBOMs, and SHA256SUMS.sig, when present, is a cosign signature. See docs/VERIFYING_RELEASES.md."
           fi
           shopt -s nullglob
           gh release upload "$TAG" --repo "$REPO" --clobber \
@@ -473,7 +479,7 @@ jobs:
           {
             echo "### SDK $VERSION released"
             echo
-            echo "- PyPI: https://pypi.org/project/igni-service/ and https://pypi.org/project/igni-extension/"
+            echo "- PyPI: https://pypi.org/project/igni-service/, https://pypi.org/project/igni-extension/ and https://pypi.org/project/igni-client/"
             echo "- npmjs: https://www.npmjs.com/org/ignite-ember (dist-tag \`$DIST_TAG\`)"
             echo "- GitHub Release: https://github.com/$REPO/releases/tag/$TAG"
           } >> "$GITHUB_STEP_SUMMARY"

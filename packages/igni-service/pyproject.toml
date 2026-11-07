@@ -37,10 +37,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ignite-ember/igni"
-Documentation = "https://github.com/ignite-ember/igni/tree/main/packages/igni-service#readme"
-Source = "https://github.com/ignite-ember/igni/tree/main/packages/igni-service"
-Issues = "https://github.com/ignite-ember/igni/issues"
+Homepage = "https://github.com/ignite-ember/igni-sdk"
+Documentation = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service#readme"
+Source = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service"
+Issues = "https://github.com/ignite-ember/igni-sdk/issues"
 
 [project.scripts]
 igni-service-bundle = "igni_service.bundle:main"

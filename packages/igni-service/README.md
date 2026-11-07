@@ -117,13 +117,13 @@ async with httpx.AsyncClient(transport=transport, base_url=fake.service_url) as 
 
 > **Until the SDKs are on PyPI: build from a checkout.** `igni-service`
 > and `igni-extension` are not published yet, so `uv add igni-service`
-> finds nothing. Build both wheels from an igni checkout and install
+> finds nothing. Build both wheels from an igni-sdk checkout and install
 > from them:
 >
 > ```bash
-> git clone https://github.com/ignite-ember/igni.git
-> uv build --wheel --out-dir ./sdk-wheels igni/packages/igni-service
-> uv build --wheel --out-dir ./sdk-wheels igni/packages/igni-extension
+> git clone https://github.com/ignite-ember/igni-sdk.git
+> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-service
+> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-extension
 > uv add igni-service --find-links ./sdk-wheels      # or: pip install --find-links ./sdk-wheels igni-service
 > ```
 >
@@ -138,9 +138,9 @@ Once published, from PyPI:
 uv add igni-service        # or: pip install igni-service
 ```
 
-Each release's wheels and sdists are also attached to igni's GitHub
+Each release's wheels and sdists are also attached to igni-sdk's GitHub
 release (`sdk-v<version>`), for a build that cannot reach PyPI. The
-versions, and working against an igni checkout instead, are in igni's
+versions, and working against an igni-sdk checkout instead, are in igni-sdk's
 `docs/PUBLISHING_THE_SDKS.md`.
 
 ## What happens on its own
@@ -529,7 +529,7 @@ the first frame (`igni.person_of`).
 
 A service reaches a producer's igni — on their desktop, or in their
 Fleet VM, woken for it — two ways, through igni server
-(service-identity §15, igni's `docs/CLOUD.md` §6):
+(service-identity §15, igni-core's `docs/CLOUD.md` §6):
 
 - **A message, for the agent.** igni posts it exactly as sent, as this
   service's extension's message: it starts a run, or waits for the run

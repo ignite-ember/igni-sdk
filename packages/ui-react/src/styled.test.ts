@@ -23,7 +23,7 @@
  * path. Reading `className=` catches every branch, including the ones
  * no test has an argument for yet.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -139,7 +139,15 @@ function fallbacksIn(path: string) {
   return { declared, inline };
 }
 
-describe("the published fallbacks are igni's values", () => {
+/*
+ * igni's theme is igni-app's: `clients/web/src/theme.css` in its checkout,
+ * `IGNI_APP_DIR` or `../igni-app` beside this repository. Without one the
+ * comparison skips; under CI, which checks igni-app out, it does not.
+ */
+const IGNI_APP = process.env.IGNI_APP_DIR ?? join(here, "..", "..", "..", "..", "igni-app");
+const THEME_CSS = join(IGNI_APP, "clients", "web", "src", "theme.css");
+
+describe.skipIf(!existsSync(THEME_CSS) && !process.env.CI)("the published fallbacks are igni's values", () => {
   /*
    * The header of igni-ui.css promises "values match igni's dark
    * theme", and for eighteen of fifty they did not. Opened outside
@@ -153,7 +161,7 @@ describe("the published fallbacks are igni's values", () => {
    * does not look broken, and it means the thing an author tunes
    * their layout against is not the thing their users see.
    */
-  const theme = fallbacksIn(join(here, "..", "..", "..", "clients", "web", "src", "theme.css")).declared;
+  const theme = fallbacksIn(THEME_CSS).declared;
   const published = fallbacksIn(PUBLISHED_CSS);
 
   it("declares nothing igni does not", () => {

@@ -32,10 +32,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ignite-ember/igni"
-Documentation = "https://github.com/ignite-ember/igni/tree/main/packages/igni-extension#readme"
-Source = "https://github.com/ignite-ember/igni/tree/main/packages/igni-extension"
-Issues = "https://github.com/ignite-ember/igni/issues"
+Homepage = "https://github.com/ignite-ember/igni-sdk"
+Documentation = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension#readme"
+Source = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension"
+Issues = "https://github.com/ignite-ember/igni-sdk/issues"
 
 [dependency-groups]
 dev = [
@@ -58,8 +58,8 @@ addopts = "--import-mode=importlib"
 target-version = "py312"
 line-length = 100
 src = ["src", "tests"]
-# Generated from igni's host schema; `make host-sdks` in igni writes it
-# and a test there checks it is current.
+# Generated from igni-core's host schema; `make host-sdks` at this
+# repository's root writes it and a test there checks it is current.
 extend-exclude = ["src/igni_extension/host_model.py"]
 
 [tool.ruff.lint]

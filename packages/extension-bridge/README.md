@@ -86,11 +86,11 @@ cross-origin with nothing to configure (`igni.install(app)`).
 
 > **Until it is on npm: install it from a checkout.** The package is not
 > published yet, so `npm install @ignite-ember/extension-bridge` finds
-> nothing. Pack it from an igni checkout and install the tarball:
+> nothing. Pack it from an igni-sdk checkout and install the tarball:
 >
 > ```bash
-> git clone https://github.com/ignite-ember/igni.git
-> npm pack --pack-destination ./sdk-packages ./igni/packages/extension-bridge
+> git clone https://github.com/ignite-ember/igni-sdk.git
+> npm pack --pack-destination ./sdk-packages ./igni-sdk/packages/extension-bridge
 > npm install ./sdk-packages/ignite-ember-extension-bridge-0.1.0.tgz
 > ```
 >
@@ -103,9 +103,9 @@ Once published, from npm:
 npm install @ignite-ember/extension-bridge
 ```
 
-Each release's tarballs are also attached to igni's GitHub release
+Each release's tarballs are also attached to igni-sdk's GitHub release
 (`sdk-v<version>`), for a build that cannot reach npmjs. Versions are in
-igni's `docs/PUBLISHING_THE_SDKS.md`.
+igni-sdk's `docs/PUBLISHING_THE_SDKS.md`.
 
 ## Source, not a build
 

@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+# Read-only. Nothing here writes to the repository.
+permissions:
+  contents: read
+
+jobs:
+  # The repository's own tests: both SDKs' host objects are what the
+  # generator writes from contracts/host-schema.json, the contracts are
+  # igni-core's unchanged (against a checkout of igni-core: under CI a
+  # missing one fails rather than skips), the docs run, and every SDK keeps
+  # the security lint.
+  repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: igni-core
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ignite-ember/igni-core
+          path: .siblings/igni-core
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
+
+      - name: Lint and test
+        env:
+          IGNI_CORE_DIR: ${{ github.workspace }}/.siblings/igni-core
+          IGNI_DOCS_REQUIRE_SDKS: "1"
+        run: make test
+
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
+
+      - name: Lint, type-check and test the SDKs
+        run: make packages-check
+
+      # examples/ticket-lookup is what docs/YOUR_FIRST_EXTENSION.md builds,
+      # file for file; its tests run against both SDKs from this checkout —
+      # what a developer has before the SDKs are on PyPI.
+      - name: The tutorial's example
+        run: |
+          cd examples/ticket-lookup
+          uv run --no-project \
+            --with ../../packages/igni-extension --with ../../packages/igni-service \
+            --with pytest --with anyio --with httpx pytest -q -rs
+
+  # The npm SDKs, from the workspace at the root. One test holds the
+  # stylesheet's fallbacks to igni's theme, which is igni-app's: it reads a
+  # checkout of igni-app, and under CI fails rather than skips without one.
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: igni-app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ignite-ember/igni-app
+          path: .siblings/igni-app
+          persist-credentials: false
+
+      # Node 24: vitest 5 wants ^22.12 and jsdom 30 ^22.22.2.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p .
+
+      - name: Unit tests
+        env:
+          IGNI_APP_DIR: ${{ github.workspace }}/.siblings/igni-app
+        run: npx vitest run
+
+  # Each Python SDK's lock, and the npm workspace's. pip-audit fails on any
+  # advisory; npm prints every advisory and fails on critical, with named
+  # exceptions in .github/dependency-audit-allowlist.toml
+  # (scripts/dependency_audit.py; igni-core's docs/VULNERABILITY_MANAGEMENT.md).
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: pip-audit (each Python SDK)
+        run: |
+          set -euo pipefail
+          for project in packages/igni-service packages/igni-extension packages/igni-client; do
+            echo "── $project"
+            uv export --frozen --directory "$project" --all-extras --no-emit-project \
+              --no-emit-local --no-hashes --format requirements.txt -o "$RUNNER_TEMP/requirements.txt"
+            uvx pip-audit --no-deps --disable-pip -r "$RUNNER_TEMP/requirements.txt"
+          done
+
+      - name: npm audit (the npm SDKs)
+        run: uv run --no-project --with 'cvss>=3,<4' python scripts/dependency_audit.py npm . .

@@ -73,7 +73,7 @@ Every tool states MCP's four hints — `read_only`, `destructive`,
 them: plan mode runs a read-only tool and refuses one that changes
 things, Accept Edits runs a write that destroys nothing and stays inside
 its own system, the default mode asks before any write, Bypass runs
-everything (igni's `docs/EXTENSIBILITY.md` has the whole table).
+everything (igni-core's `docs/EXTENSIBILITY.md` has the whole table).
 `ext.tool(hints=...)` requires them, and `ext.run()` refuses to start
 while any tool on `ext.mcp` leaves one out (`ToolHintsMissing`) — a tool
 added with `ext.mcp.add_tool` passes `annotations=hints.annotations()`.
@@ -126,11 +126,11 @@ about it, and `PostToolUseFailure` is told.
 
 > **Until the SDKs are on PyPI: build from a checkout.** `igni-extension`
 > is not published yet, so `uv add igni-extension` finds nothing. Build
-> its wheel from an igni checkout and install from it:
+> its wheel from an igni-sdk checkout and install from it:
 >
 > ```bash
-> git clone https://github.com/ignite-ember/igni.git
-> uv build --wheel --out-dir ./sdk-wheels igni/packages/igni-extension
+> git clone https://github.com/ignite-ember/igni-sdk.git
+> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-extension
 > uv add igni-extension --find-links ./sdk-wheels      # or: pip install --find-links ./sdk-wheels igni-extension
 > ```
 >
@@ -144,9 +144,9 @@ Once published, from PyPI:
 uv add igni-extension        # or: pip install igni-extension
 ```
 
-Each release's wheels and sdists are also attached to igni's GitHub
+Each release's wheels and sdists are also attached to igni-sdk's GitHub
 release (`sdk-v<version>`), for a build that cannot reach PyPI. The
-versions, and working against an igni checkout instead, are in igni's
+versions, and working against an igni-sdk checkout instead, are in igni-sdk's
 `docs/PUBLISHING_THE_SDKS.md`.
 
 ## Its service: `ext.service`
@@ -389,7 +389,7 @@ its hooks until it answers again. One handler per event.
 
 Your service reaches a producer's igni — on their desktop, or in their
 Fleet VM, woken for it — two ways (igni server's service-identity §15,
-igni's `docs/CLOUD.md` §6). Send a message when the service knows what
+igni-core's `docs/CLOUD.md` §6). Send a message when the service knows what
 the agent should read; send an event when this extension should decide.
 
 **An event is yours** (`agent.send_event` in `igni-service`). igni hands
@@ -508,7 +508,7 @@ plan mode, any agent — with a whole one of its own, or edits it: appends a
 section, inserts one before or after a named section, replaces a named
 section (an agent's header is the section `frontmatter`). Each may hold
 only while a condition holds (`"when": "index-covers-head"`). The rules —
-what stacks, what collides, what an override leaves out — are in igni's
+what stacks, what collides, what an override leaves out — are in igni-sdk's
 `docs/EXTENSIBILITY.md`. Only the extension can judge the condition, so it
 says when it changes:
 

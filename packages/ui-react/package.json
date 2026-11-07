@@ -11,13 +11,13 @@
   ],
   "license": "Apache-2.0",
   "author": "Ignite Ember (https://ignite-ember.sh/)",
-  "homepage": "https://github.com/ignite-ember/igni/tree/main/packages/ui-react#readme",
+  "homepage": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/ui-react#readme",
   "bugs": {
-    "url": "https://github.com/ignite-ember/igni/issues"
+    "url": "https://github.com/ignite-ember/igni-sdk/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ignite-ember/igni.git",
+    "url": "git+https://github.com/ignite-ember/igni-sdk.git",
     "directory": "packages/ui-react"
   },
   "type": "module",

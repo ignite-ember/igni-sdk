@@ -1,6 +1,7 @@
 # Publishing the SDKs
 
-igni's SDKs are what services and extensions build on. Five packages,
+igni's SDKs are what services, extensions and the programs that drive an igni
+build on. Six packages,
 released together to the public registries — PyPI and npmjs — from this
 repository, which is public under Apache-2.0:
 
@@ -8,6 +9,7 @@ repository, which is public under Apache-2.0:
 |---|---|---|---|
 | `igni-service` | PyPI | `packages/igni-service` | a service: its key, registration, people's tokens, the directory, notifications, erasure and export, its extension bundle |
 | `igni-extension` | PyPI | `packages/igni-extension` | an extension's process: tools over MCP, its service as the person, the host |
+| `igni-client` | PyPI | `packages/igni-client` | a program driving an igni from outside: a producer's in Fleet through the gateway, or a local one — sessions, runs, approvals, commands in the VM |
 | `@ignite-ember/extension-bridge` | npmjs | `packages/extension-bridge` | an extension's page: `connect()`, RPC, navigation, theme |
 | `@ignite-ember/ui-react` | npmjs | `packages/ui-react` | the React components under the compatibility floor |
 | `@ignite-ember/ui-css` | npmjs | `clients/ui` | the stylesheet `@ignite-ember/ui-react` is drawn with |
@@ -18,7 +20,7 @@ stylesheet cannot be installed is not installable either.
 
 The npm scope is `@ignite-ember`, the organisation's name on npmjs; `@igni`
 there is not ours. The Python names are the import names' (`igni_service`,
-`igni_extension`).
+`igni_extension`, `igni_client`).
 
 Every release is also a GitHub Release of this repository, `sdk-v<version>`,
 carrying the same wheels, sdists and npm tarballs and their `SHA256SUMS`: what
@@ -26,9 +28,9 @@ the offline bundle and an air-gapped build take instead of a registry.
 
 ## Versions
 
-**One version for all five (lockstep), semver.** §8 of
+**One version for all six (lockstep), semver.** §8 of
 [EXTENSIBILITY.md](EXTENSIBILITY.md) versions the floor independently of the
-product, as semver, declared as a range — and the five packages *are* the
+product, as semver, declared as a range — and the six packages *are* the
 floor's code: the bridge's protocol is the host's, `@ignite-ember/ui-react` is drawn
 with `@ignite-ember/ui-css`, `igni-service` builds the bundles `igni-extension` runs
 in. Independent versions would ask every extension author to find a
@@ -47,8 +49,8 @@ read a changelog for it.
   npm publishes a pre-release under the dist-tag `next`, so `npm install
   @ignite-ember/ui-react` never picks one; uv and pip skip pre-releases unless asked.
 
-The versions live in the five manifests (`pyproject.toml`, `package.json`) and
-nowhere else. `make sdk-version VERSION=0.4.0` sets all five (and the Python
+The versions live in the six manifests (`pyproject.toml`, `package.json`) and
+nowhere else. `make sdk-version VERSION=0.4.0` sets all six (and the Python
 packages' `uv.lock`); `make sdk-version-check` lists them and fails when they
 disagree, or disagree with `VERSION=` when it is given.
 
@@ -98,6 +100,7 @@ Checks the versions agree, then writes to `dist/sdk/`:
 ```
 dist/sdk/python/igni_service-<v>-py3-none-any.whl  igni_service-<v>.tar.gz
 dist/sdk/python/igni_extension-<v>-py3-none-any.whl  igni_extension-<v>.tar.gz
+dist/sdk/python/igni_client-<v>-py3-none-any.whl  igni_client-<v>.tar.gz
 dist/sdk/npm/ignite-ember-extension-bridge-<v>.tgz  ignite-ember-ui-react-<v>.tgz  ignite-ember-ui-css-<v>.tgz
 ```
 
@@ -126,7 +129,7 @@ publishing*), and only from the GitHub environment named for each.
 | Job | Runs on | |
 |---|---|---|
 | Authorize | both | stops unless the actor is a repository admin (as `release.yml` does) |
-| Resolve | both | a tag is a **release**, a manual run a **rehearsal**; checks a tag names the manifests' version (`make sdk-version-check VERSION=…`) and the five agree; picks the npm dist-tag (`next` for a pre-release, `latest` otherwise) |
+| Resolve | both | a tag is a **release**, a manual run a **rehearsal**; checks a tag names the manifests' version (`make sdk-version-check VERSION=…`) and the six agree; picks the npm dist-tag (`next` for a pre-release, `latest` otherwise) |
 | Verify Python / Verify npm | both | `make packages-check`; `clients/web`'s typecheck and vitest, which cover `packages/` — what ci.yml's `packages` and `web` jobs run, on the released commit |
 | Build | both | `make sdk-build`, `twine check --strict`, `SHA256SUMS`, and each tarball's file list in the run summary; kept as a workflow artifact for 30 days |
 | Rehearse on TestPyPI | rehearsal | environment `testpypi`: uploads the wheels and sdists to test.pypi.org (`pypa/gh-action-pypi-publish`, trusted publishing) |
@@ -142,7 +145,7 @@ half-way is finished by re-running the workflow. A published version is never
 replaced — PyPI and npm refuse it — so fix forward with the next patch.
 
 **Provenance.** npm records which workflow run built each version, and checks
-the tarball's `repository.url` (`git+https://github.com/ignite-ember/igni.git`)
+the tarball's `repository.url` (`git+https://github.com/ignite-ember/igni-sdk.git`)
 against the repository that ran it; the three `package.json`s carry it. PyPI
 attaches the equivalent attestations on its own.
 
@@ -163,14 +166,15 @@ TestPyPI is a separate service with separate accounts.
    takes a while). Not needed to publish: the projects can be moved into it
    later.
 3. On **pypi.org**, Your account → Publishing → *Add a new pending publisher*
-   (GitHub), twice:
+   (GitHub), three times:
 
    | PyPI project name | Owner | Repository name | Workflow name | Environment name |
    |---|---|---|---|---|
    | `igni-service` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
    | `igni-extension` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
+   | `igni-client` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
 
-4. On **test.pypi.org**, the same two, with environment name `testpypi`.
+4. On **test.pypi.org**, the same three, with environment name `testpypi`.
 
 A pending publisher becomes the project's trusted publisher on the first
 upload, which also creates the project under your account. It does not
@@ -235,7 +239,7 @@ From any branch whose manifests carry the version to rehearse:
 2. Approve the `testpypi` deployment when the run asks.
 3. Check the result:
    - <https://test.pypi.org/project/igni-service/> and
-     `…/igni-extension/` show the version, with the README and project links
+     `…/igni-extension/` and `…/igni-client/` show the version, with the README and project links
      rendered.
    - Install from TestPyPI, taking the dependencies from PyPI (TestPyPI does
      not have them):
@@ -243,7 +247,7 @@ From any branch whose manifests carry the version to rehearse:
      ```bash
      uv venv /tmp/sdk-try && uv pip install --python /tmp/sdk-try \
        --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ \
-       --index-strategy unsafe-best-match igni-service==<v> igni-extension==<v>
+       --index-strategy unsafe-best-match igni-service==<v> igni-extension==<v> igni-client==<v>
      ```
 
    - The run's summary lists each npm tarball's files, and the
@@ -267,6 +271,7 @@ one version uploads nothing. Rehearse changed code under a new pre-release
 4. Approve the `pypi` and `npm` deployments when the run asks.
 5. Check <https://pypi.org/project/igni-service/>,
    <https://pypi.org/project/igni-extension/>,
+   <https://pypi.org/project/igni-client/>,
    <https://www.npmjs.com/package/@ignite-ember/ui-react> (and the other two;
    the version page shows *Provenance*), and the `sdk-v0.4.0` GitHub Release.
 
@@ -278,7 +283,7 @@ a GitHub pre-release, and PyPI, where installers skip it unless asked.
 In order — the consumers cannot resolve the SDKs before they are published.
 
 1. **One-time setup**, above.
-2. **Rehearse** `0.1.0`, the version all five carry today.
+2. **Rehearse** `0.1.0`, the version all six carry today.
 3. **Release** it: `git tag sdk-v0.1.0 && git push origin sdk-v0.1.0`.
 4. **npm trusted publishing**: configure the three packages, delete
    `NPM_TOKEN` (one-time setup, step 2.4).
@@ -301,6 +306,7 @@ In order — the consumers cannot resolve the SDKs before they are published.
 ```bash
 uv add igni-service        # a service
 uv add igni-extension      # an extension's process
+uv add igni-client         # a program driving an igni
 ```
 
 **npm.** From npmjs:
@@ -313,7 +319,7 @@ Nothing to configure, no token. A consumer's lockfile (`uv.lock`,
 `package-lock.json`) records each file's hash, so a same-named package from
 anywhere else cannot match it.
 
-### Working against an igni checkout
+### Working against an igni-sdk checkout
 
 The consumers keep a local override, `IGNI_SDK=local`, for changing an SDK
 and its consumer together:
