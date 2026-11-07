@@ -38,7 +38,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from igni_extension.caller import Caller, CallerScope
 from igni_extension.threads import OffTheLoop
@@ -108,7 +108,8 @@ class PlanSubmit(HookValue):
 
     #: The plan, in markdown. A change is what the person sees.
     plan: str
-    tasks: list[Any] = Field(default_factory=list)
+    #: The tasks the agent proposed with it, as the agent wrote them.
+    tasks: list[JsonValue] = Field(default_factory=list)
     #: Plans rejected since the agent entered plan mode: 0 for the first.
     attempt: int = 0
 
@@ -246,18 +247,20 @@ class HookHandlers:
                 return await OffTheLoop.call(handler, value)
             return await OffTheLoop.call(handler, value, **{wanted: caller})
 
-    async def tell(self, name: str, raw: Any, principal: Any = None) -> None:
+    async def tell(self, name: str, raw: Any, caller: Caller | None = None) -> None:
         """An event that decides nothing: the handler hears it, and nothing is sent back."""
         found = self._handlers.get(name)
         if found is None:
             return
         event, handler = found
         try:
-            await self._call(handler, event.parse(raw), Caller.of(principal))
+            await self._call(handler, event.parse(raw), caller)
         except Exception:
             logger.exception("igni: the handler of %s failed", name)
 
-    async def answer(self, hook_id: str, name: str, raw: Any, principal: Any = None) -> HookAnswer:
+    async def answer(
+        self, hook_id: str, name: str, raw: Any, caller: Caller | None = None
+    ) -> HookAnswer:
         """The `answer` request's parameters for one deciding event."""
         found = self._handlers.get(name)
         if found is None:
@@ -269,9 +272,7 @@ class HookHandlers:
             return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
         event, handler = found
         try:
-            answer: Answer | None = await self._call(
-                handler, event.parse(raw), Caller.of(principal)
-            )
+            answer: Answer | None = await self._call(handler, event.parse(raw), caller)
         except Exception as exc:
             logger.exception("igni: the handler of %s failed", name)
             return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=str(exc))

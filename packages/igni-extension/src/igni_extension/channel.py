@@ -251,14 +251,14 @@ class HostConnection:
                 if message.decides:
                     self._spawn(self._answer(message))
                 else:
-                    self._spawn(self._hooks.tell(message.event, message.value, message.principal))
+                    self._spawn(self._hooks.tell(message.event, message.value, message.caller))
 
     async def _answer(self, hook: HookMessage) -> None:
         hook_id = hook.id or ""
         if hook.event == SERVICE_EVENT:
-            answer = await self._service_events.answer(hook_id, hook.value, hook.principal)
+            answer = await self._service_events.answer(hook_id, hook.value, hook.caller)
         else:
-            answer = await self._hooks.answer(hook_id, hook.event, hook.value, hook.principal)
+            answer = await self._hooks.answer(hook_id, hook.event, hook.value, hook.caller)
         try:
             (await self._send(Request.answer(answer))).result_or_raise()
         except (HostError, HostUnavailable) as exc:

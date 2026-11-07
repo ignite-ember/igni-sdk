@@ -13,6 +13,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from igni_extension.caller import Caller
 from igni_extension.errors import HostError
 
 
@@ -150,6 +151,11 @@ class HookMessage(BaseModel):
     @property
     def decides(self) -> bool:
         return self.id is not None
+
+    @property
+    def caller(self) -> Caller | None:
+        """Whom the event is for; `None` when igni sent none, or a malformed one."""
+        return Caller.of(self.principal)
 
 
 class SubscribeOutcome(BaseModel):

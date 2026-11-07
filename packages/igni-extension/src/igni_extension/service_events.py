@@ -88,7 +88,7 @@ class ServiceEventHandlers:
 
         return register
 
-    async def answer(self, hook_id: str, raw: Any, principal: Any = None) -> HookAnswer:
+    async def answer(self, hook_id: str, raw: Any, caller: Caller | None = None) -> HookAnswer:
         """The `answer` request's parameters: handled (`allow`), no handler (`reject`), or `failed`."""
         try:
             event = ServiceEvent.model_validate(raw)
@@ -100,7 +100,7 @@ class ServiceEventHandlers:
                 hook=hook_id, outcome=Outcome.REJECT, reason=f"no handler for {event.type}"
             )
         try:
-            with CallerScope.of(Caller.of(principal)):
+            with CallerScope.of(caller):
                 returned = await OffTheLoop.call(handler, event)
         except Exception as exc:
             logger.exception("igni: the handler of service event %s failed", event.type)
