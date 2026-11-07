@@ -21,6 +21,7 @@ from igni_client.auth.person import ApiKey, Person
 from igni_client.auth.spaces import Space, SpaceRecord, Spaces
 from igni_client.auth.tokens import TokenSource
 from igni_client.backoff import Backoff
+from igni_client.catalogue import ModelCatalogue, ModelEntry, Models
 from igni_client.client import IgniClient
 from igni_client.commands import CommandFinished, CommandOutput, CommandRun, Commands, Me
 from igni_client.errors import (
@@ -63,8 +64,9 @@ from igni_client.events import (
     Unknown,
     UserMessageReceived,
 )
+from igni_client.methods import HistoryTurn
 from igni_client.replies import Reply
-from igni_client.sessions import ModelCatalogue, Models, Session, Sessions
+from igni_client.sessions import Session, Sessions
 from igni_client.targets import Fleet, Local, Target
 
 __all__ = [
@@ -87,6 +89,8 @@ __all__ = [
     "Sessions",
     "Models",
     "ModelCatalogue",
+    "ModelEntry",
+    "HistoryTurn",
     "ApprovalRequested",
     "Decision",
     "Reply",

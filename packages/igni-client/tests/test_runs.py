@@ -20,6 +20,7 @@ from igni_client import (
     RunStarted,
     ToolCompleted,
 )
+from igni_client.methods import HISTORY
 from igni_client.testing import Delay, FakeIgni
 
 
@@ -205,7 +206,28 @@ async def test_sessions_are_created_opened_listed_and_switched() -> None:
     assert default.id == "s-default"
     assert notice == "Switched to igni-1"
     assert status.model == "igni-1"
-    assert catalogue.default == "igni-1" and "igni-1" in catalogue.models
+    assert catalogue.default == "igni-1" and catalogue.models["igni-1"].provider == "igni"
+
+
+async def test_a_session_reads_its_history_as_turns() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.history[session.id] = [
+            {"role": "user", "content": "hello", "created_at": 1},
+            {"role": "tool", "tool_name": "read_file", "content": "ok"},
+        ]
+        history = await session.history()
+
+    assert [turn.role for turn in history] == ["user", "tool"]
+    assert history[0].content == "hello" and history[1].model_extra == {"tool_name": "read_file"}
+
+
+async def test_an_answer_not_shaped_as_the_method_returns_raises() -> None:
+    async with FakeIgni() as fake:
+        fake.rpc_answers["get_turns"] = {"not": "a list"}
+        async with IgniClient(fake.local()) as igni:
+            with pytest.raises(RpcError, match="get_turns"):
+                await igni._conn.rpc("get_turns", HISTORY)
 
 
 async def test_any_method_is_reachable_and_an_error_raises() -> None:

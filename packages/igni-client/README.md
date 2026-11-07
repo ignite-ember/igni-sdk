@@ -125,8 +125,9 @@ for entry in await igni.sessions.list():
 ```
 
 `sessions.default()` is the session igni opened at start. A session has
-`history()`, `status()` (its model, context used and permission mode) and
-`use_model(name)`; `igni.models.list()` says which models there are.
+`history()` (its turns, as `HistoryTurn`s), `status()` (its model, context
+used and permission mode) and `use_model(name)`; `igni.models.list()` says
+which models there are, as a `ModelCatalogue`.
 
 ## A run, event by event
 

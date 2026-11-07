@@ -5,20 +5,25 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from igni_client.approvals import ApprovalRequested, Approver, Policy
 from igni_client.connection import Connection
-from igni_client.errors import RpcError
 from igni_client.events import (
     Event,
     InfoMessage,
-    RpcResponse,
     SessionListEntry,
     SessionListResult,
     StatusUpdate,
 )
 from igni_client.frames import Cancel, QueueMessage, UserMessage
+from igni_client.methods import (
+    ATTACHED_SESSION,
+    HISTORY,
+    SESSION_ID,
+    AttachSession,
+    HistoryTurn,
+    SessionRef,
+    SwitchModel,
+)
 from igni_client.replies import Reply
 from igni_client.runs import Run
 
@@ -73,30 +78,26 @@ class Session:
         """Stop the run that is going. Its stream ends with "Run cancelled by user."."""
         await self._conn.send(Cancel(session_id=self.id))
 
-    async def history(self) -> list[dict[str, Any]]:
-        """The session's messages so far, as igni stores them."""
-        result = await self.rpc("get_chat_history", session_id=self.id)
-        return list(result) if isinstance(result, list) else []
+    async def history(self) -> list[HistoryTurn]:
+        """The session's turns so far, as igni stores them."""
+        return await self._conn.rpc(
+            "get_chat_history", HISTORY, SessionRef(session_id=self.id), session_id=self.id
+        )
 
     async def status(self) -> StatusUpdate:
         """The model, the context used and the permission mode of this session."""
-        reply = await self._conn.rpc("get_status", session_id=self.id)
-        if isinstance(reply, StatusUpdate):
-            return reply
-        raise RpcError("get_status", f"igni answered with {reply.type}")
+        return await self._conn.rpc("get_status", StatusUpdate, session_id=self.id)
 
     async def use_model(self, name: str) -> str:
         """Switch this session to the model `name` (a key of `Models.list()`). Returns igni's notice."""
-        reply = await self._conn.rpc("switch_model", {"model_name": name}, session_id=self.id)
-        if isinstance(reply, InfoMessage):
-            return reply.text
-        if isinstance(reply, RpcResponse):
-            return str(reply.result or "")
-        return ""
+        notice = await self._conn.rpc(
+            "switch_model", InfoMessage, SwitchModel(model_name=name), session_id=self.id
+        )
+        return notice.text
 
     async def rpc(self, method: str, **args: Any) -> Any:
         """Call any of igni's methods in this session. See `IgniClient.rpc`."""
-        return _result(await self._conn.rpc(method, args, session_id=self.id))
+        return self._conn.result(await self._conn.ask(method, args, session_id=self.id))
 
     def __repr__(self) -> str:
         return f"Session({self.id!r})"
@@ -119,64 +120,28 @@ class Sessions:
 
     async def default(self) -> Session:
         """The session igni opened at start."""
-        reply = await self._conn.rpc("get_session_id")
-        session_id = str(_result(reply) or "")
+        session_id = await self._conn.rpc("get_session_id", SESSION_ID)
         return await self._attach(session_id or None, None)
 
     async def list(self) -> list[SessionListEntry]:
         """Every session igni keeps, newest first."""
-        reply = await self._conn.rpc("list_sessions")
-        if isinstance(reply, SessionListResult):
-            return reply.sessions
-        result = _result(reply)
-        return [SessionListEntry.model_validate(s) for s in result or []]
+        listed = await self._conn.rpc("list_sessions", SessionListResult)
+        return listed.sessions
 
     async def _attach(self, session_id: str | None, project_dir: str | None) -> Session:
-        args: dict[str, Any] = {}
-        if session_id:
-            args["session_id"] = session_id
-        if project_dir:
-            args["project_dir"] = project_dir
-        result = _result(await self._conn.rpc("attach_session", args))
-        attached = result if isinstance(result, dict) else {}
-        sid = str(attached.get("session_id") or session_id or "")
-        session = self._attached.get(sid) or Session(self._conn, sid)
-        session.project_dir = str(attached.get("project_dir") or project_dir or "")
-        self._attached[sid] = session
+        attached = await self._conn.rpc(
+            "attach_session",
+            ATTACHED_SESSION,
+            AttachSession(session_id=session_id or None, project_dir=project_dir or None),
+        )
+        session = self._attached.get(attached.session_id) or Session(
+            self._conn, attached.session_id
+        )
+        session.project_dir = attached.project_dir
+        self._attached[attached.session_id] = session
         return session
 
     async def reattach(self) -> None:
         """Attach every session again — after igni moved, or the socket was opened again."""
         for session in list(self._attached.values()):
             await self._attach(session.id, session.project_dir or None)
-
-
-class ModelCatalogue(BaseModel):
-    """The models igni can use, by the name a session switches to."""
-
-    model_config = ConfigDict(extra="allow")
-
-    default: str = ""
-    max_context_window: int = 0
-    models: dict[str, dict[str, Any]] = Field(default_factory=dict)
-
-
-class Models:
-    """The models this igni serves."""
-
-    def __init__(self, conn: Connection) -> None:
-        self._conn = conn
-
-    async def list(self) -> ModelCatalogue:
-        result = _result(await self._conn.rpc("get_model_registry"))
-        body = result if isinstance(result, dict) else {}
-        return ModelCatalogue(
-            default=str(body.get("default") or ""),
-            max_context_window=int(body.get("max_context_window") or 0),
-            models=dict(body.get("registry") or {}),
-        )
-
-
-def _result(reply: Event) -> Any:
-    """An `RpcResponse`'s result, or the typed message a method answered with instead."""
-    return reply.result if isinstance(reply, RpcResponse) else reply

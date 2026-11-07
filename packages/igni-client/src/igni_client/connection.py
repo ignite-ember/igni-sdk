@@ -25,8 +25,9 @@ import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TypeVar, overload
 
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import WebSocketException
 
@@ -49,6 +50,9 @@ from igni_client.targets import Target
 __all__ = ["REFUSED_METHODS", "Connection"]
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+E = TypeVar("E", bound=Event)
 
 #: What an igni in a VM answers before Fleet has bound it to its producer.
 UNBOUND = "igni is not bound to a producer yet; retry shortly"
@@ -149,10 +153,10 @@ class Connection:
         except (OSError, WebSocketException) as exc:
             raise Unavailable(f"{self.target.describe()} went away: {exc}") from exc
 
-    async def rpc(
+    async def ask(
         self, method: str, args: dict[str, Any] | None = None, *, session_id: str = ""
     ) -> Event:
-        """Call `method` and return igni's answer.
+        """Call `method` with `args` and return igni's answer as it came.
 
         The answer is usually an `RpcResponse` (whose error raises
         `RpcError` here), but some methods answer with a message of their
@@ -168,6 +172,62 @@ class Connection:
                 raise RpcError(method, reply.error)
             return reply
         raise Unavailable(f"{self.target.describe()} was not bound to its producer in time")
+
+    @overload
+    async def rpc(
+        self,
+        method: str,
+        answer: type[E],
+        params: BaseModel | None = None,
+        *,
+        session_id: str = "",
+    ) -> E: ...
+
+    @overload
+    async def rpc(
+        self,
+        method: str,
+        answer: TypeAdapter[T],
+        params: BaseModel | None = None,
+        *,
+        session_id: str = "",
+    ) -> T: ...
+
+    async def rpc(
+        self,
+        method: str,
+        answer: type[Event] | TypeAdapter[Any],
+        params: BaseModel | None = None,
+        *,
+        session_id: str = "",
+    ) -> Any:
+        """Call one of the methods this client calls itself, and read its answer as `answer`.
+
+        `answer` is either the message the method answers with instead of
+        an `RpcResponse` (`list_sessions` answers with a
+        `SessionListResult`), or a `TypeAdapter` its `RpcResponse` result
+        is read with. Any other answer raises `RpcError`. A field of
+        `params` left `None` is left out.
+        """
+        args = params.model_dump(mode="json", exclude_none=True) if params else {}
+        reply = await self.ask(method, args, session_id=session_id)
+        if isinstance(answer, TypeAdapter):
+            if not isinstance(reply, RpcResponse):
+                raise RpcError(method, f"igni answered with {reply.type}")
+            try:
+                return answer.validate_python(reply.result)
+            except ValidationError as exc:
+                raise RpcError(
+                    method, f"igni's answer is not what the method returns: {exc}"
+                ) from exc
+        if isinstance(reply, answer):
+            return reply
+        raise RpcError(method, f"igni answered with {reply.type}")
+
+    @staticmethod
+    def result(reply: Event) -> Any:
+        """An `RpcResponse`'s result, or the message a method answered with instead."""
+        return reply.result if isinstance(reply, RpcResponse) else reply
 
     async def _call(self, method: str, args: dict[str, Any], session_id: str) -> Event:
         request = RpcRequest(

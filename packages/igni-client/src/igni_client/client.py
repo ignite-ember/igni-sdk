@@ -6,11 +6,12 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from igni_client.backoff import Backoff
+from igni_client.catalogue import Models
 from igni_client.commands import Commands, Me
 from igni_client.connection import Connection
 from igni_client.events import Event
 from igni_client.routing import Router
-from igni_client.sessions import Models, Sessions, _result
+from igni_client.sessions import Sessions
 from igni_client.targets import Target, require_fleet
 
 
@@ -73,7 +74,7 @@ class IgniClient:
         Raises `RpcError` when igni answers with an error. Methods that act
         on one session take `session_id`, or use `Session.rpc`.
         """
-        return _result(await self._conn.rpc(method, args))
+        return self._conn.result(await self._conn.ask(method, args))
 
     async def events(self) -> AsyncIterator[Event]:
         """Every message igni sends from now on, from every session and every client attached.
