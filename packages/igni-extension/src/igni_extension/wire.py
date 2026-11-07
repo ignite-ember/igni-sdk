@@ -103,7 +103,11 @@ class Hello(BaseModel):
     """First on the socket: what this extension holds, and the model's version."""
 
     op: Literal["hello"]
+    #: The protocol's version.
+    protocol: int = 1
     schema_version: str = ""
+    #: The extension this connection is for.
+    extension_id: str = ""
     granted: list[str] = Field(default_factory=list)
 
 
