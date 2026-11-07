@@ -54,10 +54,10 @@ export const PUBLISHED_TOKENS = {
   ],
   /** The product's own colour. Use sparingly; it means igni. */
   brand: [
-    "--ember-orange",
-    "--ember-orange-hover",
-    "--ember-red",
-    "--ember-gradient",
+    "--igni-orange",
+    "--igni-orange-hover",
+    "--igni-red",
+    "--igni-gradient",
   ],
   /** Shape. */
   form: [

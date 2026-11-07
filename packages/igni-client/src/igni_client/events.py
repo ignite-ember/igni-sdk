@@ -1,7 +1,7 @@
 """What igni sends: every message on its socket, as a typed model.
 
 Each class mirrors one message of igni's wire protocol, field for field
-(`ember_code.protocol.schemas` in igni; a test there holds the two
+(`igni_core.protocol.schemas` in igni-core; a test there holds the two
 together). The `type` field picks the class.
 
 They are permissive on purpose. A field a newer igni adds is kept rather

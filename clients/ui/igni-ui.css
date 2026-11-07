@@ -54,9 +54,9 @@
   --danger-text: #f28376;
   --accent-blue: #6aa3f7;
 
-  --ember-orange: #f97316;
-  --ember-red: #dc2626;
-  --ember-gradient: linear-gradient(135deg, #f97316, #dc2626);
+  --igni-orange: #f97316;
+  --igni-red: #dc2626;
+  --igni-gradient: linear-gradient(135deg, #f97316, #dc2626);
 
   --space-1: 2px;
   --space-2: 4px;
@@ -74,7 +74,7 @@
   --accent-green-text: #7cc57f;
   --accent-orange-text: #fb9c5a;
   --accent-red-text: #f09393;
-  --ember-orange-hover: #fb923c;
+  --igni-orange-hover: #fb923c;
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45);
 
   --radius-sm: 8px;
@@ -254,7 +254,7 @@
 }
 
 .ui-check input {
-  accent-color: var(--ember-orange);
+  accent-color: var(--igni-orange);
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -285,7 +285,7 @@
 }
 
 .ui-switch[aria-checked="true"] {
-  background: var(--ember-orange);
+  background: var(--igni-orange);
 }
 
 .ui-switch::after {
@@ -345,7 +345,7 @@
   width: 14px;
   height: 14px;
   border: 2px solid var(--border);
-  border-top-color: var(--ember-orange);
+  border-top-color: var(--igni-orange);
   border-radius: var(--radius-circle);
   animation: ui-spin 0.7s linear infinite;
 }
@@ -373,7 +373,7 @@
 .ui-progress-fill {
   height: 100%;
   border-radius: var(--radius-pill);
-  background: var(--ember-gradient);
+  background: var(--igni-gradient);
   transition: width 0.2s ease;
 }
 
@@ -421,7 +421,7 @@
 
 .ui-tab[aria-selected="true"] {
   color: var(--fg);
-  border-bottom-color: var(--ember-orange);
+  border-bottom-color: var(--igni-orange);
 }
 
 /* ── Text ─────────────────────────────────────────────────────── */
@@ -486,7 +486,7 @@
 }
 
 .btn-primary {
-  background: var(--ember-gradient);
+  background: var(--igni-gradient);
   border: none;
   color: #fff;
 }
@@ -497,13 +497,13 @@
 .btn-primary:disabled,
 .btn-primary[aria-disabled="true"] {
   opacity: 0.6;
-  background: var(--ember-gradient);
+  background: var(--igni-gradient);
   color: rgba(255, 255, 255, 0.85);
 }
 
 .btn-primary:hover:not(:disabled) {
   box-shadow: 0 6px 18px rgba(249, 115, 22, 0.3);
-  background: var(--ember-gradient);
+  background: var(--igni-gradient);
 }
 
 /* The border keeps the stronger colour; the text uses the

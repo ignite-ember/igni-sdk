@@ -1,6 +1,6 @@
 """The vocabulary the host object model is written in — igni-sdk's copy.
 
-igni-core owns this grammar (``ember_code.extensions.host.spec``) and the
+igni-core owns this grammar (``igni_core.extensions.host.spec``) and the
 description written in it, and publishes the description as
 ``docs/host-schema.json``. This copy exists to read that file back into the
 same models, so ``tools/host_codegen.py`` can generate both SDKs from it

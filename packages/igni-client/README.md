@@ -50,7 +50,7 @@ from igni_client import Fleet, IgniClient, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
 here = Local(project_dir="~/code/payments")         # the desktop app's igni for that project
-by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m ember_code.backend --ws-port 8765`
+by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m igni_core.backend --ws-port 8765`
 ```
 
 Through the gateway the first connection to a sleeping VM waits while it
