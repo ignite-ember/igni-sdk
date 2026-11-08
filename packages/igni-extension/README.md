@@ -385,6 +385,24 @@ its hooks until it answers again. One handler per event.
 `FakeHost.hook(event, value)` asks a test's extension as igni would, and
 `FakeHost.tell(event, value)` tells it one that decides nothing.
 
+Changed since igni-extension 0.1.0, on purpose:
+
+- `HookHandlers.tell(name, raw, caller=None)` and
+  `HookHandlers.answer(hook_id, name, raw, caller=None)` in
+  `igni_extension.hooks`, and `ServiceEventHandlers.answer(hook_id, raw,
+  caller=None)` in `igni_extension.service_events`, take the `Caller`
+  already read off the wire, or `None`, and hand it to the handler as
+  given. In 0.1.0 they took the raw `principal=` dict and read it
+  themselves; `principal=` now raises `TypeError`. Handlers reached
+  through `ext.hook`, `ext.on_service_event` and `FakeHost` see the same
+  caller as before.
+- `PlanSubmit.tasks` is a list of JSON values. A task built in Python
+  that is not JSON (a date, a set, a dict with an int key) is refused
+  with `ValidationError`; what the agent sends is read as before.
+- New: `HookMessage.caller` in `igni_extension.wire`, the hook's
+  `principal` read as a `Caller`, or `None` when it is missing or
+  malformed.
+
 ## What your service sends: events and messages
 
 Your service reaches a producer's igni — on their desktop, or in their
