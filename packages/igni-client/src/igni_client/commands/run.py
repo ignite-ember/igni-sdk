@@ -19,7 +19,7 @@ from igni_client.commands.wire import (
     StreamLine,
     UnknownLine,
     VmWoken,
-    line_kind,
+    _line_kind,
 )
 from igni_client.errors import Unavailable
 from igni_client.targets import Fleet
@@ -92,7 +92,7 @@ class CommandRun:
         if not isinstance(value, dict):
             logger.warning("igni-client: passing over a line the gateway sent: %.200s", text)
             return None
-        if line_kind(value) == "done":
+        if _line_kind(value) == "done":
             # Checked as a `CommandFinished`: a field that does not fit is raised, not passed over.
             self.finished = CommandDone.ending(value)
             return None

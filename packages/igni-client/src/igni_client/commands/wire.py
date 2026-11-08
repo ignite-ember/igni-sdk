@@ -134,7 +134,7 @@ class UnknownLine(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-def line_kind(value: Any) -> str:
+def _line_kind(value: Any) -> str:
     if not isinstance(value, dict):
         return "unknown"
     if isinstance(value.get("command"), dict):
@@ -154,7 +154,7 @@ StreamLine = Annotated[
     | Annotated[CommandDone, Tag("done")]
     | Annotated[OutputLine, Tag("stream")]
     | Annotated[UnknownLine, Tag("unknown")],
-    Discriminator(line_kind),
+    Discriminator(_line_kind),
 ]
 
 STREAM_LINE: TypeAdapter[StreamLine] = TypeAdapter(StreamLine)
