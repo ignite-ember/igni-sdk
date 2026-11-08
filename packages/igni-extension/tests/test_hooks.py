@@ -6,15 +6,20 @@ Against `FakeHost`, which asks as igni asks (`docs/HOST_MODEL_PROTOCOL.md`).
 from __future__ import annotations
 
 import asyncio
+import datetime
+import json
+import logging
 from collections.abc import AsyncIterator
 
 import pytest
+from pydantic import ValidationError
 
-from igni_extension import Allow, Hooks, IgniExtension, Modify, Reject
-from igni_extension.hooks import PlanSubmit, PostToolUse, PreToolUse, Told
+from igni_extension import Allow, Caller, CallerKind, Hooks, IgniExtension, Modify, Reject
+from igni_extension.hooks import HookHandlers, PlanSubmit, PostToolUse, PreToolUse, Stop, Told
 from igni_extension.testing import FakeHost
 
 PLAN = {"session_id": "s-1", "plan": "Refactor it.", "tasks": [], "attempt": 0}
+ADA = Caller(kind=CallerKind.PERSON, id="u-ada", org="org-acme", group="g-legal")
 
 
 @pytest.fixture
@@ -182,3 +187,141 @@ def test_a_tool_event_names_the_tool_as_igni_registers_it_and_as_the_manifest_do
     assert "tool_manifest_name" in value_type.model_fields
     assert told.tool_manifest_name == "acme.tickets.lookup_ticket"
     assert built_in.tool_manifest_name == ""
+
+
+async def test_a_told_event_hands_its_handler_the_caller_igni_named(host: FakeHost) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    heard: asyncio.Future[tuple[Caller, Caller | None]] = asyncio.get_running_loop().create_future()
+
+    @ext.hook(Hooks.SESSION_START)
+    async def started(event: Told, caller: Caller) -> None:
+        heard.set_result((caller, Caller.current()))
+
+    task = await _connected(ext)
+    try:
+        await host.tell("SessionStart", {"session_id": "s-1"}, caller=ADA)
+        seen = await asyncio.wait_for(heard, 5)
+    finally:
+        task.cancel()
+        await ext.aclose()
+
+    assert seen == (ADA, ADA)
+
+
+@pytest.mark.parametrize("principal", [None, {"kind": "person"}, {"kind": "robot", "id": "r-1"}])
+async def test_a_missing_or_malformed_principal_reaches_a_handler_as_no_caller(
+    host: FakeHost, principal: object
+) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    heard: asyncio.Future[tuple[Caller | None, Caller | None]] = (
+        asyncio.get_running_loop().create_future()
+    )
+
+    @ext.hook(Hooks.SESSION_START)
+    async def started(event: Told, caller: Caller | None) -> None:
+        heard.set_result((caller, Caller.current()))
+
+    task = await _connected(ext)
+    frame = {"op": "hook", "event": "SessionStart", "value": {}, "principal": principal}
+    try:
+        await host.tell("SessionEnd", {})  # nothing hooks it; returns once connected
+        for socket in list(host._sockets):
+            await socket.send(json.dumps(frame))
+        seen = await asyncio.wait_for(heard, 5)
+    finally:
+        task.cancel()
+        await ext.aclose()
+
+    assert seen == (None, None)
+
+
+class TestHookHandlers:
+    """Called as the host channel calls them, with the caller already read off the wire."""
+
+    async def test_answer_hands_the_handler_the_caller_it_is_given(self) -> None:
+        handlers = HookHandlers()
+        seen: list[tuple[Caller, Caller | None]] = []
+
+        @handlers.on(Hooks.PLAN_SUBMIT)
+        def grounded(plan: PlanSubmit, caller: Caller) -> Reject:
+            seen.append((caller, Caller.current()))
+            return Reject(caller.id)
+
+        answer = await handlers.answer("h-1", "PlanSubmit", PLAN, caller=ADA)
+
+        assert (answer.outcome, answer.reason) == ("reject", "u-ada")
+        assert seen == [(ADA, ADA)] and seen[0][0] is ADA
+        assert Caller.current() is None
+
+    async def test_tell_hands_the_handler_the_caller_it_is_given(self) -> None:
+        handlers = HookHandlers()
+        seen: list[Caller | None] = []
+
+        @handlers.on(Hooks.SESSION_END)
+        async def ended(event: Told) -> None:
+            seen.append(Caller.current())
+
+        await handlers.tell("SessionEnd", {"session_id": "s-1"}, caller=ADA)
+        assert seen == [ADA]
+
+    async def test_without_a_caller_a_handler_that_takes_one_or_none_gets_none(self) -> None:
+        handlers = HookHandlers()
+        seen: list[Caller | None] = []
+
+        @handlers.on(Hooks.STOP)
+        async def stopping(event: Stop, caller: Caller | None) -> None:
+            seen.append(caller)
+
+        answer = await handlers.answer("h-2", "Stop", {"session_id": "s-1"})
+
+        assert answer.outcome == "allow"
+        assert seen == [None]
+
+    @pytest.mark.parametrize("call", ["tell", "answer"])
+    async def test_the_caller_is_no_longer_passed_as_principal(self, call: str) -> None:
+        handlers = HookHandlers()
+        principal = ADA.model_dump(mode="json")
+        with pytest.raises(TypeError, match="principal"):
+            if call == "tell":
+                await handlers.tell("SessionStart", {}, principal=principal)  # type: ignore[call-arg]
+            else:
+                await handlers.answer("h-3", "PlanSubmit", PLAN, principal=principal)  # type: ignore[call-arg]
+
+    async def test_a_told_handler_that_raises_is_logged_and_swallowed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        handlers = HookHandlers()
+
+        @handlers.on(Hooks.NOTIFICATION)
+        def broken(event: Told) -> None:
+            raise RuntimeError("the pager is down")
+
+        with caplog.at_level(logging.ERROR, logger="igni_extension.hooks"):
+            await handlers.tell("Notification", {}, caller=ADA)  # does not raise
+
+        (record,) = [r for r in caplog.records if r.name == "igni_extension.hooks"]
+        assert record.getMessage() == "igni: the handler of Notification failed"
+        assert record.exc_info is not None and isinstance(record.exc_info[1], RuntimeError)
+
+
+class TestAPlansTasks:
+    def test_keep_the_json_the_agent_wrote(self) -> None:
+        tasks = [{"title": "Split it", "done": False, "files": ["a.py"]}, "Test it", 3, None]
+
+        plan = PlanSubmit.model_validate_json(json.dumps({**PLAN, "tasks": tasks}))
+
+        assert plan.tasks == tasks
+
+    @pytest.mark.parametrize(
+        "task",
+        [datetime.date(2026, 11, 8), {1, 2}, object(), {1: "one"}],
+        ids=["a date", "a set", "an object", "a dict with an int key"],
+    )
+    def test_refuse_what_is_not_json(self, task: object) -> None:
+        with pytest.raises(ValidationError):
+            PlanSubmit(plan="Refactor it.", tasks=[task])  # type: ignore[list-item]
+
+    def test_are_described_as_json_values(self) -> None:
+        items = PlanSubmit.model_json_schema()["properties"]["tasks"]["items"]
+
+        assert items == {"$ref": "#/$defs/JsonValue"}

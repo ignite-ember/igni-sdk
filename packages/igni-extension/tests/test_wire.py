@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from igni_extension import HostError
+from igni_extension import Caller, CallerKind, HostError
 from igni_extension.wire import (
     HOST_MESSAGE,
     HookAnswer,
@@ -64,3 +64,23 @@ def test_a_told_hook_decides_nothing() -> None:
         json.dumps({"op": "hook", "id": None, "event": "SessionStart"})
     )
     assert isinstance(told, HookMessage) and not told.decides
+
+
+def test_a_hook_names_its_caller_from_the_principal() -> None:
+    principal = {"kind": "person", "id": "u-ada", "org": "org-acme", "group": "g-legal"}
+    hook = HookMessage(op="hook", id="h-1", event="PlanSubmit", principal=principal)
+
+    assert hook.caller == Caller(
+        kind=CallerKind.PERSON, id="u-ada", org="org-acme", group="g-legal"
+    )
+    assert hook.principal == principal
+    assert "caller" not in json.loads(hook.model_dump_json())
+
+
+@pytest.mark.parametrize("principal", [None, {}, {"kind": "person"}, {"kind": "robot", "id": "r"}])
+def test_a_hook_without_a_readable_principal_has_no_caller(
+    principal: dict[str, str] | None,
+) -> None:
+    hook = HookMessage(op="hook", event="SessionStart", principal=principal)
+
+    assert hook.caller is None

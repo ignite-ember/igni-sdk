@@ -8,6 +8,7 @@ The answer only says whether a handler took it — `allow` — or not:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import threading
 from collections.abc import AsyncIterator, Iterator, Mapping
@@ -168,6 +169,46 @@ async def test_the_handler_sees_the_caller_igni_named(host: FakeHost) -> None:
 
     assert (await _answer(ext, host, caller=ada))["outcome"] == "allow"
     assert seen == [ada]
+
+
+async def test_a_malformed_principal_is_no_caller_to_the_handler(host: FakeHost) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    heard: asyncio.Future[Caller | None] = asyncio.get_running_loop().create_future()
+
+    @ext.on_service_event("index.ready")
+    def ready(event: ServiceEvent) -> None:
+        heard.get_loop().call_soon_threadsafe(heard.set_result, Caller.current())
+
+    task = await _connected(ext)
+    frame = {
+        "op": "hook",
+        "id": "h-raw",
+        "event": "ServiceEvent",
+        "value": EVENT,
+        "principal": {"kind": "person"},
+    }
+    try:
+        await host.tell("SessionEnd", {})  # nothing hooks it; returns once connected
+        for socket in list(host._sockets):
+            await socket.send(json.dumps(frame))
+        assert await asyncio.wait_for(heard, 5) is None
+    finally:
+        task.cancel()
+        await ext.aclose()
+
+
+async def test_answer_puts_the_caller_it_is_given_in_scope() -> None:
+    handlers = ServiceEventHandlers()
+    ada = Caller(kind=CallerKind.PERSON, id="u-ada", org="org-acme", group="g-legal")
+    seen: list[Caller | None] = []
+    handlers.on()(lambda event: seen.append(Caller.current()))
+
+    answer = await handlers.answer("h-1", EVENT, caller=ada)
+
+    assert answer.outcome == "allow"
+    assert seen == [ada] and seen[0] is ada
+    with pytest.raises(TypeError, match="principal"):
+        await handlers.answer("h-2", EVENT, principal=ada.model_dump(mode="json"))  # type: ignore[call-arg]
 
 
 async def test_a_plain_def_handler_runs_off_the_loop(host: FakeHost) -> None:
