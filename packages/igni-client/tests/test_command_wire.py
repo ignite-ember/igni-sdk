@@ -5,6 +5,7 @@ from __future__ import annotations
 import binascii
 import json
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -110,6 +111,30 @@ def test_a_request_outside_the_gateway_s_limits_is_refused_before_it_is_sent() -
         ProducerRef.parse("person:")
     CommandRequest.check("x" * 16 * 1024, 3600)
     CommandRequest.check("x", 1)
+
+
+def test_a_command_s_limit_is_counted_in_bytes() -> None:
+    CommandRequest.check("\u00e9" * 8 * 1024, 10)
+    with pytest.raises(ValueError, match="1 byte to 16 KiB"):
+        CommandRequest.check("\u00e9" * (8 * 1024 + 1), 10)
+
+
+def test_a_command_that_has_not_ended_with_an_exit_code_is_not_ok() -> None:
+    assert not CommandFinished().ok
+    assert not CommandFinished(exit_code=1).ok
+    assert CommandFinished(exit_code=0).ok
+    with pytest.raises(ValidationError):
+        CommandOutput.model_validate({"stream": "stdin", "data": b""})
+
+
+def test_an_output_line_carries_its_output_there_and_back() -> None:
+    output = CommandOutput(stream="stderr", data=b"\x00caf\xe9\n")
+
+    line = OutputLine.of(output)
+
+    assert line.model_dump() == {"stream": "stderr", "data_b64": "AGNhZukK"}
+    assert STREAM_LINE.validate_json(line.model_dump_json()) == line
+    assert line.output() == output
 
 
 def test_a_done_line_s_result_holds_only_what_the_gateway_sent() -> None:
@@ -311,6 +336,77 @@ async def test_output_that_is_not_base64_is_raised(data: str) -> None:
         await run.wait()
 
 
+async def test_a_refused_credential_on_a_run_is_an_auth_error() -> None:
+    run = _run('{"error": "invalid_token"}', status=401)
+
+    with pytest.raises(AuthError, match="the gateway refused the credential: invalid_token"):
+        await run.wait()
+
+
+async def test_output_read_piece_by_piece_is_kept_as_it_is_read() -> None:
+    run = _run(
+        '{"stream": "stdout", "data_b64": "b25lCg=="}',
+        '{"stream": "stderr", "data_b64": "b29wcw=="}',
+        '{"stream": "stdout", "data_b64": "dHdvCg=="}',
+        '{"done": true, "exit_code": 0}',
+    )
+    seen = []
+
+    async for output in run:
+        seen.append((output.stream, output.text, run.stdout, run.stderr))
+
+    assert seen == [
+        ("stdout", "one\n", "one\n", ""),
+        ("stderr", "oops", "one\n", "oops"),
+        ("stdout", "two\n", "one\ntwo\n", "oops"),
+    ]
+    assert run.finished is not None and run.finished.ok
+
+
+async def test_a_run_left_partway_has_not_finished() -> None:
+    run = _run('{"stream": "stdout", "data_b64": "b2sK"}', '{"done": true, "exit_code": 0}')
+
+    async for _ in run:
+        break
+
+    assert run.finished is None and run.stdout == "ok\n"
+
+
+class _Cut(httpx.AsyncByteStream):
+    """A body that sends one line and then loses the connection."""
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield b'{"stream": "stdout", "data_b64": "b2sK"}\n'
+        raise httpx.ReadError("connection reset")
+
+
+async def test_a_gateway_that_goes_quiet_partway_is_unavailable_after_what_it_sent() -> None:
+    fleet = Fleet(
+        "http://gateway.test",
+        auth=Person("t-ada"),
+        http=httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, stream=_Cut()))
+        ),
+    )
+    request = CommandRequest(producer=ProducerRef.parse("person:u-ada"), command="ls", timeout_s=5)
+    run = CommandRun(fleet, request, "t-ada")
+    seen = []
+
+    with pytest.raises(Unavailable, match="did not answer: connection reset"):
+        async for output in run:
+            seen.append(output.text)
+
+    assert seen == ["ok\n"] and run.stdout == "ok\n" and run.finished is None
+
+
+async def test_a_run_is_made_from_a_request_model_not_a_dict() -> None:
+    fleet = Fleet("http://gateway.test", auth=Person("t-ada"))
+    body: Any = {"producer": {"kind": "person", "id": "u-ada"}, "command": "ls", "timeout_s": 5}
+
+    with pytest.raises(AttributeError, match="model_dump"):
+        await CommandRun(fleet, body, "t-ada").wait()
+
+
 async def test_a_gateway_that_does_not_answer_is_unavailable() -> None:
     def gateway(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused", request=request)
@@ -373,9 +469,11 @@ async def test_a_timeout_is_sent_as_it_was_given() -> None:
 
     await (await commands.run("ls", timeout_s=fractional)).wait()
     await (await commands.run("ls", timeout_s=whole)).wait()
+    await (await commands.run("ls", timeout_s=True)).wait()
 
     sent = [body["timeout_s"] for body in gateway.bodies()]
-    assert sent == [5.5, 5.0] and all(isinstance(timeout, float) for timeout in sent)
+    assert sent == [5.5, 5.0, True]
+    assert [type(timeout) for timeout in sent] == [float, float, bool]
 
 
 @pytest.mark.parametrize(
@@ -416,3 +514,8 @@ async def test_who_this_is_is_refused_in_the_gateway_s_words(
 async def test_who_this_is_answered_in_something_other_than_json_is_a_json_error() -> None:
     with pytest.raises(json.JSONDecodeError, match="Expecting value"):
         await Gateway(httpx.Response(200, text="<html>")).commands().me()
+
+
+async def test_who_this_is_answered_without_a_producer_is_a_validation_error() -> None:
+    with pytest.raises(ValidationError, match="producer"):
+        await Gateway(httpx.Response(200, json={"org": "org-acme"})).commands().me()

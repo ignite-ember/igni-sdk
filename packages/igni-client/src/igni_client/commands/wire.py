@@ -50,8 +50,8 @@ class CommandRequest(BaseModel):
 
     producer: ProducerRef
     command: str
-    #: Sent as given: a whole or fractional number of seconds.
-    timeout_s: int | float
+    #: Sent as given: a whole or fractional number of seconds (a bool stays a bool, as before).
+    timeout_s: bool | int | float
 
     @staticmethod
     def check(command: str, timeout_s: int) -> None:
