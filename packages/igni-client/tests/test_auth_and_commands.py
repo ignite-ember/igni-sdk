@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -155,6 +156,108 @@ async def test_a_space_id_with_a_slash_is_refused_before_asking(key_file: Path) 
     app = _app(key_file, IgniServer())
     with pytest.raises(ValueError, match="without '/'"):
         await app.spaces.declare("a/b")
+
+
+def _spaces_app(
+    key_file: Path, spaces: Callable[[httpx.Request], httpx.Response]
+) -> tuple[App, IgniServer]:
+    """An app whose sign-in `IgniServer` plays and whose spaces routes `spaces` answers."""
+    server = IgniServer()
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if "/spaces" in request.url.path:
+            server.calls.append(request)
+            return spaces(request)
+        return server(request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+    server.jwks = app.public_jwks()
+    return app, server
+
+
+async def test_spaces_are_listed_page_by_page(key_file: Path) -> None:
+    pages = {
+        "": {"spaces": [{"space_id": "sp-1", "external_id": "a"}], "next": "sp-1"},
+        "sp-1": {"spaces": [{"space_id": "sp-2", "external_id": "b"}], "next": None},
+    }
+    asked: list[dict[str, str]] = []
+
+    def spaces(request: httpx.Request) -> httpx.Response:
+        asked.append(dict(request.url.params))
+        return httpx.Response(200, json=pages[request.url.params.get("after", "")])
+
+    app, _ = _spaces_app(key_file, spaces)
+    listed = await app.spaces.list(limit=1)
+
+    assert [(s.space_id, s.external_id) for s in listed] == [("sp-1", "a"), ("sp-2", "b")]
+    assert asked == [{"limit": "1"}, {"limit": "1", "after": "sp-1"}]
+
+
+async def test_a_space_the_app_does_not_have_is_none_and_deleting_it_is_fine(
+    key_file: Path,
+) -> None:
+    app, _ = _spaces_app(key_file, lambda request: httpx.Response(404))
+
+    assert await app.spaces.get("nobody") is None
+    await app.spaces.delete("nobody")
+
+
+@pytest.mark.parametrize(
+    ("answer", "error", "said"),
+    [
+        (httpx.Response(403, text="not your app"), NotAllowed, "refused declaring a space"),
+        (httpx.Response(409, text="taken"), NotAllowed, "refused declaring a space: taken"),
+        (httpx.Response(400, text="bad id"), NotAllowed, "refused declaring a space: bad id"),
+        (httpx.Response(502), Unavailable, "answered declaring a space with 502"),
+        (httpx.Response(200, text="<html>"), Unavailable, "with something else"),
+        (httpx.Response(200, json={"external_id": "a"}), Unavailable, "with something else"),
+    ],
+)
+async def test_a_space_igni_server_will_not_declare_says_why(
+    key_file: Path, answer: httpx.Response, error: type[Exception], said: str
+) -> None:
+    app, _ = _spaces_app(key_file, lambda request: answer)
+
+    with pytest.raises(error, match=said):
+        await app.spaces.declare("a")
+
+
+async def test_a_token_igni_server_stops_honouring_is_renewed_once(key_file: Path) -> None:
+    answers = iter([httpx.Response(401), httpx.Response(200, json={"space_id": "sp-1"})])
+    app, server = _spaces_app(key_file, lambda request: next(answers))
+
+    space = await app.spaces.get("a")
+
+    assert space is not None and space.space_id == "sp-1"
+    assert len(server.token_requests) == 2, "the refused token was dropped and a new one asked"
+
+
+async def test_a_second_401_is_not_retried_again(key_file: Path) -> None:
+    app, server = _spaces_app(key_file, lambda request: httpx.Response(401))
+
+    with pytest.raises(Unavailable, match="401"):
+        await app.spaces.get("a")
+
+    assert len(server.token_requests) == 2
+
+
+async def test_igni_server_without_an_issuer_is_unavailable(key_file: Path) -> None:
+    def no_issuer(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="<html>")
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(no_issuer))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+
+    with pytest.raises(Unavailable, match="published no issuer"):
+        await app.token()
+
+
+def test_an_app_takes_its_key_exactly_once(key_file: Path) -> None:
+    with pytest.raises(ValueError, match="exactly one"):
+        App("app-bot", server="http://igni.test")
+    with pytest.raises(ValueError, match="exactly one"):
+        App("app-bot", server="http://igni.test", key_file=key_file, key_pem=key_file.read_text())
 
 
 class KeyExchange:
