@@ -596,6 +596,39 @@ async def test_a_reply_answers_each_approval_with_its_approver() -> None:
     assert sent == [[HitlDecision(requirement_id="req-a", action="confirm", choice="always")]]
 
 
+async def test_a_run_closed_early_stops_following_its_streams() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [ContentDelta(text="first"), Delay(seconds=0.05)]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            run = session.send("hi")
+            async for event in run:
+                if isinstance(event, ContentDelta):
+                    break
+            await run.aclose()  # type: ignore[attr-defined]
+            assert igni._conn.router._streams == {}, "a run closed early holds no stream open"
+
+
+async def test_ask_attaches_its_files_to_the_prompt() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        await session.ask("read it", files={"a.py": "print(1)"})
+
+    [prompt] = [r.frame for r in fake.socket.received if r.frame.type == "user_message"]
+    assert prompt.file_contents == {"a.py": "print(1)"}  # type: ignore[union-attr]
+
+
+async def test_a_reply_to_a_stream_with_nothing_in_it_is_empty() -> None:
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        return
+        yield
+
+    reply = await Reply.collect(events(), Approver(None))
+
+    assert reply == Reply(text="", thinking="", tools=[], completed=None)
+    assert str(reply) == ""
+
+
 # ── helpers ──
 
 
