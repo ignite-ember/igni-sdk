@@ -264,6 +264,24 @@ JSON such as `[1]`, `5` or `null` — is passed over with a warning on the
 0.1.0 raised `AttributeError` or `TypeError` out of the iteration on a
 line that was JSON but not an object.)
 
+Changed since igni-client 0.1.0, on purpose:
+
+- `run.record` and `run.woken` are `None` until their lines arrive, then a
+  `CommandRecord` (`command_id`, `command`, `state`) and a `Wake` (`how`,
+  `node`, `ms`), both keeping any other field the gateway sends. In 0.1.0
+  they were plain dicts, `{}` until then: read `run.record.command` where
+  you read `run.record["command"]`, and test `run.record is None` where
+  you tested `not run.record`.
+- `Wake.ms` is a float, as the gateway sends it (`30` is read as `30.0`).
+  `FakeIgni`'s gateway now wakes a VM in `12.345` ms, not `30`.
+- `CommandRun(fleet, request, token)` takes a
+  `igni_client.commands.wire.CommandRequest`, not a dict;
+  `igni.commands.run(...)` builds it for you.
+- A line that is not JSON at all is still passed over, now with the same
+  warning.
+- New names: `CommandRecord` and `Wake` in `igni_client.commands`, and the
+  gateway's wire models in `igni_client.commands.wire`.
+
 ## Anything else igni can do
 
 `igni.rpc(method, **args)` calls any of igni's methods by name — the ones

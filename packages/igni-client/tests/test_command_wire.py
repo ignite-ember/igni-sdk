@@ -277,6 +277,8 @@ async def test_a_record_and_a_wake_are_none_until_their_lines_arrive() -> None:
     assert bare.record is None and bare.woken is None
     assert told.record == CommandRecord(command_id="c-1", command="ls", state="running")
     assert told.woken == Wake(how="paused", node="n1", ms=12.345)
+    with pytest.raises(TypeError, match="not subscriptable"):
+        told.record["command"]  # type: ignore[index]
 
 
 async def test_a_record_or_a_wake_that_does_not_fit_its_model_is_kept_as_sent() -> None:
