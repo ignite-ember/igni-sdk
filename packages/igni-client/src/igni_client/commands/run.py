@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import AsyncIterator
 
 import httpx
-from pydantic import ValidationError
 
 from igni_client.commands.models import CommandFinished, CommandOutput, CommandRecord, Wake
 from igni_client.commands.wire import (
@@ -19,6 +19,7 @@ from igni_client.commands.wire import (
     StreamLine,
     UnknownLine,
     VmWoken,
+    line_kind,
 )
 from igni_client.errors import Unavailable
 from igni_client.targets import Fleet
@@ -84,17 +85,23 @@ class CommandRun:
 
     def _take(self, text: str) -> CommandOutput | None:
         try:
-            line: StreamLine = STREAM_LINE.validate_json(text)
-        except ValidationError as exc:
+            value = json.loads(text)
+        except ValueError as exc:
             logger.warning("igni-client: passing over a line the gateway sent: %s", exc)
             return None
+        if not isinstance(value, dict):
+            logger.warning("igni-client: passing over a line the gateway sent: %.200s", text)
+            return None
+        if line_kind(value) == "done":
+            # Checked as a `CommandFinished`: a field that does not fit is raised, not passed over.
+            self.finished = CommandDone.ending(value)
+            return None
+        line: StreamLine = STREAM_LINE.validate_python(value)
         match line:
             case CommandAccepted(command=record):
                 self.record = record
             case VmWoken(woken=woken):
                 self.woken = woken
-            case CommandDone():
-                self.finished = line.finished()
             case OutputLine():
                 return self._keep(line.output())
             case UnknownLine():

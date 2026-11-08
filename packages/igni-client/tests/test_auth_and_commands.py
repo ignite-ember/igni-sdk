@@ -419,6 +419,24 @@ async def test_a_command_streams_its_output_and_ends_with_its_exit_code() -> Non
     assert (me.kind, me.id, me.org) == ("person", "u-ada", "org-acme")
 
 
+async def test_the_fake_gateway_says_how_it_woke_the_vm_and_recorded_the_command() -> None:
+    async with (
+        FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake,
+        IgniClient(fake.fleet(Person("t-ada"))) as igni,
+    ):
+        run = await igni.commands.run("ls")
+        finished = await run.wait()
+
+    assert run.woken is not None and (run.woken.how, run.woken.node) == ("paused", "n1")
+    assert run.woken.ms == 12.345
+    assert run.record is not None and (run.record.command_id, run.record.state) == (
+        "c-1",
+        "running",
+    )
+    assert (finished.exit_code, finished.duration_ms) == (0, 5)
+    assert run.stdout == "ran ls\n"
+
+
 async def test_a_command_in_somebody_elses_vm_is_refused() -> None:
     async with (
         FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake,

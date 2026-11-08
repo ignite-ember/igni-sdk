@@ -12,7 +12,6 @@ from typing import Annotated, Any, Literal
 
 import httpx
 from pydantic import (
-    Base64Bytes,
     BaseModel,
     ConfigDict,
     Discriminator,
@@ -20,6 +19,8 @@ from pydantic import (
     Tag,
     TypeAdapter,
     ValidationError,
+    ValidatorFunctionWrapHandler,
+    field_validator,
 )
 
 from igni_client.commands.models import CommandFinished, CommandOutput, CommandRecord, Wake
@@ -49,7 +50,8 @@ class CommandRequest(BaseModel):
 
     producer: ProducerRef
     command: str
-    timeout_s: int
+    #: Sent as given: a whole or fractional number of seconds.
+    timeout_s: int | float
 
     @staticmethod
     def check(command: str, timeout_s: int) -> None:
@@ -65,35 +67,65 @@ class CommandAccepted(BaseModel):
 
     command: CommandRecord
 
+    @field_validator("command", mode="wrap")
+    @classmethod
+    def _as_given(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        return _as_given(value, handler, CommandRecord)
+
 
 class VmWoken(BaseModel):
     """The VM was woken for the command."""
 
     woken: Wake
 
+    @field_validator("woken", mode="wrap")
+    @classmethod
+    def _as_given(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        return _as_given(value, handler, Wake)
+
+
+def _as_given(value: Any, handler: ValidatorFunctionWrapHandler, model: type[BaseModel]) -> Any:
+    """`value` checked as `model`; one that does not fit is kept as the gateway sent it."""
+    try:
+        return handler(value)
+    except ValidationError:
+        if not isinstance(value, dict):
+            raise
+        return model.model_construct(**value)
+
 
 class OutputLine(BaseModel):
-    """A piece of stdout or stderr, base64-encoded."""
+    """A piece of stdout or stderr, base64-encoded.
+
+    `data_b64` is kept as sent and decoded by `output()`: a missing or null
+    one is no bytes, and one that is not base64 raises `binascii.Error` there.
+    """
 
     stream: Literal["stdout", "stderr"]
-    data_b64: Base64Bytes = b""
+    data_b64: JsonValue = ""
 
     @classmethod
     def of(cls, output: CommandOutput) -> OutputLine:
         """The line that carries `output`."""
-        return cls(stream=output.stream, data_b64=base64.b64encode(output.data))
+        return cls(stream=output.stream, data_b64=base64.b64encode(output.data).decode())
 
     def output(self) -> CommandOutput:
-        return CommandOutput(stream=self.stream, data=self.data_b64)
+        data = base64.b64decode(str(self.data_b64 or ""))
+        return CommandOutput(stream=self.stream, data=data)
 
 
 class CommandDone(CommandFinished):
-    """The command ended; the rest of the line says how."""
+    """The command ended; the rest of the line says how. Any true `done` ends it."""
 
-    done: Literal[True]
+    done: JsonValue
+
+    @staticmethod
+    def ending(line: dict[str, Any]) -> CommandFinished:
+        """How a done line says the command ended; a field that does not fit raises `ValidationError`."""
+        return CommandFinished.model_validate({k: v for k, v in line.items() if k != "done"})
 
     def finished(self) -> CommandFinished:
-        return CommandFinished.model_validate(self.model_dump(exclude={"done"}))
+        return self.ending(self.model_dump(exclude_unset=True))
 
 
 class UnknownLine(BaseModel):
@@ -102,14 +134,14 @@ class UnknownLine(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-def _line_kind(value: Any) -> str:
+def line_kind(value: Any) -> str:
     if not isinstance(value, dict):
         return "unknown"
     if isinstance(value.get("command"), dict):
         return "command"
     if isinstance(value.get("woken"), dict):
         return "woken"
-    if value.get("done") is True:
+    if value.get("done"):
         return "done"
     if value.get("stream") in ("stdout", "stderr"):
         return "stream"
@@ -122,7 +154,7 @@ StreamLine = Annotated[
     | Annotated[CommandDone, Tag("done")]
     | Annotated[OutputLine, Tag("stream")]
     | Annotated[UnknownLine, Tag("unknown")],
-    Discriminator(_line_kind),
+    Discriminator(line_kind),
 ]
 
 STREAM_LINE: TypeAdapter[StreamLine] = TypeAdapter(StreamLine)
@@ -134,8 +166,8 @@ class GatewayErrorBody(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     detail: JsonValue = None
-    error_description: str | None = None
-    error: str | None = None
+    error_description: JsonValue = None
+    error: JsonValue = None
 
     def reason(self) -> str:
         return str(self.detail or self.error_description or self.error or "")

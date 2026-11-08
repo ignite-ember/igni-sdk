@@ -20,7 +20,7 @@ class Commands:
         response = await self._fleet.request("GET", "/v1/me")
         if response.status_code != 200:
             raise GatewayRefusal.of(response).error()
-        self._me = Me.model_validate_json(response.content)
+        self._me = Me.model_validate(response.json())
         return self._me
 
     async def run(
