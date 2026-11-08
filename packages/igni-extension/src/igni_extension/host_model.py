@@ -1106,7 +1106,7 @@ class HostApp(HostObject):
         return cast(Display, await self._call("set_output_style", {"name": name}, Display))
 
     async def check_for_update(self) -> UpdateInfo | None:
-        """Ask whether a newer igni exists."""
+        """Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`."""
         return cast(UpdateInfo | None, await self._call("check_for_update", {}, UpdateInfo | None))
 
     async def open_external(self, url: str) -> None:

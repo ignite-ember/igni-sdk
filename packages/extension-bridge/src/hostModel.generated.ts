@@ -892,7 +892,7 @@ export class HostApp extends HostObject {
     return this.call<Display>("set_output_style", { name });
   }
 
-  /** Ask whether a newer igni exists. */
+  /** Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`. */
   check_for_update(): Promise<UpdateInfo | null> {
     return this.call<UpdateInfo | null>("check_for_update", {});
   }
