@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -77,6 +78,9 @@ from igni_service.testing_wire import (
 )
 from igni_service.tokens import PEOPLE_ONLY, CallerKind
 from igni_service.urls import IgniPaths
+
+if TYPE_CHECKING:
+    from igni_service.testing_wire import RoutedCall
 
 
 class FakeIgni:
@@ -127,11 +131,21 @@ class FakeIgni:
         self.agents = FakeAgents(is_member=self.directory.is_member, clock=self.clock.wall)
         #: VM profiles: requests, an org admin's decisions, what a VM gets.
         self.vm_profiles = FakeVmProfiles(clock=self.clock.wall)
-        self.router = FakeRouter(
+        self._routes = self._route_table()
+
+    @property
+    def router(self) -> FakeRouter:
+        """The pipeline every request the service sends goes through, as igni's router.
+
+        Made from the fake's collaborators as they are now, so a test that
+        replaces one (`fake.traffic = RecordedTraffic()`) is heard on the
+        wire, as it was when the pipeline was `FakeIgni`'s own.
+        """
+        return FakeRouter(
             addresses=self.addresses,
             traffic=self.traffic,
             guard=RouteGuard(self.oauth.bearers, self.clients),
-            table=self._route_table(),
+            table=self._routes,
         )
 
     def reset(self) -> None:
@@ -218,10 +232,17 @@ class FakeIgni:
     # ── The wire ────────────────────────────────────────────────────
 
     def transport(self) -> httpx.MockTransport:
-        return httpx.MockTransport(self.router.handle)
+        return httpx.MockTransport(self._answer)
 
     def http_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(transport=self.transport())
+
+    def _answer(self, request: httpx.Request) -> httpx.Response:
+        return self.router.handle(request)
+
+    def _fallback(self, call: RoutedCall) -> httpx.Response:
+        """An authenticated service path no route takes: the fake's directory, as it is now."""
+        return self.directory.route(call)
 
     def _route_table(self) -> RouteTable:
         """Every path igni serves a service, in the order they are matched."""
@@ -264,7 +285,7 @@ class FakeIgni:
                 handler=self.directory.route,
             ),
         )
-        return RouteTable(routes=routes, fallback=self.directory.route)
+        return RouteTable(routes=routes, fallback=self._fallback)
 
 
 #: What a service's tests import: the fake, every type its public methods

@@ -16,6 +16,7 @@ from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.testing_bearers import BearerTokens, TokenHolder
 from igni_service.testing_bundles import UploadedManifest
 from igni_service.testing_clients import FakeClientRegistry
+from igni_service.testing_directory import FakeDirectory
 from igni_service.testing_router import FakeRouter, RouteGuard, RouteTable
 from igni_service.testing_routes import Handler, Route, RouteAuth
 from igni_service.testing_settings import SettingsOverrides as SettingsOverridesItself
@@ -236,6 +237,66 @@ async def test_after_a_reset_the_router_still_records_into_the_fakes_traffic(
     assert [seen.path for seen in fake.traffic.seen] == [IgniPaths.JWKS]
 
 
+async def test_traffic_a_test_puts_in_the_fakes_place_is_what_the_wire_records(
+    fake: FakeIgni,
+) -> None:
+    async with fake.http_client() as http:
+        replaced = fake.traffic
+        fake.traffic = RecordedTraffic()
+        fake.traffic.fail(IgniPaths.JWKS, 503)
+
+        response = await http.get(f"{FakeIgni.BASE}{IgniPaths.JWKS}")
+
+    assert response.status_code == 503
+    assert [seen.path for seen in fake.traffic.seen] == [IgniPaths.JWKS]
+    assert replaced.seen == []
+
+
+async def test_addresses_a_test_puts_in_the_fakes_place_are_the_ones_reached(
+    fake: FakeIgni,
+) -> None:
+    fake.addresses = IgniAddresses(base_url="http://igni.elsewhere.test")
+
+    async with fake.http_client() as http:
+        with pytest.raises(httpx.ConnectError, match="is not igni"):
+            await http.get(f"{FakeIgni.BASE}{IgniPaths.JWKS}")
+        moved = await http.get(f"http://igni.elsewhere.test{IgniPaths.JWKS}")
+
+    assert moved.status_code == 200
+
+
+@pytest.mark.parametrize("replaced", ["clients", "bearers"])
+async def test_who_holds_a_token_is_asked_of_the_registry_and_bearers_the_fake_has_now(
+    igni: IgniService, fake: FakeIgni, replaced: str
+) -> None:
+    token = await igni.tokens.token(ORG)
+    if replaced == "clients":
+        fake.clients = FakeClientRegistry()
+    else:
+        fake.oauth.bearers = BearerTokens()
+
+    async with fake.http_client() as http:
+        response = await http.get(
+            f"{FakeIgni.BASE}{IgniPaths.DIRECTORY}/members", headers=bearer(token)
+        )
+
+    assert (response.status_code, response.json()) == (401, NOT_AUTHENTICATED)
+
+
+async def test_a_service_path_no_route_takes_falls_back_to_the_directory_the_fake_has_now(
+    igni: IgniService, fake: FakeIgni
+) -> None:
+    token = await igni.tokens.token(ORG)
+    fake.directory = FakeDirectory()
+
+    async with fake.http_client() as http:
+        response = await http.get(
+            f"{FakeIgni.BASE}{IgniPaths.SERVICE_EVENTS}", headers=bearer(token)
+        )
+
+    assert (response.status_code, response.json()) == (404, {"detail": "no such organisation"})
+
+
 async def test_a_revoked_services_token_is_not_authenticated(
     igni: IgniService, fake: FakeIgni
 ) -> None:
@@ -353,6 +414,33 @@ def test_a_bearer_nobody_issued_or_a_revoked_apps_is_not_authenticated() -> None
     assert guard.holder_for(seen("garbage"), RouteAuth.NONE) == TokenHolder()
     clients.revoke("app-1")
     assert guard.holder_for(seen(token), RouteAuth.APP) == DetailError.not_authenticated()
+
+
+def test_a_service_token_for_no_organisation_is_good_only_where_any_organisation_is() -> None:
+    clients = FakeClientRegistry()
+    clients.add_app("svc-1", ORG, "Service", RsaKeyPair.generate())
+    bearers = BearerTokens()
+    token = bearers.issue_service(TokenHolder(client_id="svc-1"), "s")
+    seen = SeenRequest(
+        method="GET", path="/", headers={"authorization": f"Bearer {token}"}, body=b""
+    )
+    guard = RouteGuard(bearers, clients)
+
+    assert guard.holder_for(seen, RouteAuth.SERVICE_ANY_ORG) == TokenHolder(client_id="svc-1")
+    assert guard.holder_for(seen, RouteAuth.SERVICE) == DetailError.not_authenticated()
+    assert guard.holder_for(seen, RouteAuth.APP) == DetailError.not_authenticated()
+
+
+def test_a_token_whose_client_the_registry_no_longer_has_is_not_authenticated() -> None:
+    bearers = BearerTokens()
+    token = bearers.issue_service(TokenHolder(client_id="svc-gone", org_id=ORG), "s")
+    seen = SeenRequest(
+        method="GET", path="/", headers={"authorization": f"Bearer {token}"}, body=b""
+    )
+
+    holder = RouteGuard(bearers, FakeClientRegistry()).holder_for(seen, RouteAuth.SERVICE)
+
+    assert holder == DetailError.not_authenticated()
 
 
 def test_a_router_answers_from_its_own_table_and_falls_back_only_on_a_service_path() -> None:

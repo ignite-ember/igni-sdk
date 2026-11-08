@@ -419,6 +419,20 @@ class TestTheFakesVmProfilesOnTheirOwn:
         assert named.decided_by is not None and named.decided_by.id == "u-ada"
         assert unnamed.decided_by is not None and unnamed.decided_by.id == "u-admin"
 
+    def test_a_rejection_keeps_its_reason_and_makes_no_profile(self) -> None:
+        profiles = FakeVmProfiles()
+        profiles.app_put(ORG, "app-1", "Bot", b'{"vcpus": 2}')
+
+        rejected = profiles.reject(ORG, VmProfileSubject.app("app-1"), reason="Too big")
+
+        assert (rejected.state, rejected.reason, rejected.profile_id) == (
+            "rejected",
+            "Too big",
+            None,
+        )
+        assert profiles.request(ORG, VmProfileSubject.app("app-1")) == rejected
+        assert (profiles.profiles, profiles.app_profiles) == ({}, {})
+
     def test_approving_again_replaces_the_profile_the_first_approval_made(self) -> None:
         profiles = FakeVmProfiles()
         subject = VmProfileSubject.app("app-1")

@@ -791,6 +791,23 @@ revoked refresh tokens, the portal's sign-in), `fake.extensions`,
 `fake.vm_profiles`. `fake.reset()` forgets what happened and keeps who
 exists, for a fake shared across a session.
 
+`fake.router` is the pipeline every request the service sends goes
+through, as igni's router. It is made from the collaborators the fake
+holds when a request arrives, so a test that puts its own in place
+(`fake.traffic = RecordedTraffic()`, say) is heard on the wire.
+
+Changed since igni-service 0.1.0, on purpose:
+
+- `FakeIgni.handle(request)` is gone. Call `fake.router.handle(request)`
+  instead; `fake.transport()` and `fake.http_client()` route through it.
+- `FakeIgni.approve_vm_profile(org_id, app=..., extension=...)` and
+  `reject_vm_profile(...)` are gone, and with them the `ValueError` for
+  naming both or neither. Use `fake.vm_profiles.approve(org_id,
+  VmProfileSubject.app(app_id))` or `VmProfileSubject.extension(extension_id)`.
+- `FakeVmProfiles.request`, `approve` and `reject` take
+  `(org_id, subject: VmProfileSubject, ...)`. The 0.1.0 form
+  `(org_id, kind, subject_id, ...)` raises `TypeError`.
+
 ```python
 import httpx
 from fastapi import Depends, FastAPI
