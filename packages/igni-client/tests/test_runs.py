@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pydantic import ValidationError
 
 from igni_client import (
     ApprovalRequested,
@@ -22,7 +23,7 @@ from igni_client import (
 )
 from igni_client.events import RunError
 from igni_client.frames import HitlDecision, QueueMessage
-from igni_client.methods import HISTORY, HistoryTurn
+from igni_client.methods import ATTACHED_SESSION, HISTORY, HistoryTurn
 from igni_client.testing import Delay, FakeIgni, Steps
 
 
@@ -253,6 +254,24 @@ async def test_a_client_never_sends_what_stops_igni() -> None:
             assert str(refused.value) == f"{method} is not a client's to send"
 
     assert not any(r.frame.type == "rpc_request" for r in fake.socket.received)
+
+
+def test_an_approval_answer_reaches_only_as_far_as_igni_knows() -> None:
+    assert Decision.allow("similar").frame("req-1") == HitlDecision(
+        requirement_id="req-1", action="confirm", choice="similar"
+    )
+    assert Decision.deny(remember=True).frame("req-1").choice == "deny"
+    assert Decision.deny().choice == "once"
+    with pytest.raises(ValidationError, match="choice"):
+        Decision(action="confirm", choice="sometimes")  # type: ignore[arg-type]
+
+
+async def test_an_attach_answer_without_its_project_is_refused() -> None:
+    async with FakeIgni() as fake:
+        fake.methods.answers["attach_elsewhere"] = {"session_id": "s-9"}
+        async with IgniClient(fake.local()) as igni:
+            with pytest.raises(RpcError, match="attach_elsewhere"):
+                await igni._conn.rpc("attach_elsewhere", ATTACHED_SESSION)
 
 
 # ── helpers ──

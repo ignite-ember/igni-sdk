@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 import pytest
 
-from igni_client import AuthError, NotAllowed, Unavailable
+from igni_client import AuthError, Fleet, NotAllowed, Person, Unavailable
+from igni_client.commands import CommandRun
 from igni_client.commands.wire import (
     STREAM_LINE,
     CommandAccepted,
@@ -59,3 +62,60 @@ def test_a_refusal_says_why_in_the_gateway_s_words(
     refused = GatewayRefusal.of(response).error()
 
     assert isinstance(refused, error) and reason in str(refused)
+
+
+def _run(*lines: str, status: int = 200) -> CommandRun:
+    """A run of `ls` whose gateway answers with `lines`, one NDJSON line each."""
+
+    def gateway(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, content="".join(f"{line}\n" for line in lines))
+
+    fleet = Fleet(
+        "http://gateway.test",
+        auth=Person("t-ada"),
+        http=httpx.AsyncClient(transport=httpx.MockTransport(gateway)),
+    )
+    request = CommandRequest(producer=ProducerRef.parse("person:u-ada"), command="ls", timeout_s=5)
+    return CommandRun(fleet, request, "t-ada")
+
+
+async def test_a_line_the_gateway_garbled_is_passed_over_and_the_run_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    run = _run(
+        "{not json",
+        "",
+        '{"stream": "stdout", "data_b64": "b2sK"}',
+        '{"progress": 0.5}',
+        '{"done": true, "exit_code": 0}',
+    )
+
+    with caplog.at_level(logging.WARNING, logger="igni_client.commands.run"):
+        finished = await run.wait()
+
+    assert finished.ok and run.stdout == "ok\n"
+    assert len(caplog.records) == 1, "only the garbled line is worth a warning"
+
+
+async def test_a_run_the_gateway_ends_without_a_result_says_so() -> None:
+    run = _run('{"stream": "stderr", "data_b64": "b29wcw=="}')
+
+    finished = await run.wait()
+
+    assert not finished.ok and run.stderr == "oops"
+    assert finished.error == "the gateway ended the output without a result"
+
+
+async def test_a_run_is_read_once() -> None:
+    run = _run('{"done": true, "exit_code": 0}')
+    await run.wait()
+
+    with pytest.raises(RuntimeError, match="read once"):
+        await run.wait()
+
+
+async def test_a_refused_run_raises_the_gateway_s_reason() -> None:
+    run = _run('{"detail": "not your VM"}', status=403)
+
+    with pytest.raises(NotAllowed, match="not your VM"):
+        await run.wait()
