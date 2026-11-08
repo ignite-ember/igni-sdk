@@ -18,6 +18,7 @@ import pytest
 from pydantic import ValidationError
 
 from igni_extension import Caller, CallerKind, IgniExtension, ServiceEvent
+from igni_extension.caller import CallerScope
 from igni_extension.service_events import ServiceEventHandlers
 from igni_extension.testing import FakeHost
 
@@ -209,6 +210,20 @@ async def test_answer_puts_the_caller_it_is_given_in_scope() -> None:
     assert seen == [ada] and seen[0] is ada
     with pytest.raises(TypeError, match="principal"):
         await handlers.answer("h-2", EVENT, principal=ada.model_dump(mode="json"))  # type: ignore[call-arg]
+
+
+async def test_without_a_caller_the_handler_sees_none_not_the_caller_around_it() -> None:
+    handlers = ServiceEventHandlers()
+    grace = Caller(kind=CallerKind.PERSON, id="u-grace", org="org-acme")
+    seen: list[Caller | None] = []
+    handlers.on()(lambda event: seen.append(Caller.current()))
+
+    with CallerScope.of(grace):
+        answer = await handlers.answer("h-3", EVENT)
+        assert Caller.current() == grace
+
+    assert answer.outcome == "allow"
+    assert seen == [None]
 
 
 async def test_a_plain_def_handler_runs_off_the_loop(host: FakeHost) -> None:

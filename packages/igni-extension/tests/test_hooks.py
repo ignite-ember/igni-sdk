@@ -235,6 +235,39 @@ async def test_a_missing_or_malformed_principal_reaches_a_handler_as_no_caller(
     assert seen == (None, None)
 
 
+@pytest.mark.parametrize("principal", [None, {"kind": "person"}, {"kind": "robot", "id": "r-1"}])
+async def test_a_deciding_event_with_a_malformed_principal_reaches_its_handler_as_no_caller(
+    host: FakeHost, principal: object
+) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    heard: asyncio.Future[tuple[Caller | None, Caller | None]] = (
+        asyncio.get_running_loop().create_future()
+    )
+
+    @ext.hook(Hooks.PLAN_SUBMIT)
+    async def grounded(plan: PlanSubmit, caller: Caller | None) -> None:
+        heard.set_result((caller, Caller.current()))
+
+    task = await _connected(ext)
+    frame = {
+        "op": "hook",
+        "id": "h-raw",
+        "event": "PlanSubmit",
+        "value": PLAN,
+        "principal": principal,
+    }
+    try:
+        await host.tell("SessionEnd", {})  # nothing hooks it; returns once connected
+        for socket in list(host._sockets):
+            await socket.send(json.dumps(frame))
+        seen = await asyncio.wait_for(heard, 5)
+    finally:
+        task.cancel()
+        await ext.aclose()
+
+    assert seen == (None, None)
+
+
 class TestHookHandlers:
     """Called as the host channel calls them, with the caller already read off the wire."""
 
@@ -252,6 +285,35 @@ class TestHookHandlers:
         assert (answer.outcome, answer.reason) == ("reject", "u-ada")
         assert seen == [(ADA, ADA)] and seen[0][0] is ADA
         assert Caller.current() is None
+
+    async def test_a_deciding_handler_that_raises_is_answered_failed_with_why(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        handlers = HookHandlers()
+
+        @handlers.on(Hooks.PLAN_SUBMIT)
+        def broken(plan: PlanSubmit, caller: Caller) -> Allow:
+            raise RuntimeError(f"no index for {caller.id}")
+
+        with caplog.at_level(logging.ERROR, logger="igni_extension.hooks"):
+            answer = await handlers.answer("h-4", "PlanSubmit", PLAN, caller=ADA)
+
+        assert (answer.hook, answer.outcome, answer.reason) == (
+            "h-4",
+            "failed",
+            "no index for u-ada",
+        )
+        (record,) = [r for r in caplog.records if r.name == "igni_extension.hooks"]
+        assert record.getMessage() == "igni: the handler of PlanSubmit failed"
+        assert Caller.current() is None
+
+    async def test_an_event_nothing_handles_is_allowed_or_not_heard(self) -> None:
+        handlers = HookHandlers()
+
+        await handlers.tell("SessionEnd", {}, caller=ADA)  # nothing to hear it; does not raise
+        answer = await handlers.answer("h-5", "PlanSubmit", PLAN, caller=ADA)
+
+        assert (answer.hook, answer.outcome, answer.reason) == ("h-5", "allow", "")
 
     async def test_tell_hands_the_handler_the_caller_it_is_given(self) -> None:
         handlers = HookHandlers()
