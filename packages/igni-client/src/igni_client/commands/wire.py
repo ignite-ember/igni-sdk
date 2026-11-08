@@ -184,9 +184,13 @@ class GatewayRefusal(BaseModel):
         """The refusal in a (fully read) response."""
         text = response.text.strip()
         try:
-            body = GatewayErrorBody.model_validate_json(response.text)
-        except ValidationError:  # not a JSON object: the text itself is the reason
+            # `json()` reads the bytes, so a UTF-16 body, a BOM or a wrong charset still parses.
+            value = response.json()
+        except ValueError:  # not JSON: the text itself is the reason
             return cls(status_code=response.status_code, detail=text)
+        if not isinstance(value, dict):
+            return cls(status_code=response.status_code, detail=text)
+        body = GatewayErrorBody.model_validate(value)
         return cls(status_code=response.status_code, detail=body.reason() or text)
 
     def error(self) -> IgniClientError:

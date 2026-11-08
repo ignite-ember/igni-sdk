@@ -1125,6 +1125,23 @@ async def test_the_fake_gateway_says_how_it_woke_the_vm_and_recorded_the_command
     assert run.stdout == "ran ls\n"
 
 
+async def test_the_fake_gateway_records_and_wakes_before_the_output_and_ends_last() -> None:
+    gateway = FakeGateway({"t-ada": "person:u-ada"})
+    gateway.commands["make"] = PlayedCommand(stdout="ok\n", stderr="warn\n")
+    seen = []
+    async with (
+        FakeIgni(gateway=gateway) as fake,
+        IgniClient(fake.fleet(Person("t-ada"))) as igni,
+    ):
+        run = await igni.commands.run("make")
+        async for output in run:
+            seen.append((output.stream, run.record is not None, run.woken is not None))
+            assert run.finished is None
+
+    assert seen == [("stdout", True, True), ("stderr", True, True)]
+    assert run.finished is not None and run.finished.ok
+
+
 async def test_a_command_in_somebody_elses_vm_is_refused() -> None:
     async with (
         FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake,

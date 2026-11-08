@@ -182,6 +182,30 @@ def test_a_refusal_s_message_is_the_gateway_s_reason_as_it_sent_it(
     assert str(GatewayRefusal.of(httpx.Response(status, text=content)).error()) == message
 
 
+@pytest.mark.parametrize(
+    ("content", "headers", "reason"),
+    [
+        ('{"detail": "not your VM"}'.encode("utf-16"), {}, "not your VM"),
+        (b'\xef\xbb\xbf{"detail": "not your VM"}', {}, "not your VM"),
+        (
+            '{"detail": "caf\u00e9"}'.encode(),
+            {"content-type": "application/json; charset=latin-1"},
+            "caf\u00e9",
+        ),
+    ],
+)
+def test_a_refusal_is_read_from_its_bytes_whatever_their_encoding(
+    content: bytes, headers: dict[str, str], reason: str
+) -> None:
+    refused = GatewayRefusal.of(httpx.Response(403, content=content, headers=headers))
+
+    assert str(refused.error()) == f"the gateway refused: {reason}"
+
+
+def test_a_producer_s_id_is_everything_after_its_first_colon() -> None:
+    assert ProducerRef.parse("space:sp:eu:1") == ProducerRef(kind="space", id="sp:eu:1")
+
+
 def _run(*lines: str, status: int = 200) -> CommandRun:
     """A run of `ls` whose gateway answers with `lines`, one NDJSON line each."""
 
@@ -260,6 +284,36 @@ async def test_a_line_that_is_json_but_not_an_object_is_passed_over_with_a_warni
         f"igni-client: passing over a line the gateway sent: {text}"
         for text in ("[1]", "5", '"x"', "null")
     ]
+
+
+async def test_a_long_line_that_is_not_an_object_is_cut_to_200_characters_in_the_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    long = json.dumps(["x" * 300])
+    run = _run(long, '{"done": true, "exit_code": 0}')
+
+    with caplog.at_level(logging.WARNING, logger="igni_client.commands.run"):
+        await run.wait()
+
+    assert [record.getMessage() for record in caplog.records] == [
+        f"igni-client: passing over a line the gateway sent: {long[:200]}"
+    ]
+
+
+async def test_output_on_a_stream_other_than_stdout_or_stderr_is_passed_over_quietly(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    run = _run(
+        '{"stream": "stdin", "data_b64": "b2sK"}',
+        '{"stream": "stdout", "data_b64": "b2sK"}',
+        '{"done": true, "exit_code": 0}',
+    )
+
+    with caplog.at_level(logging.WARNING, logger="igni_client.commands.run"):
+        outputs = [output async for output in run]
+
+    assert outputs == [CommandOutput(stream="stdout", data=b"ok\n")]
+    assert run.stdout == "ok\n" and run.stderr == "" and caplog.records == []
 
 
 async def test_a_record_and_a_wake_are_none_until_their_lines_arrive() -> None:
@@ -516,6 +570,9 @@ async def test_a_run_outside_the_gateway_s_limits_is_refused_before_it_is_asked(
     [
         (httpx.Response(401, json={"error": "invalid_token"}), AuthError, "credential"),
         (httpx.Response(403, json={"detail": "suspended"}), NotAllowed, "suspended"),
+        (httpx.Response(400, json={"detail": "bad"}), NotAllowed, "the gateway refused: bad"),
+        (httpx.Response(404, json={"detail": "gone"}), NotAllowed, "the gateway refused: gone"),
+        (httpx.Response(422, json={"detail": "odd"}), NotAllowed, "the gateway refused: odd"),
         (httpx.Response(503, text="busy"), Unavailable, "answered 503: busy"),
     ],
 )
@@ -534,3 +591,13 @@ async def test_who_this_is_answered_in_something_other_than_json_is_a_json_error
 async def test_who_this_is_answered_without_a_producer_is_a_validation_error() -> None:
     with pytest.raises(ValidationError, match="producer"):
         await Gateway(httpx.Response(200, json={"org": "org-acme"})).commands().me()
+
+
+async def test_a_run_in_a_named_producer_s_vm_does_not_ask_who_this_is() -> None:
+    gateway = Gateway(httpx.Response(503, text="busy"))
+
+    finished = await (await gateway.commands().run("ls", producer="space:sp-1")).wait()
+
+    assert finished.ok
+    assert [r.url.path for r in gateway.requests] == ["/v1/commands"]
+    assert gateway.bodies()[0]["producer"] == {"kind": "space", "id": "sp-1"}
