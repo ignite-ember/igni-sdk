@@ -166,6 +166,18 @@ class TestAnAppAsksForItsOwnVm:
         assert key.n == fake.clients.clients["app-review-bot"].jwk.n
         assert await app.thumbprint() == fake.clients.clients["app-review-bot"].thumbprint
 
+    async def test_what_is_pasted_is_the_json_web_key_set_and_nothing_else(
+        self, app: IgniApp
+    ) -> None:
+        """The set's JSON, as the README prints it: the four public members and the key's name."""
+        pasted = json.loads((await app.public_jwks()).model_dump_json())
+
+        [key] = pasted["keys"]
+        assert list(pasted) == ["keys"]
+        assert set(key) == {"kty", "use", "alg", "kid", "n", "e"}
+        assert (key["kty"], key["use"], key["alg"]) == ("RSA", "sig", "RS256")
+        assert key["kid"] == await app.thumbprint()
+
     async def test_it_closes_as_a_context_manager(self, fake: FakeIgni) -> None:
         async with fake.app("app-short", org_id=ORG) as short:
             assert (await short.vm_profile.effective()).profile_name == "Standard"
