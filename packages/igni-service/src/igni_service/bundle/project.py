@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -53,6 +54,9 @@ class ExtensionProject(BaseModel):
     project: ProjectTable = Field(default_factory=ProjectTable)
     tool: ToolTable = Field(default_factory=ToolTable)
 
+    #: Where `sdist-only` sits, as a validation error locates it.
+    SDIST_ONLY: ClassVar[tuple[str, ...]] = ("tool", "igni", "bundle", "sdist-only")
+
     @classmethod
     def read(cls, directory: Path) -> ExtensionProject:
         path = directory / "pyproject.toml"
@@ -63,6 +67,8 @@ class ExtensionProject(BaseModel):
         except tomllib.TOMLDecodeError as exc:
             raise BundleError(f"{path} is not valid TOML: {exc}") from exc
         except ValidationError as exc:
+            if any(error["loc"][:4] == cls.SDIST_ONLY for error in exc.errors()):
+                raise BundleError("[tool.igni.bundle] sdist-only must be a list of names") from exc
             raise BundleError(
                 f"{path}: [project] needs a name and string [project.scripts], and "
                 f"[tool.igni.bundle] sdist-only must be a list of names: {exc}"

@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tarfile
 import textwrap
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import pytest
@@ -22,9 +23,12 @@ from igni_service import BundleError
 from igni_service.bundle.builder import BundleBuilder
 from igni_service.bundle.code_tools import CodeTools, CodeToolsRead
 from igni_service.bundle.command import BundleCommand
-from igni_service.bundle.manifest import AgentTool
+from igni_service.bundle.manifest import AgentTool, BundleManifest
+from igni_service.bundle.permissions_tools import PermissionsTools
 from igni_service.bundle.platforms import PLATFORMS
+from igni_service.bundle.project import ExtensionProject
 from igni_service.bundle.requirements import HashedRequirements
+from igni_service.bundle.runner import CommandRunner
 from igni_service.registration import ExtensionBundle
 
 PLATFORM_NAMES = ("macOS arm64", "Linux x86_64", "Windows x86_64")
@@ -497,3 +501,231 @@ class TestFewerPlatforms:
         )
 
         assert args.platform == ["linux-x86_64", "macos-arm64"]
+
+
+class TestTheCommand:
+    def test_it_runs_as_a_module_too(self) -> None:
+        ran = subprocess.run(
+            [sys.executable, "-m", "igni_service.bundle", "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert ran.returncode == 0, ran.stderr
+        assert "igni-service-bundle" in ran.stdout
+
+
+class TestTheExtensionsPyproject:
+    """What the builder reads from `pyproject.toml`, and what it refuses there."""
+
+    @staticmethod
+    def project(tmp_path: Path, toml: str) -> ExtensionProject:
+        (tmp_path / "pyproject.toml").write_text(textwrap.dedent(toml))
+        return ExtensionProject.read(tmp_path)
+
+    def test_sdist_only_that_is_not_a_list_is_refused_in_its_own_words(
+        self, tmp_path: Path
+    ) -> None:
+        with pytest.raises(BundleError) as refused:
+            self.project(tmp_path, '[tool.igni.bundle]\nsdist-only = "wikipedia"\n')
+
+        assert str(refused.value) == "[tool.igni.bundle] sdist-only must be a list of names"
+
+    def test_sdist_only_names_are_compared_as_pep_503_names(self, tmp_path: Path) -> None:
+        project = self.project(tmp_path, '[tool.igni.bundle]\nsdist-only = ["Some_Pkg.x"]\n')
+
+        assert project.sdist_only() == {"some-pkg-x"}
+
+    def test_no_pyproject_is_not_a_python_package(self, tmp_path: Path) -> None:
+        with pytest.raises(BundleError, match="does not exist: the extension is a Python package"):
+            ExtensionProject.read(tmp_path)
+
+    def test_a_pyproject_that_is_not_toml_is_said_so(self, tmp_path: Path) -> None:
+        with pytest.raises(BundleError, match="is not valid TOML"):
+            self.project(tmp_path, "[project\n")
+
+    def test_the_module_is_the_console_script_s(self, tmp_path: Path) -> None:
+        project = self.project(
+            tmp_path,
+            """\
+            [project]
+            name = "acme-example"
+
+            [project.scripts]
+            acme-example = "acme_example.cli : main"
+            """,
+        )
+
+        assert project.module_of("acme-example") == "acme_example.cli"
+        assert project.module_of("not-declared") == ""
+
+    def test_other_tools_tables_are_left_alone(self, tmp_path: Path) -> None:
+        project = self.project(
+            tmp_path,
+            """\
+            [project]
+            name = "acme-example"
+
+            [tool.ruff]
+            line-length = 100
+
+            [tool.igni]
+            something-else = true
+            """,
+        )
+
+        assert project.sdist_only() == set()
+
+
+def manifest_of(raw: dict[str, object]) -> BundleManifest:
+    return BundleManifest.model_validate_json(json.dumps(raw))
+
+
+EXTENSION: dict[str, object] = {
+    "id": "acme.example",
+    "version": "1.0.0",
+    "python": {"package": "acme-example", "entry": "acme-example"},
+}
+
+
+class TestPermissionsToolsAgainstTheCode:
+    """`PermissionsTools` on its own: what it writes, keeps, and says."""
+
+    def test_written_tools_keep_everything_else_the_manifest_said(self) -> None:
+        manifest = manifest_of(
+            {**EXTENSION, "name": "Example", "permissions": {"hooks": ["PreToolUse"]}}
+        )
+
+        outcome = PermissionsTools(manifest).against(
+            CodeToolsRead(tools=[AgentTool.model_validate(LOOKUP)])
+        )
+
+        assert outcome.written is not None
+        written = json.loads(manifest.with_tools(outcome.written).to_json())
+        assert written == {
+            **EXTENSION,
+            "name": "Example",
+            "permissions": {"hooks": ["PreToolUse"], "tools": [LOOKUP]},
+        }
+
+    def test_code_with_no_tools_writes_nothing(self) -> None:
+        outcome = PermissionsTools(manifest_of(EXTENSION)).against(CodeToolsRead(tools=[]))
+
+        assert outcome.written is None and outcome.notes == []
+
+    def test_an_empty_declaration_is_kept_and_the_code_s_tools_are_said_unoffered(self) -> None:
+        manifest = manifest_of({**EXTENSION, "permissions": {"tools": []}})
+
+        outcome = PermissionsTools(manifest).against(
+            CodeToolsRead(tools=[AgentTool.model_validate(LOOKUP)])
+        )
+
+        assert outcome.written is None
+        assert outcome.notes == [
+            "not offered to the agent (registered, not in permissions.tools): acme.example.lookup"
+        ]
+
+    def test_a_declared_tool_may_leave_out_the_extension_s_id(self) -> None:
+        short = {**LOOKUP, "name": "lookup"}
+        manifest = manifest_of({**EXTENSION, "permissions": {"tools": [short]}})
+
+        outcome = PermissionsTools(manifest).against(
+            CodeToolsRead(tools=[AgentTool.model_validate(LOOKUP)])
+        )
+
+        assert outcome.written is None and outcome.notes == []
+
+    def test_code_that_could_not_be_read_leaves_a_declaration_unchecked(self) -> None:
+        manifest = manifest_of({**EXTENSION, "permissions": {"tools": [LOOKUP]}})
+
+        outcome = PermissionsTools(manifest).against(CodeToolsRead(problem="no wheel here"))
+
+        assert outcome.written is None
+        assert outcome.notes == [
+            "could not read the tools from the code (no wheel here); "
+            "permissions.tools is the manifest's, unchecked"
+        ]
+
+
+class ScriptedRunner(CommandRunner):
+    """Answers every command with one result, and keeps what it was asked to run."""
+
+    def __init__(self, *, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.result = subprocess.CompletedProcess[str]([], returncode, stdout, stderr)
+        self.commands: list[list[str]] = []
+
+    def run(
+        self,
+        command: Sequence[str],
+        *,
+        cwd: Path | None = None,
+        extra_env: Iterable[tuple[str, str]] = (),
+    ) -> subprocess.CompletedProcess[str]:
+        self.commands.append(list(command))
+        return self.result
+
+
+class TestReadingTheCodesTools:
+    """`CodeTools.read`: `python -m igni_extension.manifest`, run from the wheelhouse."""
+
+    @staticmethod
+    def wheelhouse(tmp_path: Path, *wheels: str) -> Path:
+        for wheel in wheels:
+            (tmp_path / wheel).write_bytes(b"")
+        return tmp_path
+
+    def test_without_igni_extension_in_the_wheelhouse_nothing_is_run_or_said(
+        self, tmp_path: Path
+    ) -> None:
+        runner = ScriptedRunner()
+        wheels = self.wheelhouse(tmp_path, "tinydep-1.0.0-py3-none-any.whl")
+
+        read = CodeTools(runner).read(wheels, "acme-example", "acme_example")
+
+        assert read == CodeToolsRead() and runner.commands == []
+
+    def test_the_tools_the_module_lists_are_read_offline(self, tmp_path: Path) -> None:
+        runner = ScriptedRunner(stdout=json.dumps({"id": "acme.example", "tools": [LOOKUP]}))
+        wheels = self.wheelhouse(tmp_path, "igni_extension-0.1.0-py3-none-any.whl")
+
+        read = CodeTools(runner).read(wheels, "acme-example", "acme_example")
+
+        assert read.tools == [AgentTool.model_validate(LOOKUP)]
+        [command] = runner.commands
+        assert {"--offline", "--no-index"} <= set(command)
+        assert command[-3:] == ["-m", "igni_extension.manifest", "acme_example"]
+
+    def test_a_failed_run_is_said_by_its_telling_line(self, tmp_path: Path) -> None:
+        runner = ScriptedRunner(
+            returncode=1,
+            stderr="Resolving...\n  × No solution found when resolving `acme-example`\n  hint\n",
+        )
+        wheels = self.wheelhouse(tmp_path, "igni_extension-0.1.0-py3-none-any.whl")
+
+        read = CodeTools(runner).read(wheels, "acme-example", "acme_example")
+
+        assert read.tools is None
+        assert read.problem == "No solution found when resolving `acme-example`"
+
+    def test_a_failed_run_with_nothing_telling_says_its_last_line(self, tmp_path: Path) -> None:
+        wheels = self.wheelhouse(tmp_path, "igni_extension-0.1.0-py3-none-any.whl")
+
+        said = CodeTools(ScriptedRunner(returncode=1, stderr="one\ntwo\n")).read(
+            wheels, "acme-example", "acme_example"
+        )
+        silent = CodeTools(ScriptedRunner(returncode=1)).read(
+            wheels, "acme-example", "acme_example"
+        )
+
+        assert said.problem == "two" and silent.problem == "no output"
+
+    def test_an_answer_that_is_not_the_listing_is_said(self, tmp_path: Path) -> None:
+        wheels = self.wheelhouse(tmp_path, "igni_extension-0.1.0-py3-none-any.whl")
+
+        read = CodeTools(ScriptedRunner(stdout="not json")).read(
+            wheels, "acme-example", "acme_example"
+        )
+
+        assert read.tools is None
+        assert read.problem.startswith("igni_extension.manifest answered something else")
