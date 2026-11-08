@@ -230,6 +230,7 @@ class Connection:
         return reply.result if isinstance(reply, RpcResponse) else reply
 
     async def _call(self, method: str, args: dict[str, Any], session_id: str) -> Event:
+        RpcRequest.check_sendable(method)
         request = RpcRequest(
             id=self.router.new_id("rpc"), method=method, args=args, session_id=session_id or None
         )

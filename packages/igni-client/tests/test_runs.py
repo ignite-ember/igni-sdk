@@ -247,8 +247,12 @@ async def test_a_vm_not_yet_bound_is_asked_again() -> None:
 async def test_a_client_never_sends_what_stops_igni() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         for method in ("shutdown", "vm_sign_in", "deliver_service_events"):
-            with pytest.raises(ValueError, match="not a client's to send"):
+            with pytest.raises(ValueError) as refused:
                 await igni.rpc(method)
+            assert type(refused.value) is ValueError, "a plain ValueError, as 0.1.0 raised"
+            assert str(refused.value) == f"{method} is not a client's to send"
+
+    assert not any(r.frame.type == "rpc_request" for r in fake.socket.received)
 
 
 # ── helpers ──

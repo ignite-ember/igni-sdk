@@ -36,11 +36,16 @@ class RpcRequest(Frame):
     args: dict[str, Any] = Field(default_factory=dict)
     session_id: str | None = None
 
+    @staticmethod
+    def check_sendable(method: str) -> None:
+        """A plain `ValueError` for a method a client never sends, as 0.1.0 raised it."""
+        if method in REFUSED_METHODS:
+            raise ValueError(f"{method} is not a client's to send")
+
     @field_validator("method")
     @classmethod
     def _a_client_s_to_send(cls, method: str) -> str:
-        if method in REFUSED_METHODS:
-            raise ValueError(f"{method} is not a client's to send")
+        cls.check_sendable(method)
         return method
 
 
