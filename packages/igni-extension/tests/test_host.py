@@ -8,6 +8,8 @@ are about what the SDK does with it.
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 from collections.abc import AsyncIterator
 
 import pytest
@@ -22,6 +24,7 @@ from igni_extension.host_model import (
     Status,
 )
 from igni_extension.testing import FakeHost, HostHarness
+from igni_extension.wire import Reply, Request, SubscribeOutcome
 
 
 @pytest.fixture
@@ -175,6 +178,51 @@ async def test_the_hello_says_what_the_extension_holds(host: FakeHost) -> None:
     ext = IgniExtension("acme.example", environ=host.environment())
     await ext.connect()
     assert ext.connection.granted == ["chat.read", "chat.post", "sessions"]
+    await ext.aclose()
+
+
+class RefusingHost(FakeHost):
+    """A host whose subscribe answers that some signals will never arrive."""
+
+    def _subscribe(self, request: Request) -> Reply:
+        self.subscribed.update(request.signals)
+        outcome = SubscribeOutcome(not_granted=["chat.run_completed"], unknown=["chat.later"])
+        return Reply(op="reply", id=request.id, ok=True, result=outcome.model_dump())
+
+
+async def test_a_signal_that_will_never_arrive_is_said_at_connect(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async with RefusingHost() as host:
+        ext = IgniExtension("acme.example", environ=host.environment())
+
+        @ext.on(ext.host.chat.run_completed)
+        async def reviewed(run: Run) -> None: ...
+
+        with caplog.at_level(logging.WARNING, logger="igni_extension.channel"):
+            await ext.connect()
+        await ext.aclose()
+
+    said = [record.getMessage() for record in caplog.records]
+    assert "igni: chat.run_completed will never arrive — its object is not in permissions.host" in (
+        said
+    )
+    assert "igni: this igni has no signal chat.later" in said
+
+
+async def test_a_message_from_the_host_the_sdk_does_not_read_is_skipped(
+    host: FakeHost, caplog: pytest.LogCaptureFixture
+) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    await ext.connect()
+
+    with caplog.at_level(logging.WARNING, logger="igni_extension.channel"):
+        for socket in list(host._sockets):
+            await socket.send(json.dumps({"op": "from_a_newer_igni"}))
+            await socket.send("not json")
+        assert await ext.host.chat.processing is False
+
+    assert sum("does not read" in r.getMessage() for r in caplog.records) == 2
     await ext.aclose()
 
 
