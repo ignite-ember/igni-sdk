@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
@@ -28,7 +29,7 @@ from igni_client import (
 )
 from igni_client.approvals import Approver
 from igni_client.events import ErrorMessage, Event, RequirementDetails, RunError, RunPaused
-from igni_client.frames import HitlDecision, QueueMessage
+from igni_client.frames import HitlDecision, HitlResponseBatch, QueueMessage, Scope
 from igni_client.methods import ATTACHED_SESSION, HISTORY, HistoryTurn
 from igni_client.replies import Reply
 from igni_client.testing import Delay, FakeIgni, Pause, Steps
@@ -456,6 +457,7 @@ async def test_the_details_of_a_waiting_call_fill_in_its_requirement() -> None:
 
 
 def test_an_approval_frame_refuses_a_scope_igni_does_not_know() -> None:
+    assert get_args(Scope) == ("once", "always", "similar", "deny")
     assert HitlDecision(requirement_id="r", action="reject", choice="deny").choice == "deny"
     with pytest.raises(ValidationError, match="choice"):
         HitlDecision(requirement_id="r", action="confirm", choice="sometimes")  # type: ignore[arg-type]
@@ -499,6 +501,99 @@ def test_approvals_and_replies_live_in_their_own_modules() -> None:
     assert Reply.__module__ == "igni_client.replies"
     for moved in ("Decision", "Policy", "Choice", "Answer", "Reply", "collect"):
         assert not hasattr(runs, moved), f"igni_client.runs.{moved} moved out in 0.2"
+
+
+def test_an_approval_batch_goes_to_igni_field_for_field() -> None:
+    batch = HitlResponseBatch(
+        id="req-9", session_id="s-1", decisions=[Decision.deny(remember=True).frame("req-a")]
+    )
+
+    assert json.loads(batch.wire()) == {
+        "type": "hitl_response_batch",
+        "id": "req-9",
+        "session_id": "s-1",
+        "decisions": [
+            {
+                "type": "hitl_decision",
+                "requirement_id": "req-a",
+                "action": "reject",
+                "choice": "deny",
+                "set_permission_mode": "",
+            }
+        ],
+    }
+
+
+async def test_an_approval_stays_open_when_its_answer_fails_to_send() -> None:
+    attempts: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        attempts.append(decisions)
+        if len(attempts) == 1:
+            raise ConnectionError("the socket closed")
+
+    paused = RunPaused(
+        run_id="r-9", requirements=[Requirement(requirement_id="req-a", tool_name="deploy")]
+    )
+    request = ApprovalRequested(paused, answer)
+
+    assert request.paused is paused and repr(request) == "ApprovalRequested(deploy)"
+    with pytest.raises(ConnectionError):
+        await request.approve()
+    assert not request.answered
+    await request.approve()
+    assert request.answered and len(attempts) == 2
+
+
+def test_a_decision_is_fixed_once_made() -> None:
+    decision = Decision.allow()
+
+    with pytest.raises(ValidationError):
+        decision.choice = "always"
+
+
+async def test_a_reply_keeps_the_last_main_completion() -> None:
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        yield RunCompleted(run_id="r-1", output_tokens=1)
+        yield RunCompleted(run_id="r-1", output_tokens=2)
+
+    reply = await Reply.collect(events(), Approver(None))
+
+    assert reply.completed is not None and reply.completed.output_tokens == 2
+
+
+async def test_a_reply_reads_no_further_than_a_failure() -> None:
+    read: list[str] = []
+
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        read.append("error")
+        yield RunError(error="the VM went away")
+        read.append("after")
+        yield ContentDelta(text="never read")
+
+    with pytest.raises(RunFailed, match="the VM went away"):
+        await Reply.collect(events(), Approver(None))
+    assert read == ["error"]
+
+
+async def test_a_reply_answers_each_approval_with_its_approver() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    paused = RunPaused(
+        run_id="r-1", requirements=[Requirement(requirement_id="req-a", tool_name="deploy")]
+    )
+
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        yield ApprovalRequested(paused, answer)
+        yield ContentDelta(text="deployed")
+
+    reply = await Reply.collect(events(), Approver(lambda r: Decision.allow("always")))
+
+    assert str(reply) == "deployed"
+    assert sent == [[HitlDecision(requirement_id="req-a", action="confirm", choice="always")]]
 
 
 # ── helpers ──
