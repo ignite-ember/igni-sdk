@@ -258,6 +258,12 @@ name another with `producer="person:<id>"`. `igni.me()` says who the
 gateway takes you for. A local igni has no gateway, so neither is
 available there.
 
+A line of the gateway's stream that is not a JSON object — garbled, or
+JSON such as `[1]`, `5` or `null` — is passed over with a warning on the
+`igni_client.commands.run` logger, and the run goes on. (igni-client
+0.1.0 raised `AttributeError` or `TypeError` out of the iteration on a
+line that was JSON but not an object.)
+
 ## Anything else igni can do
 
 `igni.rpc(method, **args)` calls any of igni's methods by name — the ones

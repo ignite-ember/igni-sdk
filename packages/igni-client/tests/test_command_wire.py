@@ -84,6 +84,7 @@ def test_a_record_and_a_wake_keep_what_the_gateway_adds() -> None:
     assert (wake.how, wake.node, wake.ms) == ("cold", "", 30.0) and isinstance(wake.ms, float)
     assert wake.model_extra == {"region": "eu"}
     assert Wake().ms is None
+    assert Wake.model_validate({"ms": "12"}).ms == 12.0
 
 
 def test_who_the_gateway_says_this_is_and_how_a_command_ended() -> None:
@@ -241,12 +242,24 @@ async def test_a_refused_run_raises_the_gateway_s_reason() -> None:
 async def test_a_line_that_is_json_but_not_an_object_is_passed_over_with_a_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    run = _run("[1]", "5", '"x"', "null", '{"done": true, "exit_code": 0}')
+    # igni-client 0.1.0 raised AttributeError or TypeError here; passing over is on purpose.
+    run = _run(
+        "[1]",
+        "5",
+        '"x"',
+        "null",
+        '{"stream": "stdout", "data_b64": "b2sK"}',
+        '{"done": true, "exit_code": 0}',
+    )
 
     with caplog.at_level(logging.WARNING, logger="igni_client.commands.run"):
         finished = await run.wait()
 
-    assert finished.ok and len(caplog.records) == 4
+    assert finished.ok and run.stdout == "ok\n"
+    assert [record.getMessage() for record in caplog.records] == [
+        f"igni-client: passing over a line the gateway sent: {text}"
+        for text in ("[1]", "5", '"x"', "null")
+    ]
 
 
 async def test_a_record_and_a_wake_are_none_until_their_lines_arrive() -> None:
