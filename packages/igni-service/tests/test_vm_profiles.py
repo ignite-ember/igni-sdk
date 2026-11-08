@@ -26,6 +26,7 @@ from igni_service.testing import (
     FakeCaps,
     FakeIgni,
     FakeVmProfiles,
+    NoVmProfileRequest,
     SettingsOverrides,
     VmProfileSubject,
 )
@@ -347,6 +348,24 @@ class TestPlayingTheOrgAdmin:
         with pytest.raises(LookupError, match="no VM profile request"):
             fake.vm_profiles.reject(ORG, VmProfileSubject.app("app-nobody"))
 
+    def test_the_admin_decides_through_vm_profiles_with_a_subject(self, fake: FakeIgni) -> None:
+        # `fake.approve_vm_profile(org, app=...)` and `VmProfileSubject.of` are gone:
+        # one way to name whose request it is, and no name-exactly-one error.
+        assert not hasattr(fake, "approve_vm_profile")
+        assert not hasattr(fake, "reject_vm_profile")
+        assert not hasattr(VmProfileSubject, "of")
+        assert VmProfileSubject.app("app-1") == VmProfileSubject(kind="app", subject_id="app-1")
+        assert VmProfileSubject.extension("acme.x") == VmProfileSubject(
+            kind="extension", subject_id="acme.x"
+        )
+
+    def test_a_subject_named_by_kind_and_id_is_refused(self) -> None:
+        profiles = FakeVmProfiles()
+        profiles.app_put(ORG, "app-1", "Bot", b"{}")
+
+        with pytest.raises(TypeError):
+            profiles.approve(ORG, "app", "app-1")  # type: ignore[arg-type,call-arg]
+
 
 class TestTheFakesVmProfilesOnTheirOwn:
     """`FakeVmProfiles` outside a `FakeIgni`, which hands it the fake's clock."""
@@ -371,6 +390,60 @@ class TestTheFakesVmProfilesOnTheirOwn:
 
         assert decided.requested_at == datetime.fromtimestamp(1_800_000_000, UTC)
         assert decided.decided_at == datetime.fromtimestamp(1_800_000_060, UTC)
+
+    def test_the_request_a_subject_made_is_read_back_and_one_never_made_is_said(self) -> None:
+        profiles = FakeVmProfiles()
+        made = VmProfileRequestRecord.model_validate(
+            profiles.app_put(ORG, "app-1", "Bot", b'{"vcpus": 2}').json()
+        )
+
+        assert profiles.request(ORG, VmProfileSubject.app("app-1")) == made
+        with pytest.raises(NoVmProfileRequest, match="^no VM profile request from app app-1 in"):
+            profiles.request(OTHER_ORG, VmProfileSubject.app("app-1"))
+
+    def test_an_approval_is_by_the_admin_it_names_and_u_admin_otherwise(self) -> None:
+        profiles = FakeVmProfiles()
+        profiles.app_put(ORG, "app-1", "Bot", b"{}")
+        profiles.app_put(ORG, "app-2", "Bot", b"{}")
+
+        named = profiles.approve(ORG, VmProfileSubject.app("app-1"), by="u-ada")
+        unnamed = profiles.reject(ORG, VmProfileSubject.app("app-2"))
+
+        assert named.decided_by is not None and named.decided_by.id == "u-ada"
+        assert unnamed.decided_by is not None and unnamed.decided_by.id == "u-admin"
+
+    def test_approving_again_replaces_the_profile_the_first_approval_made(self) -> None:
+        profiles = FakeVmProfiles()
+        subject = VmProfileSubject.app("app-1")
+        profiles.app_put(ORG, "app-1", "Bot", b'{"vcpus": 2}')
+        first = profiles.approve(ORG, subject)
+        profiles.app_put(ORG, "app-1", "Bot", b'{"vcpus": 4}')
+
+        second = profiles.approve(ORG, subject)
+
+        assert second.profile_id == first.profile_id
+        assert list(profiles.profiles) == [(ORG, first.profile_id)]
+        assert profiles.profiles[(ORG, str(first.profile_id))].settings.vcpus == 4
+        assert profiles.app_profiles == {(ORG, "app-1"): first.profile_id}
+
+    def test_a_profile_for_a_subject_with_no_name_is_named_by_its_id(self) -> None:
+        profiles = FakeVmProfiles()
+        profiles.app_put(ORG, "app-1", "", b"{}")
+
+        approved = profiles.approve(ORG, VmProfileSubject.app("app-1"))
+
+        assert profiles.profiles[(ORG, str(approved.profile_id))].name == "app-1"
+
+    async def test_approving_an_extension_gives_no_app_its_profile(
+        self, fake: FakeIgni, tmp_path: Path
+    ) -> None:
+        igni = await shipped(fake, write_bundle(tmp_path, MANIFEST_VM))
+        await igni.host(ORG).extension_vm_profile()
+
+        approved = fake.vm_profiles.approve(ORG, VmProfileSubject.extension("acme.browser"))
+
+        assert approved.profile_id is not None
+        assert fake.vm_profiles.app_profiles == {}
 
 
 class TestIgnisRulesForAProfile:

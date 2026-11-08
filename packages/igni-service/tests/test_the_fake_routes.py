@@ -16,8 +16,8 @@ from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.testing_bearers import BearerTokens, TokenHolder
 from igni_service.testing_bundles import UploadedManifest
 from igni_service.testing_clients import FakeClientRegistry
-from igni_service.testing_router import RouteGuard
-from igni_service.testing_routes import RouteAuth
+from igni_service.testing_router import RouteGuard, RouteTable
+from igni_service.testing_routes import Handler, Route, RouteAuth
 from igni_service.testing_wire import DetailError, SeenRequest
 from igni_service.urls import IgniPaths
 
@@ -181,3 +181,130 @@ async def test_a_query_igni_cannot_read_is_a_422_not_a_crash(
 def test_a_setting_igni_settings_lacks_is_refused_not_ignored() -> None:
     with pytest.raises(ValueError, match="no_such_setting"):
         SettingsOverrides.model_validate({"no_such_setting": "x"})
+
+
+def test_the_fakes_router_answers_its_requests_and_the_fake_has_no_handle_of_its_own(
+    fake: FakeIgni,
+) -> None:
+    request = httpx.Request("GET", f"{FakeIgni.BASE}{IgniPaths.JWKS}")
+
+    response = fake.router.handle(request)
+
+    assert response.status_code == 200 and response.json()["keys"]
+    assert [seen.path for seen in fake.traffic.seen] == [IgniPaths.JWKS]
+    # The pipeline is `fake.router`; `FakeIgni.handle` is gone, deliberately.
+    assert not hasattr(fake, "handle")
+
+
+async def test_after_a_reset_the_router_still_records_into_the_fakes_traffic(
+    fake: FakeIgni,
+) -> None:
+    fake.traffic.fail(IgniPaths.JWKS, 503)
+    fake.reset()
+
+    async with fake.http_client() as http:
+        response = await http.get(f"{FakeIgni.BASE}{IgniPaths.JWKS}")
+
+    assert response.status_code == 200
+    assert [seen.path for seen in fake.traffic.seen] == [IgniPaths.JWKS]
+
+
+async def test_a_revoked_services_token_is_not_authenticated(
+    igni: IgniService, fake: FakeIgni
+) -> None:
+    token = await igni.tokens.token(ORG)
+    fake.clients.revoke()
+
+    async with fake.http_client() as http:
+        response = await http.get(
+            f"{FakeIgni.BASE}{IgniPaths.DIRECTORY}/members", headers=bearer(token)
+        )
+
+    assert (response.status_code, response.json()) == (401, NOT_AUTHENTICATED)
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "status"),
+    [
+        ("GET", IgniPaths.REVOCATIONS, 200),
+        ("GET", IgniPaths.SERVED, 200),
+        ("POST", IgniPaths.NOTIFICATIONS, 401),
+        ("GET", f"{IgniPaths.DIRECTORY}/members", 401),
+        ("GET", IgniPaths.SERVICE_VM_PROFILE, 401),
+    ],
+)
+async def test_a_token_for_no_organisation_reaches_only_revocations_and_served(
+    igni: IgniService, fake: FakeIgni, method: str, path: str, status: int
+) -> None:
+    await igni.tokens.token(ORG)
+    client_id = await igni.registration.client_id()
+    token = fake.oauth.bearers.issue_service(TokenHolder(client_id=client_id), "service")
+
+    async with fake.http_client() as http:
+        response = await http.request(method, f"{FakeIgni.BASE}{path}", headers=bearer(token))
+
+    assert response.status_code == status
+    if status == 401:
+        assert response.json() == NOT_AUTHENTICATED
+
+
+def _app_token(fake: FakeIgni, app_id: str) -> dict[str, str]:
+    fake.clients.add_app(app_id, ORG, "Bot", RsaKeyPair.generate())
+    return bearer(fake.oauth.bearers.issue_app(TokenHolder(client_id=app_id, org_id=ORG)))
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "status", "body"),
+    [
+        ("GET", f"{IgniPaths.APPS}/app-1", 404, NOT_FOUND),
+        ("GET", f"{IgniPaths.APPS}/app-1/vm-profile/extra", 404, NOT_FOUND),
+        ("DELETE", IgniPaths.app_vm_profile("app-1"), 404, NOT_FOUND),
+        ("GET", f"{IgniPaths.APPS}/app-1/nothing", 404, NOT_FOUND),
+        (
+            "GET",
+            IgniPaths.app_vm_profile("app-other"),
+            403,
+            {"detail": "Only the app itself asks for its VM"},
+        ),
+    ],
+)
+async def test_an_app_path_igni_does_not_serve_the_app_is_refused(
+    fake: FakeIgni, method: str, path: str, status: int, body: dict[str, str]
+) -> None:
+    headers = _app_token(fake, "app-1")
+
+    async with fake.http_client() as http:
+        response = await http.request(method, f"{FakeIgni.BASE}{path}", headers=headers)
+
+    assert (response.status_code, response.json()) == (status, body)
+
+
+def test_the_first_route_serving_a_path_says_its_token_the_first_taking_it_answers() -> None:
+    def answer(status: int) -> Handler:
+        return lambda call: httpx.Response(status)
+
+    guarded = Route(path="/v1/x", method="GET", auth=RouteAuth.SERVICE, handler=answer(200))
+    open_post = Route(path="/v1/x", method="POST", handler=answer(201))
+    shadowed = Route(path="/v1/x", method="POST", handler=answer(202))
+    table = RouteTable(routes=(guarded, open_post, shadowed), fallback=answer(404))
+    post = SeenRequest(method="POST", path="/v1/x", headers={}, body=b"")
+
+    assert table.family("/v1/x") is guarded
+    assert table.route(post) is open_post
+    assert table.family("/v1/y") is None
+
+
+@pytest.mark.parametrize(
+    ("error", "status", "body"),
+    [
+        (DetailError.not_found(), 404, NOT_FOUND),
+        (DetailError.not_authenticated(), 401, NOT_AUTHENTICATED),
+        (DetailError(detail="no"), 400, {"detail": "no"}),
+    ],
+)
+def test_igni_s_error_body_carries_its_detail_and_not_its_status(
+    error: DetailError, status: int, body: dict[str, str]
+) -> None:
+    response = error.to_response()
+
+    assert (response.status_code, response.json()) == (status, body)
