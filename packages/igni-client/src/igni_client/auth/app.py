@@ -61,8 +61,12 @@ class App:
 
     @property
     def server(self) -> str:
-        """igni server's address."""
+        """igni server's address; assignable, as it was a plain attribute in 0.1.0."""
         return self._server.url
+
+    @server.setter
+    def server(self, url: str) -> None:
+        self._server.url = url
 
     def thumbprint(self) -> str:
         """The key's RFC 7638 thumbprint: its `kid`, and what an admin compares."""

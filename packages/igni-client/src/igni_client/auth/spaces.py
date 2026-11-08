@@ -32,8 +32,10 @@ class SpacePage(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    spaces: list[SpaceRecord] = []
-    next: str | None = None
+    #: igni server may write an empty page's `spaces` as null; 0.1.0 read that as none.
+    spaces: list[SpaceRecord] | None = None
+    #: The cursor is passed back as it came; 0.1.0 took a number as readily as a string.
+    next: str | int | None = None
 
 
 class Spaces:
@@ -66,14 +68,14 @@ class Spaces:
         """Every space of this app."""
         what = "listing spaces"
         found: list[SpaceRecord] = []
-        after: str | None = None
+        after: str | int | None = None
         while True:
             params: dict[str, str | int] = {"limit": limit}
             if after:
                 params["after"] = after
             response = await self._app.request("GET", self._path(), what=what, params=params)
             page = _parsed(response, SpacePage, what=what)
-            found.extend(page.spaces)
+            found.extend(page.spaces or [])
             after = page.next
             if not after:
                 return found

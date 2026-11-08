@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import base64
+import hashlib
 import json
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,7 +16,10 @@ from urllib.parse import parse_qs
 import httpx
 import jwt
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
+import igni_client
 from igni_client import (
     ApiKey,
     App,
@@ -23,6 +30,7 @@ from igni_client import (
     Person,
     Unavailable,
 )
+from igni_client.auth.grants import ACCESS_TOKEN_TYPE, ASSERTION_TYPE, TOKEN_EXCHANGE
 from igni_client.auth.keys import JwkSet
 from igni_client.commands.wire import ProducerRef
 from igni_client.events import Unknown, parse_event
@@ -242,9 +250,20 @@ async def test_a_second_401_is_not_retried_again(key_file: Path) -> None:
     assert len(server.token_requests) == 2
 
 
-async def test_igni_server_without_an_issuer_is_unavailable(key_file: Path) -> None:
+@pytest.mark.parametrize(
+    "discovery",
+    [
+        httpx.Response(200, text="<html>"),
+        httpx.Response(200, json=[ISSUER]),
+        httpx.Response(200, json={"issuer": ""}),
+        httpx.Response(404, json={"issuer": ISSUER}),
+    ],
+)
+async def test_igni_server_without_an_issuer_is_unavailable(
+    key_file: Path, discovery: httpx.Response
+) -> None:
     def no_issuer(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, text="<html>")
+        return discovery
 
     http = httpx.AsyncClient(transport=httpx.MockTransport(no_issuer))
     app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
@@ -398,6 +417,589 @@ def test_an_expired_or_missing_session_says_to_sign_in(tmp_path: Path) -> None:
         Person.from_cli(stored)
     with pytest.raises(AuthError, match="igni login"):
         Person.from_cli(tmp_path / "nothing.json")
+
+
+# ── The import paths 0.1.0 had ───────────────────────────────────────
+
+
+def test_the_0_1_0_auth_names_still_import_from_igni_client_auth() -> None:
+    from igni_client.auth import (  # noqa: PLC0415 — the import path is what is tested
+        ACCESS_TOKEN_TYPE,
+        ALGORITHM,
+        ASSERTION_TYPE,
+        TOKEN_EXCHANGE,
+        ApiKey,
+        App,
+        Person,
+        Space,
+        SpaceRecord,
+        Spaces,
+        TokenSource,
+    )
+
+    assert (App, ApiKey, Person, Space, Spaces, SpaceRecord, TokenSource) == (
+        igni_client.App,
+        igni_client.ApiKey,
+        igni_client.Person,
+        igni_client.Space,
+        igni_client.Spaces,
+        igni_client.SpaceRecord,
+        igni_client.TokenSource,
+    )
+    assert ASSERTION_TYPE == "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+    assert TOKEN_EXCHANGE == "urn:ietf:params:oauth:grant-type:token-exchange"
+    assert ACCESS_TOKEN_TYPE == "urn:ietf:params:oauth:token-type:access_token"
+    assert ALGORITHM == "RS256"
+
+
+def test_the_auth_names_are_exported_from_igni_client() -> None:
+    names = {"ApiKey", "App", "Person", "Space", "SpaceRecord", "Spaces", "TokenSource"}
+
+    assert names <= set(igni_client.__all__)
+
+
+# ── An app's key ─────────────────────────────────────────────────────
+
+
+def _public_numbers(key_file: Path) -> rsa.RSAPublicNumbers:
+    key = serialization.load_pem_private_key(key_file.read_bytes(), password=None)
+    assert isinstance(key, rsa.RSAPrivateKey)
+    return key.public_key().public_numbers()
+
+
+def test_an_app_s_jwk_set_is_the_json_an_admin_pastes(key_file: Path) -> None:
+    app = _app(key_file, IgniServer())
+
+    jwks = app.public_jwks()
+    pasted = json.loads(jwks.model_dump_json())
+
+    assert isinstance(jwks, JwkSet)
+    assert list(pasted) == ["keys"] and len(pasted["keys"]) == 1
+    jwk = pasted["keys"][0]
+    assert list(jwk) == ["kty", "use", "alg", "kid", "n", "e"]
+    assert (jwk["kty"], jwk["use"], jwk["alg"], jwk["kid"]) == (
+        "RSA",
+        "sig",
+        "RS256",
+        app.thumbprint(),
+    )
+    assert jwt.PyJWK(jwk).key.public_numbers() == _public_numbers(key_file)
+
+
+def test_an_app_s_kid_is_its_key_s_rfc_7638_thumbprint(key_file: Path) -> None:
+    jwk = _app(key_file, IgniServer()).public_jwks().keys[0]
+
+    # RFC 7638 §3: the required members, sorted, without whitespace, SHA-256, base64url.
+    members = json.dumps({"e": jwk.e, "kty": "RSA", "n": jwk.n}, separators=(",", ":"))
+    digest = hashlib.sha256(members.encode()).digest()
+
+    assert jwk.kid == base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+    assert jwk.e == "AQAB"
+
+
+def test_a_new_key_is_a_2048_bit_rsa_key_only_its_owner_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    made = App.generate_key("~/app-key.pem")
+    first = _public_numbers(made)
+    App.generate_key("~/app-key.pem")
+
+    assert made == tmp_path / "app-key.pem"
+    assert made.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+    assert made.stat().st_mode & 0o777 == 0o600
+    assert first.n.bit_length() == 2048
+    assert _public_numbers(made) != first, "a second key replaces the first"
+
+
+def test_an_app_needs_its_id_and_an_rsa_key(key_file: Path) -> None:
+    not_rsa = (
+        ec.generate_private_key(ec.SECP256R1())
+        .private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+        .decode()
+    )
+
+    with pytest.raises(ValueError, match="an app needs its app id"):
+        App("", server="http://igni.test", key_file=key_file)
+    with pytest.raises(ValueError, match="an app's key must be an RSA private key"):
+        App("app-bot", server="http://igni.test", key_pem=not_rsa)
+
+
+# ── An app signing in ────────────────────────────────────────────────
+
+
+async def test_an_app_s_assertion_is_signed_for_igni_server_and_lives_a_minute(
+    key_file: Path,
+) -> None:
+    server = IgniServer()
+    app = _app(key_file, server, clock=lambda: 1_000.5)
+    server.jwks = app.public_jwks()
+
+    await app.token()
+
+    form = server.token_requests[0]
+    assert list(form) == ["grant_type", "client_assertion_type", "client_assertion"]
+    assert form["grant_type"] == "client_credentials"
+    assert form["client_assertion_type"] == ASSERTION_TYPE
+    header = jwt.get_unverified_header(form["client_assertion"])
+    assert (header["alg"], header["kid"]) == ("RS256", app.thumbprint())
+    claims = jwt.decode(form["client_assertion"], options={"verify_signature": False})
+    assert list(claims) == ["iss", "sub", "aud", "iat", "exp", "jti"]
+    assert (claims["iss"], claims["sub"], claims["aud"]) == ("app-bot", "app-bot", ISSUER)
+    assert (claims["iat"], claims["exp"]) == (1_000, 1_060)
+    assert len(claims["jti"]) == 32
+
+
+async def test_igni_server_s_issuer_is_asked_for_once(key_file: Path) -> None:
+    now = [1_000.0]
+    server = IgniServer()
+    app = _app(key_file, server, clock=lambda: now[0])
+    server.jwks = app.public_jwks()
+
+    await app.token()
+    now[0] += 600
+    await app.token()
+
+    discovery = [c for c in server.calls if c.url.path == "/.well-known/openid-configuration"]
+    assert len(server.token_requests) == 2 and len(discovery) == 1
+
+
+async def test_an_igni_server_out_of_reach_is_unavailable_for_discovery(key_file: Path) -> None:
+    def unreachable(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(unreachable))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+
+    with pytest.raises(Unavailable, match="could not reach igni server for discovery"):
+        await app.token()
+
+
+@pytest.mark.parametrize(
+    ("answer", "said"),
+    [
+        (httpx.Response(503), "igni server answered the app's token with 503"),
+        (
+            httpx.Response(200, text="<html>"),
+            "igni server answered the app's token with something else",
+        ),
+        (
+            httpx.Response(200, json={"expires_in": 600}),
+            "igni server answered the app's token with something else",
+        ),
+    ],
+)
+async def test_a_token_igni_server_could_not_make_for_an_app_is_unavailable(
+    key_file: Path, answer: httpx.Response, said: str
+) -> None:
+    def token(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        return answer
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(token))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+
+    with pytest.raises(Unavailable) as unavailable:
+        await app.token()
+
+    assert str(unavailable.value) == said
+
+
+async def test_an_app_and_an_api_key_can_be_pointed_at_another_igni_server(
+    key_file: Path,
+) -> None:
+    server, exchange = IgniServer(), KeyExchange()
+    hosts: list[str] = []
+
+    def route(request: httpx.Request) -> httpx.Response:
+        hosts.append(request.url.host)
+        return exchange(request) if b"api-key" in request.content else server(request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("app-bot", server="http://old.test", key_file=key_file, http=http)
+    key = ApiKey("igpak1.org.k1.secret", server="http://old.test", http=http)
+    server.jwks = app.public_jwks()
+
+    app.server = "http://igni.test"
+    key.server = "http://igni.test"
+    await app.token()
+    await key.token()
+
+    assert app.server == key.server == "http://igni.test"
+    assert set(hosts) == {"igni.test"}
+
+
+async def test_an_app_exchanges_its_token_for_a_space_s_and_calls_igni_server_as_itself(
+    key_file: Path,
+) -> None:
+    def clock() -> float:
+        return 1_000.0
+
+    server = IgniServer()
+    app = _app(key_file, server, clock=clock)
+    server.jwks = app.public_jwks()
+
+    issued = await app.exchange("sp-9")
+    answer = await app.request(
+        "PUT", "/v1/apps/app-bot/spaces/a", what="declaring a space", params={"limit": 3}
+    )
+
+    assert app.clock is clock
+    assert (issued.access_token, issued.expires_in) == ("space:sp-9", 600)
+    assert server.token_requests[-1] == {
+        "grant_type": TOKEN_EXCHANGE,
+        "subject_token": "app:app-bot",
+        "subject_token_type": ACCESS_TOKEN_TYPE,
+        "space": "sp-9",
+    }
+    assert answer.status_code == 201
+    asked = server.calls[-1]
+    assert asked.headers["Authorization"] == "Bearer app:app-bot"
+    assert asked.url.params["limit"] == "3"
+
+
+async def test_an_app_closes_only_the_http_client_it_made(key_file: Path) -> None:
+    theirs = httpx.AsyncClient(transport=httpx.MockTransport(IgniServer()))
+    async with App("app-bot", server="http://igni.test", key_file=key_file, http=theirs):
+        pass
+    async with App("app-bot", server="http://igni.test", key_file=key_file) as own:
+        pass
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=theirs)
+    await key.aclose()
+    own_key = ApiKey("igpak1.org.k1.secret", server="http://igni.test")
+    await own_key.aclose()
+
+    assert not theirs.is_closed
+    assert own._server._http.is_closed and own_key._server._http.is_closed
+
+
+# ── A token kept and renewed ─────────────────────────────────────────
+
+
+def _key_answering(answer: Callable[[], httpx.Response], clock: Callable[[], float]) -> ApiKey:
+    async def respond(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0)  # let another caller in while this one waits
+        return answer()
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+    return ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http, clock=clock)
+
+
+async def test_a_token_without_a_lifetime_is_kept_ten_minutes_less_the_margin() -> None:
+    now, issued = [1_000.0], [0]
+
+    def answer() -> httpx.Response:
+        issued[0] += 1
+        return httpx.Response(200, json={"access_token": f"session-{issued[0]}"})
+
+    key = _key_answering(answer, clock=lambda: now[0])
+
+    await key.token()
+    now[0] += 600 - ApiKey.RENEW_BEFORE - 1
+    kept = await key.token()
+    now[0] += 2
+    renewed = await key.token()
+
+    assert (kept, renewed) == ("session-1", "session-2")
+
+
+async def test_a_token_shorter_than_the_margin_is_asked_for_every_time() -> None:
+    issued = [0]
+
+    def answer() -> httpx.Response:
+        issued[0] += 1
+        return httpx.Response(200, json={"access_token": f"s-{issued[0]}", "expires_in": 30})
+
+    key = _key_answering(answer, clock=lambda: 1_000.0)
+
+    assert [await key.token(), await key.token()] == ["s-1", "s-2"]
+
+
+async def test_callers_asking_at_once_share_one_new_token() -> None:
+    issued = [0]
+
+    def answer() -> httpx.Response:
+        issued[0] += 1
+        return httpx.Response(200, json={"access_token": f"s-{issued[0]}", "expires_in": 900})
+
+    key = _key_answering(answer, clock=lambda: 1_000.0)
+
+    tokens = await asyncio.gather(key.token(), key.token(), key.token())
+
+    assert list(tokens) == ["s-1", "s-1", "s-1"] and issued[0] == 1
+
+
+# ── A person ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("answer", "said"),
+    [
+        (httpx.Response(401, text="no such key"), "no such key"),
+        (httpx.Response(403, json=["revoked"]), '["revoked"]'),
+        (httpx.Response(400, json={"error": "invalid_grant"}), '{"error":"invalid_grant"}'),
+    ],
+)
+async def test_a_refused_key_without_igni_s_reason_is_told_igni_s_whole_answer(
+    answer: httpx.Response, said: str
+) -> None:
+    http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: answer))
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    with pytest.raises(AuthError) as refused:
+        await key.token()
+
+    assert str(refused.value) == f"igni server refused the API key: {said}"
+
+
+def test_an_api_key_needs_to_know_where_igni_server_is(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("IGNI_SERVER_URL", raising=False)
+
+    with pytest.raises(AuthError, match="pass server=, or set IGNI_SERVER_URL"):
+        Person.from_api_key("igpak1.org.k1.secret")
+
+
+def test_a_person_needs_a_session_token() -> None:
+    with pytest.raises(AuthError, match="a person needs a session token"):
+        Person("  ")
+
+
+@pytest.mark.parametrize("stored", ["not json", json.dumps({"expires_at": ""}), "[]"])
+def test_a_file_that_is_not_igni_s_credentials_says_so(tmp_path: Path, stored: str) -> None:
+    path = tmp_path / "credentials.json"
+    path.write_text(stored)
+
+    with pytest.raises(AuthError, match="is not an igni credentials file"):
+        Person.from_cli(path)
+
+
+@pytest.mark.parametrize(
+    ("expires_at", "usable"),
+    [
+        ("", True),
+        ("whenever", True),
+        ((datetime.now(UTC) + timedelta(hours=1)).replace(tzinfo=None).isoformat(), True),
+        ((datetime.now(UTC) - timedelta(hours=1)).replace(tzinfo=None).isoformat(), False),
+    ],
+)
+def test_a_stored_session_without_a_clear_end_is_used_and_a_naive_one_is_utc(
+    tmp_path: Path, expires_at: str, usable: bool
+) -> None:
+    path = tmp_path / "credentials.json"
+    path.write_text(json.dumps({"access_token": "t-ada", "expires_at": expires_at, "user": "x"}))
+
+    if usable:
+        assert Person.from_cli(path)._token == "t-ada"
+    else:
+        with pytest.raises(AuthError, match="has expired"):
+            Person.from_cli(path)
+
+
+def test_the_cli_session_is_found_in_the_home_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".igni").mkdir()
+    (tmp_path / ".igni" / "credentials.json").write_text(json.dumps({"access_token": "t-ada"}))
+
+    assert Person.from_cli()._token == "t-ada"
+
+
+# ── An app's spaces ──────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("external_id", ["", "x" * 201])
+async def test_an_external_id_empty_or_too_long_is_refused_before_asking(
+    key_file: Path, external_id: str
+) -> None:
+    app, server = _spaces_app(key_file, lambda request: httpx.Response(500))
+
+    with pytest.raises(ValueError, match="1 to 200 characters"):
+        await app.spaces.declare(external_id)
+
+    assert server.calls == []
+
+
+async def test_an_app_s_and_a_space_s_ids_are_escaped_in_the_path(key_file: Path) -> None:
+    server = IgniServer()
+    paths: list[bytes] = []
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if "/spaces" in request.url.path:
+            paths.append(request.url.raw_path)
+            return httpx.Response(200, json={"space_id": "sp-1"})
+        return server(request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("acme/bot", server="http://igni.test", key_file=key_file, http=http)
+    server.jwks = app.public_jwks()
+
+    await app.spaces.declare("a b?c" + "x" * 195)
+    await app.spaces.get("ü")
+
+    assert paths == [
+        b"/v1/apps/acme%2Fbot/spaces/a%20b%3Fc" + b"x" * 195,
+        b"/v1/apps/acme%2Fbot/spaces/%C3%BC",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("ask", "answer", "error", "said"),
+    [
+        (
+            "get",
+            httpx.Response(403, text="no"),
+            NotAllowed,
+            "igni server refused reading a space: no",
+        ),
+        ("get", httpx.Response(500), Unavailable, "igni server answered reading a space with 500"),
+        (
+            "get",
+            httpx.Response(200, json={}),
+            Unavailable,
+            "answered reading a space with something else",
+        ),
+        ("list", httpx.Response(400, text="limit"), NotAllowed, "refused listing spaces: limit"),
+        ("list", httpx.Response(503), Unavailable, "igni server answered listing spaces with 503"),
+        (
+            "list",
+            httpx.Response(200, json={"spaces": [{"external_id": "a"}]}),
+            Unavailable,
+            "igni server answered listing spaces with something else",
+        ),
+        (
+            "list",
+            httpx.Response(200, json=[]),
+            Unavailable,
+            "answered listing spaces with something else",
+        ),
+        ("delete", httpx.Response(409, text="busy"), NotAllowed, "refused deleting a space: busy"),
+        (
+            "delete",
+            httpx.Response(302),
+            Unavailable,
+            "igni server answered deleting a space with 302",
+        ),
+    ],
+)
+async def test_igni_server_s_refusal_to_read_list_or_delete_says_why(
+    key_file: Path, ask: str, answer: httpx.Response, error: type[Exception], said: str
+) -> None:
+    app, _ = _spaces_app(key_file, lambda request: answer)
+    asks = {"get": app.spaces.get, "delete": app.spaces.delete}
+
+    with pytest.raises(error, match=re.escape(said)):
+        await (app.spaces.list() if ask == "list" else asks[ask]("a"))
+
+
+async def test_an_empty_page_written_as_null_lists_no_spaces(key_file: Path) -> None:
+    pages = {
+        "": {"spaces": [{"space_id": "sp-1"}], "next": 2},
+        "2": {"spaces": None, "next": None},
+    }
+    asked: list[dict[str, str]] = []
+
+    def spaces(request: httpx.Request) -> httpx.Response:
+        asked.append(dict(request.url.params))
+        return httpx.Response(200, json=pages[request.url.params.get("after", "")])
+
+    app, _ = _spaces_app(key_file, spaces)
+    listed = await app.spaces.list()
+
+    assert [s.space_id for s in listed] == ["sp-1"]
+    assert asked == [{"limit": "100"}, {"limit": "100", "after": "2"}]
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [httpx.Response(200), httpx.Response(202, text="<html>"), httpx.Response(200, json=[])],
+)
+async def test_a_space_deleted_is_done_whatever_igni_server_says_with_it(
+    key_file: Path, answer: httpx.Response
+) -> None:
+    app, _ = _spaces_app(key_file, lambda request: answer)
+
+    await app.spaces.delete("a")
+
+
+async def test_a_space_record_keeps_what_igni_server_added(key_file: Path) -> None:
+    record = {"space_id": "sp-1", "external_id": "a", "org_id": "org-acme", "vm": "ready"}
+    app, _ = _spaces_app(key_file, lambda request: httpx.Response(200, json=record))
+
+    space = await app.spaces.get("a")
+
+    assert space is not None and space.record is not None
+    assert (space.external_id, space.record.org_id, space.record.created_at) == (
+        "a",
+        "org-acme",
+        "",
+    )
+    assert space.record.model_extra == {"vm": "ready"}
+
+
+async def test_a_space_known_by_its_id_signs_in_without_being_looked_up(key_file: Path) -> None:
+    server = IgniServer()
+    app = _app(key_file, server)
+    server.jwks = app.public_jwks()
+
+    space = app.spaces.space("sp-9")
+
+    assert (await space.token(), space.external_id, space.record) == ("space:sp-9", "", None)
+    assert not any("/spaces" in c.url.path for c in server.calls)
+    with pytest.raises(ValueError, match="a space needs its space id"):
+        app.spaces.space("")
+
+
+async def test_a_space_s_token_is_kept_and_renewed_by_its_app_s_margin(key_file: Path) -> None:
+    class EagerApp(App):
+        RENEW_BEFORE = 300
+
+    now = [1_000.0]
+    server = IgniServer()
+    http = httpx.AsyncClient(transport=httpx.MockTransport(server))
+    app = EagerApp(
+        "app-bot", server="http://igni.test", key_file=key_file, http=http, clock=lambda: now[0]
+    )
+    server.jwks = app.public_jwks()
+    space = app.spaces.space("sp-9")
+
+    await space.token()
+    now[0] += 600 - 300 - 1
+    await space.token()
+    exchanged_before = sum(f["grant_type"] == TOKEN_EXCHANGE for f in server.token_requests)
+    now[0] += 2
+    await space.token()
+    exchanged = sum(f["grant_type"] == TOKEN_EXCHANGE for f in server.token_requests)
+
+    assert (exchanged_before, exchanged) == (1, 2)
+
+
+async def test_a_refused_space_is_told_igni_server_s_whole_answer(key_file: Path) -> None:
+    server = IgniServer()
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if b"token-exchange" in request.content:
+            return httpx.Response(
+                403, json={"error": "access_denied", "error_description": "not your space"}
+            )
+        return server(request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+    server.jwks = app.public_jwks()
+
+    with pytest.raises(AuthError) as refused:
+        await app.spaces.space("sp-9").token()
+
+    said = str(refused.value)
+    assert said.startswith("igni server refused the space's token: ")
+    assert "access_denied" in said and "not your space" in said
 
 
 async def test_a_command_streams_its_output_and_ends_with_its_exit_code() -> None:

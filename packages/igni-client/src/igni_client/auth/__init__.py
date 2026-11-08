@@ -15,4 +15,28 @@ for each connection, never refreshed under one that is open.
   minutes and are renewed a minute before they run out.
 * **A space** (`spaces.py`) is one end user of an app. The app declares it,
   then exchanges its own token for the space's.
+
+Each name is defined in the module that owns it; 0.1.0's `igni_client.auth`
+names are kept here too, so `from igni_client.auth import App` still works.
 """
+
+from igni_client.auth.app import App
+from igni_client.auth.grants import ACCESS_TOKEN_TYPE, ASSERTION_TYPE, TOKEN_EXCHANGE
+from igni_client.auth.keys import ALGORITHM
+from igni_client.auth.person import ApiKey, Person
+from igni_client.auth.spaces import Space, SpaceRecord, Spaces
+from igni_client.auth.tokens import TokenSource
+
+__all__ = [
+    "ACCESS_TOKEN_TYPE",
+    "ALGORITHM",
+    "ASSERTION_TYPE",
+    "TOKEN_EXCHANGE",
+    "ApiKey",
+    "App",
+    "Person",
+    "Space",
+    "SpaceRecord",
+    "Spaces",
+    "TokenSource",
+]

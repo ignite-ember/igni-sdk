@@ -128,8 +128,12 @@ class ApiKey:
 
     @property
     def server(self) -> str:
-        """igni server's address."""
+        """igni server's address; assignable, as it was a plain attribute in 0.1.0."""
         return self._server.url
+
+    @server.setter
+    def server(self, url: str) -> None:
+        self._server.url = url
 
     async def token(self) -> str:
         return await self._tokens.get(self._session)
