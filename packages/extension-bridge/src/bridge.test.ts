@@ -131,6 +131,47 @@ describe("connecting", () => {
       /no hello from the host/,
     );
   });
+
+  it("says in its refusals what went wrong and how long it waited", async () => {
+    fakeHost();
+    await expect(connect({ timeoutMs: 30 })).rejects.toThrow(
+      new Error("igni bridge: no hello from the host within 30ms"),
+    );
+    Object.defineProperty(window, "parent", {
+      value: window,
+      configurable: true,
+    });
+    await expect(connect()).rejects.toThrow(
+      new Error(
+        "igni bridge: this page is not framed by a host, so there is nothing to connect to",
+      ),
+    );
+  });
+
+  it("waits thirty seconds for the hello unless told otherwise", async () => {
+    const host = fakeHost();
+    const pending = connect();
+
+    vi.advanceTimersByTime(29_900);
+    host.send(hello());
+    await expect(pending).resolves.toMatchObject({ extensionId: "acme.scanner" });
+
+    fakeHost();
+    const late = connect().catch((error: unknown) => error);
+    vi.advanceTimersByTime(30_000);
+    expect(await late).toEqual(
+      new Error("igni bridge: no hello from the host within 30000ms"),
+    );
+  });
+
+  it("keeps waiting past a hello it cannot read", async () => {
+    const host = fakeHost();
+    const pending = connect();
+    host.send(hello({ extensionId: 7 }));
+    host.send(hello({ extensionId: "acme.second" }));
+
+    await expect(pending).resolves.toMatchObject({ extensionId: "acme.second" });
+  });
 });
 
 describe("calling", () => {
@@ -194,6 +235,51 @@ describe("calling", () => {
     const { bridge } = await connected();
     const call = bridge.rpc("acme_status", {}, 40);
     await expect(call).rejects.toThrow(/timed out after 40ms/);
+  });
+
+  it("says the host gave no reason when it refuses without one", async () => {
+    const { host, bridge } = await connected();
+    const call = bridge.rpc("acme_status");
+    host.send({ kind: "result", id: host.lastCall().id, ok: false });
+
+    await expect(call).rejects.toThrow(
+      new Error("the host refused the call without saying why"),
+    );
+  });
+
+  it("names the method it gave up on", async () => {
+    const { bridge } = await connected();
+    await expect(bridge.rpc("acme_status", {}, 40)).rejects.toThrow(
+      new Error("igni bridge: acme_status timed out after 40ms"),
+    );
+  });
+
+  it("does not let a reply of one kind settle a request of another", async () => {
+    const { host, bridge } = await connected();
+    const read = bridge.host.chat.processing.get();
+    const call = bridge.rpc("acme_status");
+
+    // The host request is h1: a result naming it settles nothing.
+    host.send({ kind: "result", id: "h1", ok: true, value: "wrong" });
+    host.send({ kind: "host-reply", id: "2", ok: true, result: "wrong" });
+    host.send({ kind: "host-reply", id: "h1", ok: true, result: true });
+    host.send({ kind: "result", id: "2", ok: true, value: "right" });
+
+    await expect(read).resolves.toBe(true);
+    await expect(call).resolves.toBe("right");
+  });
+
+  it("posts each message with its kind before the nonce, as it always has", async () => {
+    const { host, bridge } = await connected();
+    void bridge.rpc("acme_status");
+    void bridge.host.chat.processing.get();
+    bridge.close();
+
+    expect(host.posted.map((m) => Object.keys(m as object))).toEqual([
+      ["igni", "kind", "nonce", "id", "method", "args"],
+      ["igni", "kind", "nonce", "id", "op", "path", "window"],
+      ["igni", "kind", "nonce"],
+    ]);
   });
 
   it("ignores a reply to a call it is not waiting on", async () => {

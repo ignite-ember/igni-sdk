@@ -78,6 +78,25 @@ describe("after the hello", () => {
     ).toBe(false);
   });
 
+  it.each([
+    ["a result with no id", { kind: "result", ok: true }],
+    ["a result whose ok is not a boolean", { kind: "result", id: "1", ok: "yes" }],
+    ["a host reply with no id", { kind: "host-reply", ok: true }],
+    ["a host reply whose ok is not a boolean", { kind: "host-reply", id: "h1", ok: 1 }],
+    ["a theme with no tokens", { kind: "theme", theme: "dark" }],
+  ])("refuses %s", (_label, body) => {
+    expect(isHostMessage({ igni: BRIDGE_VERSION, ...body })).toBe(false);
+  });
+
+  it("accepts a refusal that gives no reason", () => {
+    expect(
+      isHostMessage({ igni: BRIDGE_VERSION, kind: "result", id: "1", ok: false }),
+    ).toBe(true);
+    expect(
+      isHostMessage({ igni: BRIDGE_VERSION, kind: "host-reply", id: "h1", ok: false }),
+    ).toBe(true);
+  });
+
   it("refuses a kind it does not know", () => {
     expect(isHostMessage({ igni: BRIDGE_VERSION, kind: "reload" })).toBe(false);
   });

@@ -36,8 +36,12 @@ export class HostChannel {
     // nowhere the first time the app is served from somewhere else.
     // Nothing secret travels in this direction — the host authorises,
     // the guest only asks.
+    // `kind` before `nonce`, as the guest always posted them: the fields
+    // are the same either way, but a host or a log that compares the
+    // serialised message sees the order.
+    const { kind, ...rest } = body;
     this.host.postMessage(
-      { igni: BRIDGE_VERSION, nonce: this.nonce, ...body },
+      { igni: BRIDGE_VERSION, kind, nonce: this.nonce, ...rest },
       "*",
     );
   }

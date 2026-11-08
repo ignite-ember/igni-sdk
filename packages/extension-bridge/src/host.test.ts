@@ -216,6 +216,21 @@ describe("bridge.host", () => {
     expect((error as HostError).code).toBe("not_granted");
   });
 
+  it("says the host gave no reason when it refuses without one", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+
+    const reading = bridge.host.mcp.servers.get();
+    page.reply(page.posted[0].id, { ok: false });
+
+    const error = await reading.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HostError);
+    expect(error).toMatchObject({
+      code: "failed",
+      message: "the host refused without saying why",
+    });
+  });
+
   it("refuses to write a property that is not writable without asking", async () => {
     const page = framedPage();
     const bridge = await page.connected();
