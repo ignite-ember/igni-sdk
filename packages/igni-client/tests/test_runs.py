@@ -64,7 +64,8 @@ async def test_another_clients_run_never_reaches_this_one() -> None:
         fake.runs.script = lambda text: [Delay(seconds=0.05), *Steps.answer(text)]
         ours = await mine.sessions.create()
         other = await theirs.sessions.create()
-        mine_reply, _ = await asyncio.gather(ours.ask("mine"), other.ask("theirs"))
+        # Theirs is asked first, so igni plays it first: both are each client's second request.
+        _, mine_reply = await asyncio.gather(other.ask("theirs"), ours.ask("mine"))
 
     assert str(mine_reply) == "mine"
 

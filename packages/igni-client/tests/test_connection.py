@@ -225,6 +225,15 @@ async def test_a_reply_settles_its_call_and_a_stream_collects_its_run() -> None:
     assert listener.qsize() == 4, "a listener hears everything igni sends"
 
 
+def test_no_two_clients_number_their_requests_alike() -> None:
+    mine, theirs = Router(), Router()
+
+    ids = [mine.new_id("run"), mine.new_id("run"), theirs.new_id("run")]
+
+    assert len(set(ids)) == 3, "igni sends every client's messages to every client"
+    assert all(i.startswith("run-") for i in ids)
+
+
 async def test_an_interruption_ends_every_call_and_run_in_flight() -> None:
     router = Router()
     answer = router.expect("rpc-1")

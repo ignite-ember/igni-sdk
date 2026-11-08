@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import itertools
+import secrets
 
 from igni_client.errors import IgniClientError
 from igni_client.events import Event
@@ -26,13 +27,17 @@ class Router:
     """The requests in flight, the streams open and the listeners, by request id."""
 
     def __init__(self) -> None:
+        # igni sends every client's messages to every client: a request id
+        # carries this router's own tag, so another client's never matches it.
+        self._tag = secrets.token_hex(4)
         self._ids = itertools.count(1)
         self._waiting: dict[str, asyncio.Future[Event]] = {}
         self._streams: dict[str, asyncio.Queue[Event | Interruption]] = {}
         self._listeners: list[asyncio.Queue[Event]] = []
 
     def new_id(self, prefix: str) -> str:
-        return f"{prefix}-{next(self._ids)}"
+        """A request id no other client of the same igni sends: `run-1f2e3d4c-1`."""
+        return f"{prefix}-{self._tag}-{next(self._ids)}"
 
     # ── Calls ──
 
