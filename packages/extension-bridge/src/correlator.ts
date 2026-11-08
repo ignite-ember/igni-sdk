@@ -16,10 +16,16 @@ interface Waiter {
 
 export class Correlator {
   private readonly waiting = new Map<string, Waiter>();
-  private counter = 0;
 
-  /** `prefix` tells this correlator's ids apart from another's in a log. */
-  constructor(private readonly prefix: string) {}
+  /**
+   * `prefix` tells this correlator's ids apart from another's in a log;
+   * `nextNumber` numbers them. A bridge's correlators share one counter,
+   * so its ids run 1, h2, s3 across every kind, as they always have.
+   */
+  constructor(
+    private readonly prefix: string,
+    private readonly nextNumber: () => number,
+  ) {}
 
   /**
    * Send one request and wait for its reply.
@@ -32,7 +38,7 @@ export class Correlator {
     timedOut: () => Error,
     post: (id: string) => void,
   ): Promise<T> {
-    const id = `${this.prefix}${++this.counter}`;
+    const id = `${this.prefix}${this.nextNumber()}`;
     return new Promise<T>((resolve, reject) => {
       const timer =
         timeoutMs === null

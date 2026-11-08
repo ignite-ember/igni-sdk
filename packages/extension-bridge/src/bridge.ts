@@ -20,6 +20,7 @@ import { DEFAULT_TIMEOUT_MS, GuestBridge } from "./guestBridge";
 import {
   type ExtensionSettings,
   type LaunchParams,
+  type RpcArgs,
   isHostMessage,
 } from "./protocol";
 
@@ -68,9 +69,44 @@ export function connect<
         if (!channel.isFrom(message) || !isHostMessage(message.data)) return;
         bridge.receive(message.data);
       });
-      resolve(bridge);
+      resolve(expose(bridge));
     }
 
     window.addEventListener("message", onHello);
   });
+}
+
+/**
+ * The bridge as the page holds it: a plain object whose members close
+ * over the one that does the work. So `const { rpc } = bridge`,
+ * `onClick={bridge.close}` and `{ ...bridge }` behave as they did before
+ * the bridge was a class, and nothing the page did not ask for — the
+ * nonce, the requests in flight — is one of its properties.
+ */
+function expose<P extends LaunchParams, S extends ExtensionSettings>(
+  bridge: GuestBridge<P, S>,
+): Bridge<P, S> {
+  return {
+    extensionId: bridge.extensionId,
+    host: bridge.host,
+    service: bridge.service,
+    on: (signal, fn, onRefused) => bridge.on(signal, fn, onRefused),
+    get params() {
+      return bridge.params;
+    },
+    settings: bridge.settings,
+    get theme() {
+      return bridge.theme;
+    },
+    get tokens() {
+      return bridge.tokens;
+    },
+    rpc: <T>(method: string, args?: RpcArgs, timeoutMs?: number) =>
+      bridge.rpc<T>(method, args, timeoutMs),
+    navigate: (to) => bridge.navigate(to),
+    close: () => bridge.close(),
+    onTheme: (fn) => bridge.onTheme(fn),
+    onParams: (fn) => bridge.onParams(fn),
+    setLocation: (state) => bridge.setLocation(state),
+  };
 }

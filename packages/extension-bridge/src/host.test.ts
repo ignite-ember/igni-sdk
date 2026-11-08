@@ -329,6 +329,83 @@ describe("bridge.on", () => {
     }
   });
 
+  it("tells only the first handler's onRefused, since only it subscribed", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const first: HostError[] = [];
+      const second: HostError[] = [];
+      const signal = bridge.host.chat.run_completed;
+
+      bridge.on(signal, () => {}, (error) => first.push(error));
+      bridge.on(signal, () => {}, (error) => second.push(error));
+      expect(page.posted).toHaveLength(1);
+      page.reply(page.posted[0].id, {
+        ok: false,
+        error: { code: "not_granted", message: "chat is not granted" },
+      });
+
+      await vi.waitFor(() => expect(first).toHaveLength(1));
+      expect(second).toEqual([]);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("reports a subscribe the host never answers as a failure", async () => {
+    vi.useFakeTimers();
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const refused: HostError[] = [];
+
+      bridge.on(bridge.host.chat.run_completed, () => {}, (error) =>
+        refused.push(error),
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(refused).toHaveLength(1);
+      expect(refused[0]).toBeInstanceOf(HostError);
+      expect(refused[0].code).toBe("failed");
+      expect(refused[0].message).toBe(
+        "igni bridge: host.subscribe timed out after 30000ms",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("subscribes again after the last handler went", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const seen: string[] = [];
+    const signal = bridge.host.chat.run_completed;
+
+    bridge.on(signal, () => seen.push("before"))();
+    bridge.on(signal, () => seen.push("after"));
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+
+    expect(page.posted.map((p) => p.op)).toEqual([
+      "subscribe",
+      "unsubscribe",
+      "subscribe",
+    ]);
+    expect(seen).toEqual(["after"]);
+  });
+
+  it("stops once however many times its unsubscribe is called", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const off = bridge.on(bridge.host.chat.run_completed, () => {});
+
+    off();
+    off();
+
+    expect(page.posted.map((p) => p.op)).toEqual(["subscribe", "unsubscribe"]);
+  });
+
   it("hands a signal to every handler of it, and to none after the last goes", async () => {
     const page = framedPage();
     const bridge = await page.connected();

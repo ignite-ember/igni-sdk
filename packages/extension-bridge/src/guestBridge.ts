@@ -64,9 +64,12 @@ export class GuestBridge<
   private currentTokens: ThemeTokens;
   private readonly themeWatchers = new Watchers<string>();
   private readonly paramWatchers = new Watchers<P>();
-  private readonly calls = new Correlator("");
-  private readonly hostRequests = new Correlator("h");
-  private readonly tokenRequests = new Correlator("s");
+  /** One numbering for every request, whatever its kind. */
+  private requestCount = 0;
+  private readonly nextRequest = () => ++this.requestCount;
+  private readonly calls = new Correlator("", this.nextRequest);
+  private readonly hostRequests = new Correlator("h", this.nextRequest);
+  private readonly tokenRequests = new Correlator("s", this.nextRequest);
   private readonly signals = new SignalSubscriptions((op, signal) =>
     this.hostRequest({ op, path: "", signals: [signal] }),
   );

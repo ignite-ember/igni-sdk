@@ -9,19 +9,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { connect } from "./bridge";
+import { HostError } from "./hostModel";
 import { BRIDGE_VERSION } from "./protocol";
+import { ServiceError } from "./service";
 
 /** Stands in for the host app's window. */
 function fakeHost() {
   const posted: unknown[] = [];
+  const targets: unknown[] = [];
   const host = {
-    postMessage: (message: unknown) => {
+    postMessage: (message: unknown, target: unknown) => {
       posted.push(message);
+      targets.push(target);
     },
   } as unknown as Window;
   Object.defineProperty(window, "parent", { value: host, configurable: true });
   return {
     posted,
+    /** The target origin of each post, in order. */
+    targets,
+    /** The ids of everything the guest asked, in order. */
+    ids() {
+      return posted
+        .map((m) => (m as { id?: string }).id)
+        .filter((id) => id !== undefined);
+    },
     /** Deliver a message to the guest as the host would. */
     send(body: Record<string, unknown>, source: unknown = host) {
       const event = new MessageEvent("message", {
@@ -240,5 +252,262 @@ describe("the rest of the surface", () => {
     expect(seen).toEqual(["light"]);
     // The reading still follows even with nobody watching.
     expect(bridge.theme).toBe("dark");
+  });
+});
+
+describe("the bridge as a page holds it", () => {
+  async function connected(over: Record<string, unknown> = {}) {
+    const host = fakeHost();
+    const pending = connect();
+    host.send(hello(over));
+    return { host, bridge: await pending };
+  }
+
+  it("works with its methods taken off it", async () => {
+    const { host, bridge } = await connected();
+    const { rpc, navigate, close, setLocation, onTheme, onParams, on } =
+      bridge;
+
+    const call = rpc<number>("acme_status");
+    host.send({ kind: "result", id: host.lastCall().id, ok: true, value: 7 });
+    navigate("plugins");
+    setLocation({ tab: "browse" });
+    const themes: string[] = [];
+    onTheme((theme) => themes.push(theme));
+    const params: unknown[] = [];
+    onParams((next) => params.push(next));
+    on(bridge.host.chat.run_completed, () => {});
+    host.send({ kind: "theme", theme: "light", tokens: {} });
+    host.send({ kind: "params", params: { tab: "x" } });
+    close();
+
+    await expect(call).resolves.toBe(7);
+    expect(themes).toEqual(["light"]);
+    expect(params).toEqual([{ tab: "x" }]);
+    expect(host.posted.map((m) => (m as { kind: string }).kind)).toEqual([
+      "call",
+      "navigate",
+      "location",
+      "host",
+      "close",
+    ]);
+  });
+
+  it("spreads into what a page uses, and nothing it keeps to itself", async () => {
+    const { bridge } = await connected({ params: { tab: "browse" } });
+
+    expect(Object.keys(bridge).sort()).toEqual(
+      [
+        "close",
+        "extensionId",
+        "host",
+        "navigate",
+        "on",
+        "onParams",
+        "onTheme",
+        "params",
+        "rpc",
+        "service",
+        "setLocation",
+        "settings",
+        "theme",
+        "tokens",
+      ].sort(),
+    );
+    expect({ ...bridge }.params).toEqual({ tab: "browse" });
+  });
+
+  it("numbers every request from one counter, whatever its kind", async () => {
+    const { host, bridge } = await connected({
+      serviceUrl: "https://notes.example",
+    });
+
+    void bridge.rpc("acme_status");
+    void bridge.host.chat.processing.get();
+    void bridge.service.token();
+    void bridge.rpc("acme_head");
+
+    expect(host.ids()).toEqual(["1", "h2", "s3", "4"]);
+  });
+
+  it("posts to any origin, since it does not know the host's", async () => {
+    const { host, bridge } = await connected();
+    bridge.navigate("plugins");
+    bridge.setLocation({ tab: "browse" });
+
+    expect(host.targets).toEqual(["*", "*"]);
+  });
+
+  it("tells the host where the user is, with the nonce", async () => {
+    const { host, bridge } = await connected();
+    bridge.setLocation({ tab: "browse", doc: "7" });
+
+    expect(host.posted).toEqual([
+      {
+        igni: BRIDGE_VERSION,
+        kind: "location",
+        nonce: NONCE,
+        state: { tab: "browse", doc: "7" },
+      },
+    ]);
+  });
+
+  it("follows the host's params, and stops when asked", async () => {
+    const { host, bridge } = await connected({ params: { tab: "browse" } });
+    const seen: unknown[] = [];
+    const stop = bridge.onParams((next) => seen.push(next));
+
+    host.send({ kind: "params", params: { tab: "history" } });
+    expect(bridge.params).toEqual({ tab: "history" });
+
+    // An untyped caller can tell whether it stopped anything.
+    expect(stop() as unknown).toBe(true);
+    expect(stop() as unknown).toBe(false);
+    host.send({ kind: "params", params: { tab: "settings" } });
+
+    expect(seen).toEqual([{ tab: "history" }]);
+    expect(bridge.params).toEqual({ tab: "settings" });
+  });
+
+  it("answers whether an onTheme unsubscribe stopped anything", async () => {
+    const { bridge } = await connected();
+    const stop = bridge.onTheme(() => {});
+
+    expect(stop() as unknown).toBe(true);
+    expect(stop() as unknown).toBe(false);
+  });
+
+  it("passes the settings the host sent", async () => {
+    const { bridge } = await connected({
+      settings: { region: "eu", retries: 3 },
+    });
+
+    expect(bridge.settings).toEqual({ region: "eu", retries: 3 });
+  });
+
+  it("paints the host's tokens before it resolves, and again on a new theme", async () => {
+    const host = fakeHost();
+    const pending = connect();
+    host.send(hello({ tokens: { "--bg": "#101010" } }));
+    const bridge = await pending;
+    const root = document.documentElement;
+    expect(root.style.getPropertyValue("--bg")).toBe("#101010");
+
+    host.send({ kind: "theme", theme: "light", tokens: { "--bg": "#fafafa" } });
+
+    expect(root.style.getPropertyValue("--bg")).toBe("#fafafa");
+    void bridge;
+  });
+
+  it("ignores a second hello", async () => {
+    const { host, bridge } = await connected({ params: { tab: "browse" } });
+
+    host.send(
+      hello({ extensionId: "acme.other", params: { tab: "x" }, theme: "light" }),
+    );
+
+    expect(bridge.extensionId).toBe("acme.scanner");
+    expect(bridge.params).toEqual({ tab: "browse" });
+    expect(bridge.theme).toBe("dark");
+  });
+
+  it("ignores what another window says once connected", async () => {
+    const { host, bridge } = await connected();
+    const call = bridge.rpc("acme_status", {}, 40);
+    const { id } = host.lastCall();
+
+    host.send({ kind: "theme", theme: "light", tokens: {} }, { not: "host" });
+    host.send({ kind: "result", id, ok: true, value: 1 }, { not: "host" });
+
+    expect(bridge.theme).toBe("dark");
+    await expect(call).rejects.toThrow(/timed out/);
+  });
+});
+
+describe("requests the host never answers", () => {
+  async function connected() {
+    const host = fakeHost();
+    const pending = connect();
+    host.send(hello({ serviceUrl: "https://notes.example" }));
+    return { host, bridge: await pending };
+  }
+
+  it("gives up on a host request after thirty seconds, and ignores a late reply", async () => {
+    const { host, bridge } = await connected();
+    const read = bridge.host.chat.processing.get();
+    const outcome = read.catch((error: unknown) => error);
+
+    vi.advanceTimersByTime(30_000);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(HostError);
+    expect(error).toMatchObject({
+      code: "failed",
+      message: "igni bridge: host.chat.processing timed out after 30000ms",
+    });
+    expect(() =>
+      host.send({ kind: "host-reply", id: "h1", ok: true, result: true }),
+    ).not.toThrow();
+  });
+
+  it("gives up on a service token after thirty seconds", async () => {
+    const { bridge } = await connected();
+    const outcome = bridge.service.token().catch((error: unknown) => error);
+
+    vi.advanceTimersByTime(30_000);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(ServiceError);
+    expect(error).toMatchObject({
+      code: "failed",
+      message: "igni bridge: no service token within 30000ms",
+    });
+  });
+});
+
+describe("the service token from the host", () => {
+  async function connected() {
+    const host = fakeHost();
+    const pending = connect();
+    host.send(hello({ serviceUrl: "https://notes.example" }));
+    return { host, bridge: await pending };
+  }
+  function lastAsk(host: ReturnType<typeof fakeHost>) {
+    return [...host.posted]
+      .reverse()
+      .find((m) => (m as { kind: string }).kind === "service-token") as {
+      id: string;
+    };
+  }
+
+  it("is refused when the host says ok but sends no token", async () => {
+    const { host, bridge } = await connected();
+    const token = bridge.service.token();
+    host.send({ kind: "service-token-reply", id: lastAsk(host).id, ok: true });
+
+    await expect(token).rejects.toMatchObject({
+      code: "refused",
+      message: "igni gave no token for this extension's service",
+    });
+  });
+
+  it("is asked for again when the host gave no lifetime", async () => {
+    const { host, bridge } = await connected();
+    const first = bridge.service.token();
+    host.send({
+      kind: "service-token-reply",
+      id: lastAsk(host).id,
+      ok: true,
+      token: "t1",
+    });
+    await expect(first).resolves.toBe("t1");
+
+    // No expiresIn is no time left, so the next ask goes to the host.
+    const second = bridge.service.token();
+    host.send({
+      kind: "service-token-reply",
+      id: lastAsk(host).id,
+      ok: true,
+      token: "t2",
+    });
+    await expect(second).resolves.toBe("t2");
   });
 });
