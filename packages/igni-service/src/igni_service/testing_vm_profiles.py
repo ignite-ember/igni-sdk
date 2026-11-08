@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -79,7 +80,9 @@ class VmProfileSubject(BaseModel):
 class FakeVmProfiles:
     """One deployment's VM profiles and the requests for them, per organisation."""
 
-    def __init__(self, *, clock: Callable[[], float]) -> None:
+    def __init__(self, *, clock: Callable[[], float] = time.time) -> None:
+        #: The wall clock a request's and a decision's time are read from;
+        #: `FakeIgni` hands it its own, so a test can move it.
         self._clock = clock
         self.caps = FakeCaps()
         #: Every request, by `(org_id, kind, subject_id)`.

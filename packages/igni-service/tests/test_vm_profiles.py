@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -20,8 +22,16 @@ from igni_service import (
     VmProfileRequest,
 )
 from igni_service.bundle.archive import BundleArchive
-from igni_service.testing import FakeIgni, SettingsOverrides, VmProfileSubject
+from igni_service.testing import (
+    FakeCaps,
+    FakeIgni,
+    FakeVmProfiles,
+    SettingsOverrides,
+    VmProfileSubject,
+)
+from igni_service.testing_vm_rules import FakeProfile, ManifestVm, Resolved
 from igni_service.urls import IgniPaths
+from igni_service.vm_profiles import VmProfileRequestRecord
 
 from .conftest import ORG, OTHER_ORG
 
@@ -324,6 +334,90 @@ class TestPlayingTheOrgAdmin:
     def test_rejecting_one_says_the_same(self, fake: FakeIgni) -> None:
         with pytest.raises(LookupError, match="no VM profile request"):
             fake.vm_profiles.reject(ORG, VmProfileSubject.app("app-nobody"))
+
+
+class TestTheFakesVmProfilesOnTheirOwn:
+    """`FakeVmProfiles` outside a `FakeIgni`, which hands it the fake's clock."""
+
+    def test_they_are_made_without_a_clock_and_stamp_the_wall_time(self) -> None:
+        profiles = FakeVmProfiles()
+
+        answered = profiles.app_put(ORG, "app-1", "Bot", b'{"vcpus": 2}')
+
+        assert answered.status_code == 201
+        record = VmProfileRequestRecord.model_validate(answered.json())
+        assert record.requested.vcpus == 2
+        assert abs(record.requested_at.timestamp() - time.time()) < 60
+
+    def test_a_clock_they_are_given_stamps_the_request_and_the_decision(self) -> None:
+        now = [1_800_000_000.0]
+        profiles = FakeVmProfiles(clock=lambda: now[0])
+
+        profiles.app_put(ORG, "app-1", "Bot", b"{}")
+        now[0] += 60
+        decided = profiles.approve(ORG, VmProfileSubject.app("app-1"))
+
+        assert decided.requested_at == datetime.fromtimestamp(1_800_000_000, UTC)
+        assert decided.decided_at == datetime.fromtimestamp(1_800_000_060, UTC)
+
+
+class TestIgnisRulesForAProfile:
+    """What the fake holds a request to, as igni server does (`testing_vm_rules`)."""
+
+    def test_what_a_request_leaves_out_is_the_standard_profile(self) -> None:
+        resolved = Resolved.of(VmProfileRequest(vcpus=2))
+
+        assert resolved == Resolved.standard().model_copy(update={"vcpus": 2})
+
+    def test_never_pausing_is_asked_for_explicitly_and_the_caps_refuse_it(self) -> None:
+        profiles = FakeVmProfiles()
+
+        answered = profiles.app_put(ORG, "app-1", "Bot", b'{"idle_before_pause_s": null}')
+
+        assert answered.status_code == 400
+        assert "awake idle for at most 3600 seconds" in answered.json()["detail"]
+
+    def test_normal_memory_over_the_ceiling_is_malformed(self) -> None:
+        profiles = FakeVmProfiles()
+
+        answered = profiles.app_put(
+            ORG, "app-1", "Bot", b'{"memory_mib": 1024, "normal_memory_mib": 2048}'
+        )
+
+        assert answered.status_code == 422
+        assert "normal_memory_mib may not exceed memory_mib" in answered.json()["detail"]
+        assert profiles.requests == {}
+
+    def test_what_a_vm_gets_is_clamped_to_the_caps(self) -> None:
+        caps = FakeCaps(max_memory_mib=2048, max_vcpus=2, max_volume_gib=20)
+        big = Resolved.of(
+            VmProfileRequest(
+                memory_mib=8192,
+                normal_memory_mib=4096,
+                expected_memory_mib=3072,
+                vcpus=8,
+                idle_before_pause_s=None,
+                volume_max_gib=100,
+            )
+        )
+
+        served = caps.serve(FakeProfile(id="p-1", name="Big", settings=big))
+
+        assert (served.memory_mib, served.normal_memory_mib, served.expected_memory_mib) == (
+            2048,
+            2048,
+            2048,
+        )
+        assert served.vcpus == 2 and served.volume_max_gib == 20
+        assert served.idle_before_pause_s == 3600, "never pausing is the longest the caps allow"
+
+    def test_a_manifest_s_vm_is_read_in_its_own_camel_case(self) -> None:
+        vm = ManifestVm.model_validate(
+            {"memoryMib": 2048, "idleBeforePauseS": 60, "somethingNew": True}
+        )
+
+        assert Resolved.of(vm).memory_mib == 2048
+        assert Resolved.of(vm).idle_before_pause_s == 60
 
 
 class TestUploadingInATest:
