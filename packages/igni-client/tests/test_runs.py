@@ -25,7 +25,9 @@ from igni_client import (
     RunCompleted,
     RunFailed,
     RunStarted,
+    StatusUpdate,
     ToolCompleted,
+    ToolStarted,
 )
 from igni_client.approvals import Approver
 from igni_client.events import ErrorMessage, Event, RequirementDetails, RunError, RunPaused
@@ -629,7 +631,122 @@ async def test_a_reply_to_a_stream_with_nothing_in_it_is_empty() -> None:
     assert str(reply) == ""
 
 
+async def test_an_approval_given_a_scope_igni_does_not_know_sends_nothing() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    request = ApprovalRequested(_paused("deploy"), answer)
+
+    with pytest.raises(ValidationError, match="choice"):
+        await request.approve("sometimes")  # type: ignore[arg-type]
+    assert sent == [] and not request.answered
+
+
+async def test_rejecting_for_good_refuses_every_call_of_a_pause() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    await ApprovalRequested(_paused("read_file", "deploy"), answer).reject(remember=True)
+
+    assert sent == [
+        [
+            HitlDecision(requirement_id="req-read_file", action="reject", choice="deny"),
+            HitlDecision(requirement_id="req-deploy", action="reject", choice="deny"),
+        ]
+    ]
+
+
+async def test_an_answer_for_a_call_igni_did_not_ask_about_is_left_out() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    await ApprovalRequested(_paused("deploy"), answer).decide(
+        {"req-other": Decision.allow(), "req-deploy": Decision.deny()}
+    )
+
+    assert sent == [[HitlDecision(requirement_id="req-deploy", action="reject", choice="once")]]
+
+
+@pytest.mark.parametrize(
+    ("said", "action"),
+    [("yes", "confirm"), (1, "confirm"), (0, "reject"), (None, "reject"), ("", "reject")],
+)
+async def test_an_approver_reads_any_other_answer_as_a_yes_or_a_no(
+    said: object, action: str
+) -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    approver = Approver(lambda requirement: said)  # type: ignore[arg-type]
+    await approver.answer(ApprovalRequested(_paused("deploy"), answer))
+
+    assert [[(d.action, d.choice) for d in batch] for batch in sent] == [[(action, "once")]]
+
+
+async def test_a_policy_that_fails_leaves_the_approval_unanswered() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    def policy(requirement: Requirement) -> bool:
+        raise LookupError(f"no rule for {requirement.tool_name}")
+
+    request = ApprovalRequested(_paused("deploy"), answer)
+    with pytest.raises(LookupError, match="no rule for deploy"):
+        await Approver(policy).answer(request)
+
+    assert sent == [] and not request.answered
+
+
+async def test_a_reply_collected_on_its_own_raises_at_an_approval_without_a_policy() -> None:
+    read: list[str] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        raise AssertionError("nothing is sent without a policy")
+
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        yield ContentDelta(text="about to deploy")
+        read.append("approval")
+        yield ApprovalRequested(_paused("deploy"), answer)
+        read.append("after")
+
+    with pytest.raises(ApprovalRequired) as raised:
+        await Reply.collect(events(), Approver(None))
+
+    assert [r.tool_name for r in raised.value.requirements] == ["deploy"]
+    assert read == ["approval"]
+
+
+async def test_a_reply_passes_over_what_is_not_part_of_the_answer() -> None:
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        yield RunStarted(run_id="r-1")
+        yield StatusUpdate(model="m", input_tokens=5)
+        yield ToolStarted(run_id="r-1", tool_name="read_file")
+        yield ContentDelta(text="done")
+        yield InfoMessage(text="noted")
+
+    reply = await Reply.collect(events(), Approver(None))
+
+    assert reply == Reply(text="done") and str(reply) == "done"
+
+
 # ── helpers ──
+
+
+def _paused(*tools: str) -> RunPaused:
+    return RunPaused(
+        run_id="r-1",
+        requirements=[Requirement(requirement_id=f"req-{t}", tool_name=t) for t in tools],
+    )
 
 
 async def _collect(run: object) -> list[object]:

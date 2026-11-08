@@ -232,6 +232,23 @@ Without `approve=`, a pause raises `ApprovalRequired`; a failed run raises
 `RunFailed`. `session.queue(text)` adds a prompt for after the run going;
 `session.cancel()` stops it.
 
+Changed since igni-client 0.1.0, on purpose:
+
+- `Decision`, `Policy`, `Choice` and `Answer` live in
+  `igni_client.approvals`, and `Reply` in `igni_client.replies`; they are
+  no longer importable from `igni_client.runs`. `from igni_client import
+  Decision, Reply` works as before.
+- The free function `igni_client.runs.collect(events, approve)` is now
+  `Reply.collect(events, Approver(approve))`. `Approver(policy).answer(request)`
+  and `Decision.frame(requirement_id)` are new.
+- A decision's choice is one of igni's scopes, `"once"`, `"always"`,
+  `"similar"` or `"deny"` (`igni_client.frames.Scope`). Any other string,
+  as in `Decision(action="confirm", choice="sometimes")` or
+  `approve("sometimes")`, raises pydantic's `ValidationError` before
+  anything is sent, and the approval stays unanswered. In 0.1.0 it was sent
+  to igni as given. `FakeIgni` passes over an answer with an unknown scope:
+  it is not recorded in `fake.runs.decisions` or `fake.socket.received`.
+
 ## Commands in the VM
 
 Through Fleet, run a shell command in the producer's VM — as root, in a
