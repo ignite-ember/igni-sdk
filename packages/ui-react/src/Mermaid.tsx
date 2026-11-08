@@ -26,7 +26,7 @@
  * into the app for the ``json-render`` renderer, so it could not be
  * published without publishing that too. It is app code now.
  */
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CopySource } from "./CopySource";
 
@@ -43,6 +43,12 @@ interface MermaidLib {
   initialize: (config: MermaidConfig) => void;
   render: (id: string, src: string) => Promise<{ svg: string }>;
 }
+
+// Mermaid draws into a scratch element by id, and the id becomes the
+// SVG's own and scopes the <style> it injects. One counter for the
+// page, so no two renders anywhere on it share one — not across
+// blocks, not across React roots, not across an edit in flight.
+let mermaidId = 0;
 
 /**
  * A mermaid theme matching igni's.
@@ -91,18 +97,12 @@ export async function loadMermaid(): Promise<MermaidLib> {
 export function MermaidBlock({ source }: { source: string }) {
   const frame = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  // Mermaid draws into a scratch element by id, so each render needs
-  // one nobody else holds: this block's own, and a count of its
-  // renders so an edit in flight does not collide with the last.
-  const blockId = `mermaid-${useId().replace(/[^\w-]/g, "")}`;
-  const renders = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    const renderId = `${blockId}-${++renders.current}`;
     void loadMermaid()
-      .then((lib) => lib.render(renderId, source))
+      .then((lib) => lib.render(`mermaid-${++mermaidId}`, source))
       .then(({ svg }) => {
         if (cancelled || !frame.current) return;
         frame.current.innerHTML = svg;
@@ -114,7 +114,7 @@ export function MermaidBlock({ source }: { source: string }) {
     return () => {
       cancelled = true;
     };
-  }, [blockId, source]);
+  }, [source]);
 
   if (error) {
     // The source, not a blank box. A diagram that does not parse is
