@@ -11,10 +11,10 @@ from pathlib import Path
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from igni_client.auth.grants import ApiKeyGrant
+from igni_client.auth.grants import API_KEY_GRANT, ApiKeyGrant
 from igni_client.auth.server import IgniServer
 from igni_client.auth.tokens import IssuedToken, TokenCache
-from igni_client.errors import AuthError
+from igni_client.errors import AuthError, Unavailable
 
 CLI_CREDENTIALS = Path("~/.igni/credentials.json")
 
@@ -109,6 +109,7 @@ class ApiKey:
     `AuthError`.
     """
 
+    API_KEY_GRANT = API_KEY_GRANT
     RENEW_BEFORE = 60
 
     def __init__(
@@ -134,7 +135,22 @@ class ApiKey:
         return await self._tokens.get(self._session)
 
     async def _session(self) -> IssuedToken:
-        return await self._server.grant(self._grant, what="the API key")
+        """A new session for the key; refused in igni server's own words."""
+        response = await self._server.call(
+            "POST", "/v1/oauth/token", what="the key's session", form=self._grant.form()
+        )
+        if response.status_code in (400, 401, 403):
+            raise AuthError(f"igni server refused the API key: {IgniServer.reason(response)}")
+        if response.status_code != 200:
+            raise Unavailable(
+                f"igni server answered the key's exchange with {response.status_code}"
+            )
+        try:
+            return IssuedToken.model_validate_json(response.content)
+        except ValidationError as exc:
+            raise Unavailable(
+                "igni server answered the key's exchange with something else"
+            ) from exc
 
     async def aclose(self) -> None:
         await self._server.aclose()

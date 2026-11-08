@@ -20,6 +20,7 @@ from igni_client import (
     NotAllowed,
     NotSupported,
     Person,
+    Unavailable,
 )
 from igni_client.auth.keys import JwkSet
 from igni_client.commands.wire import ProducerRef
@@ -203,6 +204,62 @@ async def test_a_revoked_key_is_an_auth_error_with_igni_s_reason() -> None:
 
     with pytest.raises(AuthError, match="this API key has been revoked"):
         await key.token()
+
+
+@pytest.mark.parametrize(
+    ("answer", "said"),
+    [
+        (httpx.Response(503), "igni server answered the key's exchange with 503"),
+        (
+            httpx.Response(200, text="<html>"),
+            "igni server answered the key's exchange with something else",
+        ),
+    ],
+)
+async def test_an_exchange_igni_server_could_not_make_is_unavailable(
+    answer: httpx.Response, said: str
+) -> None:
+    http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: answer))
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    with pytest.raises(Unavailable) as unavailable:
+        await key.token()
+
+    assert str(unavailable.value) == said
+
+
+async def test_an_igni_server_out_of_reach_is_unavailable_for_the_key_s_session() -> None:
+    def unreachable(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(unreachable))
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    with pytest.raises(Unavailable, match="could not reach igni server for the key's session"):
+        await key.token()
+
+
+def test_the_api_key_grant_is_named_on_the_class() -> None:
+    assert ApiKey.API_KEY_GRANT == "urn:igni:params:oauth:grant-type:api-key"
+
+
+async def test_a_refused_app_is_told_igni_server_s_whole_answer(key_file: Path) -> None:
+    def refuse(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        return httpx.Response(
+            401, json={"error": "invalid_client", "error_description": "unknown key"}
+        )
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(refuse))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+
+    with pytest.raises(AuthError) as refused:
+        await app.token()
+
+    said = str(refused.value)
+    assert said.startswith("igni server refused the app's token: ")
+    assert "invalid_client" in said and "unknown key" in said
 
 
 def test_an_api_key_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:

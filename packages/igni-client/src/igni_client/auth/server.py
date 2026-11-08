@@ -53,10 +53,10 @@ class IgniServer:
             raise Unavailable(f"could not reach igni server for {what}: {exc}") from exc
 
     async def grant(self, grant: Grant, *, what: str) -> IssuedToken:
-        """A token for `grant`; `AuthError` when igni server refuses it."""
+        """A token for `grant`; `AuthError`, with igni server's whole answer, when it refuses it."""
         response = await self.call("POST", "/v1/oauth/token", what=what, form=grant.form())
         if response.status_code in (400, 401, 403):
-            raise AuthError(f"igni server refused {what}: {self._reason(response)}")
+            raise AuthError(f"igni server refused {what}: {response.text}")
         if response.status_code != 200:
             raise Unavailable(f"igni server answered {what} with {response.status_code}")
         try:
@@ -86,7 +86,8 @@ class IgniServer:
             await self._http.aclose()
 
     @staticmethod
-    def _reason(response: httpx.Response) -> str:
+    def reason(response: httpx.Response) -> str:
+        """Why igni server refused: its `error_description`, or else its whole answer."""
         try:
             return _OAuthError.model_validate_json(response.content).error_description or (
                 response.text
