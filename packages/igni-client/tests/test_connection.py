@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -18,9 +19,10 @@ from igni_client import (
     RunInterrupted,
     Unavailable,
 )
-from igni_client.events import PushNotification
+from igni_client.events import PushNotification, RpcResponse, parse_event
 from igni_client.frames import RpcRequest
-from igni_client.lifecycle import Phase
+from igni_client.lifecycle import Lifecycle, Link, Phase
+from igni_client.routing import Interruption, Router
 from igni_client.testing import Delay, FakeGateway, FakeIgni, Steps
 
 TOKENS = {"t-ada": "person:u-ada"}
@@ -188,6 +190,112 @@ async def test_events_yields_every_broadcast() -> None:
         await asyncio.wait_for(watcher, 5)
 
     assert seen[-1].type == "push_notification"
+
+
+def test_backoff_doubles_up_to_its_ceiling() -> None:
+    assert list(Backoff().delays()) == [0.5, 1.0, 2.0, 4.0, 8.0], "0.1.0's five attempts"
+    assert list(Backoff(attempts=6, first=0.5, most=3.0).delays()) == [
+        0.5,
+        1.0,
+        2.0,
+        3.0,
+        3.0,
+        3.0,
+    ]
+    assert list(Backoff(attempts=0).delays()) == []
+
+
+async def test_a_reply_settles_its_call_and_a_stream_collects_its_run() -> None:
+    router = Router()
+    listener = router.listen()
+    answer = router.expect("rpc-1")
+    stream = router.open_stream("run-1")
+
+    router.deliver(parse_event({"type": "rpc_request", "id": "rpc-1", "method": "echoed"}))
+    assert not answer.done(), "igni echoing a request is not its answer"
+    router.deliver(parse_event({"type": "rpc_response", "id": "rpc-1", "result": 3}))
+    router.deliver(parse_event({"type": "content_delta", "id": "run-1", "text": "hi"}))
+    router.deliver(parse_event({"type": "content_delta", "id": "run-2", "text": "theirs"}))
+
+    assert isinstance(answer.result(), RpcResponse) and answer.result().result == 3
+    assert stream.qsize() == 1 and stream.get_nowait().id == "run-1"
+    assert listener.qsize() == 4, "a listener hears everything igni sends"
+
+
+async def test_an_interruption_ends_every_call_and_run_in_flight() -> None:
+    router = Router()
+    answer = router.expect("rpc-1")
+    stream = router.open_stream("run-1")
+    moved = RunInterrupted("igni moved")
+
+    router.interrupt(moved)
+
+    with pytest.raises(RunInterrupted):
+        answer.result()
+    interruption = stream.get_nowait()
+    assert isinstance(interruption, Interruption) and interruption.error is moved
+
+
+async def test_a_closed_stream_and_a_forgotten_call_hear_nothing_more() -> None:
+    router = Router()
+    stream = router.open_stream("run-1")
+    router.close_stream("run-1")
+    router.expect("rpc-1")
+    router.forget("rpc-1")
+    listener = router.listen()
+    router.unlisten(listener)
+
+    router.deliver(parse_event({"type": "content_delta", "id": "run-1", "text": "late"}))
+    router.deliver(parse_event({"type": "rpc_response", "id": "rpc-1", "result": 1}))
+
+    assert stream.empty() and listener.empty()
+
+
+async def test_a_socket_replaced_or_closed_by_the_client_is_not_lost() -> None:
+    lifecycle = Lifecycle()
+    first, second = Link(_StubSocket()), Link(_StubSocket())  # type: ignore[arg-type]
+    lifecycle.opening(first)
+    lifecycle.opening(second)
+
+    assert not lifecycle.lost(first), "a socket replaced by a newer one"
+    lifecycle.opened()
+    assert lifecycle.phase is Phase.OPEN
+    lifecycle.close()
+    assert not lifecycle.lost(second), "a socket the client closed itself"
+
+
+async def test_a_failed_connection_says_why_to_whoever_sends_next() -> None:
+    lifecycle = Lifecycle()
+    lifecycle.failed(NotAllowed("not an active producer"))
+
+    with pytest.raises(NotAllowed, match="not an active producer"):
+        await lifecycle.socket(5.0, "igni")
+
+
+async def test_a_connection_not_open_in_time_is_unavailable() -> None:
+    with pytest.raises(Unavailable, match="igni is not connected"):
+        await Lifecycle().socket(0.01, "igni")
+
+
+async def test_a_message_igni_cannot_mean_is_passed_over_and_the_connection_goes_on(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async with FakeIgni() as fake:
+        fake.methods.answers["get_todos"] = []
+        async with IgniClient(fake.local()) as igni:
+            with caplog.at_level(logging.WARNING, logger="igni_client.connection"):
+                for socket in list(fake.socket._clients):
+                    await socket.send("not json")
+                    await socket.send(json.dumps(["not", "an", "object"]))
+                assert await igni.rpc("get_todos") == []
+
+    said = [record.getMessage() for record in caplog.records]
+    assert any("not JSON" in line for line in said)
+    assert any("not an object" in line for line in said)
+
+
+class _StubSocket:
+    """Stands in for a socket where only its identity matters."""
 
 
 def _sent(fake: FakeIgni, kind: str) -> int:
