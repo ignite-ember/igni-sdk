@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import pytest
+from pydantic import ValidationError
+from websockets.asyncio.server import ServerConnection, serve
+from websockets.typing import Subprotocol
 
+import igni_client
 from igni_client import (
     AuthError,
     Backoff,
@@ -19,8 +27,11 @@ from igni_client import (
     RunInterrupted,
     Unavailable,
 )
+from igni_client import backoff as backoff_module
+from igni_client import connection as connection_module
+from igni_client.connection import Connection
 from igni_client.events import ContentDelta, PushNotification, RpcResponse, parse_event
-from igni_client.frames import RpcRequest
+from igni_client.frames import REFUSED_METHODS, RpcRequest
 from igni_client.lifecycle import Lifecycle, Link, Phase
 from igni_client.routing import Interruption, Router
 from igni_client.testing import Delay, FakeGateway, FakeIgni, Steps
@@ -306,6 +317,205 @@ async def test_a_message_igni_cannot_mean_is_passed_over_and_the_connection_goes
     assert any("not an object" in line for line in said)
 
 
+async def test_a_negative_backoff_tries_once_and_gives_up() -> None:
+    async with FakeIgni(gateway=FakeGateway(TOKENS)) as fake:
+        fake.socket.busy_next(5)
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=Backoff(attempts=-1, first=0.01))
+        with pytest.raises(Unavailable, match="busy"):
+            await client.connect()
+        # 0.1.0 tried no times at all and returned as if connected.
+        assert fake.socket.connections == 1
+
+
+def test_a_backoff_is_fixed_once_made_and_counts_whole_attempts() -> None:
+    backoff = Backoff()
+
+    with pytest.raises(ValidationError):
+        backoff.attempts = 9
+    with pytest.raises(ValidationError):
+        Backoff(attempts="many")  # type: ignore[arg-type]
+    assert igni_client.Backoff is backoff_module.Backoff and "Backoff" in igni_client.__all__
+
+
+def test_a_client_is_paced_by_a_backoff_not_a_count_of_attempts() -> None:
+    with pytest.raises(TypeError):
+        IgniClient(Local(url="ws://127.0.0.1:1"), reconnect_attempts=5)  # type: ignore[call-arg]
+    assert list(inspect.signature(IgniClient).parameters) == ["target", "backoff"]
+
+
+async def test_events_stop_listening_when_left_and_never_yield_a_welcome() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        events = igni.events()
+        first = asyncio.ensure_future(anext(events))
+        await asyncio.sleep(0.05)
+        await fake.socket.move()
+        await fake.socket.broadcast(PushNotification(channel="moved", payload={}))
+        seen = await asyncio.wait_for(first, 5)
+        await events.aclose()  # type: ignore[attr-defined]
+
+        assert seen.type == "push_notification", "igni moving is the client's own business"
+        assert igni._conn.router._listeners == [], "a watcher that left hears nothing more"
+
+
+async def test_the_connection_module_keeps_only_the_socket() -> None:
+    assert connection_module.__all__ == ["REFUSED_METHODS", "Connection"]
+    assert connection_module.REFUSED_METHODS is REFUSED_METHODS, (
+        "igni-core's protocol test reads it"
+    )
+    assert not hasattr(connection_module, "Interruption"), "now igni_client.routing.Interruption"
+    for moved in ("new_id", "open_stream", "close_stream", "listen", "unlisten"):
+        assert not hasattr(Connection, moved) and hasattr(Router, moved), moved
+    assert list(inspect.signature(Connection).parameters) == ["target", "backoff", "router"]
+
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with pytest.raises(AttributeError):
+            await igni._conn.send({"type": "cancel", "session_id": "s-1"})  # type: ignore[arg-type]
+
+
+async def test_closing_passes_over_a_socket_that_fails_to_close_and_says_so(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async with FakeIgni() as fake:
+        igni = await IgniClient(fake.local()).connect()
+        socket = _live_socket(igni)
+        real_close = socket.close
+        socket.close = _raising(OSError("the line is gone"))
+        with caplog.at_level(logging.INFO, logger="igni_client.connection"):
+            await igni.close()
+        await real_close()
+
+    assert any("closing the socket" in r.getMessage() for r in caplog.records)
+    assert igni._conn._lifecycle.phase is Phase.CLOSED
+
+
+async def test_closing_raises_what_is_not_a_socket_error() -> None:
+    async with FakeIgni() as fake:
+        igni = await IgniClient(fake.local()).connect()
+        socket = _live_socket(igni)
+        real_close = socket.close
+        socket.close = _raising(RuntimeError("a bug, not the line"))
+        with pytest.raises(RuntimeError, match="a bug"):
+            await igni.close()
+        await real_close()
+
+
+async def test_a_line_that_stops_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with caplog.at_level(logging.INFO, logger="igni_client.connection"):
+            await fake.socket.drop(1011)
+            await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
+
+    assert any("stopped" in r.getMessage() for r in caplog.records)
+
+
+async def test_a_client_opened_again_after_closing_reconnects_when_its_line_drops() -> None:
+    async with FakeIgni(gateway=FakeGateway(TOKENS)) as fake:
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=FAST)
+        await client.connect()
+        await client.close()
+        await client.connect()
+        await fake.socket.drop(1011)
+        # 0.1.0 stayed "closing" for good, and never opened a dropped line again.
+        await _until(lambda: fake.socket.connections == 3)
+        await _until(lambda: client._conn._lifecycle.phase is Phase.OPEN)
+        await client.close()
+
+
+async def test_a_dropped_connection_that_stays_busy_gives_up() -> None:
+    async with FakeIgni(gateway=FakeGateway(TOKENS)) as fake:
+        client = IgniClient(fake.fleet(Person("t-ada")), backoff=Backoff(attempts=2, first=0.01))
+        async with client as igni:
+            fake.socket.busy_next(10)
+            await fake.socket.drop(1011)
+            await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
+            with pytest.raises(
+                Unavailable, match=r"could not be reached again after it closed \(1011\)"
+            ):
+                await igni.rpc("get_todos")
+        assert fake.socket.connections == 3
+
+
+async def test_an_igni_that_never_says_welcome_is_unavailable() -> None:
+    async with _igni_that(welcomes=False) as target:
+        client = IgniClient(target)
+        client._conn.WELCOME_TIMEOUT = 0.05
+        with pytest.raises(Unavailable, match="did not say welcome"):
+            await client.connect()
+
+
+async def test_a_call_igni_never_answers_is_unavailable() -> None:
+    async with _igni_that(welcomes=True) as target, IgniClient(target) as igni:
+        igni._conn.RPC_TIMEOUT = 0.05
+        with pytest.raises(Unavailable, match="get_todos got no answer from igni at"):
+            await igni.rpc("get_todos")
+
+
+async def test_closing_ends_every_call_in_flight() -> None:
+    async with _igni_that(welcomes=True) as target:
+        igni = await IgniClient(target).connect()
+        call = asyncio.ensure_future(igni.rpc("get_todos"))
+        await asyncio.sleep(0.05)
+        await igni.close()
+        with pytest.raises(Unavailable, match="the client was closed"):
+            await asyncio.wait_for(call, 5)
+
+
+async def test_a_connection_opened_again_forgets_why_it_failed() -> None:
+    lifecycle = Lifecycle()
+    lifecycle.failed(NotAllowed("not an active producer"))
+    link = Link(_StubSocket())  # type: ignore[arg-type]
+    lifecycle.opening(link)
+    assert lifecycle.pending_welcome() is link.welcomed
+
+    lifecycle.opened()
+    assert lifecycle.failure is None
+    lifecycle.lost(link)
+    with pytest.raises(Unavailable, match="igni is not connected"):
+        await lifecycle.socket(0.01, "igni")
+
+
+async def test_a_send_while_opening_waits_for_the_welcome() -> None:
+    lifecycle = Lifecycle()
+    link = Link(_StubSocket())  # type: ignore[arg-type]
+    lifecycle.opening(link)
+    sending = asyncio.ensure_future(lifecycle.socket(5.0, "igni"))
+    await asyncio.sleep(0.01)
+    assert not sending.done()
+
+    link.welcomed.set_result(parse_event({"type": "welcome", "client_id": "ws-1"}))  # type: ignore[arg-type]
+    assert lifecycle.pending_welcome() is None
+    lifecycle.opened()
+
+    assert await asyncio.wait_for(sending, 1) is link.socket
+
+
+async def test_a_second_reply_and_a_message_without_an_id_go_no_further() -> None:
+    router = Router()
+    listener = router.listen()
+    answer = router.expect("rpc-1")
+    stream = router.open_stream("rpc-1")
+
+    router.deliver(parse_event({"type": "rpc_response", "id": "rpc-1", "result": 1}))
+    router.deliver(parse_event({"type": "rpc_response", "id": "rpc-1", "result": 2}))
+    router.deliver(parse_event({"type": "content_delta", "text": "no id"}))
+
+    replied = answer.result()
+    assert isinstance(replied, RpcResponse) and replied.result == 1
+    assert stream.empty(), "a reply belongs to its call, never to a stream"
+    assert listener.qsize() == 3
+
+
+async def test_one_queue_collects_a_run_and_its_approvals() -> None:
+    router = Router()
+    queue = router.open_stream("run-1")
+    assert router.open_stream("hitl-1", queue) is queue
+
+    router.deliver(parse_event({"type": "content_delta", "id": "run-1", "text": "a"}))
+    router.deliver(parse_event({"type": "content_delta", "id": "hitl-1", "text": "b"}))
+
+    assert queue.qsize() == 2
+
+
 class _StubSocket:
     """Stands in for a socket where only its identity matters."""
 
@@ -331,3 +541,31 @@ async def _until(condition: object, timeout: float = 5.0) -> None:
             await asyncio.sleep(0.01)
 
     await asyncio.wait_for(wait(), timeout)
+
+
+def _live_socket(igni: IgniClient) -> Any:
+    link = igni._conn._lifecycle.link
+    assert link is not None
+    return link.socket
+
+
+def _raising(error: Exception) -> Callable[[], Awaitable[None]]:
+    async def close() -> None:
+        raise error
+
+    return close
+
+
+@asynccontextmanager
+async def _igni_that(*, welcomes: bool) -> AsyncIterator[Local]:
+    """A local igni that says welcome or not, and answers nothing."""
+
+    async def serve_one(socket: ServerConnection) -> None:
+        if welcomes:
+            await socket.send(json.dumps({"type": "welcome", "client_id": "ws-1"}))
+        async for _ in socket:
+            pass
+
+    async with serve(serve_one, "127.0.0.1", 0, subprotocols=[Subprotocol("igni.v1")]) as server:
+        port = next(iter(server.sockets)).getsockname()[1]
+        yield Local(url=f"ws://127.0.0.1:{port}")

@@ -1,12 +1,15 @@
 """What this client sends: every message it puts on igni's socket, as a typed model.
 
 Each class is one message igni reads from a client, field for field. A
-frame is checked when it is built, so a message igni would refuse — or
-one a client must never send — fails here, before the socket.
+frame built from its fields is checked, so a message igni would refuse — or
+one a client must never send — fails here, before the socket. What a
+caller hands `Session.send`, `queue` or `rpc` is put in a frame as given
+(`model_construct`) and goes to igni as igni-client 0.1.0 sent it.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -23,8 +26,17 @@ class Frame(BaseModel):
     type: str
 
     def wire(self) -> str:
-        """The frame as igni reads it; a field left unset is left out."""
-        return self.model_dump_json(exclude_none=True)
+        """The frame as igni reads it, byte for byte as 0.1.0's `json.dumps`.
+
+        An optional field left unset (`session_id`) is left out; any other
+        value goes as it is, `None` as `null`. A value JSON cannot hold
+        raises `TypeError`, as it did in 0.1.0.
+        """
+        fields = self.model_dump(warnings=False)
+        for name, field in type(self).model_fields.items():
+            if field.default is None and fields.get(name) is None:
+                del fields[name]
+        return json.dumps(fields)
 
 
 class RpcRequest(Frame):

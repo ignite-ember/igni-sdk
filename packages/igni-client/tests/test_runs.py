@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import get_args
 
 import pytest
@@ -31,7 +33,14 @@ from igni_client import (
 )
 from igni_client.approvals import Approver
 from igni_client.events import ErrorMessage, Event, RequirementDetails, RunError, RunPaused
-from igni_client.frames import HitlDecision, HitlResponseBatch, QueueMessage, Scope
+from igni_client.frames import (
+    HitlDecision,
+    HitlResponseBatch,
+    QueueMessage,
+    RpcRequest,
+    Scope,
+    UserMessage,
+)
 from igni_client.methods import ATTACHED_SESSION, HISTORY, HistoryTurn
 from igni_client.replies import Reply
 from igni_client.testing import Delay, FakeIgni, Pause, Steps
@@ -739,6 +748,91 @@ async def test_a_reply_passes_over_what_is_not_part_of_the_answer() -> None:
     assert reply == Reply(text="done") and str(reply) == "done"
 
 
+async def test_a_prompt_goes_to_igni_byte_for_byte_as_before() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        wire = _wire(igni)
+        await _collect(session.send("héllo", files={"a.py": "x"}, force=True))
+        await session.queue("then this")
+        await session.cancel()
+        await _until(lambda: _sent(fake, "cancel") == 1)
+
+    [prompt] = [r.frame for r in fake.socket.received if isinstance(r.frame, UserMessage)]
+    assert wire[0] == json.dumps(
+        {
+            "type": "user_message",
+            "id": prompt.id,
+            "session_id": session.id,
+            "text": "héllo",
+            "file_contents": {"a.py": "x"},
+            "client_id": igni.client_id,
+            "force": True,
+        }
+    ), "0.1.0's json.dumps: its spacing, and \\u escapes"
+    assert wire[-2:] == [
+        json.dumps(
+            {
+                "type": "queue_message",
+                "session_id": session.id,
+                "text": "then this",
+                "client_id": igni.client_id,
+            }
+        ),
+        json.dumps({"type": "cancel", "session_id": session.id}),
+    ]
+
+
+async def test_a_prompt_goes_to_igni_as_it_was_given() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        wire = _wire(igni)
+        run = session.send(5, force=1)  # type: ignore[arg-type]
+        following = asyncio.ensure_future(_collect(run))
+        await _until(lambda: len(wire) == 1)
+        following.cancel()
+        await session.queue(None)  # type: ignore[arg-type]
+
+        unsendable = session.send("x", files={"a.py": b"x"})  # type: ignore[dict-item]
+        with pytest.raises(TypeError):
+            await _collect(unsendable)
+
+    sent = [json.loads(line) for line in wire]
+    assert (sent[0]["text"], sent[0]["force"]) == (5, 1), "igni decides, as in 0.1.0"
+    assert sent[1]["text"] is None
+
+
+async def test_a_call_s_args_go_to_igni_as_0_1_0_sent_them() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["get_todos"] = []
+        session = await igni.sessions.create()
+        wire = _wire(igni)
+        await igni.rpc("get_todos", note=None, ratio=math.nan)
+        await session.rpc("get_todos")
+        await igni._conn.ask("get_todos", {1: "one"})  # type: ignore[dict-item]
+        with pytest.raises(TypeError):
+            await igni.rpc("get_todos", since=datetime(2026, 1, 1, tzinfo=UTC))
+
+    calls = [json.loads(line) for line in wire]
+    assert wire[0] == json.dumps(
+        {
+            "type": "rpc_request",
+            "id": calls[0]["id"],
+            "method": "get_todos",
+            "args": {"note": None, "ratio": math.nan},
+        }
+    ), "no session_id when none is named; None and NaN as json.dumps writes them"
+    assert calls[1]["session_id"] == session.id
+    assert calls[2]["args"] == {"1": "one"}
+    assert len(wire) == 3, "a value JSON cannot hold is never sent"
+
+
+def test_a_frame_built_from_its_fields_is_checked() -> None:
+    with pytest.raises(ValidationError):
+        RpcRequest(id="rpc-1", method="shutdown")
+    with pytest.raises(ValidationError):
+        UserMessage(id="run-1", session_id="s-1", text=5, client_id="")  # type: ignore[arg-type]
+
+
 # ── helpers ──
 
 
@@ -763,3 +857,18 @@ async def _until(condition: object, timeout: float = 5.0) -> None:
             await asyncio.sleep(0.01)
 
     await asyncio.wait_for(wait(), timeout)
+
+
+def _wire(igni: IgniClient) -> list[str]:
+    """Every message the client puts on its socket from now on, as it went."""
+    link = igni._conn._lifecycle.link
+    assert link is not None
+    socket, wire = link.socket, []
+    send = socket.send
+
+    async def recording(message: str) -> None:
+        wire.append(message)
+        await send(message)
+
+    socket.send = recording  # type: ignore[method-assign,assignment]
+    return wire

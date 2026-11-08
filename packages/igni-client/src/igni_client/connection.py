@@ -231,7 +231,8 @@ class Connection:
 
     async def _call(self, method: str, args: dict[str, Any], session_id: str) -> Event:
         RpcRequest.check_sendable(method)
-        request = RpcRequest(
+        # `args` as given, as 0.1.0 sent them: `json.dumps` reads them on the way out.
+        request = RpcRequest.model_construct(
             id=self.router.new_id("rpc"), method=method, args=args, session_id=session_id or None
         )
         answer = self.router.expect(request.id)

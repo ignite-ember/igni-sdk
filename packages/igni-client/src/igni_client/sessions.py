@@ -46,7 +46,8 @@ class Session:
         session before starting. A run that pauses for approval yields an
         `ApprovalRequested`; answer it in the loop and the loop continues.
         """
-        frame = UserMessage(
+        # As given, as 0.1.0 sent it: igni decides what it accepts.
+        frame = UserMessage.model_construct(
             id=self._conn.router.new_id("run"),
             session_id=self.id,
             text=text,
@@ -71,7 +72,9 @@ class Session:
     async def queue(self, text: str) -> None:
         """Add a prompt for after the run that is going; it starts nothing now."""
         await self._conn.send(
-            QueueMessage(session_id=self.id, text=text, client_id=self._conn.client_id)
+            QueueMessage.model_construct(
+                session_id=self.id, text=text, client_id=self._conn.client_id
+            )
         )
 
     async def cancel(self) -> None:

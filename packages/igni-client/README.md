@@ -274,6 +274,9 @@ Changed since igni-client 0.1.0, on purpose:
   anything is sent, and the approval stays unanswered. In 0.1.0 it was sent
   to igni as given. `FakeIgni` passes over an answer with an unknown scope:
   it is not recorded in `fake.runs.decisions` or `fake.socket.received`.
+- An `ApprovalRequested(paused, answer)` built by hand hands its `answer`
+  callback a list of `igni_client.frames.HitlDecision` models (read
+  `decision.action`), not dicts. igni gets the same message as before.
 
 ## Commands in the VM
 
@@ -374,6 +377,26 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
 
 A local igni is not retried: one that closed has stopped, and the client
 raises `Unavailable`.
+
+Changed since igni-client 0.1.0, on purpose:
+
+- `IgniClient(target, backoff=Backoff(attempts=5, first=0.5, most=8.0))`
+  paces opening the socket again; `reconnect_attempts=` is gone and raises
+  `TypeError`. The default waits are 0.1.0's. A negative `attempts` tries
+  once and raises; 0.1.0 tried no times and returned as if connected.
+  `Backoff` is new in `igni_client`.
+- A client closed and connected again opens its socket again when it drops,
+  like a new client. In 0.1.0 it never did.
+- `igni_client.connection` keeps only `Connection` and `REFUSED_METHODS`:
+  `Interruption` is in `igni_client.routing`, and the connection's
+  `new_id`, `open_stream`, `close_stream`, `listen` and `unlisten` are its
+  `router`'s. `Connection(target, backoff, router)` takes all three, and
+  its `send` takes a frame from `igni_client.frames`, not a dict.
+  `Run.stream` takes a `UserMessage`.
+- Closing passes over only a socket error, logged at INFO on the
+  `igni_client.connection` logger; any other error closing the socket is
+  raised. That logger also warns of a message from igni that is not a JSON
+  object (still passed over), and says at INFO when reading stops.
 
 ## Testing your code
 
