@@ -396,6 +396,9 @@ def test_a_router_answers_from_its_own_table_and_falls_back_only_on_a_service_pa
     assert status("GET", "/v1/elsewhere", service) == 404
     assert [call.holder for call in fallen_back] == [TokenHolder(client_id="svc-1", org_id=ORG)]
     assert len(traffic.seen) == 5
+    with pytest.raises(httpx.ConnectError, match=r"^elsewhere\.test is not igni$"):
+        router.handle(httpx.Request("GET", "http://elsewhere.test/v1/s", headers=service))
+    assert len(traffic.seen) == 5
 
 
 def test_testing_offers_what_its_all_names_and_not_what_its_helpers_import() -> None:
@@ -404,6 +407,8 @@ def test_testing_offers_what_its_all_names_and_not_what_its_helpers_import() -> 
     assert testing.SettingsOverrides is SettingsOverridesItself
     # Stray imports of the old single module, never in `__all__`, are gone on purpose;
     # the record a request makes is `igni_service.vm_profiles`'.
-    for stray in ("VmProfileRequestRecord", "DetailError", "RoutedCall", "TokenHolder"):
+    # So are the error constants it briefly had: igni's errors are `DetailError`'s.
+    strays = ("VmProfileRequestRecord", "DetailError", "RoutedCall", "TokenHolder")
+    for stray in (*strays, "NOT_FOUND", "NOT_AUTHENTICATED"):
         assert not hasattr(testing, stray)
     assert vm_profiles.VmProfileRequestRecord.__module__ == "igni_service.vm_profiles"

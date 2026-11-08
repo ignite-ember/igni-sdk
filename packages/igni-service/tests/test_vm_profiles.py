@@ -401,6 +401,13 @@ class TestTheFakesVmProfilesOnTheirOwn:
         with pytest.raises(NoVmProfileRequest, match="^no VM profile request from app app-1 in"):
             profiles.request(OTHER_ORG, VmProfileSubject.app("app-1"))
 
+    def test_a_missing_apps_request_says_first_how_an_app_asks(self) -> None:
+        with pytest.raises(NoVmProfileRequest) as missing:
+            FakeVmProfiles().approve(ORG, VmProfileSubject.app("app-1"))
+
+        said = str(missing.value)
+        assert said.index("vm_profile.request(") < said.index("extension_vm_profile()")
+
     def test_an_approval_is_by_the_admin_it_names_and_u_admin_otherwise(self) -> None:
         profiles = FakeVmProfiles()
         profiles.app_put(ORG, "app-1", "Bot", b"{}")
