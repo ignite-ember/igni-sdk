@@ -85,6 +85,18 @@ describe("connecting", () => {
     expect(bridge.theme).toBe("light");
   });
 
+  it("connects to a host that predates settings and serviceUrl", async () => {
+    const host = fakeHost();
+    const pending = connect();
+    const { settings: _settings, serviceUrl: _serviceUrl, ...older } = hello();
+    host.send(older);
+
+    const bridge = await pending;
+
+    expect(bridge.settings).toEqual({});
+    expect(bridge.service.url).toBeNull();
+  });
+
   it("ignores a hello from a window that is not the host", async () => {
     const host = fakeHost();
     const pending = connect({ timeoutMs: 50 });

@@ -91,7 +91,7 @@ export class GuestBridge<
     hello: HelloMessage,
   ) {
     this.extensionId = hello.extensionId;
-    this.settings = hello.settings as S;
+    this.settings = (hello.settings ?? {}) as S;
     this.currentParams = hello.params as P;
     this.currentTheme = hello.theme;
     this.currentTokens = hello.tokens;
@@ -107,7 +107,7 @@ export class GuestBridge<
         }),
     };
     this.host = new Host(link);
-    this.service = new ServiceLink(hello.serviceUrl, () => this.askForToken());
+    this.service = new ServiceLink(hello.serviceUrl ?? null, () => this.askForToken());
     // Applied before the page renders anything, so an extension never
     // paints once in the fallback palette and again in the real one.
     applyThemeTokens(this.currentTokens, document.documentElement);

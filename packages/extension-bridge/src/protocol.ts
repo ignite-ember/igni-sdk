@@ -62,14 +62,19 @@ export interface HelloMessage {
    * than it is worth until somebody asks for it, and the host's
    * `set_extension_settings` says the same thing. Empty when
    * nothing is configured.
+   *
+   * Optional on the wire: it was added after the envelope shipped,
+   * and a guest built against this version may be framed by a host
+   * that predates it. Missing reads as empty.
    */
-  settings: ExtensionSettings;
+  settings?: ExtensionSettings;
   /**
    * The extension's own service, as its page reaches it
    * (`bridge.service.url`) — the one origin beyond declared egress its
-   * frame's `connect-src` admits. Null: it has none.
+   * frame's `connect-src` admits. Null: it has none. Optional on the
+   * wire for the same reason `settings` is; missing reads as null.
    */
-  serviceUrl: string | null;
+  serviceUrl?: string | null;
   /** `"light"` or `"dark"`, following the host. */
   theme: string;
   /**
@@ -348,9 +353,8 @@ export function isHostMessage(data: unknown): data is HostMessage {
         typeof m.theme === "string" &&
         typeof m.params === "object" &&
         m.params !== null &&
-        typeof m.settings === "object" &&
-        m.settings !== null &&
-        (m.serviceUrl === null || typeof m.serviceUrl === "string") &&
+        (m.settings === undefined || (typeof m.settings === "object" && m.settings !== null)) &&
+        (m.serviceUrl === undefined || m.serviceUrl === null || typeof m.serviceUrl === "string") &&
         typeof m.tokens === "object" &&
         m.tokens !== null
       );
