@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -21,7 +22,8 @@ class _Discovery(BaseModel):
 class _OAuthError(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    error_description: str = ""
+    #: Any JSON value; 0.1.0 reported a number or a list as `str()` of it.
+    error_description: Any = None
 
 
 class IgniServer:
@@ -41,7 +43,7 @@ class IgniServer:
         what: str,
         bearer: str | None = None,
         form: Mapping[str, str] | None = None,
-        params: Mapping[str, str | int] | None = None,
+        params: Mapping[str, Any] | None = None,
     ) -> httpx.Response:
         """One request; `Unavailable` when igni server cannot be reached."""
         headers = {"Authorization": f"Bearer {bearer}"} if bearer is not None else None
@@ -89,8 +91,7 @@ class IgniServer:
     def reason(response: httpx.Response) -> str:
         """Why igni server refused: its `error_description`, or else its whole answer."""
         try:
-            return _OAuthError.model_validate_json(response.content).error_description or (
-                response.text
-            )
+            described = _OAuthError.model_validate_json(response.content).error_description
         except ValidationError:
             return response.text
+        return str(described or response.text)

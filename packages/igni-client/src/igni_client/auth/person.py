@@ -124,7 +124,7 @@ class ApiKey:
             raise AuthError("not an igni API key (they start with 'igpak1.')")
         self._grant = ApiKeyGrant(api_key=key.strip())
         self._server = IgniServer(server, http=http)
-        self._tokens = TokenCache(clock, renew_before=self.RENEW_BEFORE)
+        self._tokens = TokenCache(clock, renew_before=lambda: self.RENEW_BEFORE)
 
     @property
     def server(self) -> str:

@@ -6,6 +6,7 @@ import time
 import uuid
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -52,7 +53,7 @@ class App:
         self.clock = clock
         self._key = AppKey.from_pem(pem)
         self._server = IgniServer(server, http=http)
-        self._tokens = TokenCache(clock, renew_before=self.RENEW_BEFORE)
+        self._tokens = TokenCache(clock, renew_before=lambda: self.RENEW_BEFORE)
 
     @staticmethod
     def generate_key(path: str | Path) -> Path:
@@ -91,7 +92,7 @@ class App:
         path: str,
         *,
         what: str,
-        params: Mapping[str, str | int] | None = None,
+        params: Mapping[str, Any] | None = None,
     ) -> httpx.Response:
         """A call to igni server as this app, retried once with a fresh token on a 401."""
         response = await self._server.call(

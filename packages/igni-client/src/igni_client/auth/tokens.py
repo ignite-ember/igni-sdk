@@ -25,9 +25,14 @@ class IssuedToken(BaseModel):
 
 
 class TokenCache:
-    """One bearer token, kept until `renew_before` seconds before it runs out."""
+    """One bearer token, kept until `renew_before()` seconds before it runs out.
 
-    def __init__(self, clock: Callable[[], float], *, renew_before: int) -> None:
+    The margin is asked for each time a token is kept, as 0.1.0 read
+    `RENEW_BEFORE` on every renewal, so a margin set after the source was
+    made is honoured.
+    """
+
+    def __init__(self, clock: Callable[[], float], *, renew_before: Callable[[], int]) -> None:
         self._clock = clock
         self._renew_before = renew_before
         self._token: str | None = None
@@ -41,7 +46,7 @@ class TokenCache:
                 return self._token
             issued = await fetch()
             self._token = issued.access_token
-            self._expires_at = self._clock() + max(0, issued.expires_in - self._renew_before)
+            self._expires_at = self._clock() + max(0, issued.expires_in - self._renew_before())
             return self._token
 
     async def forget(self) -> None:

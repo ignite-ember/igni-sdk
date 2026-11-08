@@ -735,6 +735,42 @@ async def test_callers_asking_at_once_share_one_new_token() -> None:
     assert list(tokens) == ["s-1", "s-1", "s-1"] and issued[0] == 1
 
 
+async def test_a_margin_set_on_an_api_key_after_it_is_made_is_honoured() -> None:
+    now, issued = [1_000.0], [0]
+
+    def answer() -> httpx.Response:
+        issued[0] += 1
+        return httpx.Response(200, json={"access_token": f"s-{issued[0]}", "expires_in": 600})
+
+    key = _key_answering(answer, clock=lambda: now[0])
+    key.RENEW_BEFORE = 300
+
+    await key.token()
+    now[0] += 301
+
+    assert await key.token() == "s-2"
+
+
+async def test_a_margin_set_on_an_app_after_it_is_made_is_honoured_by_it_and_its_spaces(
+    key_file: Path,
+) -> None:
+    now = [1_000.0]
+    server = IgniServer()
+    app = _app(key_file, server, clock=lambda: now[0])
+    server.jwks = app.public_jwks()
+    space = app.spaces.space("sp-9")
+    app.RENEW_BEFORE = 300
+
+    await app.token()
+    await space.token()
+    now[0] += 301
+    await app.token()
+    await space.token()
+
+    grants = [f["grant_type"] for f in server.token_requests]
+    assert grants.count("client_credentials") == 2 and grants.count(TOKEN_EXCHANGE) == 2
+
+
 # ── A person ─────────────────────────────────────────────────────────
 
 
@@ -749,6 +785,27 @@ async def test_callers_asking_at_once_share_one_new_token() -> None:
 async def test_a_refused_key_without_igni_s_reason_is_told_igni_s_whole_answer(
     answer: httpx.Response, said: str
 ) -> None:
+    http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: answer))
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    with pytest.raises(AuthError) as refused:
+        await key.token()
+
+    assert str(refused.value) == f"igni server refused the API key: {said}"
+
+
+@pytest.mark.parametrize(
+    ("described", "said"),
+    [
+        (42, "42"),
+        (["revoked", "expired"], "['revoked', 'expired']"),
+        (0, '{"error_description":0}'),
+    ],
+)
+async def test_a_reason_igni_server_did_not_write_as_text_is_told_as_it_was(
+    described: Any, said: str
+) -> None:
+    answer = httpx.Response(401, json={"error_description": described})
     http = httpx.AsyncClient(transport=httpx.MockTransport(lambda request: answer))
     key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
 
@@ -914,6 +971,35 @@ async def test_an_empty_page_written_as_null_lists_no_spaces(key_file: Path) -> 
 
     assert [s.space_id for s in listed] == ["sp-1"]
     assert asked == [{"limit": "100"}, {"limit": "100", "after": "2"}]
+
+
+@pytest.mark.parametrize("empty", [[], {}, "", 0, False])
+async def test_a_page_with_any_empty_spaces_lists_none(key_file: Path, empty: Any) -> None:
+    app, _ = _spaces_app(
+        key_file, lambda request: httpx.Response(200, json={"spaces": empty, "next": None})
+    )
+
+    assert await app.spaces.list() == []
+
+
+@pytest.mark.parametrize(
+    ("cursor", "sent"),
+    [(True, ["true"]), (1.5, ["1.5"]), (["sp-1", "sp-2"], ["sp-1", "sp-2"])],
+)
+async def test_igni_server_s_cursor_is_passed_back_as_it_came(
+    key_file: Path, cursor: Any, sent: list[str]
+) -> None:
+    asked: list[list[str]] = []
+
+    def spaces(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.params.get_list("after"))
+        first = len(asked) == 1
+        return httpx.Response(200, json={"spaces": [], "next": cursor if first else None})
+
+    app, _ = _spaces_app(key_file, spaces)
+    await app.spaces.list()
+
+    assert asked == [[], sent]
 
 
 @pytest.mark.parametrize(

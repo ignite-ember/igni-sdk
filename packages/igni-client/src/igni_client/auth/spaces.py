@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 import httpx
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from igni_client.auth.tokens import TokenCache
 from igni_client.errors import NotAllowed, Unavailable
@@ -32,10 +32,16 @@ class SpacePage(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    #: igni server may write an empty page's `spaces` as null; 0.1.0 read that as none.
+    #: igni server may write an empty page's `spaces` as null; 0.1.0 read any
+    #: empty value (null, [], {}, "", 0, false) as none.
     spaces: list[SpaceRecord] | None = None
-    #: The cursor is passed back as it came; 0.1.0 took a number as readily as a string.
-    next: str | int | None = None
+    #: The cursor is passed back exactly as it came, whatever its JSON type, as in 0.1.0.
+    next: Any = None
+
+    @field_validator("spaces", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: Any) -> Any:
+        return value or None
 
 
 class Spaces:
@@ -68,9 +74,9 @@ class Spaces:
         """Every space of this app."""
         what = "listing spaces"
         found: list[SpaceRecord] = []
-        after: str | int | None = None
+        after: Any = None
         while True:
-            params: dict[str, str | int] = {"limit": limit}
+            params: dict[str, Any] = {"limit": limit}
             if after:
                 params["after"] = after
             response = await self._app.request("GET", self._path(), what=what, params=params)
@@ -108,7 +114,7 @@ class Space:
         self.app = app
         self.space_id = space_id
         self.record = record
-        self._tokens = TokenCache(app.clock, renew_before=app.RENEW_BEFORE)
+        self._tokens = TokenCache(app.clock, renew_before=lambda: app.RENEW_BEFORE)
 
     @property
     def external_id(self) -> str:
