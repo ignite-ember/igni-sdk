@@ -92,6 +92,7 @@ def test_who_the_gateway_says_this_is_and_how_a_command_ended() -> None:
 
     assert (me.kind, me.id, me.org, me.group, me.expires_at) == ("space", "sp-1", "", None, 0)
     assert me.model_extra == {"plan": "team"}
+    assert (Me(producer="person").kind, Me(producer="person").id) == ("person", "")
     assert not CommandFinished(exit_code=0, error="cancelled").ok
     assert CommandFinished().streamed
     assert CommandOutput(stream="stdout", data=b"caf\xe9").text == "caf\ufffd"
@@ -174,6 +175,12 @@ def test_a_refusal_says_why_in_the_gateway_s_words(
         (403, '{"detail": "", "error": "denied"}', "the gateway refused: denied"),
         (400, "[1, 2]", "the gateway refused: [1, 2]"),
         (502, "", "the gateway answered 502: "),
+        (
+            403,
+            '{"detail": "", "error": null}',
+            'the gateway refused: {"detail": "", "error": null}',
+        ),
+        (418, '{"detail": "teapot"}', "the gateway answered 418: teapot"),
     ],
 )
 def test_a_refusal_s_message_is_the_gateway_s_reason_as_it_sent_it(
@@ -227,6 +234,7 @@ async def test_a_line_the_gateway_garbled_is_passed_over_and_the_run_goes_on(
     run = _run(
         "{not json",
         "",
+        " \t ",
         '{"stream": "stdout", "data_b64": "b2sK"}',
         '{"progress": 0.5}',
         '{"done": true, "exit_code": 0}',
@@ -432,6 +440,31 @@ async def test_output_read_piece_by_piece_is_kept_as_it_is_read() -> None:
     assert run.finished is not None and run.finished.ok
 
 
+async def test_output_that_is_not_utf_8_is_kept_with_replacement_characters() -> None:
+    run = _run(
+        '{"stream": "stdout", "data_b64": "Y2Fm6Qo="}',
+        '{"stream": "stderr", "data_b64": "/w=="}',
+        '{"done": true, "exit_code": 0}',
+    )
+
+    outputs = [output async for output in run]
+
+    assert [output.data for output in outputs] == [b"caf\xe9\n", b"\xff"]
+    assert (run.stdout, run.stderr) == ("caf\ufffd\n", "\ufffd")
+
+
+async def test_the_last_done_line_says_how_the_run_ended() -> None:
+    run = _run(
+        '{"done": true, "exit_code": 1}',
+        '{"stream": "stdout", "data_b64": "b2sK"}',
+        '{"done": true, "exit_code": 0}',
+    )
+
+    finished = await run.wait()
+
+    assert finished.exit_code == 0 and run.stdout == "ok\n"
+
+
 async def test_a_run_left_partway_has_not_finished() -> None:
     run = _run('{"stream": "stdout", "data_b64": "b2sK"}', '{"done": true, "exit_code": 0}')
 
@@ -550,6 +583,9 @@ async def test_a_timeout_is_sent_as_it_was_given() -> None:
     [
         ("", 600, None, "1 byte to 16 KiB"),
         ("ls", 0, None, "timeout_s is 1 to 3600"),
+        ("ls", 3601, None, "timeout_s is 1 to 3600"),
+        ("", 0, "robot:r-1", "1 byte to 16 KiB"),
+        ("ls", 0, "robot:r-1", "timeout_s is 1 to 3600"),
         ("ls", 600, "person:", "'person:<id>'"),
         ("ls", 600, "robot:r-1", "'person:<id>'"),
     ],
