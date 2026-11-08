@@ -7,9 +7,13 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { connect, type Bridge, type HostError } from "./index";
 import type {
+  CallMessage,
   ExtensionSettings,
+  HelloMessage,
   LaunchParams,
+  LocationMessage,
   LocationState,
+  ParamsMessage,
   RpcArgs,
 } from "./protocol";
 
@@ -71,6 +75,16 @@ describe("the bridge's types", () => {
   it("hears a refused subscription through on's third argument", () => {
     expectTypeOf<Parameters<Bridge["on"]>[2]>().toEqualTypeOf<
       ((error: HostError) => void) | undefined
+    >();
+  });
+
+  it("gives the wire's own messages the same readonly records", () => {
+    expectTypeOf<HelloMessage["params"]>().toEqualTypeOf<LaunchParams>();
+    expectTypeOf<ParamsMessage["params"]>().toEqualTypeOf<LaunchParams>();
+    expectTypeOf<CallMessage["args"]>().toEqualTypeOf<RpcArgs>();
+    expectTypeOf<LocationMessage["state"]>().toEqualTypeOf<LocationState>();
+    expectTypeOf<HelloMessage["settings"]>().toEqualTypeOf<
+      ExtensionSettings | undefined
     >();
   });
 });

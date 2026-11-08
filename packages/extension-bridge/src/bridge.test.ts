@@ -164,6 +164,26 @@ describe("connecting", () => {
     );
   });
 
+  it("hears the host from the moment it says hello, before connect resolves", async () => {
+    const host = fakeHost();
+    const pending = connect();
+    // Both arrive in one task, before the page has the bridge in hand.
+    host.send(hello({ theme: "dark" }));
+    host.send({ kind: "theme", theme: "light", tokens: {} });
+
+    expect((await pending).theme).toBe("light");
+  });
+
+  it("stops listening for a hello once it has given up", async () => {
+    const host = fakeHost();
+    await expect(connect({ timeoutMs: 30 })).rejects.toThrow(/no hello/);
+    document.documentElement.style.removeProperty("--bg");
+
+    host.send(hello({ tokens: { "--bg": "#010203" } }));
+
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("");
+  });
+
   it("keeps waiting past a hello it cannot read", async () => {
     const host = fakeHost();
     const pending = connect();
@@ -235,6 +255,33 @@ describe("calling", () => {
     const { bridge } = await connected();
     const call = bridge.rpc("acme_status", {}, 40);
     await expect(call).rejects.toThrow(/timed out after 40ms/);
+  });
+
+  it("gives up at once on a call an untyped caller gave a null timeout, as it always has", async () => {
+    const { bridge } = await connected();
+    const call = bridge.rpc("acme_status", {}, null as unknown as number);
+    const outcome = call.catch((error: unknown) => error);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await outcome).toEqual(
+      new Error("igni bridge: acme_status timed out after nullms"),
+    );
+  });
+
+  it("waits thirty seconds for a call whose timeout is left undefined", async () => {
+    const { host, bridge } = await connected();
+    let outcome: unknown = "waiting";
+    void bridge.rpc("acme_status", undefined, undefined).catch((error) => {
+      outcome = error;
+    });
+
+    expect(host.lastCall().args).toEqual({});
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(outcome).toBe("waiting");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome).toEqual(
+      new Error("igni bridge: acme_status timed out after 30000ms"),
+    );
   });
 
   it("says the host gave no reason when it refuses without one", async () => {
@@ -570,6 +617,24 @@ describe("the service token from the host", () => {
     host.send({ kind: "service-token-reply", id: lastAsk(host).id, ok: true });
 
     await expect(token).rejects.toMatchObject({
+      code: "refused",
+      message: "igni gave no token for this extension's service",
+    });
+  });
+
+  it("is refused in the bridge's words when the host refuses with an empty reason", async () => {
+    const { host, bridge } = await connected();
+    const token = bridge.service.token();
+    host.send({
+      kind: "service-token-reply",
+      id: lastAsk(host).id,
+      ok: false,
+      error: "",
+    });
+
+    const error = await token.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ServiceError);
+    expect(error).toMatchObject({
       code: "refused",
       message: "igni gave no token for this extension's service",
     });

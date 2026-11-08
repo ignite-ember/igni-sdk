@@ -86,6 +86,19 @@ describe("SignalSubscriptions", () => {
     expect(refused).toEqual([]);
   });
 
+  it("still reports a refused subscribe whose handler has already gone", async () => {
+    const { asked, subscriptions } = stubHost();
+    const refused: string[] = [];
+    const off = subscriptions.on(completed, () => {}, (error) =>
+      refused.push(error.message),
+    );
+
+    off();
+    asked[0].refuse(new HostError("not_granted", "chat is not granted"));
+
+    await vi.waitFor(() => expect(refused).toEqual(["chat is not granted"]));
+  });
+
   it("says a refused subscribe on the console in its own words", async () => {
     const { asked, subscriptions } = stubHost();
     subscriptions.on(completed, () => {});

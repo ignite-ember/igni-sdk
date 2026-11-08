@@ -143,8 +143,11 @@ export class GuestBridge<
     args: RpcArgs = {},
     timeoutMs: number = DEFAULT_TIMEOUT_MS,
   ): Promise<T> {
+    // `Number`, not `timeoutMs` as it is: null means "no limit" to a
+    // correlator, but an untyped caller's null (or "500") reaches a
+    // call's timer the way `setTimeout` always read it — as 0 (or 500).
     return this.calls.send<T>(
-      timeoutMs,
+      Number(timeoutMs),
       () => new Error(`igni bridge: ${method} timed out after ${timeoutMs}ms`),
       (id) => this.channel.post({ kind: "call", id, method, args }),
     );
