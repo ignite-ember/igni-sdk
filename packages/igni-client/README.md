@@ -114,6 +114,32 @@ async with IgniClient(Fleet("https://gw.acme.internal", auth=space)) as igni:
 `app.spaces.get(id)`, `.list()` and `.delete(id)` manage them; deleting a
 space erases its VM.
 
+Changed since igni-client 0.1.0, on purpose:
+
+- `App.public_jwks()` returns a `JwkSet` (`igni_client.auth.keys`), not a
+  dict: read `jwks.keys[0].kid` where you read `jwks["keys"][0]["kid"]`,
+  and write `jwks.model_dump_json()` where you wrote
+  `json.dumps(jwks)`. The JSON is the same, members in the same order.
+- Each auth name lives in the module that owns it (`igni_client.auth.app`,
+  `.person`, `.spaces`, `.tokens`, `.keys`, `.grants`); `from
+  igni_client.auth import App` and the other 0.1.0 names still work.
+- New on `App`: `exchange(space_id)` (its token exchanged for a space's),
+  `request(method, path, what=...)` (a call to igni server as the app,
+  retried once on a 401) and the `clock` it was made with, which the app
+  and its spaces read at each renewal.
+- A space renews its token by its app's `RENEW_BEFORE`, a subclass's or
+  one set on the app included; 0.1.0 always used `App.RENEW_BEFORE`.
+- `spaces.delete(id)` is done on any 2xx answer, whatever its body; 0.1.0
+  raised `Unavailable` on a 200 or 202 that was not a JSON object.
+- A space record igni server sent malformed (no `space_id`, say) raises
+  `Unavailable("igni server answered … with something else")` from
+  `declare`, `get` and `list`, where 0.1.0 raised pydantic's
+  `ValidationError`.
+- A discovery document that is not a JSON object raises
+  `Unavailable("igni server published no issuer")`, and an API key refused
+  with a JSON body that is not an object raises `AuthError` with that
+  body; 0.1.0 raised `JSONDecodeError` or `AttributeError`.
+
 ## Sessions
 
 <!-- illustrative -->

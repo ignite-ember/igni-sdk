@@ -53,7 +53,8 @@ class App:
         self.clock = clock
         self._key = AppKey.from_pem(pem)
         self._server = IgniServer(server, http=http)
-        self._tokens = TokenCache(clock, renew_before=lambda: self.RENEW_BEFORE)
+        # The clock and the margin are read at each renewal, so either set later is honoured.
+        self._tokens = TokenCache(lambda: self.clock(), renew_before=lambda: self.RENEW_BEFORE)
 
     @staticmethod
     def generate_key(path: str | Path) -> Path:

@@ -114,7 +114,8 @@ class Space:
         self.app = app
         self.space_id = space_id
         self.record = record
-        self._tokens = TokenCache(app.clock, renew_before=lambda: app.RENEW_BEFORE)
+        # The app's clock and margin are read at each renewal, as 0.1.0 read its `_clock`.
+        self._tokens = TokenCache(lambda: app.clock(), renew_before=lambda: app.RENEW_BEFORE)
 
     @property
     def external_id(self) -> str:

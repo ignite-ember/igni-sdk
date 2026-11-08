@@ -391,7 +391,7 @@ def test_an_api_key_comes_from_the_environment(monkeypatch: pytest.MonkeyPatch) 
     key = Person.from_api_key()
 
     assert key.server == "http://igni.test"
-    assert "secret" not in repr(key)
+    assert repr(key) == "ApiKey(server='http://igni.test')"
 
 
 def test_a_missing_or_malformed_key_says_what_to_do(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -769,6 +769,56 @@ async def test_a_margin_set_on_an_app_after_it_is_made_is_honoured_by_it_and_its
 
     grants = [f["grant_type"] for f in server.token_requests]
     assert grants.count("client_credentials") == 2 and grants.count(TOKEN_EXCHANGE) == 2
+
+
+async def test_a_clock_set_on_an_app_after_it_is_made_is_followed_by_it_and_its_spaces(
+    key_file: Path,
+) -> None:
+    server = IgniServer()
+    app = _app(key_file, server, clock=lambda: 1_000.0)
+    server.jwks = app.public_jwks()
+    space = app.spaces.space("sp-9")
+
+    await app.token()
+    await space.token()
+    app.clock = lambda: 1_600.0
+    await app.token()
+    await space.token()
+
+    grants = [f["grant_type"] for f in server.token_requests]
+    assert grants.count("client_credentials") == 2 and grants.count(TOKEN_EXCHANGE) == 2
+    signed_in = [f for f in server.token_requests if f["grant_type"] == "client_credentials"]
+    claims = jwt.decode(signed_in[-1]["client_assertion"], options={"verify_signature": False})
+    assert (claims["iat"], claims["exp"]) == (1_600, 1_600 + App.ASSERTION_LIFETIME)
+
+
+async def test_each_grant_is_posted_as_a_form_in_0_1_0_s_order_and_without_a_bearer(
+    key_file: Path,
+) -> None:
+    server, exchange = IgniServer(), KeyExchange()
+    posted: list[httpx.Request] = []
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/oauth/token":
+            posted.append(request)
+        return exchange(request) if b"api-key" in request.content else server(request)
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("app-bot", server="http://igni.test", key_file=key_file, http=http)
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+    server.jwks = app.public_jwks()
+
+    await app.spaces.space("sp-9").token()
+    await key.token()
+
+    assert [list(parse_qs(r.content.decode())) for r in posted] == [
+        ["grant_type", "client_assertion_type", "client_assertion"],
+        ["grant_type", "subject_token", "subject_token_type", "space"],
+        ["grant_type", "api_key"],
+    ]
+    assert [r.method for r in posted] == ["POST"] * 3
+    assert {r.headers["content-type"] for r in posted} == {"application/x-www-form-urlencoded"}
+    assert not any("authorization" in r.headers for r in posted)
 
 
 # ── A person ─────────────────────────────────────────────────────────
