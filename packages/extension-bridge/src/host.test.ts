@@ -284,4 +284,64 @@ describe("bridge.on", () => {
     expect(refused[0]).toBeInstanceOf(HostError);
     expect(refused[0].code).toBe("not_granted");
   });
+  it("says a refused subscription on the console when nobody asked to hear it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+
+      bridge.on(bridge.host.chat.run_completed, () => {});
+      page.reply(page.posted[0].id, {
+        ok: false,
+        error: { code: "not_granted", message: "chat is not granted" },
+      });
+
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
+      expect(String(warn.mock.calls[0][0])).toContain(
+        "subscribing to chat.run_completed failed: chat is not granted",
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("says a refused unsubscribe on the console", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const off = bridge.on(bridge.host.chat.run_completed, () => {});
+      page.reply(page.posted[0].id, { ok: true, result: null });
+
+      off();
+      const [, unsubscribe] = page.posted;
+      page.reply(unsubscribe.id, {
+        ok: false,
+        error: { code: "failed", message: "the window closed" },
+      });
+
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
+      expect(String(warn.mock.calls[0][0])).toContain(
+        "unsubscribing from chat.run_completed failed: the window closed",
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("hands a signal to every handler of it, and to none after the last goes", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const seen: string[] = [];
+    const signal = bridge.host.chat.run_completed;
+    const offFirst = bridge.on(signal, () => seen.push("first"));
+    const offSecond = bridge.on(signal, () => seen.push("second"));
+
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+    offFirst();
+    offSecond();
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+
+    expect(seen).toEqual(["first", "second"]);
+  });
 });
