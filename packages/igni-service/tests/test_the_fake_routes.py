@@ -106,6 +106,26 @@ async def test_an_organisation_the_directory_lacks_is_said(
     assert (response.status_code, response.json()) == (404, {"detail": "no such organisation"})
 
 
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("GET", f"{IgniPaths.DIRECTORY}/members"),
+        ("GET", IgniPaths.app_vm_profile("app-1")),
+        ("GET", "/v1/nothing-here"),
+    ],
+)
+async def test_a_failure_a_test_asked_for_answers_before_the_token_or_the_path_is_looked_at(
+    fake: FakeIgni, method: str, path: str
+) -> None:
+    fake.traffic.fail(path, 503)
+
+    async with fake.http_client() as http:
+        response = await http.request(method, f"{FakeIgni.BASE}{path}")
+
+    assert (response.status_code, response.json()) == (503, {"detail": "failing on purpose"})
+    assert [seen.path for seen in fake.traffic.seen] == [path]
+
+
 async def test_the_token_endpoints_refuse_a_request_with_no_assertion(fake: FakeIgni) -> None:
     async with fake.http_client() as http:
         token = await http.post(f"{FakeIgni.BASE}{IgniPaths.TOKEN}", data={"grant_type": "x"})
