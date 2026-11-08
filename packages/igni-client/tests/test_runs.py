@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from collections.abc import AsyncIterator
 
 import pytest
 from pydantic import ValidationError
+from websockets.asyncio.client import connect
+from websockets.typing import Subprotocol
 
 from igni_client import (
     ApprovalRequested,
@@ -14,6 +18,7 @@ from igni_client import (
     Decision,
     IgniClient,
     InfoMessage,
+    NotAllowed,
     Requirement,
     RpcError,
     RunCompleted,
@@ -21,10 +26,12 @@ from igni_client import (
     RunStarted,
     ToolCompleted,
 )
-from igni_client.events import RunError
+from igni_client.approvals import Approver
+from igni_client.events import ErrorMessage, Event, RequirementDetails, RunError, RunPaused
 from igni_client.frames import HitlDecision, QueueMessage
 from igni_client.methods import ATTACHED_SESSION, HISTORY, HistoryTurn
-from igni_client.testing import Delay, FakeIgni, Steps
+from igni_client.replies import Reply
+from igni_client.testing import Delay, FakeIgni, Pause, Steps
 
 
 async def test_a_prompt_streams_typed_events_to_its_end() -> None:
@@ -272,6 +279,225 @@ async def test_an_attach_answer_without_its_project_is_refused() -> None:
         async with IgniClient(fake.local()) as igni:
             with pytest.raises(RpcError, match="attach_elsewhere"):
                 await igni._conn.rpc("attach_elsewhere", ATTACHED_SESSION)
+
+
+async def test_an_approval_is_answered_once() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [Steps.approval("deploy"), *Steps.answer("deployed")]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            async for event in session.send("deploy"):
+                if isinstance(event, ApprovalRequested):
+                    assert event.run_id == Steps.RUN_ID
+                    assert repr(event) == "ApprovalRequested(deploy)"
+                    await event.approve("similar")
+                    with pytest.raises(RuntimeError, match="this approval was already answered"):
+                        await event.reject()
+
+    assert fake.runs.decisions == [
+        [HitlDecision(requirement_id="req-deploy", action="confirm", choice="similar")]
+    ]
+
+
+async def test_the_calls_of_a_pause_are_answered_in_their_order() -> None:
+    pause = Pause(
+        requirements=[
+            Requirement(requirement_id="req-a", tool_name="read_file"),
+            Requirement(requirement_id="req-b", tool_name="write_file", friendly_name="Write"),
+        ]
+    )
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [pause, *Steps.answer("done")]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            async for event in session.send("both"):
+                if isinstance(event, ApprovalRequested):
+                    assert repr(event) == "ApprovalRequested(read_file, Write)"
+                    with pytest.raises(ValueError) as refused:
+                        await event.decide({"req-a": Decision.allow()})
+                    assert str(refused.value) == "every call needs an answer; missing ['req-b']"
+                    await event.decide(
+                        {"req-b": Decision.deny(), "req-a": Decision.allow("always")}
+                    )
+
+    assert fake.runs.decisions == [
+        [
+            HitlDecision(requirement_id="req-a", action="confirm", choice="always"),
+            HitlDecision(requirement_id="req-b", action="reject", choice="once"),
+        ]
+    ]
+
+
+@pytest.mark.parametrize(
+    ("policy", "action", "text"),
+    [
+        (True, "confirm", "deployed"),
+        (False, "reject", "I did not run it."),
+        (lambda requirement: requirement.tool_name == "deploy", "confirm", "deployed"),
+        (lambda requirement: Decision.deny(remember=True), "reject", "I did not run it."),
+    ],
+    ids=["true", "false", "a-callable-saying-yes", "a-callable-returning-a-decision"],
+)
+async def test_ask_answers_approvals_with_a_plain_policy(
+    policy: object, action: str, text: str
+) -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda _: [Steps.approval("deploy"), *Steps.answer("deployed")]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            reply = await session.ask("deploy", approve=policy)  # type: ignore[arg-type]
+
+    assert str(reply) == text
+    assert [d.action for d in fake.runs.decisions[0]] == [action]
+
+
+async def test_an_approver_on_its_own_answers_each_call_and_refuses_without_a_policy() -> None:
+    sent: list[list[HitlDecision]] = []
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        sent.append(decisions)
+
+    paused = RunPaused(
+        run_id="r-9",
+        requirements=[
+            Requirement(requirement_id="req-a", tool_name="read_file"),
+            Requirement(requirement_id="req-b", tool_name="deploy"),
+        ],
+    )
+    await Approver(lambda r: r.tool_name == "read_file").answer(ApprovalRequested(paused, answer))
+    with pytest.raises(ApprovalRequired) as raised:
+        await Approver(None).answer(ApprovalRequested(paused, answer))
+
+    assert sent == [
+        [
+            HitlDecision(requirement_id="req-a", action="confirm", choice="once"),
+            HitlDecision(requirement_id="req-b", action="reject", choice="once"),
+        ]
+    ]
+    assert [r.requirement_id for r in raised.value.requirements] == ["req-a", "req-b"]
+
+
+async def test_a_reply_gathers_thinking_and_tools_and_keeps_the_main_runs_completion() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [
+            ContentDelta(text="let me ", is_thinking=True),
+            ContentDelta(text="Hello"),
+            ContentDelta(text="see", is_thinking=True),
+            ToolCompleted(run_id="r-sub", summary="read a.py"),
+            ContentDelta(text=", world"),
+            RunCompleted(run_id=Steps.RUN_ID, input_tokens=10),
+            RunCompleted(run_id="r-sub", parent_run_id=Steps.RUN_ID, input_tokens=99),
+        ]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            reply = await session.ask("hi")
+
+    assert reply.text == "Hello, world" and reply.thinking == "let me see"
+    assert [tool.summary for tool in reply.tools] == ["read a.py"]
+    assert reply.completed is not None and reply.completed.input_tokens == 10
+
+
+async def test_a_reply_collected_on_its_own_follows_any_stream_of_events() -> None:
+    async def events() -> AsyncIterator[Event | ApprovalRequested]:
+        yield ContentDelta(text="hi")
+        yield RunCompleted(run_id="r-1", output_tokens=1)
+
+    reply = await Reply.collect(events(), Approver(None))
+
+    assert str(reply) == "hi" and reply.thinking == "" and reply.tools == []
+    assert reply.completed is not None and reply.completed.output_tokens == 1
+
+
+async def test_a_run_failing_without_a_word_raises_in_plain_words() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [RunError()]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            with pytest.raises(RunFailed) as raised:
+                await session.ask("hi")
+
+    assert str(raised.value) == "the run failed"
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [("you may not approve", "you may not approve"), ("", "igni refused the approval")],
+)
+async def test_igni_refusing_an_answer_raises_not_allowed(text: str, message: str) -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda _: [Steps.approval("deploy"), ErrorMessage(text=text)]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            with pytest.raises(NotAllowed) as raised:
+                await session.ask("deploy", approve=True)
+
+    assert str(raised.value) == message
+
+
+async def test_the_details_of_a_waiting_call_fill_in_its_requirement() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda text: [
+            Steps.approval("deploy"),
+            RequirementDetails(requirement_id="req-deploy", details="ships to prod"),
+            *Steps.answer("deployed"),
+        ]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            seen: list[ApprovalRequested] = []
+            async for event in session.send("deploy"):
+                if isinstance(event, ApprovalRequested):
+                    event.requirements[0].details_pending = True
+                    seen.append(event)
+                    await event.approve()
+
+    assert seen[0].requirements[0].details == "ships to prod"
+    assert not seen[0].requirements[0].details_pending
+
+
+def test_an_approval_frame_refuses_a_scope_igni_does_not_know() -> None:
+    assert HitlDecision(requirement_id="r", action="reject", choice="deny").choice == "deny"
+    with pytest.raises(ValidationError, match="choice"):
+        HitlDecision(requirement_id="r", action="confirm", choice="sometimes")  # type: ignore[arg-type]
+
+
+async def test_the_fake_passes_over_an_answer_with_a_scope_igni_does_not_know() -> None:
+    def batch(choice: str) -> str:
+        decision = {"requirement_id": "req-x", "action": "confirm", "choice": choice}
+        return json.dumps(
+            {
+                "type": "hitl_response_batch",
+                "id": choice,
+                "session_id": "s",
+                "decisions": [decision],
+            }
+        )
+
+    async with (
+        FakeIgni() as fake,
+        connect(fake.socket.url, subprotocols=[Subprotocol("igni.v1")]) as ws,
+    ):
+        await ws.recv()  # the welcome
+        await ws.send(batch("sometimes"))
+        await ws.send(batch("once"))
+        await _until(lambda: len(fake.runs.decisions) == 1)
+
+    assert fake.runs.decisions == [
+        [HitlDecision(requirement_id="req-x", action="confirm", choice="once")]
+    ]
+    assert [r.frame.type for r in fake.socket.received] == ["hitl_response_batch"]
+
+
+def test_approvals_and_replies_live_in_their_own_modules() -> None:
+    import igni_client
+    from igni_client import approvals, replies, runs
+
+    assert igni_client.Decision is approvals.Decision
+    assert igni_client.ApprovalRequested is approvals.ApprovalRequested
+    assert igni_client.Reply is replies.Reply
+    assert Decision.__module__ == ApprovalRequested.__module__ == "igni_client.approvals"
+    assert Reply.__module__ == "igni_client.replies"
+    for moved in ("Decision", "Policy", "Choice", "Answer", "Reply", "collect"):
+        assert not hasattr(runs, moved), f"igni_client.runs.{moved} moved out in 0.2"
 
 
 # ── helpers ──
