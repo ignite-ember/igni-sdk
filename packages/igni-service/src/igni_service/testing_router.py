@@ -10,6 +10,8 @@ failure a test asked for, the route, its token, then the handler.
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 import httpx
 from pydantic import BaseModel, ConfigDict
 
@@ -90,7 +92,8 @@ class FakeRouter:
         path no route takes is the table's fallback, as igni's router has it.
         """
         if not self.addresses.reaches(str(request.url)):
-            raise httpx.ConnectError(f"{request.url.host} is not igni", request=request)
+            where = urlsplit(str(request.url)).netloc
+            raise httpx.ConnectError(f"{where} is not igni", request=request)
         seen = self.traffic.record(request)
         failure = self.traffic.failure_for(seen.path)
         if failure is not None:

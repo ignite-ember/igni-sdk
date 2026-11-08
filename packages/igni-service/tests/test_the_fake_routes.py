@@ -7,12 +7,14 @@ takes answered by the directory.
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from igni_service import IgniService
 from igni_service.crypto import RsaKeyPair
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.testing_bearers import BearerTokens, TokenHolder
+from igni_service.testing_bundles import UploadedManifest
 from igni_service.testing_clients import FakeClientRegistry
 from igni_service.testing_router import RouteGuard
 from igni_service.testing_routes import RouteAuth
@@ -139,3 +141,43 @@ def test_an_apps_token_is_not_a_services() -> None:
 
     assert guard.holder_for(seen, RouteAuth.SERVICE) == DetailError.not_authenticated()
     assert guard.holder_for(seen, RouteAuth.APP) == TokenHolder(client_id="app-1", org_id=ORG)
+
+
+async def test_an_address_that_is_not_the_fakes_is_never_reached(fake: FakeIgni) -> None:
+    async with fake.http_client() as http:
+        with pytest.raises(httpx.ConnectError, match=r"^igni\.test:8080 is not igni$"):
+            await http.get(f"http://igni.test:8080{IgniPaths.JWKS}")
+
+    assert fake.traffic.seen == []
+
+
+def test_a_bundle_without_a_manifest_is_refused_in_igni_s_words() -> None:
+    refused = UploadedManifest.from_archive(b"not a tarball")
+
+    assert refused == DetailError(detail="no manifest.json at the bundle's root")
+
+
+@pytest.mark.parametrize(
+    ("path", "query", "said"),
+    [
+        (IgniPaths.REVOCATIONS, {"since": "yesterday"}, "since must be a cursor, not 'yesterday'"),
+        (
+            f"{IgniPaths.DIRECTORY}/members",
+            {"limit": "many"},
+            "limit must be a whole number, not 'many'",
+        ),
+    ],
+)
+async def test_a_query_igni_cannot_read_is_a_422_not_a_crash(
+    igni: IgniService, fake: FakeIgni, path: str, query: dict[str, str], said: str
+) -> None:
+    token = await igni.tokens.token(ORG)
+    async with fake.http_client() as http:
+        response = await http.get(f"{FakeIgni.BASE}{path}", params=query, headers=bearer(token))
+
+    assert (response.status_code, response.json()) == (422, {"detail": said})
+
+
+def test_a_setting_igni_settings_lacks_is_refused_not_ignored() -> None:
+    with pytest.raises(ValueError, match="no_such_setting"):
+        SettingsOverrides.model_validate({"no_such_setting": "x"})

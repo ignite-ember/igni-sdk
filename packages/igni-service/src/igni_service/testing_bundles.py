@@ -63,10 +63,15 @@ class UploadedManifest(BaseModel):
 
     @classmethod
     def from_archive(cls, archive: bytes) -> UploadedManifest | DetailError:
+        """The manifest, or igni's refusal: none it can read, or one that is not what was signed."""
         try:
-            return cls.model_validate(BundleArchive.read_manifest(archive))
-        except (BundleError, ValidationError) as exc:
-            return DetailError(detail=f"no readable manifest.json at the bundle's root: {exc}")
+            manifest = BundleArchive.read_manifest(archive)
+        except BundleError:
+            return DetailError(detail="no manifest.json at the bundle's root")
+        try:
+            return cls.model_validate(manifest)
+        except ValidationError:
+            return DetailError(detail="the manifest is not what was signed")
 
     @property
     def pages(self) -> list[str]:
