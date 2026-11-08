@@ -126,3 +126,13 @@ def test_settings_for_other_addresses_reach_those() -> None:
     assert settings.igni_server_url == "http://igni.other:9000"
     assert settings.public_base_url == addresses.service_url
     assert settings.key_encryption_key == "k"
+
+
+def test_a_setting_a_test_sets_to_its_default_is_still_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("IGNI_SERVER_TIMEOUT", "3")
+
+    settings = FakeIgni().settings(SettingsOverrides(timeout=10.0))
+
+    assert settings.timeout == 10.0

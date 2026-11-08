@@ -10,15 +10,22 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from igni_service import IgniService
+from igni_service import IgniService, testing, vm_profiles
 from igni_service.crypto import RsaKeyPair
 from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.testing_bearers import BearerTokens, TokenHolder
 from igni_service.testing_bundles import UploadedManifest
 from igni_service.testing_clients import FakeClientRegistry
-from igni_service.testing_router import RouteGuard, RouteTable
+from igni_service.testing_router import FakeRouter, RouteGuard, RouteTable
 from igni_service.testing_routes import Handler, Route, RouteAuth
-from igni_service.testing_wire import DetailError, SeenRequest
+from igni_service.testing_settings import SettingsOverrides as SettingsOverridesItself
+from igni_service.testing_wire import (
+    DetailError,
+    IgniAddresses,
+    RecordedTraffic,
+    RoutedCall,
+    SeenRequest,
+)
 from igni_service.urls import IgniPaths
 
 from .conftest import ORG, bearer
@@ -328,3 +335,75 @@ def test_igni_s_error_body_carries_its_detail_and_not_its_status(
     response = error.to_response()
 
     assert (response.status_code, response.json()) == (status, body)
+
+
+def test_a_bearer_nobody_issued_or_a_revoked_apps_is_not_authenticated() -> None:
+    clients = FakeClientRegistry()
+    clients.add_app("app-1", ORG, "Bot", RsaKeyPair.generate())
+    bearers = BearerTokens()
+    token = bearers.issue_app(TokenHolder(client_id="app-1", org_id=ORG))
+
+    def seen(bearer_token: str) -> SeenRequest:
+        headers = {"authorization": f"Bearer {bearer_token}"}
+        return SeenRequest(method="GET", path="/", headers=headers, body=b"")
+
+    guard = RouteGuard(bearers, clients)
+
+    assert guard.holder_for(seen("garbage"), RouteAuth.APP) == DetailError.not_authenticated()
+    assert guard.holder_for(seen("garbage"), RouteAuth.NONE) == TokenHolder()
+    clients.revoke("app-1")
+    assert guard.holder_for(seen(token), RouteAuth.APP) == DetailError.not_authenticated()
+
+
+def test_a_router_answers_from_its_own_table_and_falls_back_only_on_a_service_path() -> None:
+    clients = FakeClientRegistry()
+    clients.add_app("svc-1", ORG, "Service", RsaKeyPair.generate())
+    bearers = BearerTokens()
+    service = bearer(bearers.issue_service(TokenHolder(client_id="svc-1", org_id=ORG), "s"))
+    app = bearer(bearers.issue_app(TokenHolder(client_id="svc-1", org_id=ORG)))
+    fallen_back: list[RoutedCall] = []
+
+    def fallback(call: RoutedCall) -> httpx.Response:
+        fallen_back.append(call)
+        return httpx.Response(418)
+
+    def ok(call: RoutedCall) -> httpx.Response:
+        return httpx.Response(200)
+
+    table = RouteTable(
+        routes=(
+            Route(path="/v1/s", method="GET", auth=RouteAuth.SERVICE, handler=ok),
+            Route(path="/v1/a", method="GET", auth=RouteAuth.APP, handler=ok),
+        ),
+        fallback=fallback,
+    )
+    traffic = RecordedTraffic()
+    router = FakeRouter(
+        addresses=IgniAddresses(),
+        traffic=traffic,
+        guard=RouteGuard(bearers, clients),
+        table=table,
+    )
+
+    def status(method: str, path: str, headers: dict[str, str] | None = None) -> int:
+        request = httpx.Request(method, f"{FakeIgni.BASE}{path}", headers=headers)
+        return router.handle(request).status_code
+
+    assert status("GET", "/v1/s", service) == 200
+    assert status("POST", "/v1/s", service) == 418
+    assert status("POST", "/v1/s") == 401
+    assert status("POST", "/v1/a", app) == 404
+    assert status("GET", "/v1/elsewhere", service) == 404
+    assert [call.holder for call in fallen_back] == [TokenHolder(client_id="svc-1", org_id=ORG)]
+    assert len(traffic.seen) == 5
+
+
+def test_testing_offers_what_its_all_names_and_not_what_its_helpers_import() -> None:
+    assert all(hasattr(testing, name) for name in testing.__all__)
+    assert "SettingsOverrides" in testing.__all__
+    assert testing.SettingsOverrides is SettingsOverridesItself
+    # Stray imports of the old single module, never in `__all__`, are gone on purpose;
+    # the record a request makes is `igni_service.vm_profiles`'.
+    for stray in ("VmProfileRequestRecord", "DetailError", "RoutedCall", "TokenHolder"):
+        assert not hasattr(testing, stray)
+    assert vm_profiles.VmProfileRequestRecord.__module__ == "igni_service.vm_profiles"
