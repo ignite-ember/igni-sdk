@@ -23,7 +23,7 @@ from igni_extension.host_model import (
     SessionChange,
     Status,
 )
-from igni_extension.testing import FakeHost, HostHarness
+from igni_extension.testing import FakeHost, HostCall, HostHarness
 from igni_extension.wire import Reply, Request, SubscribeOutcome
 
 
@@ -81,6 +81,20 @@ async def test_methods_send_their_parameters_and_read_their_result(host: FakeHos
     assert (post.path, post.params) == ("chat.post", {"text": "Two issues in auth.py."})
     assert append.params == {"view": {"root": "c", "elements": {}}}
     assert view == "view-1"
+    await ext.aclose()
+
+
+async def test_a_recorded_call_equals_the_one_a_test_writes_down(host: FakeHost) -> None:
+    """`HostCall` as 0.1.0 had it: what was asked, not the number it travelled under."""
+    ext = IgniExtension("acme.example", environ=host.environment())
+
+    await ext.host.chat.post("Two issues in auth.py.")
+    await ext.host.sessions.current.set("s-2")
+
+    assert host.calls == [
+        HostCall(op="call", path="chat.post", params={"text": "Two issues in auth.py."}),
+        HostCall(op="set", path="sessions.current", value="s-2"),
+    ]
     await ext.aclose()
 
 

@@ -19,6 +19,7 @@ from types import TracebackType
 from typing import Any
 
 import anyio
+from pydantic import BaseModel
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
@@ -36,8 +37,32 @@ from igni_extension.wire import (
     SubscribeOutcome,
 )
 
-#: One request an extension made of `FakeHost`; 0.1.0's name for it.
-HostCall = Request
+
+class HostCall(BaseModel):
+    """One `get`, `set` or `call` an extension made of `FakeHost`.
+
+    What the request asked, without the number the connection gave it, so
+    a test can compare it with one it writes down.
+    """
+
+    op: str
+    path: str
+    window: str | None = None
+    #: The session, for `host.sessions.chat(id)`.
+    session: str | None = None
+    params: dict[str, Any] = {}
+    value: Any = None
+
+    @classmethod
+    def of(cls, request: Request) -> HostCall:
+        return cls(
+            op=request.op.value,
+            path=request.path,
+            window=request.window,
+            session=request.session,
+            params=dict(request.params),
+            value=request.value,
+        )
 
 
 class FakeHost:
@@ -74,7 +99,7 @@ class FakeHost:
         self.answers: dict[str, Any] = dict(answers or {})
         self.refusals: dict[str, tuple[str, str]] = dict(refusals or {})
         self.secret = secrets.token_urlsafe(16)
-        self.calls: list[Request] = []
+        self.calls: list[HostCall] = []
         self.subscribed: set[str] = set()
         self.url = ""
         self._subscribed_changed = asyncio.Event()
@@ -197,7 +222,7 @@ class FakeHost:
 
     def _answer(self, request: Request) -> Reply:
         if request.op in (Op.GET, Op.SET, Op.CALL):
-            self.calls.append(request)
+            self.calls.append(HostCall.of(request))
             if request.path in self.refusals:
                 code, message = self.refusals[request.path]
                 return self._refused(request, code, message)
