@@ -19,7 +19,7 @@ from igni_client import (
     RunInterrupted,
     Unavailable,
 )
-from igni_client.events import PushNotification, RpcResponse, parse_event
+from igni_client.events import ContentDelta, PushNotification, RpcResponse, parse_event
 from igni_client.frames import RpcRequest
 from igni_client.lifecycle import Lifecycle, Link, Phase
 from igni_client.routing import Interruption, Router
@@ -217,8 +217,11 @@ async def test_a_reply_settles_its_call_and_a_stream_collects_its_run() -> None:
     router.deliver(parse_event({"type": "content_delta", "id": "run-1", "text": "hi"}))
     router.deliver(parse_event({"type": "content_delta", "id": "run-2", "text": "theirs"}))
 
-    assert isinstance(answer.result(), RpcResponse) and answer.result().result == 3
-    assert stream.qsize() == 1 and stream.get_nowait().id == "run-1"
+    replied = answer.result()
+    assert isinstance(replied, RpcResponse) and replied.result == 3
+    collected = stream.get_nowait()
+    assert isinstance(collected, ContentDelta) and collected.id == "run-1"
+    assert stream.empty(), "another run's message is not this stream's"
     assert listener.qsize() == 4, "a listener hears everything igni sends"
 
 
