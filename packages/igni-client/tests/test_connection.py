@@ -572,3 +572,16 @@ async def _igni_that(*, welcomes: bool) -> AsyncIterator[Local]:
     async with serve(serve_one, "127.0.0.1", 0, subprotocols=[Subprotocol("igni.v1")]) as server:
         port = next(iter(server.sockets)).getsockname()[1]
         yield Local(url=f"ws://127.0.0.1:{port}")
+
+
+async def test_the_fake_answers_a_call_to_the_client_that_made_it_alone() -> None:
+    async with FakeIgni() as fake:
+        fake.methods.answers["list_background_processes"] = []
+        async with IgniClient(fake.local()) as caller, IgniClient(fake.local()) as other:
+            seen = other._conn.router.listen()
+            assert await caller.processes.list() == []
+            await fake.socket.push("session_named", {"session_id": "s", "name": "n"})
+            await _until(lambda: not seen.empty())
+            assert [seen.get_nowait().type] == ["push_notification"], (
+                "igni answers a call to its caller; only a broadcast reaches the rest"
+            )

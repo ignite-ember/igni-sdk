@@ -46,7 +46,10 @@ class LocalHandshake:
         return connection.respond(HTTPStatus.FORBIDDEN, "Forbidden\n")
 
 
-FrameHandler = Callable[[ClientFrame], Awaitable[None]]
+#: Sends one message to the client that sent the frame being handled, and no other.
+Reply = Callable[[Event], Awaitable[None]]
+#: Handles one frame a client sent; `Reply` answers that client alone.
+FrameHandler = Callable[[ClientFrame, Reply], Awaitable[None]]
 
 
 class FakeSocket:
@@ -145,7 +148,11 @@ class FakeSocket:
         except ValueError:  # not a message igni reads: igni passes it over too
             return
         self.received.append(Received(client_id=self._clients.get(socket, ""), frame=frame))
-        task = asyncio.ensure_future(self._handler(frame))
+
+        async def reply(event: Event) -> None:
+            await self._send(socket, event)
+
+        task = asyncio.ensure_future(self._handler(frame, reply))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
@@ -158,4 +165,4 @@ class FakeSocket:
             await socket.send(event.model_dump_json(by_alias=True))
 
 
-__all__ = ["FakeSocket", "FrameHandler", "Handshake", "LocalHandshake"]
+__all__ = ["FakeSocket", "FrameHandler", "Handshake", "LocalHandshake", "Reply"]

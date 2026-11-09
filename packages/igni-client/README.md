@@ -499,7 +499,6 @@ These calls are followed, each by what igni's events carry:
 | `session.plan.approve(run_id)`, `.dismiss(run_id)` | `plan_decided` of that run | that push, or the answer when `ok` is false |
 | `session.visualization_action(...)` | `visualization_action_dispatched` of this session, action and params | that push |
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
-| `session.shutdown()` | the process ends while igni winds the session down | the answer |
 | `igni.auth.login()` | `login_status` | `login_result` |
 
 A few methods make igni send events that carry nothing to tell this
@@ -887,7 +886,7 @@ by the token it offers (`transport/ws_auth.py`):
 | [`igni.window`](#igniwindow) | `model` |
 | [`session`](#session) | `cancel`, `command`, `current_id`, `display_config`, `extract_learnings`, `fire_session_start_hook`, `get_project_dir`, `is_processing`, `list_sessions`, `output_styles`, `run_shell`, `run_timeout`, `shutdown`, `slash_commands`, `status`, `switch`, `todos`, `toggle_verbose`, `typing`, `upload_attachment`, `visualization_action` |
 | [`session.agents`](#sessionagents) | `discard`, `list`, `promote` |
-| [`session.auth`](#sessionauth) | `reload_credentials`, `sign_out` |
+| [`session.auth`](#sessionauth) | `plan`, `reload_credentials`, `sign_out` |
 | [`session.context`](#sessioncontext) | `breakdown`, `compact`, `tokens` |
 | [`session.files`](#sessionfiles) | `complete`, `pick_dir`, `read`, `search` |
 | [`session.history`](#sessionhistory) | `get`, `search`, `truncate` |
@@ -1510,20 +1509,21 @@ does not stop a run at it, the client decides what to do.
 </details>
 
 <details>
-<summary><code>session.shutdown()</code> → <code>Call[None, ShutdownEvent]</code></summary>
+<summary><code>await session.shutdown()</code> → <code>None</code></summary>
 
-Wire method `shutdown` · access `client` · streams `background_process_done`, `process_exited`
+Wire method `shutdown` · access `window`
 
-Wind this session down: end its hooks, MCP servers, scheduler and background processes.
+Wind this session down: its hooks, its agents, its MCP servers, its scheduler.
 
 Takes no arguments and returns nothing once done. Runs the session's
-`SessionEnd` hooks, disconnects its MCP servers, stops its
-scheduler, and kills every background process igni is tracking —
-which ends them with `process_exited` and
-`background_process_done`. It does not stop igni or close the
-connection. Each step's failure is logged, not raised.
+`SessionEnd` hooks, cleans up its ephemeral agents, disconnects its
+MCP servers and stops its scheduler — once: a session already wound
+down is left as it is. Background processes are igni's, not the
+session's, and are left running; they end when igni does. It does
+not stop igni or close the connection. Each step's failure is
+logged, not raised. Only igni's window may call it.
 
-Followed: `async with` the call to follow it: it yields the `process_exited` and `background_process_done` pushes that arrive while igni winds the session down — the processes this call kills — and ends with the answer.
+Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
 </details>
 
@@ -1689,6 +1689,21 @@ Access: `window`. Through Fleet's gateway every connection stands as igni's wind
 #### session.auth
 
 This session's sign-in to igni server.
+
+<details>
+<summary><code>await session.auth.plan()</code> → <code>CloudPlan | None</code></summary>
+
+Wire method `get_cloud_plan` · access `client`
+
+Read who is signed in to igni server, and their organisation's plan.
+
+Takes no arguments. Asks igni server with this session's sign-in and
+returns the person's `email` and `full_name`, the organisation's
+display name (`org_name`) and plan `tier`; any of them may be
+null when igni server does not say. Returns `null` when nobody is
+signed in or igni server could not be asked.
+
+</details>
 
 <details>
 <summary><code>await session.auth.reload_credentials()</code> → <code>StatusUpdate</code></summary>
@@ -2001,9 +2016,10 @@ Wire method `mcp_connect` · access `client`
 Connect one configured MCP server to this session.
 
 `server_name` is the server's name in the MCP configuration.
-Returns an `info` message, sent in place of an `rpc_response`.
-A server that could not connect is not an error: read
-`get_mcp_server_details` for its `error`.
+Returns an `info` message, sent in place of an `rpc_response`,
+once it is connected. Fails with the reason when it did not connect
+(not configured, refused by policy, no tools, approval denied); the
+reason is also `get_mcp_server_details`'s `error` for it.
 
 </details>
 
@@ -2601,7 +2617,7 @@ configuration are not loaded.
 | `model_switch` | the method `switch_model` does the same, so `session.models.switch()` calls it |
 | `session_list` | the method `list_sessions` answers the same, so `session.list_sessions()` calls it |
 | `session_switch` | the method `switch_session` does the same, so `session.switch()` calls it |
-| `shutdown` | stops igni itself, for every window and program attached; no client of a person's igni should, and `session.shutdown()` winds one session down instead |
+| `shutdown` | stops igni itself, for every window and program attached, and only igni's window may; `session.shutdown()` winds one session down instead |
 
 <!-- api-reference:end -->
 
@@ -2693,8 +2709,8 @@ On purpose, and not backwards compatible:
   (`host_model`, `extension_service_token`, `deliver_service_events`,
   `vm_sign_in`) are refused with `ValueError` before they are sent, as
   before; `shutdown` is no longer among them, since igni's `shutdown`
-  method winds one session down (`session.shutdown()`), while the
-  `shutdown` message, which stops igni, is still never sent.
+  method winds one session down (`session.shutdown()`, igni's window's),
+  while the `shutdown` message, which stops igni, is still never sent.
 - **New:** `Call` (`igni_client.calls`), `session.events()`,
   `session.command()`, `session.typing()`, `igni.auth.cancel_login()`,
   typed push notifications, `Fleet.standing` and `Local.standing`,

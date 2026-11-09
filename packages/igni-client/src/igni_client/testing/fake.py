@@ -23,7 +23,7 @@ from igni_client.testing.gateway import CONNECT_PATH, FakeGateway
 from igni_client.testing.inbound import ClientFrame
 from igni_client.testing.methods import FakeMethods
 from igni_client.testing.runs import FakeRuns
-from igni_client.testing.server import FakeSocket, LocalHandshake
+from igni_client.testing.server import FakeSocket, LocalHandshake, Reply
 
 
 class FakeIgni:
@@ -74,13 +74,15 @@ class FakeIgni:
         http = httpx.AsyncClient(transport=self.gateway.transport())
         return Fleet(f"http://127.0.0.1:{self.socket.port}", auth=auth, http=http)
 
-    async def _handle(self, frame: ClientFrame) -> None:
+    async def _handle(self, frame: ClientFrame, reply: Reply) -> None:
+        """Play `frame`. A call is answered to the client that made it alone, as igni
+        answers it; everything else is broadcast."""
         match frame:
             case RpcRequest(method="cancel_run") if "cancel_run" not in self.methods.answers:
-                await self.socket.broadcast(FakeMethods.reply(frame, None))
+                await reply(FakeMethods.reply(frame, None))
                 await self.runs.cancel(Cancel(session_id=frame.session_id))
             case RpcRequest():
-                await self.socket.broadcast(await self.methods.answer(frame))
+                await reply(await self.methods.answer(frame))
             case Command():
                 answer = self.commands(frame.text)
                 await self.socket.broadcast(

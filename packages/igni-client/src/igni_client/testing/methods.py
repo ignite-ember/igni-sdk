@@ -16,7 +16,7 @@ from igni_client.models import (
     AttachSessionResult,
     ChatTurn,
     InfoMessage,
-    ModelRegistryEntry,
+    ModelRegistryEntryView,
     ModelRegistryResult,
     RpcRequest,
     RpcResponse,
@@ -45,8 +45,15 @@ class FakeMethods:
         #: Answers to calls the fake does not play itself, by method.
         self.answers: dict[str, RpcAnswer] = {}
         #: The models `get_model_registry` lists.
-        self.models: dict[str, ModelRegistryEntry] = {
-            "igni-1": ModelRegistryEntry(model_id="igni-1", provider="igni")
+        self.models: dict[str, ModelRegistryEntryView] = {
+            "igni-1": ModelRegistryEntryView(
+                model_id="igni-1",
+                provider="igni",
+                has_api_key=True,
+                prompt_caching=True,
+                timeout=60,
+                vision=False,
+            )
         }
         #: A session's history, as `get_chat_history` returns it.
         self.history: dict[str, list[ChatTurn]] = {}

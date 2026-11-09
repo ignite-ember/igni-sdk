@@ -257,23 +257,6 @@ async def test_a_scheduler_yields_its_session_s_tasks_until_the_block_is_left() 
     ]
 
 
-async def test_shutting_a_session_down_yields_the_process_ends_while_it_waits() -> None:
-    ended = {"pid": 3, "cmd": "server", "exit_code": -9, "duration_seconds": 2.0}
-    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-        session = await igni.sessions.create()
-        fake.methods.answers["shutdown"] = _answer(
-            fake, [("process_exited", ended, ""), ("background_process_done", ended, "")], None
-        )
-        _later(fake, ("process_exited", {**ended, "pid": 4}, ""))
-        events, result = await _follow(session.shutdown())
-
-    assert result is None
-    assert [(e.channel, e.payload.pid) for e in events] == [
-        ("process_exited", 3),
-        ("background_process_done", 3),
-    ]
-
-
 async def test_signing_in_yields_its_status_until_its_result() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         fake.methods.answers["login"] = LoginStarted(started=True)

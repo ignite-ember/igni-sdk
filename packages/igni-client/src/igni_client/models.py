@@ -302,6 +302,18 @@ class CheckPermissionArgs(Args):
     tool_name: str
 
 
+class CloudPlan(Model):
+    """Wire shape for :meth:`AuthController.get_cloud_plan` — tier +
+    org name for the org popover badge. Nullable fields because the
+    token validation response may omit either.
+    """
+
+    email: str | None = None
+    full_name: str | None = None
+    org_name: str | None
+    tier: str | None
+
+
 class Command(Frame):
     """Slash command from user.
 
@@ -754,7 +766,7 @@ class HookEntryView(Model):
     background: bool = False
     command: str = ""
     event: str
-    headers: dict[str, str]
+    header_names: list[str]
     matcher: str = ""
     timeout_ms: int = 0
     type: str = ""
@@ -1185,30 +1197,28 @@ class ModelCompleted(RunEvent):
     type: Literal["model_completed"] = "model_completed"
 
 
-class ModelRegistryEntry(Model):
-    """One entry in ``settings.models.registry``.
+class ModelRegistryEntryView(Model):
+    """One model as a client sees it: what it is and how it runs, never its key.
 
-    Everything the registry needs to know about a specific model
-    lives here. Providers other than ``openai_like`` (``anthropic``,
-    ``gemini``) use a subset of these fields — the extras are
-    ignored during kwarg construction on the provider side. The last
-    three below are the ``anthropic`` provider's own.
+    :class:`ModelRegistryEntry` holds the key itself (``api_key``), the
+    command that prints it (``api_key_cmd``), and whatever extra keys the
+    configuration carried; none of that is a client's to read. The URL
+    loses anything that can carry a credential.
     """
 
-    api_key: str | None = None
-    api_key_cmd: str | None = None
-    api_key_env: str | None = None
     context_window: int | None = None
     effort: str | None = None
+    has_api_key: bool
     max_tokens: int | None = None
     model_id: str
-    prompt_caching: bool = True
-    provider: str = "openai_like"
+    prompt_caching: bool
+    provider: str
+    source: str = ""
     temperature: float | None = None
     thinking: dict[str, JsonValue] | None = None
-    timeout: int = 60
+    timeout: int
     url: str | None = None
-    vision: bool = False
+    vision: bool
 
 
 class ModelRegistryResult(Model):
@@ -1219,7 +1229,7 @@ class ModelRegistryResult(Model):
 
     default: str
     max_context_window: int
-    registry: dict[str, ModelRegistryEntry]
+    registry: dict[str, ModelRegistryEntryView]
 
 
 class ModelSwitch(Frame):
@@ -1995,7 +2005,12 @@ class SearchChatArgs(Args):
 
 
 class SearchCodeArgs(Args):
-    """``search_code``: the snippet to find across the project."""
+    """``search_code``: the snippet to find across the project.
+
+    A key it does not name is refused, not ignored: a call that sent the
+    snippet under another name (``snippet``) was told only that ``query``
+    was missing, and searched for nothing.
+    """
 
     query: str
 

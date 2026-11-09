@@ -29,6 +29,7 @@ from igni_client.models import (
     ChatSearchHit,
     ChatTurn,
     CheckPermissionArgs,
+    CloudPlan,
     Command,
     CommandResult,
     CompactIfNeededArgs,
@@ -184,6 +185,7 @@ _EXTRACT_LEARNINGS: TypeAdapter[None] = TypeAdapter(None)
 _FIRE_SESSION_START_HOOK: TypeAdapter[None] = TypeAdapter(None)
 _GET_AGENT_DETAILS: TypeAdapter[list[AgentInfo]] = TypeAdapter(list[AgentInfo])
 _GET_CHAT_HISTORY: TypeAdapter[list[ChatTurn]] = TypeAdapter(list[ChatTurn])
+_GET_CLOUD_PLAN: TypeAdapter[CloudPlan | None] = TypeAdapter(CloudPlan | None)
 _GET_CONTEXT_BREAKDOWN: TypeAdapter[ContextBreakdown] = TypeAdapter(ContextBreakdown)
 _GET_DISPLAY_CONFIG: TypeAdapter[DisplayConfig] = TypeAdapter(DisplayConfig)
 _GET_GROUP_POLICY: TypeAdapter[GroupPolicyPackResult] = TypeAdapter(GroupPolicyPackResult)
@@ -271,7 +273,6 @@ type DismissPlanEvent = PlanDecidedPush
 type DispatchVisualizationActionEvent = VisualizationActionDispatchedPush
 type LoginEvent = LoginResultPush | LoginStatusPush | NotificationsChangedPush
 type RunWorkflowEvent = WorkflowEventPush
-type ShutdownEvent = BackgroundProcessDonePush | ProcessExitedPush
 type StartSchedulerEvent = (
     BackgroundProcessDonePush
     | FileEditedPush
@@ -558,6 +559,15 @@ METHODS: dict[str, MethodSpec] = {
     "get_chat_history": MethodSpec(
         wire="get_chat_history",
         python="session.history.get",
+        scope="session",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        followed=False,
+    ),
+    "get_cloud_plan": MethodSpec(
+        wire="get_cloud_plan",
+        python="session.auth.plan",
         scope="session",
         access="client",
         reply="rpc_response",
@@ -1162,13 +1172,10 @@ METHODS: dict[str, MethodSpec] = {
         wire="shutdown",
         python="session.shutdown",
         scope="session",
-        access="client",
+        access="window",
         reply="rpc_response",
-        streams=(
-            "push_notification:background_process_done",
-            "push_notification:process_exited",
-        ),
-        followed=True,
+        streams=(),
+        followed=False,
     ),
     "start_scheduler": MethodSpec(
         wire="start_scheduler",
@@ -1763,6 +1770,17 @@ class SessionAuth:
     def __init__(self, caller: Caller) -> None:
         self._caller = caller
 
+    async def plan(self) -> CloudPlan | None:
+        """Read who is signed in to igni server, and their organisation's plan.
+
+        Takes no arguments. Asks igni server with this session's sign-in and
+        returns the person's ``email`` and ``full_name``, the organisation's
+        display name (``org_name``) and plan ``tier``; any of them may be
+        null when igni server does not say. Returns ``null`` when nobody is
+        signed in or igni server could not be asked.
+        """
+        return await self._caller.rpc("get_cloud_plan", NoArgs, {}, _GET_CLOUD_PLAN)
+
     async def reload_credentials(self) -> StatusUpdate:
         """Read the saved sign-in again, so this session acts as whoever is signed in now.
 
@@ -2042,9 +2060,10 @@ class SessionMcp:
         """Connect one configured MCP server to this session.
 
         ``server_name`` is the server's name in the MCP configuration.
-        Returns an ``info`` message, sent in place of an ``rpc_response``.
-        A server that could not connect is not an error: read
-        ``get_mcp_server_details`` for its ``error``.
+        Returns an ``info`` message, sent in place of an ``rpc_response``,
+        once it is connected. Fails with the reason when it did not connect
+        (not configured, refused by policy, no tools, approval denied); the
+        reason is also ``get_mcp_server_details``'s ``error`` for it.
         """
         return await self._caller.rpc(
             "mcp_connect", McpServerArgs, {"server_name": server_name}, _MCP_CONNECT
@@ -2844,19 +2863,20 @@ class SessionApi:
         """
         return await self._caller.rpc("get_run_timeout", NoArgs, {}, _GET_RUN_TIMEOUT)
 
-    def shutdown(self) -> Call[None, ShutdownEvent]:
-        """Wind this session down: end its hooks, MCP servers, scheduler and background processes.
+    async def shutdown(self) -> None:
+        """Wind this session down: its hooks, its agents, its MCP servers, its scheduler.
 
         Takes no arguments and returns nothing once done. Runs the session's
-        ``SessionEnd`` hooks, disconnects its MCP servers, stops its
-        scheduler, and kills every background process igni is tracking —
-        which ends them with ``process_exited`` and
-        ``background_process_done``. It does not stop igni or close the
-        connection. Each step's failure is logged, not raised.
+        ``SessionEnd`` hooks, cleans up its ephemeral agents, disconnects its
+        MCP servers and stops its scheduler — once: a session already wound
+        down is left as it is. Background processes are igni's, not the
+        session's, and are left running; they end when igni does. It does
+        not stop igni or close the connection. Each step's failure is
+        logged, not raised. Only igni's window may call it.
 
-        ``async with`` the call to follow it: it yields the ``process_exited`` and ``background_process_done`` pushes that arrive while igni winds the session down — the processes this call kills — and ends with the answer.
+        Access: ``window``. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets ``AccessRefused``.
         """
-        return self._caller.follow("shutdown", NoArgs, {}, _SHUTDOWN)
+        return await self._caller.rpc("shutdown", NoArgs, {}, _SHUTDOWN)
 
     async def slash_commands(self) -> list[SlashCommand]:
         """List every slash command this session takes.

@@ -310,7 +310,7 @@ class Call[R, E]:
         held, self._held = self._held, []
         for event in held:
             self._consider(event)
-        if self._rule.while_waiting or self._rule.ends_with(self._context):
+        if self._rule.ends_with(self._context):
             self._done = True
 
     def __repr__(self) -> str:

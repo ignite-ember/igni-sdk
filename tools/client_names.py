@@ -121,6 +121,7 @@ METHODS: dict[str, str] = {
     "remove_plugin": "session.plugins.remove",
     "set_plugin_enabled": "session.plugins.set_enabled",
     "reload_cloud_credentials": "session.auth.reload_credentials",
+    "get_cloud_plan": "session.auth.plan",
     "clear_cloud_credentials": "session.auth.sign_out",
 }
 
@@ -238,11 +239,6 @@ FOLLOWED: dict[str, str] = {
         "block runs. What a task's tools push meanwhile carries nothing that says which "
         "run it came from, so it is not yielded; read it from ``igni.events()``."
     ),
-    "shutdown": (
-        "``async with`` the call to follow it: it yields the ``process_exited`` and "
-        "``background_process_done`` pushes that arrive while igni winds the session "
-        "down — the processes this call kills — and ends with the answer."
-    ),
     "login": (
         "``async with`` the call to follow it: it yields the ``login_status`` pushes and "
         "ends with the ``login_result`` one. igni signs in one way at a time — a new "
@@ -317,8 +313,8 @@ MESSAGES_SENT_BY_HAND: dict[str, str] = {
 #: Messages a client could send but igni-client does not, and why.
 MESSAGES_NOT_SENT: dict[str, str] = {
     "shutdown": (
-        "stops igni itself, for every window and program attached; no client of a "
-        "person's igni should, and `session.shutdown()` winds one session down instead"
+        "stops igni itself, for every window and program attached, and only igni's "
+        "window may; `session.shutdown()` winds one session down instead"
     ),
     "cancel": "`cancel_run` does the same and answers, so `session.cancel()` calls it",
     "hitl_response": (

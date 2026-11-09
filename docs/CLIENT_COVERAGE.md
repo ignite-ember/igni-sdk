@@ -55,7 +55,7 @@ clients (the reason is in the row)
 
 | | Total | Done |
 |---|---|---|
-| RPC methods | 104 (4 not for clients) | 100 of 100 |
+| RPC methods | 105 (4 not for clients) | 101 of 101 |
 | Messages | 45 | 45 |
 | Push channels | 26 | 26 |
 | PyPI documentation | 3 packages | 3 |
@@ -86,7 +86,7 @@ clients (the reason is in the row)
 | 13 | `discard_interrupted_run` | `await session.runs.discard_interrupted(…)` | client | ✅ InterruptedRunArgs | ✅ `DiscardInterruptedRunResult` |  | ✅ done |  |
 | 14 | `upload_attachment` | `await session.upload_attachment(…)` | client | ✅ UploadAttachmentArgs | ✅ `UploadAttachmentResult` |  | ✅ done |  |
 | 15 | `fire_session_start_hook` | `await session.fire_session_start_hook(…)` | client | ✅ NoArgs | ✅ `None` |  | ✅ done |  |
-| 16 | `shutdown` | `session.shutdown(…)` → `Call` | client | ✅ NoArgs | ✅ `None` | yes | ✅ done | followed: process ends while it waits |
+| 16 | `shutdown` | `await session.shutdown(…)` | window | ✅ NoArgs | ✅ `None` |  | ✅ done |  |
 
 ### History & context
 
@@ -97,7 +97,7 @@ clients (the reason is in the row)
 | 19 | `truncate_history` | `await session.history.truncate(…)` | client | ✅ TruncateHistoryArgs | ✅ `TruncateHistoryResult` |  | ✅ done |  |
 | 20 | `count_context_tokens` | `await session.context.tokens(…)` | client | ✅ NoArgs | ✅ `int` |  | ✅ done |  |
 | 21 | `get_context_breakdown` | `await session.context.breakdown(…)` | client | ✅ NoArgs | ✅ `ContextBreakdown` |  | ✅ done |  |
-| 22 | `compact_if_needed` | `await session.context.compact(…)` | client | ✅ CompactIfNeededArgs | ✅ `SessionCleared | None` |  | ✅ done |  |
+| 22 | `compact_if_needed` | `await session.context.compact(…)` | client | ✅ CompactIfNeededArgs | ✅ `SessionCleared \| None` |  | ✅ done |  |
 | 23 | `extract_learnings` | `await session.extract_learnings(…)` | client | ✅ ExtractLearningsArgs | ✅ `None` |  | ✅ done |  |
 
 ### Loop
@@ -107,7 +107,7 @@ clients (the reason is in the row)
 | 24 | `loop_status` | `await session.loop.status(…)` | client | ✅ NoArgs | ✅ `LoopStatusSnapshot` |  | ✅ done |  |
 | 25 | `loop_resume` | `await session.loop.resume(…)` | client | ✅ NoArgs | ✅ `str` |  | ✅ done |  |
 | 26 | `loop_pause` | `await session.loop.pause(…)` | client | ✅ NoArgs | ✅ `bool` |  | ✅ done |  |
-| 27 | `pop_pending_loop_iteration` | `await session.loop.next_iteration(…)` | client | ✅ NoArgs | ✅ `LoopAdvance | None` |  | ✅ done |  |
+| 27 | `pop_pending_loop_iteration` | `await session.loop.next_iteration(…)` | client | ✅ NoArgs | ✅ `LoopAdvance \| None` |  | ✅ done |  |
 | 28 | `cancel_pending_loop` | `await session.loop.cancel(…)` | client | ✅ NoArgs | ✅ `bool` |  | ✅ done |  |
 
 ### Plans
@@ -257,29 +257,30 @@ clients (the reason is in the row)
 | 94 | `set_server` | `await igni.auth.set_server(…)` | window | ✅ SetServerArgs | ✅ `ServerChoice` |  | ✅ done |  |
 | 95 | `reload_cloud_credentials` | `await session.auth.reload_credentials(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` |  | ✅ done |  |
 | 96 | `clear_cloud_credentials` | `await session.auth.sign_out(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` | yes | ✅ done | not followed: `notifications_changed` carries the new counts |
-| 97 | `check_for_update` | `await igni.check_for_update(…)` | client | ✅ NoArgs | ✅ `UpdateAvailable | None` |  | ✅ done |  |
+| 97 | `get_cloud_plan` | `await session.auth.plan(…)` | client | ✅ NoArgs | ✅ `CloudPlan \| None` |  | ✅ done |  |
+| 98 | `check_for_update` | `await igni.check_for_update(…)` | client | ✅ NoArgs | ✅ `UpdateAvailable \| None` |  | ✅ done |  |
 
 ### Approvals
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 98 | `mint_approver_token` | `await igni.approvers.mint_token(…)` | window | ✅ NoArgs | ✅ `ApproverTokenMinted` |  | ✅ done |  |
-| 99 | `revoke_approver_tokens` | `await igni.approvers.revoke_tokens(…)` | window | ✅ NoArgs | ✅ `ApproverTokensRevoked` |  | ✅ done |  |
+| 99 | `mint_approver_token` | `await igni.approvers.mint_token(…)` | window | ✅ NoArgs | ✅ `ApproverTokenMinted` |  | ✅ done |  |
+| 100 | `revoke_approver_tokens` | `await igni.approvers.revoke_tokens(…)` | window | ✅ NoArgs | ✅ `ApproverTokensRevoked` |  | ✅ done |  |
 
 ### Extension pages
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 100 | `host_model` | — | page | ✅ PageRequest | ✅ `Reply` | yes | ⛔ not for clients | an extension page's call: igni's window makes it for the page it hosts, setting `caller`, which igni honours from no other connection |
-| 101 | `window_model` | `await igni.window.model(…)` | window | ✅ WindowModelArgs | ✅ `WindowModelResult` | yes | ✅ done | not followed: a `window_model_changed` push says which window changed and its new revision |
-| 102 | `extension_service_token` | — | page | ✅ NoArgs | ✅ `PageTokenReply` |  | ⛔ not for clients | an extension page's call: it hands the page its service's token, and only igni's window speaks for a page |
+| 101 | `host_model` | — | page | ✅ PageRequest | ✅ `Reply` | yes | ⛔ not for clients | an extension page's call: igni's window makes it for the page it hosts, setting `caller`, which igni honours from no other connection |
+| 102 | `window_model` | `await igni.window.model(…)` | window | ✅ WindowModelArgs | ✅ `WindowModelResult` | yes | ✅ done | not followed: a `window_model_changed` push says which window changed and its new revision |
+| 103 | `extension_service_token` | — | page | ✅ NoArgs | ✅ `PageTokenReply` |  | ⛔ not for clients | an extension page's call: it hands the page its service's token, and only igni's window speaks for a page |
 
 ### Platform only
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 103 | `deliver_service_events` | — | platform | ✅ ServiceEventsParams | ✅ `ServiceEventsAck` | yes | ⛔ not for clients | the platform's call: Fleet delivers an extension service's events on its own control connection |
-| 104 | `vm_sign_in` | — | platform | ✅ VmSignInParams | ✅ `VmCredentialState` | yes | ⛔ not for clients | the platform's call: Fleet signs a VM's igni in on its control connection |
+| 104 | `deliver_service_events` | — | platform | ✅ ServiceEventsParams | ✅ `ServiceEventsAck` | yes | ⛔ not for clients | the platform's call: Fleet delivers an extension service's events on its own control connection |
+| 105 | `vm_sign_in` | — | platform | ✅ VmSignInParams | ✅ `VmCredentialState` | yes | ⛔ not for clients | the platform's call: Fleet signs a VM's igni in on its control connection |
 
 ## Messages
 
@@ -320,7 +321,7 @@ igni-client.
 | 28 | `session_list` | client → igni | `SessionList` | ✅ done | typed, not sent: the method `list_sessions` answers the same, so `session.list_sessions()` calls it |
 | 29 | `session_list_result` | igni → client | `SessionListResult` | ✅ done |  |
 | 30 | `session_switch` | client → igni | `SessionSwitch` | ✅ done | typed, not sent: the method `switch_session` does the same, so `session.switch()` calls it |
-| 31 | `shutdown` | client → igni | `Shutdown` | ✅ done | typed, not sent: stops igni itself, for every window and program attached; no client of a person's igni should, and `session.shutdown()` winds one session down instead |
+| 31 | `shutdown` | client → igni | `Shutdown` | ✅ done | typed, not sent: stops igni itself, for every window and program attached, and only igni's window may; `session.shutdown()` winds one session down instead |
 | 32 | `status_update` | igni → client | `StatusUpdate` | ✅ done |  |
 | 33 | `stream_end` | igni → client | `StreamEnd` | ✅ done |  |
 | 34 | `streaming_done` | igni → client | `StreamingDone` | ✅ done |  |

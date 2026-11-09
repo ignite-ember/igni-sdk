@@ -57,8 +57,6 @@ class Rule:
     ends_with: Callable[[Context], bool] = _no_end
     #: Events are kept until the result says which to match.
     needs_result: bool = False
-    #: Only the events that arrive while the call waits for its answer.
-    while_waiting: bool = False
     #: Channels and message types the rule yields, for the docs.
     yields: tuple[str, ...] = field(default=())
 
@@ -166,12 +164,6 @@ STOP_PROCESS = Rule(
     yields=("process_line", "process_exited", "background_process_done"),
 )
 
-SHUTDOWN = Rule(
-    match=lambda c, e: channel(e, "process_exited", "background_process_done"),
-    while_waiting=True,
-    yields=("process_exited", "background_process_done"),
-)
-
 
 # ── This session ──
 
@@ -213,7 +205,6 @@ RULES: dict[str, Rule] = {
     "run_workflow": RUN_WORKFLOW,
     "cancel_workflow": CANCEL_WORKFLOW,
     "stop_background_process": STOP_PROCESS,
-    "shutdown": SHUTDOWN,
     "dispatch_visualization_action": VISUALIZATION,
     "start_scheduler": SCHEDULER,
     "login": LOGIN,
