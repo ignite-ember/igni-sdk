@@ -22,10 +22,12 @@ name: SDK release
 # No publishing credential is stored. PyPI and TestPyPI trust this
 # workflow through trusted publishing (OIDC), in the GitHub environments
 # `pypi` and `testpypi`; npmjs trusts it the same way, in the environment
-# `npm`. npm's trusted publishing is configured per package, on a package
-# that already exists, so until the three exist the `npm` environment may
-# hold an `NPM_TOKEN` secret for the first publish — used only while it is
-# set. Re-running is safe: a file or version already published is skipped,
+# `npm`. Trusted publishing for a project that does not exist yet is
+# limited on both: PyPI takes one pending publisher per workflow and
+# environment, and npm configures it on an existing package. So for the
+# first release the `pypi`, `testpypi` and `npm` environments may hold a
+# token (`PYPI_TOKEN`, `TEST_PYPI_TOKEN`, `NPM_TOKEN`) — used only while it
+# is set. Re-running is safe: a file or version already published is skipped,
 # not re-uploaded.
 #
 # docs/PUBLISHING_THE_SDKS.md has the whole procedure, including the
@@ -259,6 +261,9 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/sdk/python/
           skip-existing: true
+          # Empty unless the environment holds the first release's token
+          # (docs/PUBLISHING_THE_SDKS.md, step 1); empty means OIDC.
+          password: ${{ secrets.TEST_PYPI_TOKEN }}
 
   npm-rehearsal:
     name: Rehearse npm (dry run)
@@ -326,6 +331,9 @@ jobs:
         with:
           packages-dir: dist/sdk/python/
           skip-existing: true
+          # Empty unless the environment holds the first release's token
+          # (docs/PUBLISHING_THE_SDKS.md, step 1); empty means OIDC.
+          password: ${{ secrets.PYPI_TOKEN }}
 
   npm:
     name: Publish to npmjs
