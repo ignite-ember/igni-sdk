@@ -7,12 +7,13 @@ it — and only to it.
 
 The yes is given per route, from what the route already depends on:
 
-- A route that takes a person from their token (`igni.person`,
-  `igni.optional_person`, `igni.org_admin`, or the token itself with
-  `igni.token` / `igni.optional_token` — directly, through a router's
-  dependencies, or through the service's own dependency) is a **bearer
-  route**. Any origin may call it, because the token is the whole of the
-  authority: a page without one gets nothing it could not get with `curl`.
+- A route that takes its caller from the caller's own bearer token
+  (`igni.person`, `igni.optional_person`, `igni.org_admin`, `igni.caller`,
+  or the token itself with `igni.token` / `igni.optional_token` — directly,
+  through a router's dependencies, or through the service's own
+  dependency, however deep) is a **bearer route**. Any origin may call it,
+  because the token is the whole of the authority: a page without one gets
+  nothing it could not get with `curl`.
 - A route that reads the service's own sign-in cookie (`igni.web.*`), igni's
   own calls (`igni.igni_call`), and every route that takes no token at all
   are left alone. Cross-origin, the browser refuses them.
@@ -55,17 +56,18 @@ if TYPE_CHECKING:
 
 
 class BearerRoutes:
-    """Which routes take a person's token, and nothing else."""
+    """Which routes take their caller's own bearer token, and nothing else."""
+
+    #: `IgniService`'s dependencies that read the caller's own bearer token.
+    #: Every dependency of `IgniService` that reads `Authorization` is here
+    #: or in `NOT_THE_PAGES`; a test holds the two lists to the class.
+    DEPENDENCIES = ("person", "optional_person", "org_admin", "caller", "token", "optional_token")
+    #: Ones that read a bearer token too, but never the page's: igni's own calls.
+    NOT_THE_PAGES = ("igni_call",)
 
     def __init__(self, igni: IgniService) -> None:
         self._igni = igni
-        self._bearer = {
-            type(igni).person,
-            type(igni).optional_person,
-            type(igni).org_admin,
-            type(igni).token,
-            type(igni).optional_token,
-        }
+        self._bearer = {getattr(type(igni), name) for name in self.DEPENDENCIES}
         self._known: dict[int, bool] = {}
 
     def is_bearer(self, route: Any) -> bool:

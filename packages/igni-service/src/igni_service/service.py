@@ -243,8 +243,9 @@ class IgniService:
         """Put igni's part of the service on `app`: igni's calls
         (`router`), sign-in to the service's own pages (`web.router`), and
         cross-origin calls from the extension's page to every route that
-        takes a person's token (`BearerCors`) — any origin, the token and
-        nothing else, never cookies.
+        takes its caller's bearer token (`BearerCors`: `person`,
+        `optional_person`, `org_admin`, `caller`, `token`, `optional_token`)
+        — any origin, the token and nothing else, never cookies.
         """
         app.include_router(self.router)
         app.include_router(self.web.router)
@@ -304,6 +305,9 @@ class IgniService:
         """FastAPI dependency: whoever a request's token names — a `Person`, an
         `App` or a `Space` — among the kinds this service accepts
         (`accepted_callers`, people only by default). 401 for anybody else.
+
+        A bearer route like `person`'s: the extension's page may call it
+        (`BearerCors`).
         """
         token = self._bare(credentials)
         try:

@@ -816,14 +816,15 @@ is a cross-origin call, so the browser needs the service's yes.
 - A **bearer route** answers any origin (`Access-Control-Allow-Origin: *`)
   when the call carries `Authorization: Bearer`. A bearer route is one
   that depends on `igni.person`, `igni.optional_person`, `igni.org_admin`,
-  `igni.token` or `igni.optional_token` — directly, through a router's
-  `dependencies`, or through your own dependency built on them. The token
-  is the whole of the authority. A refused token's 401 is readable too,
-  so the page can fetch a new token.
+  `igni.caller`, `igni.token` or `igni.optional_token` — directly, through
+  a router's `dependencies`, or through your own dependency built on them,
+  however deeply nested. The token is the whole of the authority. A
+  refused token's 401 is readable too, so the page can fetch a new token.
 - **Credentials are never allowed.** A browser sends no cookies on such a
   call, so the service's own sessions (`igni.web.*`) stay out of reach.
-- A route on `igni.web.*`, igni's own calls, and a route that takes no
-  token get no cross-origin yes. Neither does a route on `igni.caller`.
+- A route on `igni.web.*` (even one that also takes a token), igni's own
+  calls (`igni.igni_call`), and a route that takes no token get no
+  cross-origin yes.
 - A preflight is answered with `GET, HEAD, POST, PUT, PATCH, DELETE` and
   the headers `Authorization` and `Content-Type` (kept 600 s), only when
   the call will carry `Authorization`, and never for `/auth/` or
@@ -1826,8 +1827,8 @@ async def room(socket: WebSocket, room: str) -> None:
 The extension's process sends `Authorization: Bearer` on its own
 (`ext.service` in `igni-extension`). The page does too, through
 `bridge.service.fetch`. Because the page calls from igni's origin, every
-route above that depends on `igni.person`, `igni.optional_person` or
-`igni.org_admin` answers it cross-origin
+route above that depends on `igni.person`, `igni.optional_person`,
+`igni.org_admin` or `igni.caller` answers it cross-origin
 ([BearerCors](#bearercors-calls-from-the-extensions-page)). A route that
 needs a token but should treat an unusable one as anonymous takes
 `Depends(igni.token)` and calls `person_of` itself.
@@ -1880,8 +1881,11 @@ async def notes(caller: Caller = Depends(igni.caller)) -> list[str]:
 
 `Depends(igni.caller)` answers a typed `Person`, `App` or `Space` for the
 kinds the service accepts, and a 401 for any other. `igni.person` stays
-people only whatever the service accepts. `igni.caller_of(token)` is the
-same outside a request. In a test:
+people only whatever the service accepts. A route on `igni.caller` is a
+bearer route, so the extension's page calls it with
+`bridge.service.fetch` like any other
+([BearerCors](#bearercors-calls-from-the-extensions-page)).
+`igni.caller_of(token)` is the same outside a request. In a test:
 
 ```python
 import httpx
@@ -2533,9 +2537,9 @@ that does nothing when the service holds nothing about people.
 
 **The extension's page cannot read the service's answer (a CORS error in
 the console).** The route must depend on `igni.person`,
-`igni.optional_person`, `igni.org_admin`, `igni.token` or
+`igni.optional_person`, `igni.org_admin`, `igni.caller`, `igni.token` or
 `igni.optional_token`, and the call must carry `Authorization: Bearer`.
-Routes on `igni.web.*`, `igni.caller`, or with no token get no
+Routes on `igni.web.*`, igni's own calls, or with no token get no
 cross-origin yes. Call `igni.install(app)`.
 
 **`EventRefused` 403 when sending a message.** The extension's manifest
