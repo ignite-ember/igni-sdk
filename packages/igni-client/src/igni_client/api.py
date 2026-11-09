@@ -1310,9 +1310,9 @@ class IgniAgents:
         """Stop one sub-agent's run, leaving the rest of the turn going.
 
         ``run_id`` is the sub-agent run's id, as its events carry it.
-        Returns ``ok: true`` once the cancellation is asked for — an unknown
-        id is not detected — or ``ok: false`` with ``error`` when
-        ``run_id`` is empty or the cancellation failed.
+        Returns ``ok: true`` when the run was cancelled, or ``ok: false``
+        with ``error`` when ``run_id`` is empty, no such run is running, or
+        the cancellation failed.
         """
         return await self._caller.rpc(
             "cancel_agent_run", AgentRunArgs, {"run_id": run_id}, _CANCEL_AGENT_RUN
@@ -2385,9 +2385,10 @@ class SessionRuns:
         """Forget one interrupted run, so it is not offered again.
 
         ``message_id`` names the run (from ``get_interrupted_runs``);
-        ``session_id`` the session it belongs to. Returns ``ok: true`` —
-        also when no such run exists, so a retry is harmless — or ``ok:
-        false`` with ``error`` when ``message_id`` is empty.
+        ``session_id`` the session it belongs to; only that session's
+        interrupted run is deleted. Returns ``ok: true`` — also when no such
+        run exists, so a retry is harmless — or ``ok: false`` with ``error``
+        when ``message_id`` is empty or the store could not be written.
         """
         return await self._caller.rpc(
             "discard_interrupted_run",
@@ -2440,8 +2441,9 @@ class SessionScheduler:
         ``task_id`` is the task's ``id`` (from ``get_scheduled_tasks``). The
         task is marked cancelled, so it does not run again; a run already
         going is not stopped, but its outcome is not recorded. Returns an
-        ``info`` message, sent in place of an ``rpc_response``. An unknown
-        id is not detected.
+        ``info`` message, sent in place of an ``rpc_response``. Fails for
+        an id the project has no task for, and for a task that already
+        completed, failed or was cancelled, whose record is left as it is.
         """
         return await self._caller.rpc(
             "cancel_scheduled_task", ScheduledTaskArgs, {"task_id": task_id}, _CANCEL_SCHEDULED_TASK
