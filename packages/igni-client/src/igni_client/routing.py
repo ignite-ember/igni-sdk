@@ -13,7 +13,7 @@ import itertools
 import secrets
 
 from igni_client.errors import IgniClientError
-from igni_client.events import Event
+from igni_client.wire import Event
 
 
 class Interruption:
@@ -34,6 +34,7 @@ class Router:
         self._waiting: dict[str, asyncio.Future[Event]] = {}
         self._streams: dict[str, asyncio.Queue[Event | Interruption]] = {}
         self._listeners: list[asyncio.Queue[Event]] = []
+        self._followers: list[asyncio.Queue[Event | Interruption]] = []
 
     def new_id(self, prefix: str) -> str:
         """A request id no other client of the same igni sends: `run-1f2e3d4c-1`."""
@@ -78,12 +79,28 @@ class Router:
         with contextlib.suppress(ValueError):
             self._listeners.remove(queue)
 
+    def follow(self) -> asyncio.Queue[Event | Interruption]:
+        """A queue of every message igni sends from now on, and of what interrupts it.
+
+        A followed call (`igni_client.calls.Call`) reads it: an interruption
+        ends what it follows, as it ends a run.
+        """
+        queue: asyncio.Queue[Event | Interruption] = asyncio.Queue()
+        self._followers.append(queue)
+        return queue
+
+    def unfollow(self, queue: asyncio.Queue[Event | Interruption]) -> None:
+        with contextlib.suppress(ValueError):
+            self._followers.remove(queue)
+
     # ── Delivering ──
 
     def deliver(self, event: Event) -> None:
         """Hand `event` to every listener, and to the call or stream it answers."""
         for queue in self._listeners:
             queue.put_nowait(event)
+        for follower in self._followers:
+            follower.put_nowait(event)
         if not event.id:
             return
         waiter = self._waiting.get(event.id)
@@ -100,5 +117,5 @@ class Router:
         for waiter in list(self._waiting.values()):
             if not waiter.done():
                 waiter.set_exception(error)
-        for queue in list(self._streams.values()):
+        for queue in [*self._streams.values(), *self._followers]:
             queue.put_nowait(Interruption(error))

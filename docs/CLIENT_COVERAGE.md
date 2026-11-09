@@ -14,19 +14,40 @@ clients (the reason is in the row)
 
 ## How it is built
 
-1. **igni-core publishes the whole contract.** Every RPC method has an
-   arguments model and a concrete result type: no raw `dict`, no `Any`.
-   `docs/rpc-contract.json` holds, for each method, the JSON Schema of
-   its arguments and result, who may call it, and which messages it
-   streams. A test regenerates the file and fails when the committed copy
-   differs.
-2. **igni-sdk generates the typed client from that file.** The models
-   and the methods, grouped by area, are generated. CI fails when the
-   generated code no longer matches igni-core's contract. The by-name
-   `rpc()` call is removed once every row is typed.
-3. **Streaming.** A method whose work arrives as messages returns an
-   async iterator of typed events, the way `Session.send()` follows a run.
-4. **Documentation.** Each package's README, which is its PyPI page, is a
+1. **igni-core publishes the whole contract.** `docs/rpc-contract.json`
+   holds, for each method, the JSON Schema of its arguments and result,
+   its scope (`session` or `igni`), who may call it (`access`), and the
+   messages and push channels it streams; every message on the socket;
+   every push channel's payload; and which access level a connection
+   reaches. igni-sdk keeps a copy in `contracts/rpc-contract.json`
+   (`make contracts`; `make contracts-check` and the contracts test hold
+   it to igni-core's).
+2. **igni-sdk generates the typed client from that file.**
+   `tools/client_codegen.py` writes `igni_client.models` (a Pydantic model
+   per type, the contract's descriptions as docstrings, unions
+   discriminated where the schema discriminates), `igni_client.api`
+   (every method on `IgniClient` for scope `igni` and on `Session` for
+   scope `session`, grouped by namespace, the contract's `doc` as its
+   docstring) and the API reference in igni-client's README.
+   `tools/client_names.py` is the one hand-kept table: what each method
+   is called in Python, which streaming methods are followed and why the
+   rest are not, and which messages are sent as methods.
+   `tests/test_the_client_api_is_generated.py` fails when what is checked
+   in is stale (`make client-api`), and the generator refuses a contract
+   with a method the table does not place. The by-name `rpc()` call is
+   gone.
+3. **Streaming.** A method that streams returns a `Call`: `await` it for
+   the typed result, or `async with` it and `async for` the typed events
+   this call caused, told apart from every other call's by what they
+   carry (`igni_client.follow`). A method whose events igni gives nothing
+   to correlate returns its result only, and its row says why.
+4. **Access.** igni-core's contract says a Fleet connection stands as
+   igni's window; a desktop program with the lockfile's token reaches
+   `client` calls, one with an approver token `approver` calls too.
+   igni-client refuses a call it knows the connection cannot make with
+   `AccessRefused` before sending it (`igni_client.access`), and reads
+   igni's own refusal into the same error.
+5. **Documentation.** Each package's README, which is its PyPI page, is a
    complete reference. Every area and method is documented, with
    examples.
 
@@ -34,288 +55,325 @@ clients (the reason is in the row)
 
 | | Total | Done |
 |---|---|---|
-| RPC methods | 104 (2 not for clients) | 0 |
+| RPC methods | 104 (4 not for clients) | 0 of 100 |
 | Messages | 45 | 0 |
+| Push channels | 26 | 0 |
 | PyPI documentation | 3 packages | 2 |
 
 ## RPC methods
 
 ### Sessions
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 1 | `attach_session` | `igni.sessions.create() / .open(id)` | n/a | n/a (pool-level) | 🟨 typed, to re-check | already typed |
-| 2 | `list_sessions` | `igni.sessions.list()` | ❌ raw dict | ✅ msg.SessionListResult | 🟨 typed, to re-check | already typed |
-| 3 | `switch_session` | `session.switch_to()` | ✅ SessionIdArgs | ✅ msg.Info | ⬜ todo |  |
-| 4 | `get_session_id` | `session.id (attach answer)` | ❌ raw dict | ✅ str | ⬜ todo | already used internally |
-| 5 | `get_project_dir` | `session.project_dir()` | ❌ raw dict | ✅ str | ⬜ todo |  |
-| 6 | `get_status` | `session.status()` | ❌ raw dict | ✅ msg.StatusUpdate | 🟨 typed, to re-check | already typed |
-| 7 | `get_processing` | `session.is_processing()` | ❌ raw dict | ✅ bool | ⬜ todo |  |
-| 8 | `get_run_timeout` | `session.run_timeout()` | ❌ raw dict | ✅ int | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `attach_session` | `await igni.sessions.attach(…)` | client | ✅ AttachSessionParams | ✅ `AttachSessionResult` | yes | 🟨 generated; tests and docs to come | not followed: the approvals and runs it shows again carry no request id and no end; on `igni` though scoped `session`: a session is attached before there is a `Session` to call it on; `igni.sessions.create()` and `.open()` are built on it |
+| 2 | `list_sessions` | `await session.list_sessions(…)` | client | ✅ NoArgs | ✅ `SessionListResult` |  | 🟨 generated; tests and docs to come |  |
+| 3 | `switch_session` | `await session.switch(…)` | client | ✅ SessionIdArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 4 | `get_session_id` | `await session.current_id(…)` | client | ✅ NoArgs | ✅ `str` |  | 🟨 generated; tests and docs to come |  |
+| 5 | `get_project_dir` | `await session.get_project_dir(…)` | client | ✅ NoArgs | ✅ `str` |  | 🟨 generated; tests and docs to come |  |
+| 6 | `get_status` | `await session.status(…)` | client | ✅ NoArgs | ✅ `StatusUpdate` |  | 🟨 generated; tests and docs to come |  |
+| 7 | `get_processing` | `await session.is_processing(…)` | client | ✅ NoArgs | ✅ `bool` |  | 🟨 generated; tests and docs to come |  |
+| 8 | `get_run_timeout` | `await session.run_timeout(…)` | client | ✅ NoArgs | ✅ `int` |  | 🟨 generated; tests and docs to come |  |
 
 ### Runs
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 9 | `cancel_run` | `session.cancel()` | ❌ raw dict | ✅ None | ⬜ todo | exists as a frame; check |
-| 10 | `cancel_agent_run` | `session.cancel_agent_run(run_id)` | ✅ AgentRunArgs | ✅ CancelAgentRunResult | ⬜ todo |  |
-| 11 | `get_pending_messages` | `session.pending_messages()` | ✅ SessionIdArgs | ✅ list[PendingMessage] | ⬜ todo |  |
-| 12 | `get_interrupted_runs` | `session.interrupted_runs()` | ✅ SessionIdArgs | ✅ list[InterruptedRun] | ⬜ todo |  |
-| 13 | `discard_interrupted_run` | `session.discard_interrupted_run(run_id)` | ✅ InterruptedRunArgs | ✅ DiscardInterruptedRunResult | ⬜ todo |  |
-| 14 | `upload_attachment` | `session.upload_attachment(path|bytes)` | ✅ UploadAttachmentArgs | ✅ UploadAttachmentResult | ⬜ todo |  |
-| 15 | `fire_session_start_hook` | `session.fire_start_hook()` | ❌ raw dict | ✅ None | ⬜ todo |  |
-| 16 | `shutdown` | `igni.shutdown()` | ❌ raw dict | ✅ None | ⬜ todo | stops the igni; documented as such |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 9 | `cancel_run` | `await session.cancel(…)` | client | ✅ NoArgs | ✅ `None` | yes | 🟨 generated; tests and docs to come | not followed: the `info` and `stream_end` it causes belong to the turn it stops |
+| 10 | `cancel_agent_run` | `await igni.agents.cancel_run(…)` | client | ✅ AgentRunArgs | ✅ `CancelAgentRunResult` |  | 🟨 generated; tests and docs to come |  |
+| 11 | `get_pending_messages` | `await session.runs.pending_messages(…)` | client | ✅ SessionIdArgs | ✅ `list[PendingMessage]` |  | 🟨 generated; tests and docs to come |  |
+| 12 | `get_interrupted_runs` | `await session.runs.interrupted(…)` | client | ✅ SessionIdArgs | ✅ `list[InterruptedRun]` |  | 🟨 generated; tests and docs to come |  |
+| 13 | `discard_interrupted_run` | `await session.runs.discard_interrupted(…)` | client | ✅ InterruptedRunArgs | ✅ `DiscardInterruptedRunResult` |  | 🟨 generated; tests and docs to come |  |
+| 14 | `upload_attachment` | `await session.upload_attachment(…)` | client | ✅ UploadAttachmentArgs | ✅ `UploadAttachmentResult` |  | 🟨 generated; tests and docs to come |  |
+| 15 | `fire_session_start_hook` | `await session.fire_session_start_hook(…)` | client | ✅ NoArgs | ✅ `None` |  | 🟨 generated; tests and docs to come |  |
+| 16 | `shutdown` | `session.shutdown(…)` → `Call` | client | ✅ NoArgs | ✅ `None` | yes | 🟨 generated; tests and docs to come | followed: process ends while it waits |
 
 ### History & context
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 17 | `get_chat_history` | `session.history()` | ✅ SessionIdArgs | ✅ list[ChatTurn] | 🟨 typed, to re-check | already typed |
-| 18 | `search_chat` | `session.search(query)` | ✅ SearchChatArgs | ✅ list[ChatSearchHit] | ⬜ todo |  |
-| 19 | `truncate_history` | `session.truncate(...)` | ✅ TruncateHistoryArgs | ✅ TruncateHistoryResult | ⬜ todo |  |
-| 20 | `count_context_tokens` | `session.context.tokens()` | ❌ raw dict | ✅ int | ⬜ todo |  |
-| 21 | `get_context_breakdown` | `session.context.breakdown()` | ❌ raw dict | ✅ ContextBreakdown | ⬜ todo |  |
-| 22 | `compact_if_needed` | `session.context.compact()` | ✅ CompactIfNeededArgs | ✅ msg.SessionCleared \| None | ⬜ todo |  |
-| 23 | `extract_learnings` | `session.extract_learnings()` | ✅ ExtractLearningsArgs | ✅ None | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 17 | `get_chat_history` | `await session.history.get(…)` | client | ✅ SessionIdArgs | ✅ `list[ChatTurn]` |  | 🟨 generated; tests and docs to come |  |
+| 18 | `search_chat` | `await session.history.search(…)` | client | ✅ SearchChatArgs | ✅ `list[ChatSearchHit]` |  | 🟨 generated; tests and docs to come |  |
+| 19 | `truncate_history` | `await session.history.truncate(…)` | client | ✅ TruncateHistoryArgs | ✅ `TruncateHistoryResult` |  | 🟨 generated; tests and docs to come |  |
+| 20 | `count_context_tokens` | `await session.context.tokens(…)` | client | ✅ NoArgs | ✅ `int` |  | 🟨 generated; tests and docs to come |  |
+| 21 | `get_context_breakdown` | `await session.context.breakdown(…)` | client | ✅ NoArgs | ✅ `ContextBreakdown` |  | 🟨 generated; tests and docs to come |  |
+| 22 | `compact_if_needed` | `await session.context.compact(…)` | client | ✅ CompactIfNeededArgs | ✅ `SessionCleared | None` |  | 🟨 generated; tests and docs to come |  |
+| 23 | `extract_learnings` | `await session.extract_learnings(…)` | client | ✅ ExtractLearningsArgs | ✅ `None` |  | 🟨 generated; tests and docs to come |  |
 
 ### Loop
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 24 | `loop_status` | `session.loop.status()` | ❌ raw dict | ✅ LoopStatusSnapshot | ⬜ todo |  |
-| 25 | `loop_resume` | `session.loop.resume()` | ❌ raw dict | ✅ str | ⬜ todo |  |
-| 26 | `loop_pause` | `session.loop.pause()` | ❌ raw dict | ✅ bool | ⬜ todo |  |
-| 27 | `pop_pending_loop_iteration` | `session.loop.next()` | ❌ raw dict | ✅ LoopAdvance \| None | ⬜ todo |  |
-| 28 | `cancel_pending_loop` | `session.loop.cancel()` | ❌ raw dict | ✅ bool | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 24 | `loop_status` | `await session.loop.status(…)` | client | ✅ NoArgs | ✅ `LoopStatusSnapshot` |  | 🟨 generated; tests and docs to come |  |
+| 25 | `loop_resume` | `await session.loop.resume(…)` | client | ✅ NoArgs | ✅ `str` |  | 🟨 generated; tests and docs to come |  |
+| 26 | `loop_pause` | `await session.loop.pause(…)` | client | ✅ NoArgs | ✅ `bool` |  | 🟨 generated; tests and docs to come |  |
+| 27 | `pop_pending_loop_iteration` | `await session.loop.next_iteration(…)` | client | ✅ NoArgs | ✅ `LoopAdvance | None` |  | 🟨 generated; tests and docs to come |  |
+| 28 | `cancel_pending_loop` | `await session.loop.cancel(…)` | client | ✅ NoArgs | ✅ `bool` |  | 🟨 generated; tests and docs to come |  |
 
 ### Plans
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 29 | `get_latest_plan` | `session.plan.latest()` | ❌ raw dict | ❌ Any | ⬜ todo | result is Any in igni-core |
-| 30 | `approve_plan` | `session.plan.approve()` | ❌ raw dict | ❌ Awaitable[Any] | ⬜ todo | result is Any in igni-core |
-| 31 | `dismiss_plan` | `session.plan.dismiss()` | ❌ raw dict | ❌ Awaitable[Any] | ⬜ todo | result is Any in igni-core |
-| 32 | `get_todos` | `session.todos()` | ❌ raw dict | ✅ list[TodoItemWire] | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 29 | `get_latest_plan` | `await session.plan.latest(…)` | client | ✅ NoArgs | ✅ `LatestPlanResult` |  | 🟨 generated; tests and docs to come |  |
+| 30 | `approve_plan` | `session.plan.approve(…)` → `Call` | approver | ✅ PlanRunArgs | ✅ `PlanDecisionResult` | yes | 🟨 generated; tests and docs to come | followed: `plan_decided` by `run_id` |
+| 31 | `dismiss_plan` | `session.plan.dismiss(…)` → `Call` | client | ✅ PlanRunArgs | ✅ `PlanDecisionResult` | yes | 🟨 generated; tests and docs to come | followed: `plan_decided` by `run_id` |
+| 32 | `get_todos` | `await session.todos(…)` | client | ✅ NoArgs | ✅ `list[TodoItem]` |  | 🟨 generated; tests and docs to come |  |
 
 ### Models
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 33 | `switch_model` | `session.use_model(name)` | ✅ SwitchModelArgs | ✅ msg.Info | 🟨 typed, to re-check | already typed |
-| 34 | `get_model_registry` | `igni.models.list()` | ❌ raw dict | ✅ ModelRegistryResult | 🟨 typed, to re-check | already typed (catalogue) |
-| 35 | `get_display_config` | `igni.display_config()` | ❌ raw dict | ✅ DisplayConfig | ⬜ todo |  |
-| 36 | `toggle_verbose` | `igni.set_verbose(on)` | ❌ raw dict | ✅ bool | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 33 | `switch_model` | `await session.models.switch(…)` | client | ✅ SwitchModelArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 34 | `get_model_registry` | `await session.models.list(…)` | client | ✅ NoArgs | ✅ `ModelRegistryResult` |  | 🟨 generated; tests and docs to come |  |
+| 35 | `get_display_config` | `await session.display_config(…)` | client | ✅ NoArgs | ✅ `DisplayConfig` |  | 🟨 generated; tests and docs to come |  |
+| 36 | `toggle_verbose` | `await session.toggle_verbose(…)` | client | ✅ NoArgs | ✅ `bool` |  | 🟨 generated; tests and docs to come |  |
 
 ### Permissions
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 37 | `check_permission` | `igni.permissions.check(tool, args)` | ✅ CheckPermissionArgs | ✅ PermissionLevel | ⬜ todo |  |
-| 38 | `save_permission_rule` | `igni.permissions.save_rule(rule)` | ✅ SavePermissionRuleArgs | ✅ None | ⬜ todo |  |
-| 39 | `get_group_policy` | `igni.permissions.group_policy()` | ❌ raw dict | ✅ GroupPolicyPackResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 37 | `check_permission` | `await session.permissions.check(…)` | client | ✅ CheckPermissionArgs | ✅ `Literal['allow', 'ask', 'deny']` |  | 🟨 generated; tests and docs to come |  |
+| 38 | `save_permission_rule` | `await session.permissions.save_rule(…)` | window | ✅ SavePermissionRuleArgs | ✅ `None` |  | 🟨 generated; tests and docs to come |  |
+| 39 | `get_group_policy` | `await igni.group_policy(…)` | client | ✅ NoArgs | ✅ `GroupPolicyPackResult` |  | 🟨 generated; tests and docs to come |  |
 
 ### Workspace
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 40 | `get_workspace_trust` | `igni.workspace.trust(dir)` | ❌ raw dict | ✅ WorkspaceTrustStatus | ⬜ todo |  |
-| 41 | `set_workspace_trust` | `igni.workspace.set_trust(dir, trusted)` | ❌ raw dict | ✅ WorkspaceTrustStatus | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 40 | `get_workspace_trust` | `await session.workspace.trust(…)` | client | ✅ NoArgs | ✅ `WorkspaceTrustStatus` |  | 🟨 generated; tests and docs to come |  |
+| 41 | `set_workspace_trust` | `await session.workspace.set_trust(…)` | window | ✅ TrustDecisionArgs | ✅ `WorkspaceTrustStatus` | yes | 🟨 generated; tests and docs to come | not followed: igni pushes `workspace_trust_required` only to the windows showing the trust dialog |
 
 ### Files
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 42 | `complete_files` | `igni.files.complete(prefix)` | ✅ CompleteFilesArgs | ✅ FileCompletion | ⬜ todo |  |
-| 43 | `list_dirs` | `igni.files.list_dirs(path)` | ✅ ListDirsArgs | ✅ DirListResult | ⬜ todo |  |
-| 44 | `read_file` | `igni.files.read(path)` | ✅ ReadFileArgs | ✅ ReadFileResult | ⬜ todo |  |
-| 45 | `search_code` | `igni.files.search(query)` | ✅ SearchCodeArgs | ✅ SearchCodeResult | ⬜ todo |  |
-| 46 | `pick_dir_native` | `igni.files.pick_dir()` | ✅ PickDirArgs | ✅ PickDirResult | ⬜ todo | opens a dialog on the igni machine |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 42 | `complete_files` | `await session.files.complete(…)` | client | ✅ CompleteFilesArgs | ✅ `FileCompletion` |  | 🟨 generated; tests and docs to come |  |
+| 43 | `list_dirs` | `await igni.files.list_dirs(…)` | client | ✅ ListDirsArgs | ✅ `DirListResult` |  | 🟨 generated; tests and docs to come |  |
+| 44 | `read_file` | `await session.files.read(…)` | client | ✅ ReadFileArgs | ✅ `ReadFileResult` |  | 🟨 generated; tests and docs to come |  |
+| 45 | `search_code` | `await session.files.search(…)` | client | ✅ SearchCodeArgs | ✅ `SearchCodeResult` |  | 🟨 generated; tests and docs to come |  |
+| 46 | `pick_dir_native` | `await session.files.pick_dir(…)` | client | ✅ PickDirArgs | ✅ `PickDirResult` |  | 🟨 generated; tests and docs to come |  |
 
 ### Shell & processes
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 47 | `run_shell` | `igni.shell.run(cmd) → streams output` | ✅ RunShellArgs | ✅ RunShellResult | ⬜ todo | streaming |
-| 48 | `list_background_processes` | `igni.processes.list()` | ❌ raw dict | ✅ list[ProcessRow] | ⬜ todo |  |
-| 49 | `read_process_tail` | `igni.processes.tail(id) / .follow(id)` | ✅ ProcessTailArgs | ✅ ProcessTailResult | ⬜ todo | streaming |
-| 50 | `stop_background_process` | `igni.processes.stop(id)` | ✅ ProcessArgs | ✅ StopProcessResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 47 | `run_shell` | `await session.run_shell(…)` | window | ✅ RunShellArgs | ✅ `RunShellResult` | yes | 🟨 generated; tests and docs to come | not followed: a command that moves to the background is reported by `process_*` pushes carrying its `pid` |
+| 48 | `list_background_processes` | `await igni.processes.list(…)` | client | ✅ NoArgs | ✅ `list[ProcessRow]` |  | 🟨 generated; tests and docs to come |  |
+| 49 | `read_process_tail` | `await igni.processes.tail(…)` | client | ✅ ProcessTailArgs | ✅ `ProcessTailResult` |  | 🟨 generated; tests and docs to come |  |
+| 50 | `stop_background_process` | `igni.processes.stop(…)` → `Call` | client | ✅ ProcessArgs | ✅ `StopProcessResult` | yes | 🟨 generated; tests and docs to come | followed: `process_*` by `pid` |
 
 ### Agents
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 51 | `get_agent_details` | `igni.agents.list()` | ❌ raw dict | ✅ list[AgentInfo] | ⬜ todo |  |
-| 52 | `promote_ephemeral_agent` | `igni.agents.promote(name)` | ✅ PromoteAgentArgs | ✅ PromoteEphemeralResult | ⬜ todo |  |
-| 53 | `discard_ephemeral_agent` | `igni.agents.discard(name)` | ✅ AgentNameArgs | ✅ DiscardEphemeralResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 51 | `get_agent_details` | `await session.agents.list(…)` | client | ✅ NoArgs | ✅ `list[AgentInfo]` |  | 🟨 generated; tests and docs to come |  |
+| 52 | `promote_ephemeral_agent` | `await session.agents.promote(…)` | window | ✅ PromoteAgentArgs | ✅ `PromoteEphemeralResult` |  | 🟨 generated; tests and docs to come |  |
+| 53 | `discard_ephemeral_agent` | `await session.agents.discard(…)` | client | ✅ AgentNameArgs | ✅ `DiscardEphemeralResult` |  | 🟨 generated; tests and docs to come |  |
 
 ### Skills & commands
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 54 | `get_skill_names` | `igni.skills.names()` | ❌ raw dict | ✅ list[str] | ⬜ todo |  |
-| 55 | `get_skill_definitions` | `igni.skills.definitions()` | ❌ raw dict | ✅ list[SkillDefinition] | ⬜ todo |  |
-| 56 | `get_skill_details` | `igni.skills.list()` | ❌ raw dict | ✅ list[SkillInfo] | ⬜ todo |  |
-| 57 | `get_slash_commands` | `igni.slash_commands.list()` | ❌ raw dict | ✅ list[SlashCommandEntry] | ⬜ todo |  |
-| 58 | `get_output_styles` | `igni.output_styles.list()` | ❌ raw dict | ✅ OutputStylesResult | ⬜ todo |  |
-| 59 | `dispatch_visualization_action` | `session.visualization_action(...)` | ✅ VisualizationActionArgs | ✅ VisualizationActionResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 54 | `get_skill_names` | `await session.skills.names(…)` | client | ✅ NoArgs | ✅ `list[str]` |  | 🟨 generated; tests and docs to come |  |
+| 55 | `get_skill_definitions` | `await session.skills.definitions(…)` | client | ✅ NoArgs | ✅ `list[SkillDefinition]` |  | 🟨 generated; tests and docs to come |  |
+| 56 | `get_skill_details` | `await session.skills.list(…)` | client | ✅ NoArgs | ✅ `list[SkillInfo]` |  | 🟨 generated; tests and docs to come |  |
+| 57 | `get_slash_commands` | `await session.slash_commands(…)` | client | ✅ NoArgs | ✅ `list[SlashCommand]` |  | 🟨 generated; tests and docs to come |  |
+| 58 | `get_output_styles` | `await session.output_styles(…)` | client | ✅ NoArgs | ✅ `OutputStylesResult` |  | 🟨 generated; tests and docs to come |  |
+| 59 | `dispatch_visualization_action` | `session.visualization_action(…)` → `Call` | client | ✅ VisualizationActionArgs | ✅ `VisualizationActionResult` | yes | 🟨 generated; tests and docs to come | followed: `visualization_action_dispatched` by session, action and params |
 
 ### Hooks
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 60 | `get_hooks_details` | `igni.hooks.list()` | ❌ raw dict | ✅ list[HookEntryView] | ⬜ todo |  |
-| 61 | `reload_hooks` | `igni.hooks.reload()` | ❌ raw dict | ❌ Any | ⬜ todo | result is Any in igni-core |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 60 | `get_hooks_details` | `await session.hooks.list(…)` | client | ✅ NoArgs | ✅ `list[HookEntryView]` |  | 🟨 generated; tests and docs to come |  |
+| 61 | `reload_hooks` | `await session.hooks.reload(…)` | client | ✅ NoArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
 
 ### Scheduler
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 62 | `start_scheduler` | `igni.scheduler.start()` | ❌ raw dict | ✅ None | ⬜ todo |  |
-| 63 | `execute_scheduled_task` | `igni.scheduler.schedule(description) → follows task events` | ❌ raw dict | ❌ Any | ⬜ todo | args and result untyped in igni-core; streaming |
-| 64 | `cancel_scheduled_task` | `igni.scheduler.cancel(task_id)` | ❌ raw dict | ❌ Any | ⬜ todo | args and result untyped in igni-core |
-| 65 | `get_scheduled_tasks` | `igni.scheduler.list(include_done=…)` | ❌ raw dict | ❌ Any | ⬜ todo | args and result untyped in igni-core |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 62 | `start_scheduler` | `session.scheduler.start(…)` → `Call` | client | ✅ NoArgs | ✅ `None` | yes | 🟨 generated; tests and docs to come | followed: `scheduler_*` by session |
+| 63 | `execute_scheduled_task` | `await session.scheduler.execute(…)` | client | ✅ ExecuteScheduledTaskArgs | ✅ `str` | yes | 🟨 generated; tests and docs to come | not followed: what the task's tools push carries nothing that says which run it came from |
+| 64 | `cancel_scheduled_task` | `await session.scheduler.cancel(…)` | client | ✅ ScheduledTaskArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 65 | `get_scheduled_tasks` | `await session.scheduler.list(…)` | client | ✅ ScheduledTasksArgs | ✅ `list[ScheduledTask]` |  | 🟨 generated; tests and docs to come |  |
 
 ### Workflows
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 66 | `list_workflows` | `igni.workflows.list()` | ❌ raw dict | ✅ list[WorkflowListItem] | ⬜ todo |  |
-| 67 | `run_workflow` | `igni.workflows.run(name) → follows its events` | ❌ raw dict | ✅ WorkflowRunResponse | ⬜ todo | streaming |
-| 68 | `cancel_workflow` | `igni.workflows.cancel(id)` | ❌ raw dict | ✅ WorkflowCancelResponse | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 66 | `list_workflows` | `await session.workflows.list(…)` | client | ✅ WorkflowListRequest | ✅ `list[WorkflowListItem]` |  | 🟨 generated; tests and docs to come |  |
+| 67 | `run_workflow` | `session.workflows.run(…)` → `Call` | client | ✅ WorkflowRunRequest | ✅ `WorkflowRunResponse` | yes | 🟨 generated; tests and docs to come | followed: `workflow_event` by the answer's `workflow_run_id` |
+| 68 | `cancel_workflow` | `session.workflows.cancel(…)` → `Call` | client | ✅ WorkflowCancelRequest | ✅ `WorkflowCancelResponse` | yes | 🟨 generated; tests and docs to come | followed: `workflow_event` by `workflow_run_id` |
 
 ### MCP
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 69 | `ensure_mcp` | `igni.mcp.ensure()` | ❌ raw dict | ✅ McpInitResult | ⬜ todo |  |
-| 70 | `get_mcp_status` | `igni.mcp.status()` | ❌ raw dict | ✅ list[McpServerStatus] | ⬜ todo |  |
-| 71 | `get_mcp_servers` | `igni.mcp.servers()` | ❌ raw dict | ✅ list[MCPServerSummary] | ⬜ todo |  |
-| 72 | `get_mcp_server_details` | `igni.mcp.server_details()` | ❌ raw dict | ✅ list[MCPServerSnapshot] | ⬜ todo |  |
-| 73 | `mcp_connect` | `igni.mcp.connect(name)` | ✅ McpServerArgs | ✅ msg.Info | ⬜ todo |  |
-| 74 | `mcp_disconnect` | `igni.mcp.disconnect(name)` | ✅ McpServerArgs | ✅ msg.Info | ⬜ todo |  |
-| 75 | `set_mcp_tool_enabled` | `igni.mcp.set_tool_enabled(server, tool, on)` | ✅ McpToolEnabledArgs | ✅ MCPToolToggleResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 69 | `ensure_mcp` | `await session.mcp.ensure(…)` | client | ✅ NoArgs | ✅ `McpInitResult` |  | 🟨 generated; tests and docs to come |  |
+| 70 | `get_mcp_status` | `await session.mcp.status(…)` | client | ✅ NoArgs | ✅ `list[McpServerStatus]` |  | 🟨 generated; tests and docs to come |  |
+| 71 | `get_mcp_servers` | `await session.mcp.servers(…)` | client | ✅ NoArgs | ✅ `list[McpServerSummary]` |  | 🟨 generated; tests and docs to come |  |
+| 72 | `get_mcp_server_details` | `await session.mcp.server_details(…)` | client | ✅ NoArgs | ✅ `list[McpServerSnapshot]` |  | 🟨 generated; tests and docs to come |  |
+| 73 | `mcp_connect` | `await session.mcp.connect(…)` | client | ✅ McpServerArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 74 | `mcp_disconnect` | `await session.mcp.disconnect(…)` | client | ✅ McpServerArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 75 | `set_mcp_tool_enabled` | `await session.mcp.set_tool_enabled(…)` | client | ✅ McpToolEnabledArgs | ✅ `McpToolToggleResult` |  | 🟨 generated; tests and docs to come |  |
 
 ### Plugins
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 76 | `get_plugin_details` | `igni.plugins.list()` | ❌ raw dict | ✅ list[PluginInfo] | ⬜ todo |  |
-| 77 | `get_plugin_contents` | `igni.plugins.contents(name)` | ✅ PluginNameArgs | ✅ PluginContents | ⬜ todo |  |
-| 78 | `preview_plugin` | `igni.plugins.preview(source)` | ✅ PreviewPluginArgs | ✅ PluginContents | ⬜ todo |  |
-| 79 | `install_plugin` | `igni.plugins.install(name)` | ✅ InstallPluginArgs | ✅ msg.Info | ⬜ todo |  |
-| 80 | `update_plugin` | `igni.plugins.update(name)` | ✅ UpdatePluginArgs | ✅ msg.Info | ⬜ todo |  |
-| 81 | `remove_plugin` | `igni.plugins.remove(name)` | ✅ PluginNameArgs | ✅ msg.Info | ⬜ todo |  |
-| 82 | `set_plugin_enabled` | `igni.plugins.set_enabled(name, on)` | ✅ PluginEnabledArgs | ✅ msg.Info | ⬜ todo |  |
-| 83 | `get_marketplaces` | `igni.marketplaces.list()` | ❌ raw dict | ✅ list[MarketplaceInfo] | ⬜ todo |  |
-| 84 | `add_marketplace` | `igni.marketplaces.add(source)` | ✅ MarketplaceUrlArgs | ✅ msg.Info | ⬜ todo |  |
-| 85 | `remove_marketplace` | `igni.marketplaces.remove(name)` | ✅ MarketplaceNameArgs | ✅ msg.Info | ⬜ todo |  |
-| 86 | `refresh_marketplaces` | `igni.marketplaces.refresh()` | ✅ RefreshMarketplacesArgs | ✅ msg.Info | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 76 | `get_plugin_details` | `await session.plugins.list(…)` | client | ✅ NoArgs | ✅ `list[PluginInfo]` |  | 🟨 generated; tests and docs to come |  |
+| 77 | `get_plugin_contents` | `await session.plugins.contents(…)` | client | ✅ PluginNameArgs | ✅ `PluginContents` |  | 🟨 generated; tests and docs to come |  |
+| 78 | `preview_plugin` | `await session.plugins.preview(…)` | client | ✅ PreviewPluginArgs | ✅ `PluginContents` |  | 🟨 generated; tests and docs to come |  |
+| 79 | `install_plugin` | `await session.plugins.install(…)` | window | ✅ InstallPluginArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 80 | `update_plugin` | `await session.plugins.update(…)` | window | ✅ UpdatePluginArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 81 | `remove_plugin` | `await session.plugins.remove(…)` | window | ✅ PluginNameArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 82 | `set_plugin_enabled` | `await session.plugins.set_enabled(…)` | window | ✅ PluginEnabledArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 83 | `get_marketplaces` | `await igni.marketplaces.list(…)` | client | ✅ NoArgs | ✅ `list[MarketplaceInfo]` |  | 🟨 generated; tests and docs to come |  |
+| 84 | `add_marketplace` | `await igni.marketplaces.add(…)` | window | ✅ MarketplaceUrlArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 85 | `remove_marketplace` | `await igni.marketplaces.remove(…)` | window | ✅ MarketplaceNameArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
+| 86 | `refresh_marketplaces` | `await igni.marketplaces.refresh(…)` | client | ✅ RefreshMarketplacesArgs | ✅ `InfoMessage` |  | 🟨 generated; tests and docs to come |  |
 
 ### Extensions
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 87 | `list_extensions` | `igni.extensions.list()` | ❌ raw dict | ✅ ExtensionListResult | ⬜ todo |  |
-| 88 | `set_extension_settings` | `igni.extensions.set_settings(id, settings)` | ✅ SetExtensionSettingsArgs | ✅ ExtensionListResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 87 | `list_extensions` | `await igni.extensions.list(…)` | client | ✅ NoArgs | ✅ `ExtensionListResult` |  | 🟨 generated; tests and docs to come |  |
+| 88 | `set_extension_settings` | `await igni.extensions.set_settings(…)` | window | ✅ SetExtensionSettingsArgs | ✅ `ExtensionListResult` |  | 🟨 generated; tests and docs to come |  |
 
 ### Notifications
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 89 | `notifications_list` | `igni.notifications.list()` | ❌ raw dict | ✅ NotificationsListResult | ⬜ todo |  |
-| 90 | `notifications_counts` | `igni.notifications.counts()` | ❌ raw dict | ✅ NotificationCounts | ⬜ todo |  |
-| 91 | `notifications_mark_read` | `igni.notifications.mark_read(ids)` | ✅ MarkReadArgs | ✅ NotificationsReadResult | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 89 | `notifications_list` | `await igni.notifications.list(…)` | client | ✅ NoArgs | ✅ `NotificationsListResult` | yes | 🟨 generated; tests and docs to come | not followed: the `notifications_changed` push repeats the counts the answer carries |
+| 90 | `notifications_counts` | `await igni.notifications.counts(…)` | client | ✅ NoArgs | ✅ `NotificationCounts` |  | 🟨 generated; tests and docs to come |  |
+| 91 | `notifications_mark_read` | `await igni.notifications.mark_read(…)` | client | ✅ MarkReadArgs | ✅ `NotificationsReadResult` | yes | 🟨 generated; tests and docs to come | not followed: the `notifications_changed` push repeats the counts the answer carries |
 
 ### Sign-in & server
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 92 | `login` | `igni.auth.login() → follows the sign-in` | ❌ raw dict | ✅ LoginStarted | ⬜ todo | streaming |
-| 93 | `discover_server` | `igni.auth.discover_server(url)` | ✅ DiscoverServerArgs | ✅ ServerFound | ⬜ todo |  |
-| 94 | `set_server` | `igni.auth.set_server(url)` | ✅ SetServerArgs | ✅ ServerChoice | ⬜ todo |  |
-| 95 | `reload_cloud_credentials` | `igni.auth.reload_credentials()` | ❌ raw dict | ✅ msg.StatusUpdate | ⬜ todo |  |
-| 96 | `clear_cloud_credentials` | `igni.auth.sign_out()` | ❌ raw dict | ✅ msg.StatusUpdate | ⬜ todo |  |
-| 97 | `check_for_update` | `igni.check_for_update()` | ❌ raw dict | ✅ UpdateAvailable \| None | ⬜ todo |  |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 92 | `login` | `igni.auth.login(…)` → `Call` | window | ✅ NoArgs | ✅ `LoginStarted` | yes | 🟨 generated; tests and docs to come | followed: `login_status` to `login_result` |
+| 93 | `discover_server` | `await igni.auth.discover_server(…)` | client | ✅ DiscoverServerArgs | ✅ `ServerFound` |  | 🟨 generated; tests and docs to come |  |
+| 94 | `set_server` | `await igni.auth.set_server(…)` | window | ✅ SetServerArgs | ✅ `ServerChoice` |  | 🟨 generated; tests and docs to come |  |
+| 95 | `reload_cloud_credentials` | `await session.auth.reload_credentials(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` |  | 🟨 generated; tests and docs to come |  |
+| 96 | `clear_cloud_credentials` | `await session.auth.sign_out(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` | yes | 🟨 generated; tests and docs to come | not followed: `notifications_changed` carries the new counts |
+| 97 | `check_for_update` | `await igni.check_for_update(…)` | client | ✅ NoArgs | ✅ `UpdateAvailable | None` |  | 🟨 generated; tests and docs to come |  |
 
 ### Approvals
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 98 | `mint_approver_token` | `igni.approvers.mint_token(...)` | n/a | n/a (pool-level) | ⬜ todo | pool-level; no handler model yet |
-| 99 | `revoke_approver_tokens` | `igni.approvers.revoke_tokens(...)` | n/a | n/a (pool-level) | ⬜ todo | pool-level; no handler model yet |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 98 | `mint_approver_token` | `await igni.approvers.mint_token(…)` | window | ✅ NoArgs | ✅ `ApproverTokenMinted` |  | 🟨 generated; tests and docs to come |  |
+| 99 | `revoke_approver_tokens` | `await igni.approvers.revoke_tokens(…)` | window | ✅ NoArgs | ✅ `ApproverTokensRevoked` |  | 🟨 generated; tests and docs to come |  |
 
 ### Extension pages
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 100 | `host_model` | `—` | n/a | n/a (pool-level) | ⬜ todo | decide: page-only (PAGE_RPCS) |
-| 101 | `window_model` | `—` | n/a | n/a (pool-level) | ⬜ todo | decide: page-only |
-| 102 | `extension_service_token` | `—` | n/a | n/a (pool-level) | ⬜ todo | decide: page-only (PAGE_RPCS) |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 100 | `host_model` | — | page | ✅ PageRequest | ✅ `Reply` | yes | ⛔ not for clients | an extension page's call: igni's window makes it for the page it hosts, setting `caller`, which igni honours from no other connection |
+| 101 | `window_model` | `await igni.window.model(…)` | window | ✅ WindowModelArgs | ✅ `WindowModelResult` | yes | 🟨 generated; tests and docs to come | not followed: a `window_model_changed` push says which window changed and its new revision |
+| 102 | `extension_service_token` | — | page | ✅ NoArgs | ✅ `PageTokenReply` |  | ⛔ not for clients | an extension page's call: it hands the page its service's token, and only igni's window speaks for a page |
 
 ### Platform only
 
-| # | Wire method | SDK call (planned) | Args typed in igni-core | Result typed in igni-core | SDK | Notes |
-|---|---|---|---|---|---|---|
-| 103 | `deliver_service_events` | `— not for clients` | n/a | n/a (pool-level) | ⛔ not for clients | PLATFORM_RPCS: only the platform's control connection |
-| 104 | `vm_sign_in` | `— not for clients` | n/a | n/a (pool-level) | ⛔ not for clients | PLATFORM_RPCS: only the platform's control connection |
+| # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 103 | `deliver_service_events` | — | platform | ✅ ServiceEventsParams | ✅ `ServiceEventsAck` | yes | ⛔ not for clients | the platform's call: Fleet delivers an extension service's events on its own control connection |
+| 104 | `vm_sign_in` | — | platform | ✅ VmSignInParams | ✅ `VmCredentialState` | yes | ⛔ not for clients | the platform's call: Fleet signs a VM's igni in on its control connection |
 
 ## Messages
 
-Every message igni sends to a client has a class on the `refactor/standards`
-branch. Most of the messages a client sends do not yet.
+Every message has a generated class in `igni_client.models`; those igni
+sends are re-exported from `igni_client.events`, those a client sends from
+`igni_client.frames`. `Unknown` is only for a message type newer than this
+igni-client.
 
-| # | Message | Direction | SDK | Notes |
+| # | Message | Direction | SDK class | SDK | Notes |
+|---|---|---|---|---|---|
+| 1 | `cancel` | client → igni | `Cancel` | 🟨 generated; tests and docs to come | typed, not sent: `cancel_run` does the same and answers, so `session.cancel()` calls it |
+| 2 | `cancel_login` | client → igni | `CancelLogin` | 🟨 generated; tests and docs to come | sent by `igni.auth.cancel_login()` |
+| 3 | `command` | client → igni | `Command` | 🟨 generated; tests and docs to come | sent by `session.command()` |
+| 4 | `command_result` | igni → client | `CommandResult` | 🟨 generated; tests and docs to come |  |
+| 5 | `content_delta` | igni → client | `ContentDelta` | 🟨 generated; tests and docs to come |  |
+| 6 | `error` | igni → client | `ErrorMessage` | 🟨 generated; tests and docs to come |  |
+| 7 | `hitl_decision` | client → igni | `HitlDecision` | 🟨 generated; tests and docs to come | sent by a row of `hitl_response_batch` |
+| 8 | `hitl_request` | igni → client | `Requirement` | 🟨 generated; tests and docs to come |  |
+| 9 | `hitl_response` | client → igni | `HitlResponse` | 🟨 generated; tests and docs to come | typed, not sent: answers one call of a pause and leaves the rest refused; `hitl_response_batch` answers every call of it, which is what `ApprovalRequested` sends |
+| 10 | `hitl_response_batch` | client → igni | `HitlResponseBatch` | 🟨 generated; tests and docs to come | sent by `ApprovalRequested.approve()`, `.reject()` and `.decide()` |
+| 11 | `info` | igni → client | `InfoMessage` | 🟨 generated; tests and docs to come |  |
+| 12 | `mcp_toggle` | client → igni | `McpToggle` | 🟨 generated; tests and docs to come | typed, not sent: the methods `mcp_connect` and `mcp_disconnect` do the same, so `session.mcp.connect()` and `.disconnect()` call them |
+| 13 | `model_completed` | igni → client | `ModelCompleted` | 🟨 generated; tests and docs to come |  |
+| 14 | `model_switch` | client → igni | `ModelSwitch` | 🟨 generated; tests and docs to come | typed, not sent: the method `switch_model` does the same, so `session.models.switch()` calls it |
+| 15 | `push_notification` | igni → client | `PushNotification` | 🟨 generated; tests and docs to come |  |
+| 16 | `queue_message` | client → igni | `QueueMessage` | 🟨 generated; tests and docs to come | sent by `session.queue()` |
+| 17 | `reasoning_started` | igni → client | `ReasoningStarted` | 🟨 generated; tests and docs to come |  |
+| 18 | `requirement_details` | igni → client | `RequirementDetails` | 🟨 generated; tests and docs to come |  |
+| 19 | `requirement_resolved` | igni → client | `RequirementResolved` | 🟨 generated; tests and docs to come |  |
+| 20 | `rpc_request` | client → igni | `RpcRequest` | 🟨 generated; tests and docs to come | sent by every generated method |
+| 21 | `rpc_response` | igni → client | `RpcResponse` | 🟨 generated; tests and docs to come |  |
+| 22 | `run_completed` | igni → client | `RunCompleted` | 🟨 generated; tests and docs to come |  |
+| 23 | `run_error` | igni → client | `RunError` | 🟨 generated; tests and docs to come |  |
+| 24 | `run_paused` | igni → client | `RunPaused` | 🟨 generated; tests and docs to come |  |
+| 25 | `run_started` | igni → client | `RunStarted` | 🟨 generated; tests and docs to come |  |
+| 26 | `scheduler_event` | igni → client | `SchedulerEvent` | 🟨 generated; tests and docs to come |  |
+| 27 | `session_cleared` | igni → client | `SessionCleared` | 🟨 generated; tests and docs to come |  |
+| 28 | `session_list` | client → igni | `SessionList` | 🟨 generated; tests and docs to come | typed, not sent: the method `list_sessions` answers the same, so `session.list_sessions()` calls it |
+| 29 | `session_list_result` | igni → client | `SessionListResult` | 🟨 generated; tests and docs to come |  |
+| 30 | `session_switch` | client → igni | `SessionSwitch` | 🟨 generated; tests and docs to come | typed, not sent: the method `switch_session` does the same, so `session.switch()` calls it |
+| 31 | `shutdown` | client → igni | `Shutdown` | 🟨 generated; tests and docs to come | typed, not sent: stops igni itself, for every window and program attached; no client of a person's igni should, and `session.shutdown()` winds one session down instead |
+| 32 | `status_update` | igni → client | `StatusUpdate` | 🟨 generated; tests and docs to come |  |
+| 33 | `stream_end` | igni → client | `StreamEnd` | 🟨 generated; tests and docs to come |  |
+| 34 | `streaming_done` | igni → client | `StreamingDone` | 🟨 generated; tests and docs to come |  |
+| 35 | `task_created` | igni → client | `TaskCreated` | 🟨 generated; tests and docs to come |  |
+| 36 | `task_iteration` | igni → client | `TaskIteration` | 🟨 generated; tests and docs to come |  |
+| 37 | `task_state_updated` | igni → client | `TaskStateUpdated` | 🟨 generated; tests and docs to come |  |
+| 38 | `task_updated` | igni → client | `TaskUpdated` | 🟨 generated; tests and docs to come |  |
+| 39 | `tool_completed` | igni → client | `ToolCompleted` | 🟨 generated; tests and docs to come |  |
+| 40 | `tool_error` | igni → client | `ToolError` | 🟨 generated; tests and docs to come |  |
+| 41 | `tool_started` | igni → client | `ToolStarted` | 🟨 generated; tests and docs to come |  |
+| 42 | `typing` | both | `Typing` | 🟨 generated; tests and docs to come | sent by `session.typing()` |
+| 43 | `user_message` | client → igni | `UserMessage` | 🟨 generated; tests and docs to come | sent by `session.send()` and `session.ask()` |
+| 44 | `user_message_received` | igni → client | `UserMessageReceived` | 🟨 generated; tests and docs to come |  |
+| 45 | `welcome` | igni → client | `Welcome` | 🟨 generated; tests and docs to come |  |
+
+## Push channels
+
+A push notification on a channel the contract types parses into that
+channel's class, a `PushNotification` whose `payload` is typed.
+
+| # | Channel | SDK class | Payload | SDK |
 |---|---|---|---|---|
-| 1 | `cancel` | client → igni | 🟨 typed, to re-check |  |
-| 2 | `cancel_login` | client → igni | ⬜ todo |  |
-| 3 | `command` | client → igni | ⬜ todo |  |
-| 4 | `command_result` | igni → client | 🟨 typed, to re-check |  |
-| 5 | `content_delta` | igni → client | 🟨 typed, to re-check |  |
-| 6 | `error` | igni → client | 🟨 typed, to re-check |  |
-| 7 | `hitl_decision` | client → igni | 🟨 typed, to re-check |  |
-| 8 | `hitl_request` | igni → client | 🟨 typed, to re-check |  |
-| 9 | `hitl_response` | client → igni | ⬜ todo |  |
-| 10 | `hitl_response_batch` | client → igni | 🟨 typed, to re-check |  |
-| 11 | `info` | igni → client | 🟨 typed, to re-check |  |
-| 12 | `mcp_toggle` | client → igni | ⬜ todo |  |
-| 13 | `model_completed` | igni → client | 🟨 typed, to re-check |  |
-| 14 | `model_switch` | client → igni | ⬜ todo |  |
-| 15 | `push_notification` | igni → client | 🟨 typed, to re-check |  |
-| 16 | `queue_message` | client → igni | 🟨 typed, to re-check |  |
-| 17 | `reasoning_started` | igni → client | 🟨 typed, to re-check |  |
-| 18 | `requirement_details` | igni → client | 🟨 typed, to re-check |  |
-| 19 | `requirement_resolved` | igni → client | 🟨 typed, to re-check |  |
-| 20 | `rpc_request` | client → igni | 🟨 typed, to re-check | replaced by the typed methods above |
-| 21 | `rpc_response` | igni → client | 🟨 typed, to re-check | answer of every method above |
-| 22 | `run_completed` | igni → client | 🟨 typed, to re-check |  |
-| 23 | `run_error` | igni → client | 🟨 typed, to re-check |  |
-| 24 | `run_paused` | igni → client | 🟨 typed, to re-check |  |
-| 25 | `run_started` | igni → client | 🟨 typed, to re-check |  |
-| 26 | `scheduler_event` | igni → client | 🟨 typed, to re-check |  |
-| 27 | `session_cleared` | igni → client | 🟨 typed, to re-check |  |
-| 28 | `session_list` | client → igni | ⬜ todo |  |
-| 29 | `session_list_result` | igni → client | 🟨 typed, to re-check |  |
-| 30 | `session_switch` | client → igni | ⬜ todo |  |
-| 31 | `shutdown` | client → igni | ⬜ todo |  |
-| 32 | `status_update` | igni → client | 🟨 typed, to re-check |  |
-| 33 | `stream_end` | client → igni | 🟨 typed, to re-check |  |
-| 34 | `streaming_done` | igni → client | 🟨 typed, to re-check |  |
-| 35 | `task_created` | igni → client | 🟨 typed, to re-check |  |
-| 36 | `task_iteration` | igni → client | 🟨 typed, to re-check |  |
-| 37 | `task_state_updated` | igni → client | 🟨 typed, to re-check |  |
-| 38 | `task_updated` | igni → client | 🟨 typed, to re-check |  |
-| 39 | `tool_completed` | igni → client | 🟨 typed, to re-check |  |
-| 40 | `tool_error` | igni → client | 🟨 typed, to re-check |  |
-| 41 | `tool_started` | igni → client | 🟨 typed, to re-check |  |
-| 42 | `typing` | igni → client | 🟨 typed, to re-check |  |
-| 43 | `user_message` | client → igni | 🟨 typed, to re-check |  |
-| 44 | `user_message_received` | igni → client | 🟨 typed, to re-check |  |
-| 45 | `welcome` | igni → client | 🟨 typed, to re-check |  |
+| 1 | `background_process_done` | `BackgroundProcessDonePush` | `BackgroundProcessDonePayload` | 🟨 generated; tests and docs to come |
+| 2 | `file_edited` | `FileEditedPush` | `FileEditedPayload` | 🟨 generated; tests and docs to come |
+| 3 | `host_signal` | `HostSignalPush` | `HostSignal` | 🟨 generated; tests and docs to come |
+| 4 | `http_retry_attempt` | `HttpRetryAttemptPush` | `HttpRetryAttemptPayload` | 🟨 generated; tests and docs to come |
+| 5 | `http_retry_succeeded` | `HttpRetrySucceededPush` | `HttpRetrySucceededPayload` | 🟨 generated; tests and docs to come |
+| 6 | `login_result` | `LoginResultPush` | `LoginResultPayload` | 🟨 generated; tests and docs to come |
+| 7 | `login_status` | `LoginStatusPush` | `LoginStatusPayload` | 🟨 generated; tests and docs to come |
+| 8 | `notifications_changed` | `NotificationsChangedPush` | `NotificationsChanged` | 🟨 generated; tests and docs to come |
+| 9 | `open_external` | `OpenExternalPush` | `ExternalOpen` | 🟨 generated; tests and docs to come |
+| 10 | `orchestrate_event` | `OrchestrateEventPush` | `OrchestrateEvent` | 🟨 generated; tests and docs to come |
+| 11 | `output_style_changed` | `OutputStyleChangedPush` | `OutputStyleChangedPayload` | 🟨 generated; tests and docs to come |
+| 12 | `permission_mode_changed` | `PermissionModeChangedPush` | `PermissionModeChange` | 🟨 generated; tests and docs to come |
+| 13 | `plan_decided` | `PlanDecidedPush` | `PlanDecidedPayload` | 🟨 generated; tests and docs to come |
+| 14 | `plan_submitted` | `PlanSubmittedPush` | `PlanSubmittedPayload` | 🟨 generated; tests and docs to come |
+| 15 | `process_exited` | `ProcessExitedPush` | `ProcessExitedPayload` | 🟨 generated; tests and docs to come |
+| 16 | `process_line` | `ProcessLinePush` | `ProcessLinePayload` | 🟨 generated; tests and docs to come |
+| 17 | `process_started` | `ProcessStartedPush` | `ProcessStartedPayload` | 🟨 generated; tests and docs to come |
+| 18 | `scheduler_completed` | `SchedulerCompletedPush` | `SchedulerCompletedPayload` | 🟨 generated; tests and docs to come |
+| 19 | `scheduler_started` | `SchedulerStartedPush` | `SchedulerStartedPayload` | 🟨 generated; tests and docs to come |
+| 20 | `session_named` | `SessionNamedPush` | `SessionNamedPayload` | 🟨 generated; tests and docs to come |
+| 21 | `todos_updated` | `TodosUpdatedPush` | `TodosUpdatedPayload` | 🟨 generated; tests and docs to come |
+| 22 | `visualization_action_dispatched` | `VisualizationActionDispatchedPush` | `VisualizationActionDispatchedPayload` | 🟨 generated; tests and docs to come |
+| 23 | `vm_credential` | `VmCredentialPush` | `VmCredentialState` | 🟨 generated; tests and docs to come |
+| 24 | `window_model_changed` | `WindowModelChangedPush` | `WindowChange` | 🟨 generated; tests and docs to come |
+| 25 | `workflow_event` | `WorkflowEventPush` | `WorkflowEventRecord` | 🟨 generated; tests and docs to come |
+| 26 | `workspace_trust_required` | `WorkspaceTrustRequiredPush` | `WorkspaceTrustStatus` | 🟨 generated; tests and docs to come |
 
 ## PyPI documentation
 
 | Package | Status | What "done" means |
 |---|---|---|
-| `igni-client` | ⬜ todo | Every area and method above: what it does, its arguments, its result, its errors, and an example. Streaming, approvals, events, reconnects, and Fleet vs local, each with a worked example. |
+| `igni-client` | 🟨 its API reference is generated from the contract; the rest is to be rewritten | Every area and method above: what it does, its arguments, its result, its errors, and an example. Streaming, approvals, events, reconnects, and Fleet vs local, each with a worked example. |
 | `igni-service` | ✅ written (branch `docs/pypi-reference`, 2,591 lines; its examples run as tests); on PyPI from 0.1.1 | The plain opening (PR #18), then every capability documented in depth. |
 | `igni-extension` | ✅ written (branch `docs/pypi-reference`, 1,739 lines; its examples run as tests); on PyPI from 0.1.1 | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |

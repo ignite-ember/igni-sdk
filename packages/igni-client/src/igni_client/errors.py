@@ -44,12 +44,65 @@ class NotSupported(IgniClientError):
 
 
 class RpcError(IgniClientError):
-    """A call igni answered with an error."""
+    """A call igni answered with an error, or whose answer could not be read.
+
+    `method` is the wire method, `message` what igni said. igni answers an
+    error as a sentence; `RpcError.of` reads which kind it is, and each kind
+    is a subclass a caller can catch on its own.
+    """
 
     def __init__(self, method: str, message: str) -> None:
         super().__init__(f"{method}: {message}")
         self.method = method
         self.message = message
+
+    @staticmethod
+    def of(method: str, message: str) -> RpcError:
+        """The kind of error igni's `message` for `method` is."""
+        if any(marker in message for marker in _REFUSALS):
+            return AccessRefused(method, message)
+        if message.startswith("Unknown RPC method"):
+            return UnknownMethod(method, message)
+        if message.endswith("is a required argument") or message.startswith(f"{method}: '"):
+            return InvalidArguments(method, message)
+        return MethodFailed(method, message)
+
+
+class AccessRefused(RpcError, NotAllowed):
+    """igni refused the call from this connection: it is igni's window's, or an approver's.
+
+    A program attached with the lockfile's token may run sessions but not
+    decide for the person; an approver token (`Local(approver_token=...)`)
+    answers approvals, and only igni's own window loosens a rule. Raised
+    without asking igni when the connection is known not to reach the
+    method (`igni_client.access`).
+    """
+
+
+class UnknownMethod(RpcError):
+    """igni does not have the method: it is older than this igni-client."""
+
+
+class InvalidArguments(RpcError, ValueError):
+    """The arguments are not what the method takes — refused before sending, or by igni."""
+
+
+class UnexpectedAnswer(RpcError):
+    """igni's answer is not what the method returns: igni and this igni-client disagree."""
+
+
+class MethodFailed(RpcError):
+    """The method ran and failed; `message` is igni's reason."""
+
+
+#: What igni says when it refuses a call for the connection it came on
+#: (igni-core's `backend/standing_policy.py` and `message_admission.py`).
+_REFUSALS = (
+    "only igni's window",
+    "a program answers approval requests only with an approver token",
+    "only on the platform's control connection",
+    "an approver answers once",
+)
 
 
 class RunFailed(IgniClientError):

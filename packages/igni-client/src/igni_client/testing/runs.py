@@ -6,14 +6,18 @@ import asyncio
 
 from pydantic import BaseModel
 
-from igni_client.events import (
+from igni_client.models import (
+    Cancel,
+    HitlDecision,
+    HitlResponseBatch,
     InfoMessage,
+    QueueMessage,
     RequirementResolved,
     RunPaused,
     StreamEnd,
+    UserMessage,
     UserMessageReceived,
 )
-from igni_client.frames import Cancel, HitlDecision, HitlResponseBatch, QueueMessage, UserMessage
 from igni_client.testing.server import FakeSocket
 from igni_client.testing.steps import Delay, Pause, Script, Step, Steps
 

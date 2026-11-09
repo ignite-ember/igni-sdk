@@ -7,14 +7,14 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from igni_client.events import (
+from igni_client.models import (
     ContentDelta,
-    Event,
     Requirement,
     RunCompleted,
     RunStarted,
     ToolCompleted,
 )
+from igni_client.wire import Event
 
 
 class Pause(BaseModel):
@@ -64,6 +64,7 @@ class Steps:
                     tool_name=tool_name,
                     friendly_name=tool_name.replace("_", " "),
                     tool_args=tool_args,
+                    agent_path=[],
                 )
             ]
         )

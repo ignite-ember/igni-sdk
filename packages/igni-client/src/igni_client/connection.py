@@ -25,12 +25,13 @@ import contextlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar, overload
+from typing import Any
 
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import WebSocketException
 
+from igni_client.api import NOT_FOR_CLIENTS
 from igni_client.backoff import Backoff
 from igni_client.errors import (
     AuthError,
@@ -40,19 +41,23 @@ from igni_client.errors import (
     RunInterrupted,
     Unavailable,
 )
-from igni_client.events import Event, RpcResponse, Welcome, parse_event
-from igni_client.frames import REFUSED_METHODS, Frame, RpcRequest
+from igni_client.events import parse_event
 from igni_client.lifecycle import Lifecycle, Link
+from igni_client.models import RpcRequest, RpcResponse, Welcome
 from igni_client.routing import Router
 from igni_client.targets import Target
+from igni_client.wire import Event, to_wire
 
 #: Re-exported: igni-core's protocol test reads it from here.
 __all__ = ["REFUSED_METHODS", "Connection"]
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
-E = TypeVar("E", bound=Event)
+#: igni's methods a client never sends: an extension page's and the platform's.
+REFUSED_METHODS: frozenset[str] = frozenset(NOT_FOR_CLIENTS)
+
+#: `Connection.ask`'s timeout when none is given: `Connection.RPC_TIMEOUT`.
+DEFAULT_TIMEOUT = -1.0
 
 #: What an igni in a VM answers before Fleet has bound it to its producer.
 UNBOUND = "igni is not bound to a producer yet; retry shortly"
@@ -145,104 +150,63 @@ class Connection:
 
     # ── Sending ──
 
-    async def send(self, frame: Frame) -> None:
+    async def send(self, frame: BaseModel) -> None:
         """Send one message, waiting for the socket if it is being opened again."""
         socket = await self._lifecycle.socket(self.WELCOME_TIMEOUT, self.target.describe())
         try:
-            await socket.send(frame.wire())
+            await socket.send(to_wire(frame))
         except (OSError, WebSocketException) as exc:
             raise Unavailable(f"{self.target.describe()} went away: {exc}") from exc
 
     async def ask(
-        self, method: str, args: dict[str, Any] | None = None, *, session_id: str = ""
+        self,
+        method: str,
+        args: dict[str, Any] | None = None,
+        *,
+        session_id: str = "",
+        timeout: float | None = DEFAULT_TIMEOUT,
     ) -> Event:
         """Call `method` with `args` and return igni's answer as it came.
 
-        The answer is usually an `RpcResponse` (whose error raises
-        `RpcError` here), but some methods answer with a message of their
-        own — `list_sessions` with a `SessionListResult` — and that message
-        is returned as it is.
+        The answer is usually an `RpcResponse` (whose error raises the
+        `RpcError` it is here), but some methods answer with a message of
+        their own — `get_status` with a `StatusUpdate` — and that message is
+        returned as it is. `timeout` is how long to wait for it — `None`
+        for as long as it takes, `RPC_TIMEOUT` when left out.
         """
+        if method in REFUSED_METHODS:
+            raise ValueError(f"{method} is not a client's to send")
+        wait = self.RPC_TIMEOUT if timeout == DEFAULT_TIMEOUT else timeout
         for _ in range(self.UNBOUND_RETRIES):
-            reply = await self._call(method, args or {}, session_id)
+            request_id = self.router.new_id("rpc")
+            envelope = {"session_id": session_id} if session_id else {}
+            request = RpcRequest.model_validate(
+                {"id": request_id, "method": method, "args": args or {}, **envelope}
+            )
+            reply = await self._exchange(request, request_id, method, wait)
             if isinstance(reply, RpcResponse) and reply.error:
                 if reply.error == UNBOUND:
                     await asyncio.sleep(self.UNBOUND_RETRY_SECONDS)
                     continue
-                raise RpcError(method, reply.error)
+                raise RpcError.of(method, reply.error)
             return reply
         raise Unavailable(f"{self.target.describe()} was not bound to its producer in time")
 
-    @overload
-    async def rpc(
-        self,
-        method: str,
-        answer: type[E],
-        params: BaseModel | None = None,
-        *,
-        session_id: str = "",
-    ) -> E: ...
+    async def exchange(self, frame: BaseModel, request_id: str, what: str) -> Event:
+        """Send `frame` and return the first message igni answers it with, by `request_id`."""
+        return await self._exchange(frame, request_id, what, self.RPC_TIMEOUT)
 
-    @overload
-    async def rpc(
-        self,
-        method: str,
-        answer: TypeAdapter[T],
-        params: BaseModel | None = None,
-        *,
-        session_id: str = "",
-    ) -> T: ...
-
-    async def rpc(
-        self,
-        method: str,
-        answer: type[Event] | TypeAdapter[Any],
-        params: BaseModel | None = None,
-        *,
-        session_id: str = "",
-    ) -> Any:
-        """Call one of the methods this client calls itself, and read its answer as `answer`.
-
-        `answer` is either the message the method answers with instead of
-        an `RpcResponse` (`list_sessions` answers with a
-        `SessionListResult`), or a `TypeAdapter` its `RpcResponse` result
-        is read with. Any other answer raises `RpcError`. A field of
-        `params` left `None` is left out.
-        """
-        args = params.model_dump(mode="json", exclude_none=True) if params else {}
-        reply = await self.ask(method, args, session_id=session_id)
-        if isinstance(answer, TypeAdapter):
-            if not isinstance(reply, RpcResponse):
-                raise RpcError(method, f"igni answered with {reply.type}")
-            try:
-                return answer.validate_python(reply.result)
-            except ValidationError as exc:
-                raise RpcError(
-                    method, f"igni's answer is not what the method returns: {exc}"
-                ) from exc
-        if isinstance(reply, answer):
-            return reply
-        raise RpcError(method, f"igni answered with {reply.type}")
-
-    @staticmethod
-    def result(reply: Event) -> Any:
-        """An `RpcResponse`'s result, or the message a method answered with instead."""
-        return reply.result if isinstance(reply, RpcResponse) else reply
-
-    async def _call(self, method: str, args: dict[str, Any], session_id: str) -> Event:
-        RpcRequest.check_sendable(method)
-        # `args` as given, as 0.1.0 sent them: `json.dumps` reads them on the way out.
-        request = RpcRequest.model_construct(
-            id=self.router.new_id("rpc"), method=method, args=args, session_id=session_id or None
-        )
-        answer = self.router.expect(request.id)
+    async def _exchange(
+        self, frame: BaseModel, request_id: str, what: str, timeout: float | None
+    ) -> Event:
+        answer = self.router.expect(request_id)
         try:
-            await self.send(request)
-            return await asyncio.wait_for(answer, self.RPC_TIMEOUT)
+            await self.send(frame)
+            return await asyncio.wait_for(answer, timeout)
         except TimeoutError as exc:
-            raise Unavailable(f"{method} got no answer from {self.target.describe()}") from exc
+            raise Unavailable(f"{what} got no answer from {self.target.describe()}") from exc
         finally:
-            self.router.forget(request.id)
+            self.router.forget(request_id)
 
     # ── Reading ──
 

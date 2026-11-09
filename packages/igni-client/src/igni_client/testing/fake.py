@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import httpx
 
 from igni_client.auth.tokens import TokenSource
-from igni_client.frames import Cancel, HitlResponseBatch, QueueMessage, RpcRequest, UserMessage
+from igni_client.models import (
+    Cancel,
+    CancelLogin,
+    Command,
+    CommandResult,
+    HitlResponseBatch,
+    QueueMessage,
+    RpcRequest,
+    Typing,
+    UserMessage,
+)
 from igni_client.targets import Fleet, Local
 from igni_client.testing.gateway import CONNECT_PATH, FakeGateway
 from igni_client.testing.inbound import ClientFrame
@@ -31,6 +43,12 @@ class FakeIgni:
         )
         self.methods = FakeMethods()
         self.runs = FakeRuns(self.socket)
+        #: How a slash command is answered: a function of its text.
+        self.commands: Callable[[str], CommandResult] = lambda text: CommandResult(
+            kind="info", content=f"ran {text}"
+        )
+        #: How many times a sign-in was cancelled (`cancel_login`).
+        self.logins_cancelled = 0
 
     async def start(self) -> FakeIgni:
         await self.socket.start()
@@ -58,8 +76,20 @@ class FakeIgni:
 
     async def _handle(self, frame: ClientFrame) -> None:
         match frame:
+            case RpcRequest(method="cancel_run") if "cancel_run" not in self.methods.answers:
+                await self.socket.broadcast(FakeMethods.reply(frame, None))
+                await self.runs.cancel(Cancel(session_id=frame.session_id))
             case RpcRequest():
                 await self.socket.broadcast(await self.methods.answer(frame))
+            case Command():
+                answer = self.commands(frame.text)
+                await self.socket.broadcast(
+                    answer.model_copy(update={"id": frame.id, "session_id": frame.session_id})
+                )
+            case Typing():
+                await self.socket.broadcast(frame)
+            case CancelLogin():
+                self.logins_cancelled += 1
             case UserMessage():
                 await self.runs.prompt(frame)
             case HitlResponseBatch():
