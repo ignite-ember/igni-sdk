@@ -1,13 +1,45 @@
 # igni-service
 
-What a service needs to be part of an igni deployment, behind one object.
-Its own key, its registration, people's tokens, the directory,
-notifications, erasure and export, sign-in to its own pages, and the
-extension it ships — without a single igni address, token request or
-signature in the service's code.
+**The Python SDK for an extension's backend service.**
+
+An igni extension usually comes in two parts:
+
+- **The extension itself** runs inside igni, on each person's device or in
+  their Fleet VM: a page in the igni app, and a process that gives the
+  agent tools. It is built with `igni-extension`, and its page with
+  `@ignite-ember/extension-bridge`.
+- **Its backend service** is your web service. It runs once, in the
+  organisation's cloud or data centre, and keeps what is shared between
+  people: comments, tickets, documents. It is built with this package.
+
+The extension's process and its page call the backend service **as the
+person signed in to igni**. The service never signs anyone in itself: one
+line (`Depends(igni.person)`) tells it who is calling.
+
+What this package does for the service:
+
+- **Joins it to igni.** It creates the service's key and registers it with
+  igni server. An igni super admin approves it once, in igni's portal.
+- **Ships the extension.** It uploads the extension bundle. Once an org
+  admin switches the extension on for a group, every igni in that group
+  installs it.
+- **Talks to igni for an organisation.** It looks people up in the
+  directory, sends notifications, and sends a message or an event to a
+  person's or an app's agent, which igni wakes when it needs to.
+- **Answers igni's privacy requests.** It erases or exports what the
+  service holds about a person.
+
+None of this needs an igni address, token request or signature in the
+service's code.
+
+| Package | For |
+|---|---|
+| `igni-service` | an extension's backend service (this one) |
+| `igni-extension` | the extension's process, inside igni |
+| `igni-client` | your own program driving an igni from outside: sessions, prompts, commands |
 
 Building a service and its extension for the first time? Follow
-[Your first extension](../../docs/YOUR_FIRST_EXTENSION.md) from an empty
+[Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md) from an empty
 directory to a working extension and service; this README is the
 reference.
 
@@ -114,25 +146,6 @@ async with httpx.AsyncClient(transport=transport, base_url=fake.service_url) as 
 ```
 
 ## Installing
-
-> **Until the SDKs are on PyPI: build from a checkout.** `igni-service`
-> and `igni-extension` are not published yet, so `uv add igni-service`
-> finds nothing. Build both wheels from an igni-sdk checkout and install
-> from them:
->
-> ```bash
-> git clone https://github.com/ignite-ember/igni-sdk.git
-> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-service
-> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-extension
-> uv add igni-service --find-links ./sdk-wheels      # or: pip install --find-links ./sdk-wheels igni-service
-> ```
->
-> The bundle builder resolves the extension's dependencies the same way,
-> so it needs the same directory:
-> `igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels`.
-> It says so when it cannot find `igni-extension`.
-
-Once published, from PyPI:
 
 ```bash
 uv add igni-service        # or: pip install igni-service

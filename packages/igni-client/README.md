@@ -20,22 +20,17 @@ async with IgniClient(Fleet("https://gw.acme.internal", auth=Person.from_cli()))
 
 | | igni-client | igni-extension | igni-service |
 |---|---|---|---|
-| Runs | anywhere: a script, a backend, CI | on each machine, started by igni | as your service's backend |
+| Runs | anywhere: a script, a backend, CI | on each machine, started by igni | in the organisation's cloud or data centre, as an extension's backend service |
 | Reaches | one producer's igni, from outside | the igni that started it, from inside | igni server, for an organisation |
-| For | running the agent from code | adding tools, hooks and pages to igni | a service people's agents use |
+| For | running the agent from code | adding tools, hooks and pages to igni | the shared data behind an extension, which its process and page call as the signed-in person |
 
 ## Installing
 
-**Until the SDKs are on PyPI**, build the wheel from a checkout of igni:
-
 ```bash
-git clone https://github.com/ignite-ember/igni-sdk.git
-uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-client
-uv add igni-client --find-links ./sdk-wheels
+uv add igni-client        # or: pip install igni-client
 ```
 
-Once published: `uv add igni-client` (or `pip install igni-client`).
-Python 3.12 or later. Every release is also a GitHub Release of igni,
+Python 3.12 or later. Every release is also a GitHub Release of igni-sdk,
 `sdk-v<version>`, carrying the wheel for a machine with no route to PyPI.
 
 ## Where the igni is

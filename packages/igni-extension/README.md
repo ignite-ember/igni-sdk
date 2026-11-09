@@ -6,7 +6,7 @@ runs in — without an address, a token or a protocol message in the
 extension's code.
 
 Building an extension for the first time? Follow
-[Your first extension](../../docs/YOUR_FIRST_EXTENSION.md) from an empty
+[Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md) from an empty
 directory to a tool the agent calls, a page, a hook and a service; this
 README is the reference.
 
@@ -123,22 +123,6 @@ exception's message as its text; igni's `PostToolUse` hooks are not asked
 about it, and `PostToolUseFailure` is told.
 
 ## Installing
-
-> **Until the SDKs are on PyPI: build from a checkout.** `igni-extension`
-> is not published yet, so `uv add igni-extension` finds nothing. Build
-> its wheel from an igni-sdk checkout and install from it:
->
-> ```bash
-> git clone https://github.com/ignite-ember/igni-sdk.git
-> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-extension
-> uv add igni-extension --find-links ./sdk-wheels      # or: pip install --find-links ./sdk-wheels igni-extension
-> ```
->
-> Building the bundle needs the same directory:
-> `igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels`
-> (igni-service's README).
-
-Once published, from PyPI:
 
 ```bash
 uv add igni-extension        # or: pip install igni-extension
