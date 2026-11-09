@@ -166,19 +166,31 @@ TestPyPI is a separate service with separate accounts.
    takes a while). Not needed to publish: the projects can be moved into it
    later.
 3. On **pypi.org**, Your account → Publishing → *Add a new pending publisher*
-   (GitHub), three times:
+   (GitHub) for one of them:
 
    | PyPI project name | Owner | Repository name | Workflow name | Environment name |
    |---|---|---|---|---|
-   | `igni-service` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
-   | `igni-extension` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
-   | `igni-client` | `ignite-ember` | `igni` | `sdk-release.yml` | `pypi` |
+   | `igni-service` | `ignite-ember` | `igni-sdk` | `sdk-release.yml` | `pypi` |
+   | `igni-extension` | `ignite-ember` | `igni-sdk` | `sdk-release.yml` | `pypi` |
+   | `igni-client` | `ignite-ember` | `igni-sdk` | `sdk-release.yml` | `pypi` |
 
-4. On **test.pypi.org**, the same three, with environment name `testpypi`.
+4. On **test.pypi.org**, the same, with environment name `testpypi`.
 
-A pending publisher becomes the project's trusted publisher on the first
-upload, which also creates the project under your account. It does not
-reserve the name until then, so rehearse soon after adding it.
+PyPI takes **one** pending publisher per repository, workflow and
+environment: adding the second project with the same four answers is
+refused ("already been registered for a different project name"). A
+publisher can be added to any number of projects once they exist, so the
+first release, which creates all three, publishes with a token instead:
+
+5. On pypi.org, Account settings → API tokens → *Add API token*, scope
+   *Entire account* (no project exists to scope it to). Store it as the
+   secret **`PYPI_TOKEN`** of the GitHub environment `pypi` — of the
+   environment, not of the repository. For a rehearsal, the same on
+   test.pypi.org as **`TEST_PYPI_TOKEN`** of `testpypi`.
+6. After the first release, on each project's page → Manage → Publishing,
+   add the trusted publisher of the table above (and on TestPyPI with
+   `testpypi`). Then delete the secrets and the tokens: with them gone the
+   workflow publishes with its OIDC token alone.
 
 ### 2. npmjs
 
@@ -202,7 +214,7 @@ uses a token, and the token is removed straight after.
    | Field | Value |
    |---|---|
    | Organization or user | `ignite-ember` |
-   | Repository | `igni` |
+   | Repository | `igni-sdk` |
    | Workflow filename | `sdk-release.yml` |
    | Environment name | `npm` |
 
@@ -219,12 +231,12 @@ workflow skips a version that is already published.)
 
 ### 3. GitHub environments
 
-In `ignite-ember/igni` → Settings → Environments, create three:
+In `ignite-ember/igni-sdk` → Settings → Environments, create three:
 
 | Environment | Required reviewers | Deployment branches and tags | Secrets |
 |---|---|---|---|
-| `testpypi` | the admin | all (a rehearsal runs from any branch) | none |
-| `pypi` | the admin | selected: tag pattern `sdk-v*` | none |
+| `testpypi` | the admin | all (a rehearsal runs from any branch) | `TEST_PYPI_TOKEN`, until the projects trust the workflow |
+| `pypi` | the admin | selected: tag pattern `sdk-v*` | `PYPI_TOKEN`, until the projects trust the workflow |
 | `npm` | the admin | selected: tag pattern `sdk-v*` | `NPM_TOKEN`, until npm trusted publishing is configured |
 
 The names must match the trusted publishers above exactly. A release's
@@ -285,8 +297,10 @@ In order — the consumers cannot resolve the SDKs before they are published.
 1. **One-time setup**, above.
 2. **Rehearse** `0.1.0`, the version all six carry today.
 3. **Release** it: `git tag sdk-v0.1.0 && git push origin sdk-v0.1.0`.
-4. **npm trusted publishing**: configure the three packages, delete
-   `NPM_TOKEN` (one-time setup, step 2.4).
+4. **Trusted publishing**: on PyPI and TestPyPI add the publisher to the
+   three projects and delete `PYPI_TOKEN` and `TEST_PYPI_TOKEN` (one-time
+   setup, step 1.6); on npm configure the three packages and delete
+   `NPM_TOKEN` (step 2.4).
 5. **Consumers' lockfiles**, which do not hold the SDKs from PyPI yet:
 
    ```bash
@@ -349,7 +363,7 @@ files are on PyPI and npmjs like the rest, and also attached to each
 hand:
 
 ```bash
-gh release download sdk-v0.4.0 --repo ignite-ember/igni --dir sdk-0.4.0
+gh release download sdk-v0.4.0 --repo ignite-ember/igni-sdk --dir sdk-0.4.0
 (cd sdk-0.4.0 && sha256sum -c SHA256SUMS)
 ```
 
