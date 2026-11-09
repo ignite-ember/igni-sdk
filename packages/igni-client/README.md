@@ -1,72 +1,166 @@
 # igni-client
 
-Drive an igni from your own code. Connect headlessly to a person's, an
-app's or a space's igni — in Fleet, through its gateway, or on this
-machine — and run work there: open sessions, send prompts, follow the
-answer as it streams, answer approvals, run shell commands in the VM.
+**The Python SDK for driving an igni from your own program.**
 
-It speaks the same protocol igni's own app does, so anything the app can
-do in a session, your code can do.
+igni is an AI agent that works on a person's projects. It runs on the
+person's own machine, inside the igni desktop app, or in a VM of their
+own in Fleet, the organisation's cloud. igni-client connects to one igni
+from outside — a script, a backend, a CI job, a bot — and does there what
+a person does in igni's window:
+
+- **Run the agent.** Open a session, send a prompt and follow the answer
+  token by token, tool call by tool call, or wait for the whole of it.
+- **Answer it.** When the agent wants to run a tool that needs a yes,
+  approve or refuse it, from your code or by a policy.
+- **Use everything else igni has.** Every one of igni's methods — plans,
+  history, MCP servers, plugins, scheduled tasks, workflows, background
+  processes, notifications, sign-in — is a typed Python method, its
+  arguments and result generated from igni's own contract. A call that
+  makes igni stream events follows them, and only its own.
+- **Run commands in a Fleet VM**, streaming their output.
+
+It speaks the protocol igni's own app speaks, so anything the app can do,
+your program can.
+
+| Package | For |
+|---|---|
+| `igni-client` | your own program driving an igni from outside: sessions, prompts, approvals, every method igni has (this one) |
+| `igni-extension` | an extension's process, inside igni: tools, hooks, host calls |
+| `igni-service` | an extension's backend service: the organisation's shared data, igni server's calls |
+
+Everything here runs in the organisation's own cloud or data centre, or on
+the person's machine: igni server, Fleet, the igni you connect to, and
+your program. Ignite Ember hosts none of it.
+
+## Contents
+
+- [Installing](#installing)
+- [Quick start](#quick-start)
+- [Concepts](#concepts)
+  - [Where the igni is: Fleet or this machine](#where-the-igni-is-fleet-or-this-machine)
+  - [Who you connect as: a person, an app, a space](#who-you-connect-as-a-person-an-app-a-space)
+  - [Sessions, and igni as a whole](#sessions-and-igni-as-a-whole)
+  - [Who may call what](#who-may-call-what)
+  - [igni tells everyone everything](#igni-tells-everyone-everything)
+  - [Typed from igni's contract](#typed-from-ignis-contract)
+- [Guides](#guides)
+  - [A run, token by token](#a-run-token-by-token)
+  - [Approvals](#approvals)
+  - [The whole answer at once](#the-whole-answer-at-once)
+  - [Calls that stream](#calls-that-stream)
+  - [Watching an igni](#watching-an-igni)
+  - [Slash commands](#slash-commands)
+  - [Commands in a Fleet VM](#commands-in-a-fleet-vm)
+  - [When the connection changes under you](#when-the-connection-changes-under-you)
+  - [Testing your program](#testing-your-program)
+- [API reference](#api-reference)
+  - [IgniClient](#igniclient)
+  - [Session and Sessions](#session-and-sessions)
+  - [Call](#call)
+  - [Targets: Fleet and Local](#targets-fleet-and-local)
+  - [Credentials: Person, App, Space](#credentials-person-app-space)
+  - [Approvals and replies](#approvals-and-replies)
+  - [Models, events and frames](#models-events-and-frames)
+  - [Errors](#errors)
+  - [igni_client.testing](#igni_clienttesting)
+  - [igni's methods, by namespace](#ignis-methods-by-namespace)
+- [Errors and troubleshooting](#errors-and-troubleshooting)
+- [Changes since 0.1.0](#changes-since-010)
+
+## Installing
+
+```bash
+pip install igni-client        # or: uv add igni-client
+```
+
+It needs Python 3.12 or later, and brings httpx, websockets, Pydantic and
+PyJWT with `cryptography`.
+
+Each release's wheels and sdists are also attached to igni-sdk's GitHub
+release (`sdk-v<version>`), for a machine that cannot reach PyPI. The
+versions, and working from an igni-sdk checkout, are in
+[PUBLISHING_THE_SDKS.md](https://github.com/ignite-ember/igni-sdk/blob/main/docs/PUBLISHING_THE_SDKS.md).
+
+## Quick start
+
+Against a person's igni in Fleet, with an API key they made on igni's
+portal:
 
 <!-- illustrative -->
 ```python
 from igni_client import Fleet, IgniClient, Person
 
-async with IgniClient(Fleet("https://gw.acme.internal", auth=Person.from_cli())) as igni:
-    session = await igni.sessions.create()
+key = Person.from_api_key("igpak1.…", server="https://igni.acme.internal")
+async with IgniClient(Fleet("https://gw.acme.internal", auth=key)) as igni:
+    session = await igni.sessions.create(project_dir="/workspace/payments")
     reply = await session.ask("Summarise the open pull requests", approve=False)
     print(reply)
 ```
 
-| | igni-client | igni-extension | igni-service |
-|---|---|---|---|
-| Runs | anywhere: a script, a backend, CI | on each machine, started by igni | as your service's backend |
-| Reaches | one producer's igni, from outside | the igni that started it, from inside | igni server, for an organisation |
-| For | running the agent from code | adding tools, hooks and pages to igni | a service people's agents use |
+Every example below runs as it is pasted. Instead of a real igni they use
+`FakeIgni`, from `igni_client.testing`, which plays igni on a loopback
+socket — so this one runs anywhere:
 
-## Installing
+```python
+from igni_client import IgniClient
+from igni_client.testing import FakeIgni, Steps
 
-**Until the SDKs are on PyPI**, build the wheel from a checkout of igni:
+async with FakeIgni() as fake:
+    fake.runs.script = lambda text: Steps.answer("Two pull requests are open.")
+    fake.methods.answers["get_todos"] = []           # what the fake answers igni's get_todos
+    async with IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create(project_dir="/workspace/payments")
+        reply = await session.ask("Summarise the open pull requests", approve=False)
+        print(reply)                                 # Two pull requests are open.
 
-```bash
-git clone https://github.com/ignite-ember/igni-sdk.git
-uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-client
-uv add igni-client --find-links ./sdk-wheels
+        status = await session.status()              # a StatusUpdate
+        print(status.model, status.permission_mode)
+        todos = await session.todos()                # list[TodoItem]
+        print(todos)
 ```
 
-Once published: `uv add igni-client` (or `pip install igni-client`).
-Python 3.12 or later. Every release is also a GitHub Release of igni,
-`sdk-v<version>`, carrying the wheel for a machine with no route to PyPI.
+## Concepts
 
-## Where the igni is
+### Where the igni is: Fleet or this machine
 
-`Fleet` is a producer's igni in Fleet, reached through the gateway, which
-wakes its VM if it is asleep. `Local` is an igni on this machine — the
-desktop app's, found from the project it has open.
+A **target** says where the igni is and how to reach it.
+
+- **`Fleet(url, auth=...)`** — a producer's igni in Fleet, reached
+  through Fleet's gateway at `url`. The gateway authenticates you, wakes
+  the producer's VM if it is asleep, and relays igni's socket. The first
+  connection to a sleeping VM waits while it resumes — tens of
+  milliseconds paused, a fraction of a second suspended; your program
+  sees a pause, not an error.
+- **`Local(project_dir)`** — the igni the desktop app runs for that
+  project on this machine, found from the lockfile it writes there
+  (`<project>/.igni/backend.lock`), which also carries the token a
+  program attaches with.
+- **`Local(url=..., token=...)`** — an igni you name directly, such as
+  one started by hand with `--ws-port`.
 
 <!-- illustrative -->
 ```python
-from igni_client import Fleet, IgniClient, Local, Person
+from igni_client import Fleet, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
-here = Local(project_dir="~/code/payments")         # the desktop app's igni for that project
+here = Local(project_dir="~/code/payments")          # the desktop app's igni for that project
 by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m igni_core.backend --ws-port 8765`
 ```
 
-Through the gateway the first connection to a sleeping VM waits while it
-resumes — tens of milliseconds paused, a fraction of a second suspended.
-Your code sees a pause, not an error.
+Both speak the same protocol once open, so everything above the target is
+the same code. Two things differ: only Fleet has `igni.commands` and
+`igni.me()` (they are the gateway's), and only Fleet reconnects on its own
+when the line drops — a local igni that closed has stopped.
 
-## Who you connect as
+### Who you connect as: a person, an app, a space
 
-The gateway decides whose igni you reach from the token: a person's, an
-app's, or a space's.
+Through Fleet, the token you connect with decides whose igni you reach.
 
-**A person** gives a program an **API key**: made on the portal (*API keys*),
-it expires after 30, 90 or 365 days, and stops when they revoke it, sign out
-everywhere or leave the organisation. The client exchanges it with igni
-server for a 15-minute session as them, renewed as needed. That session
-can do what the person can, except make more keys.
+**A person** gives a program an **API key**. They make it on igni's
+portal (*API keys*); it expires after 30, 90 or 365 days, and stops when
+they revoke it, sign out everywhere or leave the organisation. The client
+exchanges it with igni server for a 15-minute session as them, renewed as
+needed. That session can do what the person can, except make more keys.
 
 <!-- illustrative -->
 ```python
@@ -114,78 +208,157 @@ async with IgniClient(Fleet("https://gw.acme.internal", auth=space)) as igni:
 `app.spaces.get(id)`, `.list()` and `.delete(id)` manage them; deleting a
 space erases its VM.
 
-Changed since igni-client 0.1.0, on purpose:
+### Sessions, and igni as a whole
 
-- `App.public_jwks()` returns a `JwkSet` (`igni_client.auth.keys`), not a
-  dict: read `jwks.keys[0].kid` where you read `jwks["keys"][0]["kid"]`,
-  and write `jwks.model_dump_json()` where you wrote
-  `json.dumps(jwks)`. The JSON is the same, members in the same order.
-- Each auth name lives in the module that owns it (`igni_client.auth.app`,
-  `.person`, `.spaces`, `.tokens`, `.keys`, `.grants`); `from
-  igni_client.auth import App` and the other 0.1.0 names still work.
-- New on `App`: `exchange(space_id)` (its token exchanged for a space's),
-  `request(method, path, what=...)` (a call to igni server as the app,
-  retried once on a 401) and the `clock` it was made with, which the app
-  and its spaces read at each renewal.
-- A space renews its token by its app's `RENEW_BEFORE`, a subclass's or
-  one set on the app included; 0.1.0 always used `App.RENEW_BEFORE`.
-- `spaces.delete(id)` is done on any 2xx answer, whatever its body; 0.1.0
-  raised `Unavailable` on a 200 or 202 that was not a JSON object.
-- A space record igni server sent malformed (no `space_id`, say) raises
-  `Unavailable("igni server answered … with something else")` from
-  `declare`, `get` and `list`, where 0.1.0 raised pydantic's
-  `ValidationError`.
-- A discovery document that is not a JSON object raises
-  `Unavailable("igni server published no issuer")`, and an API key refused
-  with a JSON body that is not an object raises `AuthError` with that
-  body; 0.1.0 raised `JSONDecodeError` or `AttributeError`.
-
-## Sessions
-
-<!-- illustrative -->
-```python
-session = await igni.sessions.create(project_dir="/workspace/payments")
-again = await igni.sessions.open(session.id)         # an existing one, approvals it waits on included
-for entry in await igni.sessions.list():
-    print(entry.session_id, entry.name, entry.run_count)
-```
-
-`sessions.default()` is the session igni opened at start. A session has
-`history()` (its turns, as `HistoryTurn`s), `status()` (its model, context
-used and permission mode) and `use_model(name)`; `igni.models.list()` says
-which models there are, as a `ModelCatalogue`.
-
-## A run, event by event
-
-`session.send()` starts a run and yields what happens as it happens: the
-answer in pieces, each tool call, sub-agents starting, the end.
+A **session** is one of igni's conversations: its own history, model,
+permission mode and project folder. Most of igni's methods act on one
+session, and are methods of its `Session`:
 
 ```python
-from igni_client import ContentDelta, IgniClient, RunCompleted, ToolStarted
+from igni_client import IgniClient
 from igni_client.testing import FakeIgni
 
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-    session = await igni.sessions.create()
-    async for event in session.send("What does the payments service do?"):
-        match event:
-            case ContentDelta(text=text, is_thinking=False):
-                print(text, end="")
-            case ToolStarted(friendly_name=name):
-                print(f"\n[{name}]")
-            case RunCompleted(output_tokens=tokens):
-                print(f"\n{tokens} tokens")
+    session = await igni.sessions.create(project_dir="/workspace/payments")
+    again = await igni.sessions.open(session.id)     # the same Session object
+    default = await igni.sessions.default()          # the one igni opened at start
+    for entry in await igni.sessions.list():
+        print(entry.session_id, entry.name, entry.run_count)
+
+    registry = await session.models.list()           # a ModelRegistryResult
+    print(registry.default, list(registry.registry))
+    notice = await session.models.switch("igni-1")   # an InfoMessage
+    print(notice.text)
 ```
 
-Every event is a typed model of igni's message. A message this version
-does not know arrives as `Unknown`, with everything it carried, so a newer
-igni does not break an older client.
+The rest act on igni as a whole — the machine, the account, every
+session — and are methods of `IgniClient`: `igni.processes`,
+`igni.notifications`, `igni.auth`, `igni.marketplaces` and the others.
+igni's contract says which is which (each method's *scope*), and the
+SDK follows it.
 
-## Approvals
+### Who may call what
 
-When the agent wants to use a tool that needs a yes — a shell command, an
-edit, depending on the permission mode — igni pauses the run and the loop
-yields an `ApprovalRequested`. Answer it in the loop and the same loop
-carries on with the resumed run:
+igni decides what a connection may do by the token it attached with — its
+*standing* — and each method needs one of three access levels:
+
+| Access | Who reaches it |
+|---|---|
+| `client` | any connection |
+| `approver` | igni's window, or a program holding an approver token the window minted |
+| `window` | igni's own window only |
+
+- **Through Fleet**, igni on the VM takes no token: every connection —
+  yours included — stands as igni's window and reaches every method.
+- **On the desktop**, the app launches igni with a secret only its window
+  holds. A program attached through the lockfile (`Local(project_dir)`)
+  is a *program*: it runs sessions and calls every `client` method, but
+  decides nothing for the person. Given an **approver token**, it also
+  answers approvals — each time once: no saved rule, no change of
+  permission mode.
+
+A program's limits are what keeps the agent, which can read the lockfile
+too, from approving its own tool calls. To let a program approve, the
+person types `/programs` in igni's window, makes an approver token and
+hands it over:
+
+<!-- illustrative -->
+```python
+here = Local(project_dir="~/code/payments", approver_token="…")
+# or set IGNI_APPROVER_TOKEN
+```
+
+igni forgets approver tokens when it quits, and revoking them in
+`/programs` disconnects the programs using one.
+
+Where igni-client knows the standing — a program, an approver, Fleet —
+it refuses a call the connection cannot make before sending it, with
+`AccessRefused`, the error igni would answer. Where it does not (a
+`Local(url=..., token=...)` given a token by hand, which may be the
+window's own secret), it sends the call and igni decides. Each method in
+the [reference](#ignis-methods-by-namespace) says its access level.
+
+### igni tells everyone everything
+
+igni sends every message to every client attached to it — a person's
+open window, an extension's page, your program. A person with igni open
+sees your runs as they happen, and you see theirs. So nothing in
+igni-client assumes a message is for it:
+
+- a method's answer is matched by the id of the request it answers;
+- `session.send()` follows its own run by the run's request id, and the
+  approvals it answers;
+- a [call that streams](#calls-that-stream) picks out its own events by
+  what they carry — a workflow run's id, a process's pid;
+- `igni.events()` and `session.events()` are for watching everything.
+
+### Typed from igni's contract
+
+igni publishes its whole protocol as a contract: every method's
+arguments and result, every message on its socket, every push
+notification's payload, as JSON Schema. igni-client is generated from it:
+
+- `igni_client.models` — a Pydantic model for every type a client sends
+  or reads, with igni's descriptions as docstrings;
+- `igni_client.api` — every method a client calls, typed, grouped by
+  namespace, igni's documentation as its docstring;
+- the [method reference](#ignis-methods-by-namespace) at the end of this
+  page.
+
+A model of something igni sends keeps a field a newer igni adds, so an
+older igni-client keeps working against a newer igni; a message type
+newer than the SDK arrives as `Unknown`, with everything it carried.
+
+## Guides
+
+### A run, token by token
+
+`session.send()` sends a prompt and yields the run it starts as it
+happens: the answer a few tokens at a time, the model's reasoning, each
+tool call and its result, sub-agents starting and finishing, the end.
+
+```python
+from igni_client import ContentDelta, IgniClient, RunCompleted, ToolCompleted, ToolStarted
+from igni_client.testing import FakeIgni, Steps
+
+async with FakeIgni() as fake:
+    fake.runs.script = lambda text: [
+        *Steps.answer("The payments service charges cards")[:2],
+        ToolStarted(run_id="r-1", tool_name="read_file", friendly_name="Read file"),
+        ToolCompleted(run_id="r-1", summary="src/charge.py"),
+        ContentDelta(text=" and refunds them."),
+        RunCompleted(run_id="r-1", input_tokens=900, output_tokens=12),
+    ]
+    async with IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        async for event in session.send("What does the payments service do?"):
+            match event:
+                case ContentDelta(text=text, is_thinking=False):
+                    print(text, end="", flush=True)
+                case ToolStarted(friendly_name=name):
+                    print(f"\n[{name}]", end=" ")
+                case RunCompleted(parent_run_id="", output_tokens=tokens):
+                    print(f"\n{tokens} tokens")
+```
+
+Each event is a typed model of igni's message — `ContentDelta`,
+`ReasoningStarted`, `ToolStarted`, `ToolCompleted`, `ToolError`,
+`RunStarted`, `ModelCompleted`, `StreamingDone`, `RunCompleted`,
+`RunError`, `TaskCreated`, a push notification and the rest; see
+[Models, events and frames](#models-events-and-frames). A sub-agent's
+events carry its `parent_run_id`.
+
+`files={path: content}` attaches files to the prompt as the app attaches
+them; `force=True` discards a run left interrupted in the session first.
+The loop ends when the run does. Breaking out of it stops following the
+run; the run goes on in igni. `await session.cancel()` stops it.
+
+### Approvals
+
+When the agent wants to run a tool that needs a yes — a shell command, an
+edit, depending on the session's permission mode — igni pauses the run,
+and the loop yields an `ApprovalRequested`. Answer it in the loop and the
+same loop carries on with the resumed run:
 
 ```python
 from igni_client import ApprovalRequested, IgniClient
@@ -205,80 +378,192 @@ async with FakeIgni() as fake:
                 await event.approve()
 ```
 
-`approve(choice)` lets every call run (`"once"`, or `"always"` / `"similar"`
-to save a permission rule); `reject()` refuses them. `decide({...})`
-answers each call separately with a `Decision.allow()` or
-`Decision.deny()`. igni asks about the calls of one pause together and
-counts a call left out as refused, so every answer covers all of them.
+- `approve(choice)` lets every call of the pause run: `"once"`, or
+  `"always"` / `"similar"` to save a permission rule (igni's window only).
+- `reject(remember=False)` refuses them; `remember=True` saves a rule
+  refusing such calls from now on.
+- `decide({requirement_id: Decision, ...})` answers each call on its own,
+  with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
-A loop that ends without answering leaves the run waiting on igni's side;
-`sessions.open()` offers it again.
+igni asks about every call of one pause together and counts a call left
+out as refused, so every answer covers them all. A loop that ends without
+answering leaves the run waiting on igni's side; the next time the
+session is attached igni shows the approval again, and
+[`session.events()`](#watching-an-igni) offers it as an
+`ApprovalRequested`.
 
-**Approving on this machine.** Found from the lockfile, `Local` runs
-sessions but cannot answer approvals: the agent can read that file too, and
-must not approve its own calls. igni refuses the answer and `approve()`
-raises `NotAllowed`. To let your program approve, type `/programs` in igni's
-window, make an approver token and give it to the program:
+A program without an approver token cannot answer: igni refuses, and
+`approve()` raises `NotAllowed` (see [Who may call what](#who-may-call-what)).
 
-<!-- illustrative -->
-```python
-here = Local(project_dir="~/code/payments", approver_token="…")
-# or set IGNI_APPROVER_TOKEN
-```
+### The whole answer at once
 
-igni forgets approver tokens when it quits, and revoking them in
-`/programs` disconnects the programs using one. An approver answers each
-pause once: `approve("always")`, `Decision.deny(remember=True)` and
-switching the permission mode stay igni's window's. Through Fleet's gateway
-none of this applies: the token you connect with is already the person's.
-
-## The whole answer at once
-
-`session.ask()` runs the prompt to the end and returns the answer.
-`approve=` decides approvals: `True` allows everything, `False` refuses
-everything, or a function of each `Requirement` — sync or async —
-returns a `bool` or a `Decision`:
+`session.ask()` runs the prompt to the end and returns a `Reply`: the
+answer's `text`, the model's `thinking`, every `ToolCompleted` in
+`tools`, and the main run's `RunCompleted` with its token counts.
+`approve=` answers approvals as they come: `True` allows every call,
+`False` refuses every call, or a function of each `Requirement` — sync or
+async — returns a `bool` or a `Decision`:
 
 ```python
 from igni_client import Decision, IgniClient
-from igni_client.testing import FakeIgni
+from igni_client.testing import FakeIgni, Steps
 
 
 def only_reads(requirement):
     return Decision.allow() if requirement.tool_name == "read_file" else Decision.deny()
 
 
-async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-    session = await igni.sessions.create()
-    reply = await session.ask("Explain src/auth.py", approve=only_reads)
-    print(reply.text, reply.completed.output_tokens if reply.completed else 0)
+async with FakeIgni() as fake:
+    fake.runs.script = lambda text: [Steps.approval("read_file", path="src/auth.py"), *Steps.answer("It checks tokens.")]
+    async with IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        reply = await session.ask("Explain src/auth.py", approve=only_reads)
+        print(reply.text, reply.completed.output_tokens if reply.completed else 0)
+        await session.queue("Then write tests for it")   # starts after the run going
 ```
 
-Without `approve=`, a pause raises `ApprovalRequired`; a failed run raises
-`RunFailed`. `session.queue(text)` adds a prompt for after the run going;
-`session.cancel()` stops it.
+Without `approve=`, a pause raises `ApprovalRequired` (its
+`requirements` say what was asked); a failed run raises `RunFailed`.
+`session.queue(text)` adds a prompt for after the run that is going.
 
-Changed since igni-client 0.1.0, on purpose:
+### Calls that stream
 
-- `Decision`, `Policy`, `Choice` and `Answer` live in
-  `igni_client.approvals`, and `Reply` in `igni_client.replies`; they are
-  no longer importable from `igni_client.runs`. `from igni_client import
-  Decision, Reply` works as before.
-- The free function `igni_client.runs.collect(events, approve)` is now
-  `Reply.collect(events, Approver(approve))`. `Approver(policy).answer(request)`
-  and `Decision.frame(requirement_id)` are new.
-- A decision's choice is one of igni's scopes, `"once"`, `"always"`,
-  `"similar"` or `"deny"` (`igni_client.frames.Scope`). Any other string,
-  as in `Decision(action="confirm", choice="sometimes")` or
-  `approve("sometimes")`, raises pydantic's `ValidationError` before
-  anything is sent, and the approval stays unanswered. In 0.1.0 it was sent
-  to igni as given. `FakeIgni` passes over an answer with an unknown scope:
-  it is not recorded in `fake.runs.decisions` or `fake.socket.received`.
-- An `ApprovalRequested(paused, answer)` built by hand hands its `answer`
-  callback a list of `igni_client.frames.HitlDecision` models (read
-  `decision.action`), not dicts. igni gets the same message as before.
+Some of igni's methods make igni send events while it does the work, or
+after: a workflow reports each step, a stopped process prints its last
+lines, a sign-in says what it is doing. Each of those returns a **`Call`**.
 
-## Commands in the VM
+**Await it** for the result, as any other method:
+
+```python
+from igni_client import IgniClient
+from igni_client.models import WorkflowRunResponse
+from igni_client.testing import FakeIgni
+
+async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+    fake.methods.answers["run_workflow"] = WorkflowRunResponse(workflow_run_id="wf-1", name="nightly")
+    session = await igni.sessions.create()
+    started = await session.workflows.run("nightly", args={"branch": "main"})
+    print(started.workflow_run_id)
+```
+
+**Enter it** with `async with` to follow the events this call causes,
+too. `async with` starts listening before the call is sent, so nothing is
+missed; `async for` yields only this call's events, typed, and ends when
+igni has no more to send for it; `await call.result()` is the result:
+
+```python
+import asyncio
+
+from igni_client import IgniClient
+from igni_client.models import WorkflowRunResponse
+from igni_client.testing import FakeIgni
+
+
+def step(run_id, kind, seq):
+    return {"workflow_run_id": run_id, "name": "nightly", "ts": seq, "seq": seq, "type": kind, "payload": {}}
+
+
+async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+    session = await igni.sessions.create()
+
+    async def run_workflow(args):
+        async def report():
+            await asyncio.sleep(0.05)
+            await fake.socket.push("workflow_event", step("wf-someone-else", "step", 1), session_id=session.id)
+            await fake.socket.push("workflow_event", step("wf-1", "step", 1), session_id=session.id)
+            await fake.socket.push("workflow_event", step("wf-1", "workflow_completed", 2), session_id=session.id)
+
+        asyncio.ensure_future(report())
+        return WorkflowRunResponse(workflow_run_id="wf-1", name=args["name"])
+
+    fake.methods.answers["run_workflow"] = run_workflow
+
+    async with session.workflows.run("nightly") as run:
+        async for event in run:                       # WorkflowEventPush, this run's only
+            print(event.payload.seq, event.payload.type)
+        print("run", (await run.result()).workflow_run_id)
+```
+
+Leaving the block stops listening; the work itself is igni's and goes on.
+A call whose answer is an error raises it from `async for` as from
+`await`; a connection that moves or drops while you follow raises
+`RunInterrupted`.
+
+These calls are followed, each by what igni's events carry:
+
+| Method | Yields | Ends |
+|---|---|---|
+| `session.workflows.run(name)` | `workflow_event` of the run id igni answers with | the run's `workflow_completed` or `workflow_failed` |
+| `session.workflows.cancel(id)` | `workflow_event` of that run | its last event, or the answer when nothing was cancelled |
+| `igni.processes.stop(pid)` | `process_line`, `process_exited`, `background_process_done` of that pid | `background_process_done`, or the answer when it was not running |
+| `session.plan.approve(run_id)`, `.dismiss(run_id)` | `plan_decided` of that run | that push, or the answer when `ok` is false |
+| `session.visualization_action(...)` | `visualization_action_dispatched` of this session, action and params | that push |
+| `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
+| `session.shutdown()` | the process ends while igni winds the session down | the answer |
+| `igni.auth.login()` | `login_status` | `login_result` |
+
+A few methods make igni send events that carry nothing to tell this
+call's from another's — a shell command moved to the background is
+reported by pid, but the answer does not say which pid. Those return
+their result only, and their reference entry says why and where to watch
+instead: `attach`, `cancel`, `run_shell`, `scheduler.execute`,
+`auth.sign_out`, `notifications.list`, `notifications.mark_read`,
+`workspace.set_trust` and `window.model`.
+
+### Watching an igni
+
+`igni.events()` yields every message igni sends from now on, from every
+session and every client — runs, approvals, push notifications. A push on
+a channel igni's contract types is that channel's class, its payload a
+model: `ProcessLinePush`, `SessionNamedPush`, `TodosUpdatedPush`,
+`NotificationsChangedPush` and the rest.
+
+```python
+import asyncio
+
+from igni_client import IgniClient
+from igni_client.models import SessionNamedPush
+from igni_client.testing import FakeIgni
+
+async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+    async def watch():
+        async for event in igni.events():
+            if isinstance(event, SessionNamedPush):
+                return event.payload.name
+
+    watching = asyncio.ensure_future(watch())
+    await asyncio.sleep(0.05)
+    await fake.socket.push("session_named", {"session_id": "s-1", "name": "Payments refactor"})
+    print(await asyncio.wait_for(watching, 5))
+```
+
+`session.events()` is the same for one session, and offers each pause it
+sees as an `ApprovalRequested` — among them the approvals a session was
+waiting on, which igni shows again when it is attached. Answering one
+resumes that run, whose events follow in the same loop.
+
+### Slash commands
+
+`session.command(text)` runs one of igni's slash commands, as typed in its
+composer, and returns igni's `CommandResult`: what to show (`kind`,
+`content`) and what it asks a client to do (`action`).
+
+```python
+from igni_client import IgniClient
+from igni_client.testing import FakeIgni
+
+async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+    session = await igni.sessions.create()
+    result = await session.command("/help")
+    print(result.kind, result.content)
+    await session.typing("half a tho")              # every client sees the draft
+```
+
+The commands that switch approvals off or change whom igni signs in to
+(`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
+an `error` to anything but igni's window.
+
+### Commands in a Fleet VM
 
 Through Fleet, run a shell command in the producer's VM — as root, in a
 shell — and stream its output as it is written. igni server decides who
@@ -296,130 +581,249 @@ async with FakeIgni(gateway=gateway) as fake:
         async for output in run:
             print(output.text, end="")
         print("exit", run.finished.exit_code)
+        print(await igni.me())
 ```
 
 `await run.wait()` collects it instead (into `run.stdout` and
 `run.stderr`). A producer runs commands in its own VM; an org admin may
 name another with `producer="person:<id>"`. `igni.me()` says who the
 gateway takes you for. A local igni has no gateway, so neither is
-available there.
+available there: both raise `NotSupported`.
 
-A line of the gateway's stream that is not a JSON object — garbled, or
-JSON such as `[1]`, `5` or `null` — is passed over with a warning on the
-`igni_client.commands.run` logger, and the run goes on. (igni-client
-0.1.0 raised `AttributeError` or `TypeError` out of the iteration on a
-line that was JSON but not an object.)
+A line of the gateway's stream that is not a JSON object is passed over
+with a warning on the `igni_client.commands.run` logger, and the run goes
+on.
 
-Changed since igni-client 0.1.0, on purpose:
-
-- `run.record` and `run.woken` are `None` until their lines arrive, then a
-  `CommandRecord` (`command_id`, `command`, `state`) and a `Wake` (`how`,
-  `node`, `ms`), both keeping any other field the gateway sends. In 0.1.0
-  they were plain dicts, `{}` until then: read `run.record.command` where
-  you read `run.record["command"]`, and test `run.record is None` where
-  you tested `not run.record`.
-- `Wake.ms` is a float, as the gateway sends it (`30` is read as `30.0`).
-  `FakeIgni`'s gateway now wakes a VM in `12.345` ms, not `30`.
-- `CommandRun(fleet, request, token)` takes a
-  `igni_client.commands.wire.CommandRequest`, not a dict;
-  `igni.commands.run(...)` builds it for you.
-- A line that is not JSON at all is still passed over, now with the same
-  warning.
-- New names: `CommandRecord` and `Wake` in `igni_client.commands`, and the
-  gateway's wire models in `igni_client.commands.wire`.
-
-## Anything else igni can do
-
-Every one of igni's methods — the ones its own app uses for plugins, MCP
-servers, scheduled tasks, workflows and the rest — is a typed method on
-`IgniClient` or `Session`, generated from igni-core's contract. The API
-reference below lists them all:
-
-```python
-from igni_client import IgniClient
-from igni_client.models import ScheduledTask
-from igni_client.testing import FakeIgni
-
-async with FakeIgni() as fake:
-    fake.methods.answers["get_scheduled_tasks"] = []
-    async with IgniClient(fake.local()) as igni:
-        session = await igni.sessions.create()
-        tasks: list[ScheduledTask] = await session.scheduler.list(include_done=False)
-        print(tasks)
-```
-
-## Watching
-
-igni sends every message to every client attached — a person's open
-window, and you. `igni.events()` yields them all, from every session, to
-watch what an igni is doing; `session.send()` is for following your own
-run. A person with igni open on their VM sees your runs as they happen.
-
-## When the connection changes under you
+### When the connection changes under you
 
 - **Fleet moved the VM.** When a node drains or fails, the gateway wakes
   the VM on another node and reconnects behind you. The client re-attaches
-  its sessions on its own; a run going at that moment ends with
+  its sessions on its own; a run or call going at that moment ends with
   `RunInterrupted` — it may or may not have finished, so read the
-  session's history.
+  session's history (`session.history.get()`).
 - **Busy.** With no room for the VM right away, the gateway answers "busy,
-  retry"; the client tries again, backing off, and raises `Unavailable`
-  if it stays busy.
+  retry"; the client tries again, backing off (`Backoff`), and raises
+  `Unavailable` if it stays busy.
+- **Not bound yet.** A VM that has just woken answers "not bound to a
+  producer yet" for a moment; calls are asked again.
 - **Refused.** `AuthError` for a credential igni does not accept,
   `NotAllowed` for a producer that is no longer active, a lapsed licence,
   or a command in somebody else's VM. Neither is retried.
 
 ```python
-from igni_client import IgniClient, Person
+from igni_client import Backoff, IgniClient, Person
 from igni_client.testing import FakeGateway, FakeIgni
 
 async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
     fake.socket.busy_next(1)                # the first connection is told "busy, retry"
-    async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
+    async with IgniClient(fake.fleet(Person("t-ada")), backoff=Backoff(first=0.01)) as igni:
         print("connected on attempt", fake.socket.connections)
 ```
 
-A local igni is not retried: one that closed has stopped, and the client
-raises `Unavailable`.
+A local igni is not reconnected: one that closed has stopped, and the
+client raises `Unavailable`.
 
-Changed since igni-client 0.1.0, on purpose:
+### Testing your program
 
-- `IgniClient(target, backoff=Backoff(attempts=5, first=0.5, most=8.0))`
-  paces opening the socket again; `reconnect_attempts=` is gone and raises
-  `TypeError`. The default waits are 0.1.0's. A negative `attempts` tries
-  once and raises; 0.1.0 tried no times and returned as if connected.
-  `Backoff` is new in `igni_client`.
-- A client closed and connected again opens its socket again when it drops,
-  like a new client. In 0.1.0 it never did.
-- `igni_client.connection` keeps only `Connection` and `REFUSED_METHODS`:
-  `Interruption` is in `igni_client.routing`, and the connection's
-  `new_id`, `open_stream`, `close_stream`, `listen` and `unlisten` are its
-  `router`'s. `Connection(target, backoff, router)` takes all three, and
-  its `send` takes a frame from `igni_client.frames`, not a dict.
-  `Run.stream` takes a `UserMessage`.
-- Closing passes over only a socket error, logged at INFO on the
-  `igni_client.connection` logger; any other error closing the socket is
-  raised. That logger also warns of a message from igni that is not a JSON
-  object (still passed over), and says at INFO when reading stops.
+`igni_client.testing` plays igni — and Fleet's gateway in front of it —
+in your test's own process, on a real loopback socket, so your program
+runs against it unchanged:
 
-## Testing your code
+```python
+from igni_client import IgniClient
+from igni_client.models import ProcessTailResult
+from igni_client.testing import FakeIgni, Steps, sample
 
-`igni_client.testing.FakeIgni` is igni on a loopback socket, scripted.
-Each part is a collaborator a test talks to: `fake.runs.script` decides
-what each prompt runs (`Steps.answer(text)`, `Steps.approval(tool,
-**args)`, `Delay(seconds=...)`, or any typed message), and `fake.methods`
-answers the rest (`answers`, `models`, `history`). Given
-`gateway=FakeGateway(tokens)` it plays Fleet's gateway too: bearer tokens
-on `/v1/connect`, `/v1/me` and `/v1/commands` through `fake.fleet(auth)`,
-with `gateway.commands` deciding what each command prints.
+async with FakeIgni() as fake:
+    fake.runs.script = lambda text: Steps.answer(f"you said {text}")
+    fake.methods.answers["read_process_tail"] = sample(ProcessTailResult)   # any valid answer
+    fake.methods.answers["get_todos"] = lambda args: []                      # or a function of the args
+    async with IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        assert str(await session.ask("hi")) == "you said hi"
+        tail = await igni.processes.tail(1)
+        assert tail == sample(ProcessTailResult)
 
-It records what your code did — `fake.socket.received` (the typed frames
-it sent), `fake.runs.decisions`, `gateway.commands_run`,
-`fake.methods.sessions` — and plays what Fleet does under you:
-`fake.socket.move()`, `drop(code)`, `busy_next(n)` and
-`fake.methods.unbound_for(n)`.
+    [call] = [c for c in fake.methods.calls if c.method == "read_process_tail"]
+    assert call.args == {"pid": 1, "tail": 200}
+```
+
+It records what your program did — `fake.socket.received` (the typed
+frames it sent), `fake.methods.calls`, `fake.runs.decisions`,
+`gateway.commands_run` — and plays what igni and Fleet do under you:
+`fake.socket.push(channel, payload)`, `fake.socket.move()`,
+`drop(code)`, `busy_next(n)` and `fake.methods.unbound_for(n)`. See
+[igni_client.testing](#igni_clienttesting).
 
 ## API reference
+
+### IgniClient
+
+`IgniClient(target, *, backoff=None)` — a connection to one igni. Open it
+with `async with` (or `await igni.connect()` and `await igni.close()`).
+
+| Member | What it is |
+|---|---|
+| `sessions` | `Sessions`: create, open, list sessions |
+| `events()` | every message igni sends from now on (an async iterator of `Event`) |
+| `commands` | `Commands`, shell commands in a Fleet VM (`NotSupported` locally) |
+| `me()` | who the gateway takes you for: a `Me` (`NotSupported` locally) |
+| `client_id` | igni's name for this connection; its own messages carry it |
+| `target` | the `Fleet` or `Local` it was made with |
+| `agents`, `approvers`, `auth`, `extensions`, `files`, `marketplaces`, `notifications`, `processes`, `window`, `check_for_update()`, `group_policy()` | igni's methods for igni as a whole, [by namespace](#ignis-methods-by-namespace) |
+
+`backoff=Backoff(attempts=5, first=0.5, most=8.0)` paces opening the
+socket again after Fleet said busy or the line dropped.
+
+### Session and Sessions
+
+`igni.sessions` (`Sessions`):
+
+| Method | Returns |
+|---|---|
+| `create(project_dir=None)` | a new `Session`, working in `project_dir` (igni's own project when left out) |
+| `open(session_id, project_dir=None)` | that `Session` |
+| `default()` | the `Session` igni opened at start |
+| `list()` | `list[SessionListEntry]`, every session of igni's own project, newest first |
+| `attach(session_id="", project_dir="")` | igni's own call underneath: an `AttachSessionResult` |
+
+A `Session`:
+
+| Member | What it is |
+|---|---|
+| `id`, `project_dir` | the session's id and folder, as igni bound them |
+| `send(text, *, files=None, force=False)` | the run, event by event: an async iterator of `Event` and `ApprovalRequested` |
+| `ask(text, *, files=None, approve=None)` | the whole answer: a `Reply` |
+| `queue(text)` | a prompt for after the run going |
+| `events()` | every message about this session from now on, pauses as `ApprovalRequested` |
+| `command(text)`, `typing(text)` | a slash command; this client's draft |
+| `cancel()`, `status()`, `todos()`, … and `plan`, `history`, `context`, `loop`, `models`, `mcp`, `plugins`, `scheduler`, `workflows` and the other namespaces | igni's methods for one session, [by namespace](#ignis-methods-by-namespace) |
+
+### Call
+
+What a [method that streams](#calls-that-stream) returns
+(`igni_client.calls.Call[R, E]`, `R` its result and `E` its events).
+
+| Use | What it does |
+|---|---|
+| `await call` | sends it; its result |
+| `async with call:` | sends it, listening for its events from before it is sent |
+| `async for event in call` | inside the block: this call's events, then the end |
+| `await call.result()` | inside the block: its result, once it came |
+| `call.method` | its wire method |
+
+Iterating a call that was not entered raises `RuntimeError`, as does
+entering one twice.
+
+### Targets: Fleet and Local
+
+| Target | |
+|---|---|
+| `Fleet(url, *, auth, http=None)` | a producer's igni through Fleet's gateway at `url`; `auth` is a `Person`, `App` or `Space`; `http` an `httpx.AsyncClient` to use |
+| `Local(project_dir=".", *, url=None, token=None, approver_token=None)` | an igni on this machine: from the project's lockfile, or at `url` with `token` |
+
+Each has `standing` — what igni stands the connection as (`"window"`,
+`"approver"`, `"program"` or `"unknown"`; see
+[Who may call what](#who-may-call-what)) — and `describe()`. `Local.approves`
+says whether it has an approver token; `IGNI_APPROVER_TOKEN` gives it one.
+
+### Credentials: Person, App, Space
+
+| Credential | Made with |
+|---|---|
+| `Person(token)` | an organisation-pinned session token |
+| `Person.from_api_key(key=None, *, server=None)` | a person's API key, exchanged for 15-minute sessions (`IGNI_API_KEY`, `IGNI_SERVER_URL`) |
+| `Person.from_cli(path=None)` | the session `igni login` keeps |
+| `App(app_id, *, server, key_file=None, key_pem=None)` | an app signing in as itself, by its private key; `App.generate_key(path)`, `app.public_jwks()`, `await app.aclose()` |
+| `await app.spaces.declare(external_id)` | a `Space`, one end user of the app; also `get`, `list`, `delete` |
+
+Each is a `TokenSource`: `await source.token()` is a fresh bearer token.
+
+### Approvals and replies
+
+| Name | What it is |
+|---|---|
+| `ApprovalRequested` | a paused run: `requirements` (each a `Requirement`), `run_id`, `approve(choice="once")`, `reject(remember=False)`, `decide({id: Decision})`, `answered` |
+| `Decision` | one call's answer: `Decision.allow(choice="once")`, `Decision.deny(remember=False)` |
+| `Requirement` | one tool call waiting: `requirement_id`, `tool_name`, `friendly_name`, `tool_args`, `details`, `agent_path` |
+| `Reply` | `ask()`'s answer: `text`, `thinking`, `tools`, `completed`; `str(reply)` is the text |
+
+### Models, events and frames
+
+- **`igni_client.models`** — every type igni's contract defines that a
+  client sends or reads: arguments (`ProcessTailArgs`), results
+  (`ProcessTailResult`, `ModelRegistryResult`, `ChatTurn` — a union told
+  apart by `role`), messages and push payloads. Generated; the
+  contract's descriptions are their docstrings.
+- **`igni_client.events`** — the messages igni sends, re-exported:
+  `ContentDelta`, `ReasoningStarted`, `RunStarted`, `ToolStarted`,
+  `ToolCompleted`, `ToolError`, `ModelCompleted`, `StreamingDone`,
+  `RunCompleted`, `RunError`, `RunPaused`, `Requirement`,
+  `RequirementDetails`, `RequirementResolved`, `StreamEnd`, `TaskCreated`,
+  `TaskUpdated`, `TaskIteration`, `TaskStateUpdated`, `SessionCleared`,
+  `SessionListResult`, `StatusUpdate`, `CommandResult`, `InfoMessage`
+  (`info`), `ErrorMessage` (`error`), `SchedulerEvent`, `Welcome`,
+  `Typing`, `UserMessageReceived`, `PushNotification`, `RpcResponse`; and
+  `Unknown`, a message type newer than this igni-client. `Event` is their
+  base (`type`, `id`, `session_id`, `event_seq`), `RunEvent` a run's
+  (`run_id`, `parent_run_id`). `parse_event(dict)` reads one.
+- **Push notifications** — a `PushNotification` on a channel the contract
+  types is that channel's class, named for it: `BackgroundProcessDonePush`,
+  `FileEditedPush`, `LoginResultPush`, `LoginStatusPush`,
+  `NotificationsChangedPush`, `OrchestrateEventPush`,
+  `PermissionModeChangedPush`, `PlanDecidedPush`, `PlanSubmittedPush`,
+  `ProcessExitedPush`, `ProcessLinePush`, `ProcessStartedPush`,
+  `SchedulerCompletedPush`, `SchedulerStartedPush`, `SessionNamedPush`,
+  `TodosUpdatedPush`, `WorkflowEventPush`, `WorkspaceTrustRequiredPush` and
+  the rest (`igni_client.models.PUSH_TYPES`). One on a newer channel is a
+  plain `PushNotification` with its payload as JSON.
+- **`igni_client.frames`** — the messages a client sends: `UserMessage`,
+  `QueueMessage`, `HitlResponseBatch`, `HitlDecision`, `RpcRequest`,
+  `Command`, `Typing`, `CancelLogin`, and the ones igni-client types but
+  does not send (`Shutdown`, `Cancel`, `HitlResponse`, `SessionList`,
+  `SessionSwitch`, `ModelSwitch`, `McpToggle`; the
+  [reference](#ignis-methods-by-namespace) says why). `frame.wire()` is
+  its JSON.
+
+### Errors
+
+Everything igni-client raises on purpose is an `IgniClientError`:
+
+| Error | When | What to do |
+|---|---|---|
+| `Unavailable` | igni could not be reached, went away, is busy, or did not answer in time | try again later |
+| `AuthError` | the credential was refused | fix or renew it |
+| `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |
+| `NotSupported` | the target cannot do it: commands and `me()` need Fleet | use Fleet |
+| `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
+| `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
+| `UnknownMethod` (`RpcError`) | igni is older than this igni-client | upgrade igni |
+| `InvalidArguments` (`RpcError`, `ValueError`) | the arguments are not what the method takes; checked before sending | fix the call |
+| `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
+| `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
+| `RunFailed` | a run ended with `run_error` | read the message |
+| `RunInterrupted` | the connection moved or dropped while a run or followed call was going | read the session's history |
+| `ApprovalRequired` | `ask()` reached an approval with no `approve=`; `requirements` say what | pass `approve=`, or use `send()` |
+
+### igni_client.testing
+
+| Name | What it is |
+|---|---|
+| `FakeIgni(*, gateway=None, local_token=None)` | igni on a loopback socket; `fake.local()` and `fake.fleet(auth)` are targets pointed at it |
+| `fake.runs` | `script` (the run for a prompt's text, a list of steps), `decisions` (every approval answer) |
+| `fake.methods` | `answers` (by method: a value, a model, a message, or a function of the args), `calls`, `history`, `models`, `sessions`, `unbound_for(n)` |
+| `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections` |
+| `fake.commands` | how a slash command is answered: a function of its text |
+| `FakeGateway(tokens)` | Fleet's gateway: `commands` (by command line, a `PlayedCommand`), `commands_run` |
+| `Steps` | runs to script: `answer(text)`, `approval(tool, **args)`, `echo`, `rejected()`; with `Pause` and `Delay` steps |
+| `sample(T)` | a valid value of any of igni-client's types |
+
+### igni's methods, by namespace
+
+Every method below is generated from igni's contract, its documentation
+igni's own. A method that streams and is followed returns a
+[`Call`](#call); its entry says what it yields. Each says its wire method
+and the [access](#who-may-call-what) it needs.
 
 <!-- api-reference:start -->
 
@@ -2200,3 +2604,106 @@ configuration are not loaded.
 | `shutdown` | stops igni itself, for every window and program attached; no client of a person's igni should, and `session.shutdown()` winds one session down instead |
 
 <!-- api-reference:end -->
+
+## Errors and troubleshooting
+
+**`AccessRefused: … only igni's window may do this`.** The connection is
+a program, attached with igni's lockfile on the desktop, and the method
+is the window's: it loosens a rule the agent is held to (a saved
+permission rule, a trusted folder, a plugin) or changes whom igni acts
+for. Make the change in igni's window, or run the program through Fleet,
+where every connection is the window.
+
+**`AccessRefused: … approver token`, or `NotAllowed` from `approve()`.**
+A program answers approvals only with an approver token: `/programs` in
+igni's window makes one; pass it as `Local(approver_token=...)` or
+`IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,
+`Decision.deny(remember=True)` and switching the permission mode stay the
+window's.
+
+**`AuthError: igni at … refused the approver token`.** igni forgets
+approver tokens when it quits, and `/programs` can revoke them: make a new
+one.
+
+**`Unavailable: no igni is running for …`.** `Local(project_dir)` found no
+lockfile: open the project in igni, or pass `url=`.
+
+**`Unavailable: … got no answer`.** A call waits 60 seconds
+(`Connection.RPC_TIMEOUT`); the slow ones — installing a plugin,
+compacting a conversation, a shell command — longer, and a scheduled
+task's run as long as it takes (`igni_client.calls.TIMEOUTS`).
+
+**`UnknownMethod`.** igni is older than this igni-client and lacks the
+method. igni-client is generated from one version of igni's contract,
+which is in its `igni_client.models` docstring; use an igni at least as
+new.
+
+**`UnexpectedAnswer`.** igni answered with a shape the method does not
+return: igni and igni-client disagree about the contract. Align their
+versions; report it if they match.
+
+**`InvalidArguments`.** An argument is not of the method's type, or is
+one it does not take. Nothing was sent.
+
+**`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
+or a followed call was going. It may or may not have finished: read
+`session.history.get()`, or the method's own state.
+
+**A followed call never ends.** It ends when igni has no more to send for
+it, and some never do: `session.scheduler.start()` follows the scheduler
+for as long as the block runs. Leave the block, or wrap the loop in
+`asyncio.timeout(...)`.
+
+**An event arrives as `Unknown`.** igni sent a message type newer than
+this igni-client; upgrade it. Everything it carried is in
+`event.model_extra`. A known message this version cannot read is
+`Unknown` too, and logged as a warning on `igni_client.events`.
+
+**Logging.** igni-client logs on the `igni_client.*` loggers: the
+connection's reconnects at INFO, a message that is not JSON or cannot be
+read at WARNING. It never logs a token.
+
+## Changes since 0.1.0
+
+On purpose, and not backwards compatible:
+
+- **Every method is typed.** `igni.rpc(method, **args)` and
+  `session.rpc(...)` are gone: every one of igni's methods is a Python
+  method on `IgniClient` or `Session`, its arguments checked before
+  sending and its result a model. `session.use_model(name)` is
+  `session.models.switch(name)` (an `InfoMessage`); `igni.models.list()`
+  is `session.models.list()` (a `ModelRegistryResult`; `ModelCatalogue`
+  and `ModelEntry` are gone); `session.history()` is
+  `session.history.get()`, a list of `ChatTurn` — `UserTurn`,
+  `AssistantTurn`, `ToolTurn` and the others, told apart by `role` —
+  where it was `HistoryTurn` (gone). `session.cancel()` calls igni's
+  `cancel_run`, which answers, instead of sending `cancel`.
+- **Every message is generated from igni's contract**, field for field.
+  The models igni sends are required where the contract requires them:
+  `Requirement(…)` built by hand needs `tool_args` and `agent_path`,
+  `RunPaused(…)` its `requirements`, `PushNotification(…)` its `payload`.
+  `HitlDecision.action` and `.choice` are strings, as igni types them;
+  `Decision` still holds the values igni knows.
+- **A frame on the wire** is its `type` and the fields given a value; a
+  field left at its default is left out, and igni applies the same
+  default. In 0.1.0 every field went, as given.
+- **Errors.** igni's error answers raise `AccessRefused`,
+  `UnknownMethod`, `InvalidArguments`, `UnexpectedAnswer` or
+  `MethodFailed`, each an `RpcError`. A page's and the platform's methods
+  (`host_model`, `extension_service_token`, `deliver_service_events`,
+  `vm_sign_in`) are refused with `ValueError` before they are sent, as
+  before; `shutdown` is no longer among them, since igni's `shutdown`
+  method winds one session down (`session.shutdown()`), while the
+  `shutdown` message, which stops igni, is still never sent.
+- **New:** `Call` (`igni_client.calls`), `session.events()`,
+  `session.command()`, `session.typing()`, `igni.auth.cancel_login()`,
+  typed push notifications, `Fleet.standing` and `Local.standing`,
+  `igni_client.access`, `igni_client.testing.sample`, and `FakeIgni`'s
+  `methods.calls`, `socket.push()`, `commands` and `logins_cancelled`.
+- From earlier 0.2 changes: `IgniClient(target, backoff=Backoff(...))`
+  replaces `reconnect_attempts=`; `App.public_jwks()` is a `JwkSet`;
+  `Decision`, `Policy`, `Choice` and `Answer` live in
+  `igni_client.approvals` and `Reply` in `igni_client.replies`;
+  `run.record` and `run.woken` of a command are models, `None` until
+  their lines arrive; `igni_client.connection` keeps only `Connection`
+  and `REFUSED_METHODS`.
