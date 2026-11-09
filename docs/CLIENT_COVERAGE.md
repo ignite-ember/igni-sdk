@@ -36,7 +36,7 @@ clients (the reason is in the row)
 |---|---|---|
 | RPC methods | 104 (2 not for clients) | 0 |
 | Messages | 45 | 0 |
-| PyPI documentation | 3 packages | 0 |
+| PyPI documentation | 3 packages | 2 |
 
 ## RPC methods
 
@@ -317,5 +317,5 @@ branch. Most of the messages a client sends do not yet.
 | Package | Status | What "done" means |
 |---|---|---|
 | `igni-client` | ⬜ todo | Every area and method above: what it does, its arguments, its result, its errors, and an example. Streaming, approvals, events, reconnects, and Fleet vs local, each with a worked example. |
-| `igni-service` | ⬜ todo | The plain opening (PR #18), then every capability documented in depth. |
-| `igni-extension` | ⬜ todo | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
+| `igni-service` | ✅ written (branch `docs/pypi-reference`, 2,591 lines; its examples run as tests); on PyPI from 0.1.1 | The plain opening (PR #18), then every capability documented in depth. |
+| `igni-extension` | ✅ written (branch `docs/pypi-reference`, 1,739 lines; its examples run as tests); on PyPI from 0.1.1 | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
