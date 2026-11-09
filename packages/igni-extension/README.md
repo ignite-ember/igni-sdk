@@ -1,5 +1,7 @@
 # igni-extension
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/igni-extension](https://ignite-ember.sh/docs/sdk/igni-extension) — guides and the complete API reference, a page per topic.
+
 An igni extension's process, as its author writes it: tools igni can
 call, its own service reached as the signed-in person, and the host it
 runs in — without an address, a token or a protocol message in the

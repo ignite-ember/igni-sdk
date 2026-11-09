@@ -1,4 +1,4 @@
-.PHONY: help install check test npm-test npm-typecheck packages-check contracts contracts-check host-sdks client-api clean
+.PHONY: help install check test npm-test npm-typecheck packages-check contracts contracts-check host-sdks client-api sdk-docs clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -36,6 +36,7 @@ contracts: ## Refresh contracts/ from igni-core (../igni-core or IGNI_CORE_DIR),
 	uv run python scripts/sync_contracts.py
 	$(MAKE) --no-print-directory host-sdks
 	$(MAKE) --no-print-directory client-api
+	$(MAKE) --no-print-directory sdk-docs
 
 contracts-check: ## Fail when a copy in contracts/ differs from igni-core's
 	uv run python scripts/sync_contracts.py --check
@@ -53,6 +54,14 @@ host-sdks: ## Regenerate the SDKs' host objects from contracts/host-schema.json
 # checked in is stale; this regenerates it.
 client-api: ## Regenerate igni-client's models, methods and API reference from contracts/rpc-contract.json
 	uv run python -m tools.client_codegen
+
+# The SDKs' documentation on igni's site (ignite-ember.sh/docs/sdk), a page
+# per topic: each README cut at its sections, igni-client's reference from
+# the contract, igni-service's and igni-extension's from their code. The
+# site copies docs/site/ (scripts/sync-sdk-docs.mjs there).
+# tests/test_the_sdk_docs_are_generated.py fails when it is stale.
+sdk-docs: ## Regenerate the SDKs' site pages in docs/site/ from the READMEs, the contract and the code
+	uv run python -m tools.sdk_docs
 
 PY_PACKAGES := packages/igni-service packages/igni-extension packages/igni-client
 

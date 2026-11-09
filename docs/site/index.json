@@ -1,0 +1,4689 @@
+{
+  "generated_by": "igni-sdk tools/sdk_docs.py (make sdk-docs); do not edit",
+  "packages": [
+    {
+      "name": "igni-client",
+      "module": "igni_client",
+      "version": "0.1.0",
+      "description": "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there.",
+      "pypi": "https://pypi.org/project/igni-client/",
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-client"
+    },
+    {
+      "name": "igni-extension",
+      "module": "igni_extension",
+      "version": "0.1.0",
+      "description": "What an igni extension's process needs: tools over MCP, its own service with the person's token, and the host's object model.",
+      "pypi": "https://pypi.org/project/igni-extension/",
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension"
+    },
+    {
+      "name": "igni-service",
+      "module": "igni_service",
+      "version": "0.1.0",
+      "description": "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle.",
+      "pypi": "https://pypi.org/project/igni-service/",
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service"
+    }
+  ],
+  "pages": [
+    {
+      "package": "igni-client",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there.",
+      "category": "guide",
+      "order": 0,
+      "file": "igni-client/overview.md",
+      "sections": []
+    },
+    {
+      "package": "igni-client",
+      "slug": "installing",
+      "title": "Installing",
+      "description": "It needs Python 3.12 or later, and brings httpx, websockets, Pydantic and PyJWT with cryptography.",
+      "category": "guide",
+      "order": 1,
+      "file": "igni-client/installing.md",
+      "sections": []
+    },
+    {
+      "package": "igni-client",
+      "slug": "quick-start",
+      "title": "Quick start",
+      "description": "Against a person's igni in Fleet, with an API key they made on igni's portal:",
+      "category": "guide",
+      "order": 2,
+      "file": "igni-client/quick-start.md",
+      "sections": []
+    },
+    {
+      "package": "igni-client",
+      "slug": "concepts",
+      "title": "Concepts",
+      "description": "A target says where the igni is and how to reach it.",
+      "category": "guide",
+      "order": 3,
+      "file": "igni-client/concepts.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "where-the-igni-is-fleet-or-this-machine",
+          "title": "Where the igni is: Fleet or this machine"
+        },
+        {
+          "level": 2,
+          "id": "who-you-connect-as-a-person-an-app-a-space",
+          "title": "Who you connect as: a person, an app, a space"
+        },
+        {
+          "level": 2,
+          "id": "sessions-and-igni-as-a-whole",
+          "title": "Sessions, and igni as a whole"
+        },
+        {
+          "level": 2,
+          "id": "who-may-call-what",
+          "title": "Who may call what"
+        },
+        {
+          "level": 2,
+          "id": "igni-tells-everyone-everything",
+          "title": "igni tells everyone everything"
+        },
+        {
+          "level": 2,
+          "id": "typed-from-igni-s-contract",
+          "title": "Typed from igni's contract"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "guides",
+      "title": "Guides",
+      "description": "session.send() sends a prompt and yields the run it starts as it happens: the answer a few tokens at a time, the model's reasoning, each tool call and its result, sub-agents starting and finishing, the end.",
+      "category": "guide",
+      "order": 4,
+      "file": "igni-client/guides.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "a-run-token-by-token",
+          "title": "A run, token by token"
+        },
+        {
+          "level": 2,
+          "id": "approvals",
+          "title": "Approvals"
+        },
+        {
+          "level": 2,
+          "id": "the-whole-answer-at-once",
+          "title": "The whole answer at once"
+        },
+        {
+          "level": 2,
+          "id": "calls-that-stream",
+          "title": "Calls that stream"
+        },
+        {
+          "level": 2,
+          "id": "watching-an-igni",
+          "title": "Watching an igni"
+        },
+        {
+          "level": 2,
+          "id": "slash-commands",
+          "title": "Slash commands"
+        },
+        {
+          "level": 2,
+          "id": "commands-in-a-fleet-vm",
+          "title": "Commands in a Fleet VM"
+        },
+        {
+          "level": 2,
+          "id": "when-the-connection-changes-under-you",
+          "title": "When the connection changes under you"
+        },
+        {
+          "level": 2,
+          "id": "testing-your-program",
+          "title": "Testing your program"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "api-reference",
+      "title": "API reference",
+      "description": "IgniClient(target, *, backoff=None) — a connection to one igni. Open it with async with (or await igni.connect() and await igni.close()).",
+      "category": "guide",
+      "order": 5,
+      "file": "igni-client/api-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniclient",
+          "title": "IgniClient"
+        },
+        {
+          "level": 2,
+          "id": "session-and-sessions",
+          "title": "Session and Sessions"
+        },
+        {
+          "level": 2,
+          "id": "call",
+          "title": "Call"
+        },
+        {
+          "level": 2,
+          "id": "targets-fleet-and-local",
+          "title": "Targets: Fleet and Local"
+        },
+        {
+          "level": 2,
+          "id": "credentials-person-app-space",
+          "title": "Credentials: Person, App, Space"
+        },
+        {
+          "level": 2,
+          "id": "approvals-and-replies",
+          "title": "Approvals and replies"
+        },
+        {
+          "level": 2,
+          "id": "models-events-and-frames",
+          "title": "Models, events and frames"
+        },
+        {
+          "level": 2,
+          "id": "errors",
+          "title": "Errors"
+        },
+        {
+          "level": 2,
+          "id": "igni-client-testing",
+          "title": "igni_client.testing"
+        },
+        {
+          "level": 2,
+          "id": "igni-s-methods-by-namespace",
+          "title": "igni's methods, by namespace"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "errors-and-troubleshooting",
+      "title": "Errors and troubleshooting",
+      "description": "a program, attached with igni's lockfile on the desktop, and the method is the window's: it loosens a rule the agent is held to (a saved permission rule, a trusted folder, a plugin) or changes whom igni acts for.",
+      "category": "guide",
+      "order": 6,
+      "file": "igni-client/errors-and-troubleshooting.md",
+      "sections": []
+    },
+    {
+      "package": "igni-client",
+      "slug": "changes-since-0-1-0",
+      "title": "Changes since 0.1.0",
+      "description": "On purpose, and not backwards compatible:",
+      "category": "guide",
+      "order": 7,
+      "file": "igni-client/changes-since-0-1-0.md",
+      "sections": []
+    },
+    {
+      "package": "igni-client",
+      "slug": "igni",
+      "title": "igni as a whole",
+      "description": "The methods igni answers for igni as a whole; IgniClient is one.",
+      "category": "reference",
+      "order": 8,
+      "file": "igni-client/igni.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-check-for-update",
+          "title": "igni.check_for_update()"
+        },
+        {
+          "level": 2,
+          "id": "igni-group-policy",
+          "title": "igni.group_policy()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "sessions",
+      "title": "Sessions",
+      "description": "igni's sessions: attach one, or make a new one in a project folder. The methods igni answers for one session; Session is one.",
+      "category": "reference",
+      "order": 9,
+      "file": "igni-client/sessions.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-sessions-attach",
+          "title": "igni.sessions.attach()"
+        },
+        {
+          "level": 2,
+          "id": "session-status",
+          "title": "session.status()"
+        },
+        {
+          "level": 2,
+          "id": "session-current-id",
+          "title": "session.current_id()"
+        },
+        {
+          "level": 2,
+          "id": "session-get-project-dir",
+          "title": "session.get_project_dir()"
+        },
+        {
+          "level": 2,
+          "id": "session-is-processing",
+          "title": "session.is_processing()"
+        },
+        {
+          "level": 2,
+          "id": "session-run-timeout",
+          "title": "session.run_timeout()"
+        },
+        {
+          "level": 2,
+          "id": "session-list-sessions",
+          "title": "session.list_sessions()"
+        },
+        {
+          "level": 2,
+          "id": "session-switch",
+          "title": "session.switch()"
+        },
+        {
+          "level": 2,
+          "id": "session-cancel",
+          "title": "session.cancel()"
+        },
+        {
+          "level": 2,
+          "id": "session-shutdown",
+          "title": "session.shutdown()"
+        },
+        {
+          "level": 2,
+          "id": "session-typing",
+          "title": "session.typing()"
+        },
+        {
+          "level": 2,
+          "id": "session-upload-attachment",
+          "title": "session.upload_attachment()"
+        },
+        {
+          "level": 2,
+          "id": "session-todos",
+          "title": "session.todos()"
+        },
+        {
+          "level": 2,
+          "id": "session-display-config",
+          "title": "session.display_config()"
+        },
+        {
+          "level": 2,
+          "id": "session-toggle-verbose",
+          "title": "session.toggle_verbose()"
+        },
+        {
+          "level": 2,
+          "id": "session-extract-learnings",
+          "title": "session.extract_learnings()"
+        },
+        {
+          "level": 2,
+          "id": "session-visualization-action",
+          "title": "session.visualization_action()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "runs",
+      "title": "Runs received but not finished",
+      "description": "This session's runs that were received but not finished.",
+      "category": "reference",
+      "order": 10,
+      "file": "igni-client/runs.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-runs-discard-interrupted",
+          "title": "session.runs.discard_interrupted()"
+        },
+        {
+          "level": 2,
+          "id": "session-runs-interrupted",
+          "title": "session.runs.interrupted()"
+        },
+        {
+          "level": 2,
+          "id": "session-runs-pending-messages",
+          "title": "session.runs.pending_messages()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "history-and-context",
+      "title": "History and context",
+      "description": "This session's conversation as stored: read, search, cut back. This session's context window: how full it is, and compacting it.",
+      "category": "reference",
+      "order": 11,
+      "file": "igni-client/history-and-context.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-history-get",
+          "title": "session.history.get()"
+        },
+        {
+          "level": 2,
+          "id": "session-history-search",
+          "title": "session.history.search()"
+        },
+        {
+          "level": 2,
+          "id": "session-history-truncate",
+          "title": "session.history.truncate()"
+        },
+        {
+          "level": 2,
+          "id": "session-context-breakdown",
+          "title": "session.context.breakdown()"
+        },
+        {
+          "level": 2,
+          "id": "session-context-compact",
+          "title": "session.context.compact()"
+        },
+        {
+          "level": 2,
+          "id": "session-context-tokens",
+          "title": "session.context.tokens()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "loop",
+      "title": "Loop",
+      "description": "This session's loop: a task the agent repeats until it is done.",
+      "category": "reference",
+      "order": 12,
+      "file": "igni-client/loop.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-loop-cancel",
+          "title": "session.loop.cancel()"
+        },
+        {
+          "level": 2,
+          "id": "session-loop-next-iteration",
+          "title": "session.loop.next_iteration()"
+        },
+        {
+          "level": 2,
+          "id": "session-loop-pause",
+          "title": "session.loop.pause()"
+        },
+        {
+          "level": 2,
+          "id": "session-loop-resume",
+          "title": "session.loop.resume()"
+        },
+        {
+          "level": 2,
+          "id": "session-loop-status",
+          "title": "session.loop.status()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "plans",
+      "title": "Plans",
+      "description": "Plan mode: the plan the agent submitted, and the person's decision.",
+      "category": "reference",
+      "order": 13,
+      "file": "igni-client/plans.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-plan-approve",
+          "title": "session.plan.approve()"
+        },
+        {
+          "level": 2,
+          "id": "session-plan-dismiss",
+          "title": "session.plan.dismiss()"
+        },
+        {
+          "level": 2,
+          "id": "session-plan-latest",
+          "title": "session.plan.latest()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "models",
+      "title": "Choosing a model",
+      "description": "The models this session can use, and switching between them.",
+      "category": "reference",
+      "order": 14,
+      "file": "igni-client/models.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-models-list",
+          "title": "session.models.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-models-switch",
+          "title": "session.models.switch()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "permissions",
+      "title": "Permissions",
+      "description": "Saved permission rules for tool calls.",
+      "category": "reference",
+      "order": 15,
+      "file": "igni-client/permissions.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-permissions-check",
+          "title": "session.permissions.check()"
+        },
+        {
+          "level": 2,
+          "id": "session-permissions-save-rule",
+          "title": "session.permissions.save_rule()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "workspace",
+      "title": "Workspace trust",
+      "description": "Whether this session's project folder is trusted.",
+      "category": "reference",
+      "order": 16,
+      "file": "igni-client/workspace.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-workspace-set-trust",
+          "title": "session.workspace.set_trust()"
+        },
+        {
+          "level": 2,
+          "id": "session-workspace-trust",
+          "title": "session.workspace.trust()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "files",
+      "title": "Files and folders",
+      "description": "Files in this session's project folder. Folders on the machine igni runs on.",
+      "category": "reference",
+      "order": 17,
+      "file": "igni-client/files.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-files-complete",
+          "title": "session.files.complete()"
+        },
+        {
+          "level": 2,
+          "id": "session-files-pick-dir",
+          "title": "session.files.pick_dir()"
+        },
+        {
+          "level": 2,
+          "id": "session-files-read",
+          "title": "session.files.read()"
+        },
+        {
+          "level": 2,
+          "id": "session-files-search",
+          "title": "session.files.search()"
+        },
+        {
+          "level": 2,
+          "id": "igni-files-list-dirs",
+          "title": "igni.files.list_dirs()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "shell-and-processes",
+      "title": "Shell and background processes",
+      "description": "The methods igni answers for one session; Session is one. Background processes igni tracks, in every session.",
+      "category": "reference",
+      "order": 18,
+      "file": "igni-client/shell-and-processes.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-run-shell",
+          "title": "session.run_shell()"
+        },
+        {
+          "level": 2,
+          "id": "igni-processes-list",
+          "title": "igni.processes.list()"
+        },
+        {
+          "level": 2,
+          "id": "igni-processes-stop",
+          "title": "igni.processes.stop()"
+        },
+        {
+          "level": 2,
+          "id": "igni-processes-tail",
+          "title": "igni.processes.tail()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "agents",
+      "title": "Agents",
+      "description": "The agents this session can hand work to. Sub-agents' runs, wherever they are going.",
+      "category": "reference",
+      "order": 19,
+      "file": "igni-client/agents.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-agents-discard",
+          "title": "session.agents.discard()"
+        },
+        {
+          "level": 2,
+          "id": "session-agents-list",
+          "title": "session.agents.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-agents-promote",
+          "title": "session.agents.promote()"
+        },
+        {
+          "level": 2,
+          "id": "igni-agents-cancel-run",
+          "title": "igni.agents.cancel_run()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "skills-and-commands",
+      "title": "Skills, slash commands and output styles",
+      "description": "The skills this session's agent can use. The methods igni answers for one session; Session is one.",
+      "category": "reference",
+      "order": 20,
+      "file": "igni-client/skills-and-commands.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-skills-definitions",
+          "title": "session.skills.definitions()"
+        },
+        {
+          "level": 2,
+          "id": "session-skills-list",
+          "title": "session.skills.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-skills-names",
+          "title": "session.skills.names()"
+        },
+        {
+          "level": 2,
+          "id": "session-command",
+          "title": "session.command()"
+        },
+        {
+          "level": 2,
+          "id": "session-slash-commands",
+          "title": "session.slash_commands()"
+        },
+        {
+          "level": 2,
+          "id": "session-output-styles",
+          "title": "session.output_styles()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "hooks",
+      "title": "Hooks",
+      "description": "The hooks that run on this session's events. The methods igni answers for one session; Session is one.",
+      "category": "reference",
+      "order": 21,
+      "file": "igni-client/hooks.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-hooks-list",
+          "title": "session.hooks.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-hooks-reload",
+          "title": "session.hooks.reload()"
+        },
+        {
+          "level": 2,
+          "id": "session-fire-session-start-hook",
+          "title": "session.fire_session_start_hook()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "scheduler",
+      "title": "Scheduled tasks",
+      "description": "Scheduled tasks of this session's project.",
+      "category": "reference",
+      "order": 22,
+      "file": "igni-client/scheduler.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-scheduler-cancel",
+          "title": "session.scheduler.cancel()"
+        },
+        {
+          "level": 2,
+          "id": "session-scheduler-execute",
+          "title": "session.scheduler.execute()"
+        },
+        {
+          "level": 2,
+          "id": "session-scheduler-list",
+          "title": "session.scheduler.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-scheduler-start",
+          "title": "session.scheduler.start()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "workflows",
+      "title": "Workflows",
+      "description": "Workflows: scripted runs this session starts and follows.",
+      "category": "reference",
+      "order": 23,
+      "file": "igni-client/workflows.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-workflows-cancel",
+          "title": "session.workflows.cancel()"
+        },
+        {
+          "level": 2,
+          "id": "session-workflows-list",
+          "title": "session.workflows.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-workflows-run",
+          "title": "session.workflows.run()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "mcp",
+      "title": "MCP servers",
+      "description": "MCP servers this session connects to, and their tools.",
+      "category": "reference",
+      "order": 24,
+      "file": "igni-client/mcp.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-mcp-connect",
+          "title": "session.mcp.connect()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-disconnect",
+          "title": "session.mcp.disconnect()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-ensure",
+          "title": "session.mcp.ensure()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-server-details",
+          "title": "session.mcp.server_details()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-servers",
+          "title": "session.mcp.servers()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-set-tool-enabled",
+          "title": "session.mcp.set_tool_enabled()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-status",
+          "title": "session.mcp.status()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "plugins",
+      "title": "Plugins and marketplaces",
+      "description": "Plugins installed into this session's project. Plugin marketplaces: where plugins are installed from.",
+      "category": "reference",
+      "order": 25,
+      "file": "igni-client/plugins.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "session-plugins-contents",
+          "title": "session.plugins.contents()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-install",
+          "title": "session.plugins.install()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-list",
+          "title": "session.plugins.list()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-preview",
+          "title": "session.plugins.preview()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-remove",
+          "title": "session.plugins.remove()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-set-enabled",
+          "title": "session.plugins.set_enabled()"
+        },
+        {
+          "level": 2,
+          "id": "session-plugins-update",
+          "title": "session.plugins.update()"
+        },
+        {
+          "level": 2,
+          "id": "igni-marketplaces-add",
+          "title": "igni.marketplaces.add()"
+        },
+        {
+          "level": 2,
+          "id": "igni-marketplaces-list",
+          "title": "igni.marketplaces.list()"
+        },
+        {
+          "level": 2,
+          "id": "igni-marketplaces-refresh",
+          "title": "igni.marketplaces.refresh()"
+        },
+        {
+          "level": 2,
+          "id": "igni-marketplaces-remove",
+          "title": "igni.marketplaces.remove()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "extensions",
+      "title": "Extensions",
+      "description": "The extensions installed into this igni, and their settings.",
+      "category": "reference",
+      "order": 26,
+      "file": "igni-client/extensions.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-extensions-list",
+          "title": "igni.extensions.list()"
+        },
+        {
+          "level": 2,
+          "id": "igni-extensions-set-settings",
+          "title": "igni.extensions.set_settings()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "notifications",
+      "title": "Notifications",
+      "description": "The signed-in person's notifications, and what extensions posted.",
+      "category": "reference",
+      "order": 27,
+      "file": "igni-client/notifications.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-notifications-counts",
+          "title": "igni.notifications.counts()"
+        },
+        {
+          "level": 2,
+          "id": "igni-notifications-list",
+          "title": "igni.notifications.list()"
+        },
+        {
+          "level": 2,
+          "id": "igni-notifications-mark-read",
+          "title": "igni.notifications.mark_read()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "sign-in-and-server",
+      "title": "Sign-in and server",
+      "description": "Signing igni in to igni server, and choosing which server. This session's sign-in to igni server.",
+      "category": "reference",
+      "order": 28,
+      "file": "igni-client/sign-in-and-server.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-auth-cancel-login",
+          "title": "igni.auth.cancel_login()"
+        },
+        {
+          "level": 2,
+          "id": "igni-auth-discover-server",
+          "title": "igni.auth.discover_server()"
+        },
+        {
+          "level": 2,
+          "id": "igni-auth-login",
+          "title": "igni.auth.login()"
+        },
+        {
+          "level": 2,
+          "id": "igni-auth-set-server",
+          "title": "igni.auth.set_server()"
+        },
+        {
+          "level": 2,
+          "id": "session-auth-plan",
+          "title": "session.auth.plan()"
+        },
+        {
+          "level": 2,
+          "id": "session-auth-reload-credentials",
+          "title": "session.auth.reload_credentials()"
+        },
+        {
+          "level": 2,
+          "id": "session-auth-sign-out",
+          "title": "session.auth.sign_out()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "approvers",
+      "title": "Approver tokens",
+      "description": "Approver tokens: what lets a program answer approval requests.",
+      "category": "reference",
+      "order": 29,
+      "file": "igni-client/approvers.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-approvers-mint-token",
+          "title": "igni.approvers.mint_token()"
+        },
+        {
+          "level": 2,
+          "id": "igni-approvers-revoke-tokens",
+          "title": "igni.approvers.revoke_tokens()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "window",
+      "title": "igni's window model",
+      "description": "igni's own window's model — its fields, toasts and dialog.",
+      "category": "reference",
+      "order": 30,
+      "file": "igni-client/window.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-window-model",
+          "title": "igni.window.model()"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "access",
+      "title": "Access: who may call what",
+      "description": "Which connections may make each call — client, approver, window — and how a connection's standing is decided.",
+      "category": "reference",
+      "order": 31,
+      "file": "igni-client/access.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "who-may-call-what",
+          "title": "Who may call what"
+        },
+        {
+          "level": 2,
+          "id": "the-access-each-method-needs",
+          "title": "The access each method needs"
+        },
+        {
+          "level": 2,
+          "id": "not-for-clients",
+          "title": "Not for clients"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "models-reference",
+      "title": "Models reference",
+      "description": "Every model igni-client reads or sends, field by field, with the methods that return it and the models it is part of.",
+      "category": "reference",
+      "order": 32,
+      "file": "igni-client/models-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igni-as-a-whole",
+          "title": "igni as a whole"
+        },
+        {
+          "level": 3,
+          "id": "grouppolicypackresult",
+          "title": "GroupPolicyPackResult"
+        },
+        {
+          "level": 3,
+          "id": "updateavailable",
+          "title": "UpdateAvailable"
+        },
+        {
+          "level": 2,
+          "id": "sessions",
+          "title": "Sessions"
+        },
+        {
+          "level": 3,
+          "id": "attachsessionresult",
+          "title": "AttachSessionResult"
+        },
+        {
+          "level": 3,
+          "id": "displayconfig",
+          "title": "DisplayConfig"
+        },
+        {
+          "level": 3,
+          "id": "sessionlistentry",
+          "title": "SessionListEntry"
+        },
+        {
+          "level": 3,
+          "id": "todoitem",
+          "title": "TodoItem"
+        },
+        {
+          "level": 3,
+          "id": "uploadattachmentresult",
+          "title": "UploadAttachmentResult"
+        },
+        {
+          "level": 3,
+          "id": "visualizationactionresult",
+          "title": "VisualizationActionResult"
+        },
+        {
+          "level": 2,
+          "id": "runs-received-but-not-finished",
+          "title": "Runs received but not finished"
+        },
+        {
+          "level": 3,
+          "id": "discardinterruptedrunresult",
+          "title": "DiscardInterruptedRunResult"
+        },
+        {
+          "level": 3,
+          "id": "interruptedrun",
+          "title": "InterruptedRun"
+        },
+        {
+          "level": 3,
+          "id": "pendingmessage",
+          "title": "PendingMessage"
+        },
+        {
+          "level": 2,
+          "id": "history-and-context",
+          "title": "History and context"
+        },
+        {
+          "level": 3,
+          "id": "assistantturn",
+          "title": "AssistantTurn"
+        },
+        {
+          "level": 3,
+          "id": "chatsearchhit",
+          "title": "ChatSearchHit"
+        },
+        {
+          "level": 3,
+          "id": "contextbreakdown",
+          "title": "ContextBreakdown"
+        },
+        {
+          "level": 3,
+          "id": "planturn",
+          "title": "PlanTurn"
+        },
+        {
+          "level": 3,
+          "id": "statsturn",
+          "title": "StatsTurn"
+        },
+        {
+          "level": 3,
+          "id": "thinkingturn",
+          "title": "ThinkingTurn"
+        },
+        {
+          "level": 3,
+          "id": "toolturn",
+          "title": "ToolTurn"
+        },
+        {
+          "level": 3,
+          "id": "truncatehistoryresult",
+          "title": "TruncateHistoryResult"
+        },
+        {
+          "level": 3,
+          "id": "userturn",
+          "title": "UserTurn"
+        },
+        {
+          "level": 3,
+          "id": "visualizationturn",
+          "title": "VisualizationTurn"
+        },
+        {
+          "level": 2,
+          "id": "loop",
+          "title": "Loop"
+        },
+        {
+          "level": 3,
+          "id": "loopadvance",
+          "title": "LoopAdvance"
+        },
+        {
+          "level": 3,
+          "id": "loopstatussnapshot",
+          "title": "LoopStatusSnapshot"
+        },
+        {
+          "level": 2,
+          "id": "plans",
+          "title": "Plans"
+        },
+        {
+          "level": 3,
+          "id": "latestplanresult",
+          "title": "LatestPlanResult"
+        },
+        {
+          "level": 3,
+          "id": "plandecisionresult",
+          "title": "PlanDecisionResult"
+        },
+        {
+          "level": 2,
+          "id": "choosing-a-model",
+          "title": "Choosing a model"
+        },
+        {
+          "level": 3,
+          "id": "modelregistryentryview",
+          "title": "ModelRegistryEntryView"
+        },
+        {
+          "level": 3,
+          "id": "modelregistryresult",
+          "title": "ModelRegistryResult"
+        },
+        {
+          "level": 2,
+          "id": "workspace-trust",
+          "title": "Workspace trust"
+        },
+        {
+          "level": 3,
+          "id": "workspacetruststatus",
+          "title": "WorkspaceTrustStatus"
+        },
+        {
+          "level": 2,
+          "id": "files-and-folders",
+          "title": "Files and folders"
+        },
+        {
+          "level": 3,
+          "id": "dirlistresult",
+          "title": "DirListResult"
+        },
+        {
+          "level": 3,
+          "id": "filecompletion",
+          "title": "FileCompletion"
+        },
+        {
+          "level": 3,
+          "id": "pickdirresult",
+          "title": "PickDirResult"
+        },
+        {
+          "level": 3,
+          "id": "readfileresult",
+          "title": "ReadFileResult"
+        },
+        {
+          "level": 3,
+          "id": "searchcodematch",
+          "title": "SearchCodeMatch"
+        },
+        {
+          "level": 3,
+          "id": "searchcoderesult",
+          "title": "SearchCodeResult"
+        },
+        {
+          "level": 2,
+          "id": "shell-and-background-processes",
+          "title": "Shell and background processes"
+        },
+        {
+          "level": 3,
+          "id": "processrow",
+          "title": "ProcessRow"
+        },
+        {
+          "level": 3,
+          "id": "processtailresult",
+          "title": "ProcessTailResult"
+        },
+        {
+          "level": 3,
+          "id": "runshellresult",
+          "title": "RunShellResult"
+        },
+        {
+          "level": 3,
+          "id": "stopprocessresult",
+          "title": "StopProcessResult"
+        },
+        {
+          "level": 2,
+          "id": "agents",
+          "title": "Agents"
+        },
+        {
+          "level": 3,
+          "id": "agentinfo",
+          "title": "AgentInfo"
+        },
+        {
+          "level": 3,
+          "id": "cancelagentrunresult",
+          "title": "CancelAgentRunResult"
+        },
+        {
+          "level": 3,
+          "id": "discardephemeralresult",
+          "title": "DiscardEphemeralResult"
+        },
+        {
+          "level": 3,
+          "id": "promoteephemeralresult",
+          "title": "PromoteEphemeralResult"
+        },
+        {
+          "level": 2,
+          "id": "skills-slash-commands-and-output-styles",
+          "title": "Skills, slash commands and output styles"
+        },
+        {
+          "level": 3,
+          "id": "builtinslashcommand",
+          "title": "BuiltinSlashCommand"
+        },
+        {
+          "level": 3,
+          "id": "extensionslashcommand",
+          "title": "ExtensionSlashCommand"
+        },
+        {
+          "level": 3,
+          "id": "markdownslashcommand",
+          "title": "MarkdownSlashCommand"
+        },
+        {
+          "level": 3,
+          "id": "outputstyleinfo",
+          "title": "OutputStyleInfo"
+        },
+        {
+          "level": 3,
+          "id": "outputstylesresult",
+          "title": "OutputStylesResult"
+        },
+        {
+          "level": 3,
+          "id": "skilldefinition",
+          "title": "SkillDefinition"
+        },
+        {
+          "level": 3,
+          "id": "skillinfo",
+          "title": "SkillInfo"
+        },
+        {
+          "level": 3,
+          "id": "skillslashcommand",
+          "title": "SkillSlashCommand"
+        },
+        {
+          "level": 2,
+          "id": "hooks",
+          "title": "Hooks"
+        },
+        {
+          "level": 3,
+          "id": "hookentryview",
+          "title": "HookEntryView"
+        },
+        {
+          "level": 2,
+          "id": "scheduled-tasks",
+          "title": "Scheduled tasks"
+        },
+        {
+          "level": 3,
+          "id": "scheduledtask",
+          "title": "ScheduledTask"
+        },
+        {
+          "level": 2,
+          "id": "workflows",
+          "title": "Workflows"
+        },
+        {
+          "level": 3,
+          "id": "workflowcancelresponse",
+          "title": "WorkflowCancelResponse"
+        },
+        {
+          "level": 3,
+          "id": "workflowlistitem",
+          "title": "WorkflowListItem"
+        },
+        {
+          "level": 3,
+          "id": "workflowphase",
+          "title": "WorkflowPhase"
+        },
+        {
+          "level": 3,
+          "id": "workflowrunresponse",
+          "title": "WorkflowRunResponse"
+        },
+        {
+          "level": 2,
+          "id": "mcp-servers",
+          "title": "MCP servers"
+        },
+        {
+          "level": 3,
+          "id": "mcpprompt",
+          "title": "McpPrompt"
+        },
+        {
+          "level": 3,
+          "id": "mcpresource",
+          "title": "McpResource"
+        },
+        {
+          "level": 3,
+          "id": "mcpserversnapshot",
+          "title": "McpServerSnapshot"
+        },
+        {
+          "level": 3,
+          "id": "mcpserversummary",
+          "title": "McpServerSummary"
+        },
+        {
+          "level": 3,
+          "id": "mcptooltoggleresult",
+          "title": "McpToolToggleResult"
+        },
+        {
+          "level": 3,
+          "id": "mcpinitresult",
+          "title": "McpInitResult"
+        },
+        {
+          "level": 3,
+          "id": "mcpserverstatus",
+          "title": "McpServerStatus"
+        },
+        {
+          "level": 2,
+          "id": "plugins-and-marketplaces",
+          "title": "Plugins and marketplaces"
+        },
+        {
+          "level": 3,
+          "id": "marketplaceinfo",
+          "title": "MarketplaceInfo"
+        },
+        {
+          "level": 3,
+          "id": "marketplaceplugininfo",
+          "title": "MarketplacePluginInfo"
+        },
+        {
+          "level": 3,
+          "id": "pluginagentinfo",
+          "title": "PluginAgentInfo"
+        },
+        {
+          "level": 3,
+          "id": "plugincontents",
+          "title": "PluginContents"
+        },
+        {
+          "level": 3,
+          "id": "pluginhookinfo",
+          "title": "PluginHookInfo"
+        },
+        {
+          "level": 3,
+          "id": "plugininfo",
+          "title": "PluginInfo"
+        },
+        {
+          "level": 3,
+          "id": "pluginmcpserverinfo",
+          "title": "PluginMcpServerInfo"
+        },
+        {
+          "level": 3,
+          "id": "pluginpreviewsource",
+          "title": "PluginPreviewSource"
+        },
+        {
+          "level": 3,
+          "id": "pluginskillinfo",
+          "title": "PluginSkillInfo"
+        },
+        {
+          "level": 3,
+          "id": "plugintoolinfo",
+          "title": "PluginToolInfo"
+        },
+        {
+          "level": 2,
+          "id": "extensions",
+          "title": "Extensions"
+        },
+        {
+          "level": 3,
+          "id": "extensionindicator",
+          "title": "ExtensionIndicator"
+        },
+        {
+          "level": 3,
+          "id": "extensionlistresult",
+          "title": "ExtensionListResult"
+        },
+        {
+          "level": 3,
+          "id": "extensionmenuentry",
+          "title": "ExtensionMenuEntry"
+        },
+        {
+          "level": 3,
+          "id": "extensionpage",
+          "title": "ExtensionPage"
+        },
+        {
+          "level": 3,
+          "id": "extensionsetting",
+          "title": "ExtensionSetting"
+        },
+        {
+          "level": 3,
+          "id": "extensionsummary",
+          "title": "ExtensionSummary"
+        },
+        {
+          "level": 3,
+          "id": "extensionswitchedoff",
+          "title": "ExtensionSwitchedOff"
+        },
+        {
+          "level": 3,
+          "id": "extensiontool",
+          "title": "ExtensionTool"
+        },
+        {
+          "level": 2,
+          "id": "notifications",
+          "title": "Notifications"
+        },
+        {
+          "level": 3,
+          "id": "floornotification",
+          "title": "FloorNotification"
+        },
+        {
+          "level": 3,
+          "id": "notificationcounts",
+          "title": "NotificationCounts"
+        },
+        {
+          "level": 3,
+          "id": "notificationtarget",
+          "title": "NotificationTarget"
+        },
+        {
+          "level": 3,
+          "id": "notificationslistresult",
+          "title": "NotificationsListResult"
+        },
+        {
+          "level": 3,
+          "id": "notificationsreadresult",
+          "title": "NotificationsReadResult"
+        },
+        {
+          "level": 2,
+          "id": "sign-in-and-server",
+          "title": "Sign-in and server"
+        },
+        {
+          "level": 3,
+          "id": "cloudplan",
+          "title": "CloudPlan"
+        },
+        {
+          "level": 3,
+          "id": "loginstarted",
+          "title": "LoginStarted"
+        },
+        {
+          "level": 3,
+          "id": "serverchoice",
+          "title": "ServerChoice"
+        },
+        {
+          "level": 3,
+          "id": "serverfound",
+          "title": "ServerFound"
+        },
+        {
+          "level": 2,
+          "id": "approver-tokens",
+          "title": "Approver tokens"
+        },
+        {
+          "level": 3,
+          "id": "approvertokenminted",
+          "title": "ApproverTokenMinted"
+        },
+        {
+          "level": 3,
+          "id": "approvertokensrevoked",
+          "title": "ApproverTokensRevoked"
+        },
+        {
+          "level": 2,
+          "id": "igni-s-window-model",
+          "title": "igni's window model"
+        },
+        {
+          "level": 3,
+          "id": "dialoganswered",
+          "title": "DialogAnswered"
+        },
+        {
+          "level": 3,
+          "id": "dialogshown",
+          "title": "DialogShown"
+        },
+        {
+          "level": 3,
+          "id": "hydrated",
+          "title": "Hydrated"
+        },
+        {
+          "level": 3,
+          "id": "revised",
+          "title": "Revised"
+        },
+        {
+          "level": 3,
+          "id": "toastadded",
+          "title": "ToastAdded"
+        },
+        {
+          "level": 3,
+          "id": "written",
+          "title": "Written"
+        },
+        {
+          "level": 2,
+          "id": "in-messages-and-push-notifications",
+          "title": "In messages and push notifications"
+        },
+        {
+          "level": 3,
+          "id": "agentcompletedevent",
+          "title": "AgentCompletedEvent"
+        },
+        {
+          "level": 3,
+          "id": "agentpausedevent",
+          "title": "AgentPausedEvent"
+        },
+        {
+          "level": 3,
+          "id": "agentstartedevent",
+          "title": "AgentStartedEvent"
+        },
+        {
+          "level": 3,
+          "id": "backgroundprocessdonepayload",
+          "title": "BackgroundProcessDonePayload"
+        },
+        {
+          "level": 3,
+          "id": "contentpreviewevent",
+          "title": "ContentPreviewEvent"
+        },
+        {
+          "level": 3,
+          "id": "externalopen",
+          "title": "ExternalOpen"
+        },
+        {
+          "level": 3,
+          "id": "fileeditedpayload",
+          "title": "FileEditedPayload"
+        },
+        {
+          "level": 3,
+          "id": "hostsignal",
+          "title": "HostSignal"
+        },
+        {
+          "level": 3,
+          "id": "httpretryattemptpayload",
+          "title": "HttpRetryAttemptPayload"
+        },
+        {
+          "level": 3,
+          "id": "httpretrysucceededpayload",
+          "title": "HttpRetrySucceededPayload"
+        },
+        {
+          "level": 3,
+          "id": "loginresultpayload",
+          "title": "LoginResultPayload"
+        },
+        {
+          "level": 3,
+          "id": "loginstatuspayload",
+          "title": "LoginStatusPayload"
+        },
+        {
+          "level": 3,
+          "id": "notificationschanged",
+          "title": "NotificationsChanged"
+        },
+        {
+          "level": 3,
+          "id": "outputstylechangedpayload",
+          "title": "OutputStyleChangedPayload"
+        },
+        {
+          "level": 3,
+          "id": "permissionmodechangedpayload",
+          "title": "PermissionModeChangedPayload"
+        },
+        {
+          "level": 3,
+          "id": "plandecidedpayload",
+          "title": "PlanDecidedPayload"
+        },
+        {
+          "level": 3,
+          "id": "planmodeenteredpayload",
+          "title": "PlanModeEnteredPayload"
+        },
+        {
+          "level": 3,
+          "id": "plansubmittedpayload",
+          "title": "PlanSubmittedPayload"
+        },
+        {
+          "level": 3,
+          "id": "processexitedpayload",
+          "title": "ProcessExitedPayload"
+        },
+        {
+          "level": 3,
+          "id": "processlinepayload",
+          "title": "ProcessLinePayload"
+        },
+        {
+          "level": 3,
+          "id": "processstartedpayload",
+          "title": "ProcessStartedPayload"
+        },
+        {
+          "level": 3,
+          "id": "runerrorevent",
+          "title": "RunErrorEvent"
+        },
+        {
+          "level": 3,
+          "id": "schedulercompletedpayload",
+          "title": "SchedulerCompletedPayload"
+        },
+        {
+          "level": 3,
+          "id": "schedulerstartedpayload",
+          "title": "SchedulerStartedPayload"
+        },
+        {
+          "level": 3,
+          "id": "sessionnamedpayload",
+          "title": "SessionNamedPayload"
+        },
+        {
+          "level": 3,
+          "id": "taskcreatedevent",
+          "title": "TaskCreatedEvent"
+        },
+        {
+          "level": 3,
+          "id": "tasksnapshot",
+          "title": "TaskSnapshot"
+        },
+        {
+          "level": 3,
+          "id": "taskupdatedevent",
+          "title": "TaskUpdatedEvent"
+        },
+        {
+          "level": 3,
+          "id": "todosupdatedpayload",
+          "title": "TodosUpdatedPayload"
+        },
+        {
+          "level": 3,
+          "id": "toolcompletedevent",
+          "title": "ToolCompletedEvent"
+        },
+        {
+          "level": 3,
+          "id": "toolstartedevent",
+          "title": "ToolStartedEvent"
+        },
+        {
+          "level": 3,
+          "id": "visualizationactiondispatchedpayload",
+          "title": "VisualizationActionDispatchedPayload"
+        },
+        {
+          "level": 3,
+          "id": "visualizationdeltapayload",
+          "title": "VisualizationDeltaPayload"
+        },
+        {
+          "level": 3,
+          "id": "vmcredentialstate",
+          "title": "VmCredentialState"
+        },
+        {
+          "level": 3,
+          "id": "windowchange",
+          "title": "WindowChange"
+        },
+        {
+          "level": 3,
+          "id": "workfloweventrecord",
+          "title": "WorkflowEventRecord"
+        },
+        {
+          "level": 2,
+          "id": "in-arguments",
+          "title": "In arguments"
+        },
+        {
+          "level": 3,
+          "id": "toolcallargs",
+          "title": "ToolCallArgs"
+        },
+        {
+          "level": 2,
+          "id": "unions",
+          "title": "Unions"
+        },
+        {
+          "level": 3,
+          "id": "chatturn",
+          "title": "ChatTurn"
+        },
+        {
+          "level": 3,
+          "id": "slashcommand",
+          "title": "SlashCommand"
+        },
+        {
+          "level": 3,
+          "id": "windowmodelresult",
+          "title": "WindowModelResult"
+        },
+        {
+          "level": 2,
+          "id": "enumerations",
+          "title": "Enumerations"
+        },
+        {
+          "level": 3,
+          "id": "commandaction",
+          "title": "CommandAction"
+        },
+        {
+          "level": 3,
+          "id": "commandresultkind",
+          "title": "CommandResultKind"
+        },
+        {
+          "level": 3,
+          "id": "notificationorigin",
+          "title": "NotificationOrigin"
+        },
+        {
+          "level": 3,
+          "id": "permissionmode",
+          "title": "PermissionMode"
+        },
+        {
+          "level": 3,
+          "id": "plandecision",
+          "title": "PlanDecision"
+        },
+        {
+          "level": 3,
+          "id": "taskstatus",
+          "title": "TaskStatus"
+        },
+        {
+          "level": 2,
+          "id": "arguments",
+          "title": "Arguments"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "events-reference",
+      "title": "Events reference",
+      "description": "Every message igni sends and a client sends, and every push notification channel's payload, field by field.",
+      "category": "reference",
+      "order": 33,
+      "file": "igni-client/events-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "events-of-a-run",
+          "title": "Events of a run"
+        },
+        {
+          "level": 3,
+          "id": "modelcompleted",
+          "title": "ModelCompleted"
+        },
+        {
+          "level": 3,
+          "id": "reasoningstarted",
+          "title": "ReasoningStarted"
+        },
+        {
+          "level": 3,
+          "id": "runcompleted",
+          "title": "RunCompleted"
+        },
+        {
+          "level": 3,
+          "id": "runpaused",
+          "title": "RunPaused"
+        },
+        {
+          "level": 3,
+          "id": "runstarted",
+          "title": "RunStarted"
+        },
+        {
+          "level": 3,
+          "id": "streamingdone",
+          "title": "StreamingDone"
+        },
+        {
+          "level": 3,
+          "id": "toolcompleted",
+          "title": "ToolCompleted"
+        },
+        {
+          "level": 3,
+          "id": "toolerror",
+          "title": "ToolError"
+        },
+        {
+          "level": 3,
+          "id": "toolstarted",
+          "title": "ToolStarted"
+        },
+        {
+          "level": 2,
+          "id": "other-messages-igni-sends",
+          "title": "Other messages igni sends"
+        },
+        {
+          "level": 3,
+          "id": "commandresult",
+          "title": "CommandResult"
+        },
+        {
+          "level": 3,
+          "id": "contentdelta",
+          "title": "ContentDelta"
+        },
+        {
+          "level": 3,
+          "id": "errormessage",
+          "title": "ErrorMessage"
+        },
+        {
+          "level": 3,
+          "id": "infomessage",
+          "title": "InfoMessage"
+        },
+        {
+          "level": 3,
+          "id": "pushnotification",
+          "title": "PushNotification"
+        },
+        {
+          "level": 3,
+          "id": "requirement",
+          "title": "Requirement"
+        },
+        {
+          "level": 3,
+          "id": "requirementdetails",
+          "title": "RequirementDetails"
+        },
+        {
+          "level": 3,
+          "id": "requirementresolved",
+          "title": "RequirementResolved"
+        },
+        {
+          "level": 3,
+          "id": "rpcresponse",
+          "title": "RpcResponse"
+        },
+        {
+          "level": 3,
+          "id": "runerror",
+          "title": "RunError"
+        },
+        {
+          "level": 3,
+          "id": "schedulerevent",
+          "title": "SchedulerEvent"
+        },
+        {
+          "level": 3,
+          "id": "sessioncleared",
+          "title": "SessionCleared"
+        },
+        {
+          "level": 3,
+          "id": "sessionlistresult",
+          "title": "SessionListResult"
+        },
+        {
+          "level": 3,
+          "id": "statusupdate",
+          "title": "StatusUpdate"
+        },
+        {
+          "level": 3,
+          "id": "streamend",
+          "title": "StreamEnd"
+        },
+        {
+          "level": 3,
+          "id": "taskcreated",
+          "title": "TaskCreated"
+        },
+        {
+          "level": 3,
+          "id": "taskiteration",
+          "title": "TaskIteration"
+        },
+        {
+          "level": 3,
+          "id": "taskstateupdated",
+          "title": "TaskStateUpdated"
+        },
+        {
+          "level": 3,
+          "id": "taskupdated",
+          "title": "TaskUpdated"
+        },
+        {
+          "level": 3,
+          "id": "typing",
+          "title": "Typing"
+        },
+        {
+          "level": 3,
+          "id": "usermessagereceived",
+          "title": "UserMessageReceived"
+        },
+        {
+          "level": 3,
+          "id": "welcome",
+          "title": "Welcome"
+        },
+        {
+          "level": 2,
+          "id": "push-notifications",
+          "title": "Push notifications"
+        },
+        {
+          "level": 3,
+          "id": "backgroundprocessdonepush",
+          "title": "BackgroundProcessDonePush"
+        },
+        {
+          "level": 3,
+          "id": "fileeditedpush",
+          "title": "FileEditedPush"
+        },
+        {
+          "level": 3,
+          "id": "hostsignalpush",
+          "title": "HostSignalPush"
+        },
+        {
+          "level": 3,
+          "id": "httpretryattemptpush",
+          "title": "HttpRetryAttemptPush"
+        },
+        {
+          "level": 3,
+          "id": "httpretrysucceededpush",
+          "title": "HttpRetrySucceededPush"
+        },
+        {
+          "level": 3,
+          "id": "loginresultpush",
+          "title": "LoginResultPush"
+        },
+        {
+          "level": 3,
+          "id": "loginstatuspush",
+          "title": "LoginStatusPush"
+        },
+        {
+          "level": 3,
+          "id": "notificationschangedpush",
+          "title": "NotificationsChangedPush"
+        },
+        {
+          "level": 3,
+          "id": "openexternalpush",
+          "title": "OpenExternalPush"
+        },
+        {
+          "level": 3,
+          "id": "orchestrateeventpush",
+          "title": "OrchestrateEventPush"
+        },
+        {
+          "level": 3,
+          "id": "outputstylechangedpush",
+          "title": "OutputStyleChangedPush"
+        },
+        {
+          "level": 3,
+          "id": "permissionmodechangedpush",
+          "title": "PermissionModeChangedPush"
+        },
+        {
+          "level": 3,
+          "id": "plandecidedpush",
+          "title": "PlanDecidedPush"
+        },
+        {
+          "level": 3,
+          "id": "plansubmittedpush",
+          "title": "PlanSubmittedPush"
+        },
+        {
+          "level": 3,
+          "id": "processexitedpush",
+          "title": "ProcessExitedPush"
+        },
+        {
+          "level": 3,
+          "id": "processlinepush",
+          "title": "ProcessLinePush"
+        },
+        {
+          "level": 3,
+          "id": "processstartedpush",
+          "title": "ProcessStartedPush"
+        },
+        {
+          "level": 3,
+          "id": "schedulercompletedpush",
+          "title": "SchedulerCompletedPush"
+        },
+        {
+          "level": 3,
+          "id": "schedulerstartedpush",
+          "title": "SchedulerStartedPush"
+        },
+        {
+          "level": 3,
+          "id": "sessionnamedpush",
+          "title": "SessionNamedPush"
+        },
+        {
+          "level": 3,
+          "id": "todosupdatedpush",
+          "title": "TodosUpdatedPush"
+        },
+        {
+          "level": 3,
+          "id": "visualizationactiondispatchedpush",
+          "title": "VisualizationActionDispatchedPush"
+        },
+        {
+          "level": 3,
+          "id": "vmcredentialpush",
+          "title": "VmCredentialPush"
+        },
+        {
+          "level": 3,
+          "id": "windowmodelchangedpush",
+          "title": "WindowModelChangedPush"
+        },
+        {
+          "level": 3,
+          "id": "workfloweventpush",
+          "title": "WorkflowEventPush"
+        },
+        {
+          "level": 3,
+          "id": "workspacetrustrequiredpush",
+          "title": "WorkspaceTrustRequiredPush"
+        },
+        {
+          "level": 2,
+          "id": "messages-a-client-sends",
+          "title": "Messages a client sends"
+        },
+        {
+          "level": 3,
+          "id": "cancel",
+          "title": "Cancel"
+        },
+        {
+          "level": 3,
+          "id": "cancellogin",
+          "title": "CancelLogin"
+        },
+        {
+          "level": 3,
+          "id": "command",
+          "title": "Command"
+        },
+        {
+          "level": 3,
+          "id": "hitldecision",
+          "title": "HitlDecision"
+        },
+        {
+          "level": 3,
+          "id": "hitlresponse",
+          "title": "HitlResponse"
+        },
+        {
+          "level": 3,
+          "id": "hitlresponsebatch",
+          "title": "HitlResponseBatch"
+        },
+        {
+          "level": 3,
+          "id": "mcptoggle",
+          "title": "McpToggle"
+        },
+        {
+          "level": 3,
+          "id": "modelswitch",
+          "title": "ModelSwitch"
+        },
+        {
+          "level": 3,
+          "id": "queuemessage",
+          "title": "QueueMessage"
+        },
+        {
+          "level": 3,
+          "id": "rpcrequest",
+          "title": "RpcRequest"
+        },
+        {
+          "level": 3,
+          "id": "sessionlist",
+          "title": "SessionList"
+        },
+        {
+          "level": 3,
+          "id": "sessionswitch",
+          "title": "SessionSwitch"
+        },
+        {
+          "level": 3,
+          "id": "shutdown",
+          "title": "Shutdown"
+        },
+        {
+          "level": 3,
+          "id": "typing",
+          "title": "Typing"
+        },
+        {
+          "level": 3,
+          "id": "usermessage",
+          "title": "UserMessage"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
+      "slug": "errors-reference",
+      "title": "Errors reference",
+      "description": "Every error igni-client raises, how they are related, and when each is raised.",
+      "category": "reference",
+      "order": 34,
+      "file": "igni-client/errors-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniclienterror",
+          "title": "IgniClientError"
+        },
+        {
+          "level": 2,
+          "id": "unavailable",
+          "title": "Unavailable"
+        },
+        {
+          "level": 2,
+          "id": "autherror",
+          "title": "AuthError"
+        },
+        {
+          "level": 2,
+          "id": "notallowed",
+          "title": "NotAllowed"
+        },
+        {
+          "level": 2,
+          "id": "notsupported",
+          "title": "NotSupported"
+        },
+        {
+          "level": 2,
+          "id": "rpcerror",
+          "title": "RpcError"
+        },
+        {
+          "level": 2,
+          "id": "accessrefused",
+          "title": "AccessRefused"
+        },
+        {
+          "level": 2,
+          "id": "unknownmethod",
+          "title": "UnknownMethod"
+        },
+        {
+          "level": 2,
+          "id": "invalidarguments",
+          "title": "InvalidArguments"
+        },
+        {
+          "level": 2,
+          "id": "unexpectedanswer",
+          "title": "UnexpectedAnswer"
+        },
+        {
+          "level": 2,
+          "id": "methodfailed",
+          "title": "MethodFailed"
+        },
+        {
+          "level": 2,
+          "id": "runfailed",
+          "title": "RunFailed"
+        },
+        {
+          "level": 2,
+          "id": "runinterrupted",
+          "title": "RunInterrupted"
+        },
+        {
+          "level": 2,
+          "id": "approvalrequired",
+          "title": "ApprovalRequired"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "What an igni extension's process needs: tools over MCP, its own service with the person's token, and the host's object model.",
+      "category": "guide",
+      "order": 0,
+      "file": "igni-extension/overview.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "tools-and-what-each-says-it-is",
+      "title": "Tools, and what each says it is",
+      "description": "Every tool states MCP's four hints — read_only, destructive, idempotent, open_world — because igni's permission modes decide on them: plan mode runs a read-only tool and refuses one that changes things, Accept Edits…",
+      "category": "guide",
+      "order": 1,
+      "file": "igni-extension/tools-and-what-each-says-it-is.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "one-tool-five-names",
+          "title": "One tool, five names"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "installing",
+      "title": "Installing",
+      "description": "Once published, from PyPI:",
+      "category": "guide",
+      "order": 2,
+      "file": "igni-extension/installing.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "its-service-ext-service",
+      "title": "Its service: ext.service",
+      "description": "An httpx.AsyncClient for the extension's own service, as the person signed in to igni. Paths are relative to the service.",
+      "category": "guide",
+      "order": 3,
+      "file": "igni-extension/its-service-ext-service.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "whom-a-call-is-for-caller",
+      "title": "Whom a call is for: Caller",
+      "description": "Every call igni makes — a tool call, a page's call, a hook — names whom it is for: a person (kind=\"person\", their id, org and the one group they belong to) or, later, an app (no group).",
+      "category": "guide",
+      "order": 4,
+      "file": "igni-extension/whom-a-call-is-for-caller.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "the-host-ext-host",
+      "title": "The host: ext.host",
+      "description": "ext.host is igni as the extension sees it — the host object model (docs/HOST_OBJECT_MODEL.md in igni): one object per part of the app, each with properties, signals and methods.",
+      "category": "guide",
+      "order": 5,
+      "file": "igni-extension/the-host-ext-host.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "having-a-say-ext-hook",
+      "title": "Having a say: @ext.hook",
+      "description": "igni's hook events (docs/HOOKS.md in igni) are where an extension gets a say before something happens, in one pipeline with igni's own settings-file hooks:",
+      "category": "guide",
+      "order": 6,
+      "file": "igni-extension/having-a-say-ext-hook.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "what-your-service-sends-events-and-messages",
+      "title": "What your service sends: events and messages",
+      "description": "Your service reaches a producer's igni — on their desktop, or in their Fleet VM, woken for it — two ways (igni server's service-identity §15, igni-core's docs/CLOUD.md §6).",
+      "category": "guide",
+      "order": 7,
+      "file": "igni-extension/what-your-service-sends-events-and-messages.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "staying-awake-ext-busy",
+      "title": "Staying awake: ext.busy",
+      "description": "In the cloud igni's VM sleeps when nothing is busy. Work your process does on its own — indexing, a sync — says so:",
+      "category": "guide",
+      "order": 8,
+      "file": "igni-extension/staying-awake-ext-busy.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "plain-functions-run-off-the-loop",
+      "title": "Plain functions run off the loop",
+      "description": "The process serves igni on one event loop. A plain def you hand the SDK — a tool, a hook handler, a reaction (@ext.on), a background job (@ext.on_start) — runs in a worker thread, so a slow one never holds the calls…",
+      "category": "guide",
+      "order": 9,
+      "file": "igni-extension/plain-functions-run-off-the-loop.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "the-agent-s-prompt-ext-prompt",
+      "title": "The agent's prompt: ext.prompt",
+      "description": "A manifest's contributes.prompt overrides a prompt — the main prompt, plan mode, any agent — with a whole one of its own, or edits it: appends a section, inserts one before or after a named section, replaces a named…",
+      "category": "guide",
+      "order": 10,
+      "file": "igni-extension/the-agent-s-prompt-ext-prompt.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "its-own-work-and-its-own-directory",
+      "title": "Its own work, and its own directory",
+      "description": "Work the extension does for as long as it runs — a sync loop, processes it starts — goes in @ext.on_start. It starts with ext.run() and is cancelled when igni closes the extension, so it cleans up in its own finally:",
+      "category": "guide",
+      "order": 11,
+      "file": "igni-extension/its-own-work-and-its-own-directory.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "testing-an-extension",
+      "title": "Testing an extension",
+      "description": "MCP session ext.run() serves, and host.call(tool, args, caller=...) calls one tool for one caller. A Caller is whom igni says the call is for — build one per person a test plays:",
+      "category": "guide",
+      "order": 12,
+      "file": "igni-extension/testing-an-extension.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-igni-extension-class",
+      "title": "IgniExtension",
+      "description": "Reference: IgniExtension — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 13,
+      "file": "igni-extension/reference-igni-extension-class.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniextension",
+          "title": "IgniExtension"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-tool",
+          "title": "IgniExtension.tool()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-on",
+          "title": "IgniExtension.on()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-hook",
+          "title": "IgniExtension.hook()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-on-service-event",
+          "title": "IgniExtension.on_service_event()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-on-start",
+          "title": "IgniExtension.on_start()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-signals",
+          "title": "IgniExtension.signals"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-assets",
+          "title": "IgniExtension.assets"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-service",
+          "title": "IgniExtension.service"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-tokens",
+          "title": "IgniExtension.tokens"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-connect",
+          "title": "IgniExtension.connect()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-aclose",
+          "title": "IgniExtension.aclose()"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-run",
+          "title": "IgniExtension.run()"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-tools",
+      "title": "Tools: hints and names",
+      "description": "Reference: ManifestTool, ToolNames, ToolHints, ToolHintsMissing — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 14,
+      "file": "igni-extension/reference-tools.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "manifesttool",
+          "title": "ManifestTool"
+        },
+        {
+          "level": 3,
+          "id": "manifesttool-wire",
+          "title": "ManifestTool.wire()"
+        },
+        {
+          "level": 2,
+          "id": "toolnames",
+          "title": "ToolNames"
+        },
+        {
+          "level": 3,
+          "id": "toolnames-of",
+          "title": "ToolNames.of()"
+        },
+        {
+          "level": 2,
+          "id": "toolhints",
+          "title": "ToolHints"
+        },
+        {
+          "level": 3,
+          "id": "toolhints-annotations",
+          "title": "ToolHints.annotations()"
+        },
+        {
+          "level": 3,
+          "id": "toolhints-wire",
+          "title": "ToolHints.wire()"
+        },
+        {
+          "level": 2,
+          "id": "toolhintsmissing",
+          "title": "ToolHintsMissing"
+        },
+        {
+          "level": 3,
+          "id": "toolhintsmissing-check",
+          "title": "ToolHintsMissing.check()"
+        },
+        {
+          "level": 3,
+          "id": "toolhintsmissing-complete",
+          "title": "ToolHintsMissing.complete()"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-callers-and-service",
+      "title": "Callers and the backend service",
+      "description": "Reference: Caller, CallerKind, NoCaller, ServiceClient, SignedIn — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 15,
+      "file": "igni-extension/reference-callers-and-service.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "caller",
+          "title": "Caller"
+        },
+        {
+          "level": 3,
+          "id": "caller-ref",
+          "title": "Caller.ref"
+        },
+        {
+          "level": 3,
+          "id": "caller-of",
+          "title": "Caller.of()"
+        },
+        {
+          "level": 3,
+          "id": "caller-current",
+          "title": "Caller.current()"
+        },
+        {
+          "level": 3,
+          "id": "caller-required",
+          "title": "Caller.required()"
+        },
+        {
+          "level": 2,
+          "id": "callerkind",
+          "title": "CallerKind"
+        },
+        {
+          "level": 2,
+          "id": "nocaller",
+          "title": "NoCaller"
+        },
+        {
+          "level": 2,
+          "id": "serviceclient",
+          "title": "ServiceClient"
+        },
+        {
+          "level": 3,
+          "id": "serviceclient-for",
+          "title": "ServiceClient.for_()"
+        },
+        {
+          "level": 3,
+          "id": "serviceclient-anonymous",
+          "title": "ServiceClient.anonymous"
+        },
+        {
+          "level": 3,
+          "id": "serviceclient-websocket",
+          "title": "ServiceClient.websocket()"
+        },
+        {
+          "level": 3,
+          "id": "serviceclient-aclose",
+          "title": "ServiceClient.aclose()"
+        },
+        {
+          "level": 2,
+          "id": "signedin",
+          "title": "SignedIn"
+        },
+        {
+          "level": 3,
+          "id": "signedin-of",
+          "title": "SignedIn.of()"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-host",
+      "title": "The host",
+      "description": "Reference: Host, LocalNotification, Notifications, Property, SCHEMA_VERSION, Signal… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 16,
+      "file": "igni-extension/reference-host.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "host",
+          "title": "Host"
+        },
+        {
+          "level": 3,
+          "id": "host-decide",
+          "title": "Host.decide()"
+        },
+        {
+          "level": 3,
+          "id": "host-decide-batch",
+          "title": "Host.decide_batch()"
+        },
+        {
+          "level": 2,
+          "id": "localnotification",
+          "title": "LocalNotification"
+        },
+        {
+          "level": 2,
+          "id": "notifications",
+          "title": "Notifications"
+        },
+        {
+          "level": 3,
+          "id": "notifications-notify",
+          "title": "Notifications.notify()"
+        },
+        {
+          "level": 3,
+          "id": "notifications-mark-read",
+          "title": "Notifications.mark_read()"
+        },
+        {
+          "level": 2,
+          "id": "property",
+          "title": "Property"
+        },
+        {
+          "level": 3,
+          "id": "property-path",
+          "title": "Property.path"
+        },
+        {
+          "level": 3,
+          "id": "property-get",
+          "title": "Property.get()"
+        },
+        {
+          "level": 3,
+          "id": "property-set",
+          "title": "Property.set()"
+        },
+        {
+          "level": 2,
+          "id": "schema-version",
+          "title": "SCHEMA_VERSION"
+        },
+        {
+          "level": 2,
+          "id": "signal",
+          "title": "Signal"
+        },
+        {
+          "level": 3,
+          "id": "signal-parse",
+          "title": "Signal.parse()"
+        },
+        {
+          "level": 2,
+          "id": "target",
+          "title": "Target"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-hooks",
+      "title": "Hooks",
+      "description": "Reference: Allow, HookEvent, Hooks, Modify, Reject — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 17,
+      "file": "igni-extension/reference-hooks.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "allow",
+          "title": "Allow"
+        },
+        {
+          "level": 3,
+          "id": "allow-for-hook",
+          "title": "Allow.for_hook()"
+        },
+        {
+          "level": 2,
+          "id": "hookevent",
+          "title": "HookEvent"
+        },
+        {
+          "level": 3,
+          "id": "hookevent-parse",
+          "title": "HookEvent.parse()"
+        },
+        {
+          "level": 2,
+          "id": "hooks",
+          "title": "Hooks"
+        },
+        {
+          "level": 3,
+          "id": "hooks-all",
+          "title": "Hooks.all()"
+        },
+        {
+          "level": 2,
+          "id": "modify",
+          "title": "Modify"
+        },
+        {
+          "level": 3,
+          "id": "modify-for-hook",
+          "title": "Modify.for_hook()"
+        },
+        {
+          "level": 2,
+          "id": "reject",
+          "title": "Reject"
+        },
+        {
+          "level": 3,
+          "id": "reject-for-hook",
+          "title": "Reject.for_hook()"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-service-events-and-prompts",
+      "title": "Service events and prompt conditions",
+      "description": "Reference: PromptConditions, ServiceEvent — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 18,
+      "file": "igni-extension/reference-service-events-and-prompts.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "promptconditions",
+          "title": "PromptConditions"
+        },
+        {
+          "level": 3,
+          "id": "promptconditions-holding",
+          "title": "PromptConditions.holding"
+        },
+        {
+          "level": 3,
+          "id": "promptconditions-hold",
+          "title": "PromptConditions.hold()"
+        },
+        {
+          "level": 3,
+          "id": "promptconditions-set",
+          "title": "PromptConditions.set()"
+        },
+        {
+          "level": 3,
+          "id": "promptconditions-refresh",
+          "title": "PromptConditions.refresh()"
+        },
+        {
+          "level": 2,
+          "id": "serviceevent",
+          "title": "ServiceEvent"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-environment",
+      "title": "Environment",
+      "description": "Reference: Assets, ExtensionEnvironment, HostEndpoint, Secrets, Workspace, WorkspaceMode — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 19,
+      "file": "igni-extension/reference-environment.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "assets",
+          "title": "Assets"
+        },
+        {
+          "level": 3,
+          "id": "assets-path",
+          "title": "Assets.path()"
+        },
+        {
+          "level": 3,
+          "id": "assets-file",
+          "title": "Assets.file()"
+        },
+        {
+          "level": 2,
+          "id": "extensionenvironment",
+          "title": "ExtensionEnvironment"
+        },
+        {
+          "level": 3,
+          "id": "extensionenvironment-read",
+          "title": "ExtensionEnvironment.read()"
+        },
+        {
+          "level": 2,
+          "id": "hostendpoint",
+          "title": "HostEndpoint"
+        },
+        {
+          "level": 3,
+          "id": "hostendpoint-configured",
+          "title": "HostEndpoint.configured"
+        },
+        {
+          "level": 2,
+          "id": "secrets",
+          "title": "Secrets"
+        },
+        {
+          "level": 3,
+          "id": "secrets-env-name",
+          "title": "Secrets.env_name()"
+        },
+        {
+          "level": 3,
+          "id": "secrets-get",
+          "title": "Secrets.get()"
+        },
+        {
+          "level": 2,
+          "id": "workspace",
+          "title": "Workspace"
+        },
+        {
+          "level": 3,
+          "id": "workspace-granted",
+          "title": "Workspace.granted"
+        },
+        {
+          "level": 3,
+          "id": "workspace-writable",
+          "title": "Workspace.writable"
+        },
+        {
+          "level": 2,
+          "id": "workspacemode",
+          "title": "WorkspaceMode"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-errors",
+      "title": "Errors",
+      "description": "Reference: HostError, HostErrorCode, HostUnavailable, IgniExtensionError, NotConfigured, NotSignedIn — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 20,
+      "file": "igni-extension/reference-errors.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "hosterror",
+          "title": "HostError"
+        },
+        {
+          "level": 2,
+          "id": "hosterrorcode",
+          "title": "HostErrorCode"
+        },
+        {
+          "level": 2,
+          "id": "hostunavailable",
+          "title": "HostUnavailable"
+        },
+        {
+          "level": 2,
+          "id": "igniextensionerror",
+          "title": "IgniExtensionError"
+        },
+        {
+          "level": 2,
+          "id": "notconfigured",
+          "title": "NotConfigured"
+        },
+        {
+          "level": 2,
+          "id": "notsignedin",
+          "title": "NotSignedIn"
+        }
+      ]
+    },
+    {
+      "package": "igni-extension",
+      "slug": "reference-testing",
+      "title": "igni_extension.testing",
+      "description": "Reference: ConcurrencyHarness, ConcurrencyProblem, ConcurrencyReport, ConcurrentCall, ConcurrentResult, FakeHost… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 21,
+      "file": "igni-extension/reference-testing.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "concurrencyharness",
+          "title": "ConcurrencyHarness"
+        },
+        {
+          "level": 3,
+          "id": "concurrencyharness-run",
+          "title": "ConcurrencyHarness.run()"
+        },
+        {
+          "level": 3,
+          "id": "concurrencyharness-check",
+          "title": "ConcurrencyHarness.check()"
+        },
+        {
+          "level": 3,
+          "id": "concurrencyharness-sent-index",
+          "title": "ConcurrencyHarness.sent_index()"
+        },
+        {
+          "level": 3,
+          "id": "concurrencyharness-compare",
+          "title": "ConcurrencyHarness.compare()"
+        },
+        {
+          "level": 2,
+          "id": "concurrencyproblem",
+          "title": "ConcurrencyProblem"
+        },
+        {
+          "level": 2,
+          "id": "concurrencyreport",
+          "title": "ConcurrencyReport"
+        },
+        {
+          "level": 2,
+          "id": "concurrentcall",
+          "title": "ConcurrentCall"
+        },
+        {
+          "level": 2,
+          "id": "concurrentresult",
+          "title": "ConcurrentResult"
+        },
+        {
+          "level": 2,
+          "id": "fakehost",
+          "title": "FakeHost"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-environment",
+          "title": "FakeHost.environment()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-start",
+          "title": "FakeHost.start()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-stop",
+          "title": "FakeHost.stop()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-emit",
+          "title": "FakeHost.emit()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-hook",
+          "title": "FakeHost.hook()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-tell",
+          "title": "FakeHost.tell()"
+        },
+        {
+          "level": 3,
+          "id": "fakehost-wait-subscribed",
+          "title": "FakeHost.wait_subscribed()"
+        },
+        {
+          "level": 2,
+          "id": "fakehosttokenendpoint",
+          "title": "FakeHostTokenEndpoint"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-environment",
+          "title": "FakeHostTokenEndpoint.environment()"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-sign-in",
+          "title": "FakeHostTokenEndpoint.sign_in()"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-sign-out",
+          "title": "FakeHostTokenEndpoint.sign_out()"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-transport",
+          "title": "FakeHostTokenEndpoint.transport"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-handle",
+          "title": "FakeHostTokenEndpoint.handle()"
+        },
+        {
+          "level": 3,
+          "id": "fakehosttokenendpoint-unsigned",
+          "title": "FakeHostTokenEndpoint.unsigned()"
+        },
+        {
+          "level": 2,
+          "id": "hostcall",
+          "title": "HostCall"
+        },
+        {
+          "level": 3,
+          "id": "hostcall-of",
+          "title": "HostCall.of()"
+        },
+        {
+          "level": 2,
+          "id": "hostharness",
+          "title": "HostHarness"
+        },
+        {
+          "level": 3,
+          "id": "hostharness-session",
+          "title": "HostHarness.session"
+        },
+        {
+          "level": 3,
+          "id": "hostharness-call",
+          "title": "HostHarness.call()"
+        },
+        {
+          "level": 3,
+          "id": "hostharness-request-meta",
+          "title": "HostHarness.request_meta()"
+        },
+        {
+          "level": 3,
+          "id": "hostharness-received",
+          "title": "HostHarness.received()"
+        },
+        {
+          "level": 3,
+          "id": "hostharness-conditions-said",
+          "title": "HostHarness.conditions_said()"
+        },
+        {
+          "level": 2,
+          "id": "manualclock",
+          "title": "ManualClock"
+        },
+        {
+          "level": 3,
+          "id": "manualclock-monotonic",
+          "title": "ManualClock.monotonic()"
+        },
+        {
+          "level": 3,
+          "id": "manualclock-advance",
+          "title": "ManualClock.advance()"
+        },
+        {
+          "level": 2,
+          "id": "minter",
+          "title": "Minter"
+        },
+        {
+          "level": 2,
+          "id": "tokenclaims",
+          "title": "TokenClaims"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle.",
+      "category": "guide",
+      "order": 0,
+      "file": "igni-service/overview.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "installing",
+      "title": "Installing",
+      "description": "Once published, from PyPI:",
+      "category": "guide",
+      "order": 1,
+      "file": "igni-service/installing.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "what-happens-on-its-own",
+      "title": "What happens on its own",
+      "description": "igni.lifespan runs in the background, retrying with backoff while igni is unreachable, so the service starts and serves either way:",
+      "category": "guide",
+      "order": 2,
+      "file": "igni-service/what-happens-on-its-own.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "people",
+      "title": "People",
+      "description": "gave them (from the extension on their machine). A Person: user_id, org_id, org_name, org_role, email, name, super_admin. Every check on the token is made here;",
+      "category": "guide",
+      "order": 3,
+      "file": "igni-service/people.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "apps-and-their-spaces",
+      "title": "Apps and their spaces",
+      "description": "An app — and each of its end users, a space — can call a service too, with a token igni exchanged for the service's URL (token_use app or space). A service takes people only unless it says more:",
+      "category": "guide",
+      "order": 4,
+      "file": "igni-service/apps-and-their-spaces.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "what-a-vm-needs-vm-profile-requests",
+      "title": "What a VM needs: VM profile requests",
+      "description": "In igni's cloud every producer — a person, an app, an app's space — runs in a microVM of its own, built from a VM profile: memory, vCPUs, idle before a pause, its volume, and the packages and setup script baked into the…",
+      "category": "guide",
+      "order": 5,
+      "file": "igni-service/what-a-vm-needs-vm-profile-requests.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "an-app-asking",
+          "title": "An app asking"
+        },
+        {
+          "level": 2,
+          "id": "worked-example-a-headless-browser-chromium-playwright-mcp",
+          "title": "Worked example: a headless browser (Chromium + Playwright MCP)"
+        },
+        {
+          "level": 2,
+          "id": "no-admin-calls-here",
+          "title": "No admin calls here"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "somebody-removed",
+      "title": "Somebody removed",
+      "description": "A person removed from an organisation (or deactivated, erased, their sessions withdrawn), an app or a space deleted: nothing they hold works from that moment, not for the ten minutes their token would still live (igni's…",
+      "category": "guide",
+      "order": 6,
+      "file": "igni-service/somebody-removed.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "calls-from-the-extension-s-page",
+      "title": "Calls from the extension's page",
+      "description": "igni.install(app) puts igni's routes on the app — igni.router (erasure, export, a deleted organisation) and igni.web.router (sign-in) — and BearerCors, which lets the extension's page call the service from igni's window…",
+      "category": "guide",
+      "order": 7,
+      "file": "igni-service/calls-from-the-extension-s-page.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "igni-for-one-organisation",
+      "title": "igni, for one organisation",
+      "description": "host = igni.host(org_id):",
+      "category": "guide",
+      "order": 8,
+      "file": "igni-service/igni-for-one-organisation.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "reaching-a-producer-s-agent",
+      "title": "Reaching a producer's agent",
+      "description": "A service reaches a producer's igni — on their desktop, or in their Fleet VM, woken for it — two ways, through igni server (service-identity §15, igni-core's docs/CLOUD.md §6):",
+      "category": "guide",
+      "order": 9,
+      "file": "igni-service/reaching-a-producer-s-agent.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "erasure-and-export",
+      "title": "Erasure and export",
+      "description": "igni.router (mounted by igni.install(app)) answers igni's two calls about one person, each with a token igni signs for this service (token_use igni, the organisation in org):",
+      "category": "guide",
+      "order": 10,
+      "file": "igni-service/erasure-and-export.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "a-deleted-organisation",
+      "title": "A deleted organisation",
+      "description": "@igni.on_organisation_deleted receives the id of an organisation igni deleted (DELETE /v1/igni/organisations/{org_id}, mounted by igni.router). Stop routing to its data;",
+      "category": "guide",
+      "order": 11,
+      "file": "igni-service/a-deleted-organisation.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "deploying",
+      "title": "Deploying",
+      "description": "IgniService.from_settings keeps both in IGNI_KEY_DATABASE_URL, in tables of the SDK's own (igni_service_key, igni_web_session, igni_web_login), created on first use. Rows are sealed with the key encryption key;",
+      "category": "guide",
+      "order": 12,
+      "file": "igni-service/deploying.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "where-the-key-and-sessions-are-kept",
+          "title": "Where the key and sessions are kept"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "the-extension-bundle",
+      "title": "The extension bundle",
+      "description": "Builds what the service uploads: manifest.json (declaring the python packaging), the extension's README.md, plugin/ and ui/, and a wheelhouse with the extension's wheel and every dependency's for CPython 3.12 on macOS…",
+      "category": "guide",
+      "order": 13,
+      "file": "igni-service/the-extension-bundle.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "testing-a-service",
+      "title": "Testing a service",
+      "description": "igni_service.testing.FakeIgni is igni in-process: it signs tokens, serves its keys, takes registrations and bundles, issues service tokens, answers the directory, plays the portal's sign-in, revokes sign-ins, and…",
+      "category": "guide",
+      "order": 14,
+      "file": "igni-service/testing-a-service.md",
+      "sections": []
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-igni-service-class",
+      "title": "IgniService and its settings",
+      "description": "Reference: IgniService, IgniSettings, IgniTables — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 15,
+      "file": "igni-service/reference-igni-service-class.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniservice",
+          "title": "IgniService"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-from-settings",
+          "title": "IgniService.from_settings()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-lifespan",
+          "title": "IgniService.lifespan()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-aclose",
+          "title": "IgniService.aclose()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-install",
+          "title": "IgniService.install()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-router",
+          "title": "IgniService.router"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-on-erase",
+          "title": "IgniService.on_erase()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-on-export",
+          "title": "IgniService.on_export()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-on-organisation-deleted",
+          "title": "IgniService.on_organisation_deleted()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-person",
+          "title": "IgniService.person()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-caller",
+          "title": "IgniService.caller()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-caller-of",
+          "title": "IgniService.caller_of()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-optional-person",
+          "title": "IgniService.optional_person()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-token",
+          "title": "IgniService.token()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-optional-token",
+          "title": "IgniService.optional_token()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-person-of",
+          "title": "IgniService.person_of()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-org-admin",
+          "title": "IgniService.org_admin()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-igni-call",
+          "title": "IgniService.igni_call()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-host",
+          "title": "IgniService.host()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-thumbprint",
+          "title": "IgniService.thumbprint()"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-challenge",
+          "title": "IgniService.challenge()"
+        },
+        {
+          "level": 2,
+          "id": "ignisettings",
+          "title": "IgniSettings"
+        },
+        {
+          "level": 2,
+          "id": "ignitables",
+          "title": "IgniTables"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-callers",
+      "title": "Callers: Person, App, Space",
+      "description": "Reference: IgniCall, PEOPLE_ONLY, App, Caller, CallerKind, Person… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 16,
+      "file": "igni-service/reference-callers.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "ignicall",
+          "title": "IgniCall"
+        },
+        {
+          "level": 2,
+          "id": "people-only",
+          "title": "PEOPLE_ONLY"
+        },
+        {
+          "level": 2,
+          "id": "app",
+          "title": "App"
+        },
+        {
+          "level": 3,
+          "id": "app-kind",
+          "title": "App.kind"
+        },
+        {
+          "level": 3,
+          "id": "app-from-claims",
+          "title": "App.from_claims()"
+        },
+        {
+          "level": 2,
+          "id": "caller",
+          "title": "Caller"
+        },
+        {
+          "level": 2,
+          "id": "callerkind",
+          "title": "CallerKind"
+        },
+        {
+          "level": 3,
+          "id": "callerkind-token-use",
+          "title": "CallerKind.token_use"
+        },
+        {
+          "level": 2,
+          "id": "person",
+          "title": "Person"
+        },
+        {
+          "level": 3,
+          "id": "person-kind",
+          "title": "Person.kind"
+        },
+        {
+          "level": 3,
+          "id": "person-is-org-admin",
+          "title": "Person.is_org_admin"
+        },
+        {
+          "level": 3,
+          "id": "person-display-name",
+          "title": "Person.display_name"
+        },
+        {
+          "level": 3,
+          "id": "person-from-claims",
+          "title": "Person.from_claims()"
+        },
+        {
+          "level": 2,
+          "id": "space",
+          "title": "Space"
+        },
+        {
+          "level": 3,
+          "id": "space-kind",
+          "title": "Space.kind"
+        },
+        {
+          "level": 3,
+          "id": "space-from-claims",
+          "title": "Space.from_claims()"
+        },
+        {
+          "level": 2,
+          "id": "tokenrefused",
+          "title": "TokenRefused"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-web-sign-in",
+      "title": "Web sign-in, sessions and CORS",
+      "description": "Reference: BearerCors, MemoryWebSessionStore, SqlWebSessionStore, WebSession, WebSessionStore, WebSignIn — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 17,
+      "file": "igni-service/reference-web-sign-in.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "bearercors",
+          "title": "BearerCors"
+        },
+        {
+          "level": 2,
+          "id": "memorywebsessionstore",
+          "title": "MemoryWebSessionStore"
+        },
+        {
+          "level": 3,
+          "id": "memorywebsessionstore-get",
+          "title": "MemoryWebSessionStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "memorywebsessionstore-put",
+          "title": "MemoryWebSessionStore.put()"
+        },
+        {
+          "level": 3,
+          "id": "memorywebsessionstore-delete",
+          "title": "MemoryWebSessionStore.delete()"
+        },
+        {
+          "level": 3,
+          "id": "memorywebsessionstore-put-login",
+          "title": "MemoryWebSessionStore.put_login()"
+        },
+        {
+          "level": 3,
+          "id": "memorywebsessionstore-take-login",
+          "title": "MemoryWebSessionStore.take_login()"
+        },
+        {
+          "level": 2,
+          "id": "sqlwebsessionstore",
+          "title": "SqlWebSessionStore"
+        },
+        {
+          "level": 3,
+          "id": "sqlwebsessionstore-get",
+          "title": "SqlWebSessionStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "sqlwebsessionstore-put",
+          "title": "SqlWebSessionStore.put()"
+        },
+        {
+          "level": 3,
+          "id": "sqlwebsessionstore-delete",
+          "title": "SqlWebSessionStore.delete()"
+        },
+        {
+          "level": 3,
+          "id": "sqlwebsessionstore-put-login",
+          "title": "SqlWebSessionStore.put_login()"
+        },
+        {
+          "level": 3,
+          "id": "sqlwebsessionstore-take-login",
+          "title": "SqlWebSessionStore.take_login()"
+        },
+        {
+          "level": 2,
+          "id": "websession",
+          "title": "WebSession"
+        },
+        {
+          "level": 2,
+          "id": "websessionstore",
+          "title": "WebSessionStore"
+        },
+        {
+          "level": 3,
+          "id": "websessionstore-get",
+          "title": "WebSessionStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "websessionstore-put",
+          "title": "WebSessionStore.put()"
+        },
+        {
+          "level": 3,
+          "id": "websessionstore-delete",
+          "title": "WebSessionStore.delete()"
+        },
+        {
+          "level": 3,
+          "id": "websessionstore-put-login",
+          "title": "WebSessionStore.put_login()"
+        },
+        {
+          "level": 3,
+          "id": "websessionstore-take-login",
+          "title": "WebSessionStore.take_login()"
+        },
+        {
+          "level": 2,
+          "id": "websignin",
+          "title": "WebSignIn"
+        },
+        {
+          "level": 3,
+          "id": "websignin-redirect-uri-for",
+          "title": "WebSignIn.redirect_uri_for()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-redirect-uri",
+          "title": "WebSignIn.redirect_uri"
+        },
+        {
+          "level": 3,
+          "id": "websignin-login-path",
+          "title": "WebSignIn.login_path"
+        },
+        {
+          "level": 3,
+          "id": "websignin-logout-path",
+          "title": "WebSignIn.logout_path"
+        },
+        {
+          "level": 3,
+          "id": "websignin-store",
+          "title": "WebSignIn.store"
+        },
+        {
+          "level": 3,
+          "id": "websignin-router",
+          "title": "WebSignIn.router"
+        },
+        {
+          "level": 3,
+          "id": "websignin-login",
+          "title": "WebSignIn.login()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-callback",
+          "title": "WebSignIn.callback()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-logout",
+          "title": "WebSignIn.logout()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-person",
+          "title": "WebSignIn.person()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-signed-in",
+          "title": "WebSignIn.signed_in()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-super-admin",
+          "title": "WebSignIn.super_admin()"
+        },
+        {
+          "level": 3,
+          "id": "websignin-org-admin",
+          "title": "WebSignIn.org_admin()"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-host-and-directory",
+      "title": "Host and directory",
+      "description": "Reference: Directory, Host, Member, Organisation — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 18,
+      "file": "igni-service/reference-host-and-directory.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "directory",
+          "title": "Directory"
+        },
+        {
+          "level": 3,
+          "id": "directory-org-id",
+          "title": "Directory.org_id"
+        },
+        {
+          "level": 3,
+          "id": "directory-organisation",
+          "title": "Directory.organisation()"
+        },
+        {
+          "level": 3,
+          "id": "directory-members",
+          "title": "Directory.members()"
+        },
+        {
+          "level": 3,
+          "id": "directory-person",
+          "title": "Directory.person()"
+        },
+        {
+          "level": 3,
+          "id": "directory-resolve",
+          "title": "Directory.resolve()"
+        },
+        {
+          "level": 2,
+          "id": "host",
+          "title": "Host"
+        },
+        {
+          "level": 3,
+          "id": "host-org-id",
+          "title": "Host.org_id"
+        },
+        {
+          "level": 3,
+          "id": "host-notify",
+          "title": "Host.notify()"
+        },
+        {
+          "level": 3,
+          "id": "host-vm-profile",
+          "title": "Host.vm_profile()"
+        },
+        {
+          "level": 3,
+          "id": "host-extension-vm-profile",
+          "title": "Host.extension_vm_profile()"
+        },
+        {
+          "level": 3,
+          "id": "host-agent",
+          "title": "Host.agent()"
+        },
+        {
+          "level": 3,
+          "id": "host-send-event",
+          "title": "Host.send_event()"
+        },
+        {
+          "level": 2,
+          "id": "member",
+          "title": "Member"
+        },
+        {
+          "level": 3,
+          "id": "member-is-active",
+          "title": "Member.is_active"
+        },
+        {
+          "level": 3,
+          "id": "member-display-name",
+          "title": "Member.display_name"
+        },
+        {
+          "level": 2,
+          "id": "organisation",
+          "title": "Organisation"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-notifications",
+      "title": "Notifications",
+      "description": "Reference: Delivered, Notification, Target — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 19,
+      "file": "igni-service/reference-notifications.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "delivered",
+          "title": "Delivered"
+        },
+        {
+          "level": 2,
+          "id": "notification",
+          "title": "Notification"
+        },
+        {
+          "level": 3,
+          "id": "notification-split",
+          "title": "Notification.split()"
+        },
+        {
+          "level": 2,
+          "id": "target",
+          "title": "Target"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-producers-and-agents",
+      "title": "Producers, agents and events",
+      "description": "Reference: Agent, Attachment, Chat, EventAccepted, ItemStatus, Producer — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 20,
+      "file": "igni-service/reference-producers-and-agents.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "agent",
+          "title": "Agent"
+        },
+        {
+          "level": 3,
+          "id": "agent-producer",
+          "title": "Agent.producer"
+        },
+        {
+          "level": 3,
+          "id": "agent-send-message",
+          "title": "Agent.send_message()"
+        },
+        {
+          "level": 3,
+          "id": "agent-send-event",
+          "title": "Agent.send_event()"
+        },
+        {
+          "level": 3,
+          "id": "agent-new-chat",
+          "title": "Agent.new_chat()"
+        },
+        {
+          "level": 3,
+          "id": "agent-chat",
+          "title": "Agent.chat()"
+        },
+        {
+          "level": 3,
+          "id": "agent-status",
+          "title": "Agent.status()"
+        },
+        {
+          "level": 3,
+          "id": "agent-send-item",
+          "title": "Agent.send_item()"
+        },
+        {
+          "level": 2,
+          "id": "attachment",
+          "title": "Attachment"
+        },
+        {
+          "level": 3,
+          "id": "attachment-from-bytes",
+          "title": "Attachment.from_bytes()"
+        },
+        {
+          "level": 3,
+          "id": "attachment-from-path",
+          "title": "Attachment.from_path()"
+        },
+        {
+          "level": 2,
+          "id": "chat",
+          "title": "Chat"
+        },
+        {
+          "level": 3,
+          "id": "chat-send-message",
+          "title": "Chat.send_message()"
+        },
+        {
+          "level": 3,
+          "id": "chat-queue",
+          "title": "Chat.queue()"
+        },
+        {
+          "level": 3,
+          "id": "chat-show",
+          "title": "Chat.show()"
+        },
+        {
+          "level": 3,
+          "id": "chat-rename",
+          "title": "Chat.rename()"
+        },
+        {
+          "level": 3,
+          "id": "chat-cancel",
+          "title": "Chat.cancel()"
+        },
+        {
+          "level": 2,
+          "id": "eventaccepted",
+          "title": "EventAccepted"
+        },
+        {
+          "level": 2,
+          "id": "itemstatus",
+          "title": "ItemStatus"
+        },
+        {
+          "level": 2,
+          "id": "producer",
+          "title": "Producer"
+        },
+        {
+          "level": 3,
+          "id": "producer-person",
+          "title": "Producer.person()"
+        },
+        {
+          "level": 3,
+          "id": "producer-app",
+          "title": "Producer.app()"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-subjects",
+      "title": "Erasure and export: Subject",
+      "description": "Reference: ExportSection, Subject — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 21,
+      "file": "igni-service/reference-subjects.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "exportsection",
+          "title": "ExportSection"
+        },
+        {
+          "level": 2,
+          "id": "subject",
+          "title": "Subject"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-vm-profiles",
+      "title": "VM profiles and IgniApp",
+      "description": "Reference: AppVmProfile, EffectiveVmProfile, IgniApp, ServiceVmProfile, VmPackages, VmProfileRequest… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 22,
+      "file": "igni-service/reference-vm-profiles.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "appvmprofile",
+          "title": "AppVmProfile"
+        },
+        {
+          "level": 2,
+          "id": "effectivevmprofile",
+          "title": "EffectiveVmProfile"
+        },
+        {
+          "level": 2,
+          "id": "igniapp",
+          "title": "IgniApp"
+        },
+        {
+          "level": 3,
+          "id": "igniapp-aclose",
+          "title": "IgniApp.aclose()"
+        },
+        {
+          "level": 3,
+          "id": "igniapp-public-jwks",
+          "title": "IgniApp.public_jwks()"
+        },
+        {
+          "level": 3,
+          "id": "igniapp-thumbprint",
+          "title": "IgniApp.thumbprint()"
+        },
+        {
+          "level": 3,
+          "id": "igniapp-token",
+          "title": "IgniApp.token()"
+        },
+        {
+          "level": 3,
+          "id": "igniapp-request",
+          "title": "IgniApp.request()"
+        },
+        {
+          "level": 2,
+          "id": "servicevmprofile",
+          "title": "ServiceVmProfile"
+        },
+        {
+          "level": 2,
+          "id": "vmpackages",
+          "title": "VmPackages"
+        },
+        {
+          "level": 2,
+          "id": "vmprofilerequest",
+          "title": "VmProfileRequest"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilerequest-body",
+          "title": "VmProfileRequest.body()"
+        },
+        {
+          "level": 2,
+          "id": "vmprofilerequestrecord",
+          "title": "VmProfileRequestRecord"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilerequestrecord-is-pending",
+          "title": "VmProfileRequestRecord.is_pending"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilerequestrecord-is-approved",
+          "title": "VmProfileRequestRecord.is_approved"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilerequestrecord-is-rejected",
+          "title": "VmProfileRequestRecord.is_rejected"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-key-storage",
+      "title": "Key storage",
+      "description": "Reference: KeyCipher, KeyStore, MemoryKeyStore, SqlKeyStore, StoredKey — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 23,
+      "file": "igni-service/reference-key-storage.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "keycipher",
+          "title": "KeyCipher"
+        },
+        {
+          "level": 3,
+          "id": "keycipher-generate",
+          "title": "KeyCipher.generate()"
+        },
+        {
+          "level": 3,
+          "id": "keycipher-seal",
+          "title": "KeyCipher.seal()"
+        },
+        {
+          "level": 3,
+          "id": "keycipher-open",
+          "title": "KeyCipher.open()"
+        },
+        {
+          "level": 2,
+          "id": "keystore",
+          "title": "KeyStore"
+        },
+        {
+          "level": 3,
+          "id": "keystore-get",
+          "title": "KeyStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "keystore-claim",
+          "title": "KeyStore.claim()"
+        },
+        {
+          "level": 2,
+          "id": "memorykeystore",
+          "title": "MemoryKeyStore"
+        },
+        {
+          "level": 3,
+          "id": "memorykeystore-get",
+          "title": "MemoryKeyStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "memorykeystore-claim",
+          "title": "MemoryKeyStore.claim()"
+        },
+        {
+          "level": 2,
+          "id": "sqlkeystore",
+          "title": "SqlKeyStore"
+        },
+        {
+          "level": 3,
+          "id": "sqlkeystore-engine",
+          "title": "SqlKeyStore.engine"
+        },
+        {
+          "level": 3,
+          "id": "sqlkeystore-get",
+          "title": "SqlKeyStore.get()"
+        },
+        {
+          "level": 3,
+          "id": "sqlkeystore-claim",
+          "title": "SqlKeyStore.claim()"
+        },
+        {
+          "level": 2,
+          "id": "storedkey",
+          "title": "StoredKey"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-errors",
+      "title": "Errors",
+      "description": "Reference: VmProfileRefused, BundleError, ConfigurationError, EventRefused, IgniError, IgniUnavailable… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 24,
+      "file": "igni-service/reference-errors.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "vmprofilerefused",
+          "title": "VmProfileRefused"
+        },
+        {
+          "level": 2,
+          "id": "bundleerror",
+          "title": "BundleError"
+        },
+        {
+          "level": 2,
+          "id": "configurationerror",
+          "title": "ConfigurationError"
+        },
+        {
+          "level": 2,
+          "id": "eventrefused",
+          "title": "EventRefused"
+        },
+        {
+          "level": 2,
+          "id": "ignierror",
+          "title": "IgniError"
+        },
+        {
+          "level": 2,
+          "id": "igniunavailable",
+          "title": "IgniUnavailable"
+        },
+        {
+          "level": 2,
+          "id": "keystoreerror",
+          "title": "KeyStoreError"
+        },
+        {
+          "level": 2,
+          "id": "notificationrefused",
+          "title": "NotificationRefused"
+        },
+        {
+          "level": 2,
+          "id": "servicenotapproved",
+          "title": "ServiceNotApproved"
+        },
+        {
+          "level": 2,
+          "id": "servicerevoked",
+          "title": "ServiceRevoked"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "reference-testing",
+      "title": "igni_service.testing",
+      "description": "Reference: BundleArchive, Delivery, FakeAgents, FakeCaps, FakeIgni, FakeVmProfiles… — signatures and docstrings, read from the code.",
+      "category": "reference",
+      "order": 25,
+      "file": "igni-service/reference-testing.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "bundlearchive",
+          "title": "BundleArchive"
+        },
+        {
+          "level": 3,
+          "id": "bundlearchive-write",
+          "title": "BundleArchive.write()"
+        },
+        {
+          "level": 3,
+          "id": "bundlearchive-read-manifest",
+          "title": "BundleArchive.read_manifest()"
+        },
+        {
+          "level": 2,
+          "id": "delivery",
+          "title": "Delivery"
+        },
+        {
+          "level": 2,
+          "id": "fakeagents",
+          "title": "FakeAgents"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-reset",
+          "title": "FakeAgents.reset()"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-settle",
+          "title": "FakeAgents.settle()"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-event",
+          "title": "FakeAgents.event()"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-item",
+          "title": "FakeAgents.item()"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-upload",
+          "title": "FakeAgents.upload()"
+        },
+        {
+          "level": 3,
+          "id": "fakeagents-status",
+          "title": "FakeAgents.status()"
+        },
+        {
+          "level": 2,
+          "id": "fakecaps",
+          "title": "FakeCaps"
+        },
+        {
+          "level": 3,
+          "id": "fakecaps-refusal",
+          "title": "FakeCaps.refusal()"
+        },
+        {
+          "level": 3,
+          "id": "fakecaps-serve",
+          "title": "FakeCaps.serve()"
+        },
+        {
+          "level": 2,
+          "id": "fakeigni",
+          "title": "FakeIgni"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-router",
+          "title": "FakeIgni.router"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-reset",
+          "title": "FakeIgni.reset()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-service",
+          "title": "FakeIgni.service()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-app",
+          "title": "FakeIgni.app()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-settings",
+          "title": "FakeIgni.settings()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-upload",
+          "title": "FakeIgni.upload()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-transport",
+          "title": "FakeIgni.transport()"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni-http-client",
+          "title": "FakeIgni.http_client()"
+        },
+        {
+          "level": 2,
+          "id": "fakevmprofiles",
+          "title": "FakeVmProfiles"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-request",
+          "title": "FakeVmProfiles.request()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-approve",
+          "title": "FakeVmProfiles.approve()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-reject",
+          "title": "FakeVmProfiles.reject()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-assign",
+          "title": "FakeVmProfiles.assign()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-app-put",
+          "title": "FakeVmProfiles.app_put()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-app-get",
+          "title": "FakeVmProfiles.app_get()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-app-profile",
+          "title": "FakeVmProfiles.app_profile()"
+        },
+        {
+          "level": 3,
+          "id": "fakevmprofiles-service",
+          "title": "FakeVmProfiles.service()"
+        },
+        {
+          "level": 2,
+          "id": "heldextension",
+          "title": "HeldExtension"
+        },
+        {
+          "level": 3,
+          "id": "heldextension-pages",
+          "title": "HeldExtension.pages"
+        },
+        {
+          "level": 3,
+          "id": "heldextension-published",
+          "title": "HeldExtension.published()"
+        },
+        {
+          "level": 2,
+          "id": "igniaddresses",
+          "title": "IgniAddresses"
+        },
+        {
+          "level": 3,
+          "id": "igniaddresses-authorization-endpoint",
+          "title": "IgniAddresses.authorization_endpoint"
+        },
+        {
+          "level": 3,
+          "id": "igniaddresses-reaches",
+          "title": "IgniAddresses.reaches()"
+        },
+        {
+          "level": 3,
+          "id": "igniaddresses-assertion-audiences",
+          "title": "IgniAddresses.assertion_audiences()"
+        },
+        {
+          "level": 3,
+          "id": "igniaddresses-discovery",
+          "title": "IgniAddresses.discovery()"
+        },
+        {
+          "level": 2,
+          "id": "ignipaths",
+          "title": "IgniPaths"
+        },
+        {
+          "level": 3,
+          "id": "ignipaths-app-vm-profile-request",
+          "title": "IgniPaths.app_vm_profile_request()"
+        },
+        {
+          "level": 3,
+          "id": "ignipaths-app-vm-profile",
+          "title": "IgniPaths.app_vm_profile()"
+        },
+        {
+          "level": 3,
+          "id": "ignipaths-service-event",
+          "title": "IgniPaths.service_event()"
+        },
+        {
+          "level": 3,
+          "id": "ignipaths-extension",
+          "title": "IgniPaths.extension()"
+        },
+        {
+          "level": 3,
+          "id": "ignipaths-extension-asset",
+          "title": "IgniPaths.extension_asset()"
+        },
+        {
+          "level": 2,
+          "id": "manualclock",
+          "title": "ManualClock"
+        },
+        {
+          "level": 3,
+          "id": "manualclock-wall",
+          "title": "ManualClock.wall()"
+        },
+        {
+          "level": 3,
+          "id": "manualclock-monotonic",
+          "title": "ManualClock.monotonic()"
+        },
+        {
+          "level": 3,
+          "id": "manualclock-advance",
+          "title": "ManualClock.advance()"
+        },
+        {
+          "level": 2,
+          "id": "novmprofilerequest",
+          "title": "NoVmProfileRequest"
+        },
+        {
+          "level": 2,
+          "id": "notifycall",
+          "title": "NotifyCall"
+        },
+        {
+          "level": 2,
+          "id": "organisationdeletion",
+          "title": "OrganisationDeletion"
+        },
+        {
+          "level": 3,
+          "id": "organisationdeletion-send",
+          "title": "OrganisationDeletion.send()"
+        },
+        {
+          "level": 2,
+          "id": "personclaims",
+          "title": "PersonClaims"
+        },
+        {
+          "level": 2,
+          "id": "portalrefused",
+          "title": "PortalRefused"
+        },
+        {
+          "level": 2,
+          "id": "seenrequest",
+          "title": "SeenRequest"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-of",
+          "title": "SeenRequest.of()"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-json-body",
+          "title": "SeenRequest.json_body()"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-json-model",
+          "title": "SeenRequest.json_model()"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-form",
+          "title": "SeenRequest.form()"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-bearer",
+          "title": "SeenRequest.bearer()"
+        },
+        {
+          "level": 3,
+          "id": "seenrequest-first",
+          "title": "SeenRequest.first()"
+        },
+        {
+          "level": 2,
+          "id": "sentevent",
+          "title": "SentEvent"
+        },
+        {
+          "level": 2,
+          "id": "settingsoverrides",
+          "title": "SettingsOverrides"
+        },
+        {
+          "level": 3,
+          "id": "settingsoverrides-settings-for",
+          "title": "SettingsOverrides.settings_for()"
+        },
+        {
+          "level": 2,
+          "id": "spaceclaims",
+          "title": "SpaceClaims"
+        },
+        {
+          "level": 2,
+          "id": "tokenoverrides",
+          "title": "TokenOverrides"
+        },
+        {
+          "level": 3,
+          "id": "tokenoverrides-seconds",
+          "title": "TokenOverrides.seconds()"
+        },
+        {
+          "level": 2,
+          "id": "vmprofilesubject",
+          "title": "VmProfileSubject"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilesubject-app",
+          "title": "VmProfileSubject.app()"
+        },
+        {
+          "level": 3,
+          "id": "vmprofilesubject-extension",
+          "title": "VmProfileSubject.extension()"
+        }
+      ]
+    }
+  ]
+}

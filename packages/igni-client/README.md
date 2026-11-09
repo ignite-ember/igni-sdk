@@ -1,5 +1,7 @@
 # igni-client
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/igni-client](https://ignite-ember.sh/docs/sdk/igni-client) — guides and the complete API reference, a page per topic.
+
 **The Python SDK for driving an igni from your own program.**
 
 igni is an AI agent that works on a person's projects. It runs on the

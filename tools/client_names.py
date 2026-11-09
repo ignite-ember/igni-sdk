@@ -194,6 +194,67 @@ NAMESPACES: dict[str, str] = {
     "session.auth": "This session's sign-in to igni server.",
 }
 
+#: igni-client's reference on the site, a page per area (``tools/sdk_docs.py``):
+#: its slug, its title, and what is on it — whole namespaces (``igni.processes``,
+#: or ``session`` for the methods on ``Session`` itself) and single methods by
+#: their Python path (``session.run_shell``). Every method is on exactly one
+#: page; the generator refuses a method no page takes, or two pages take.
+REFERENCE_PAGES: list[tuple[str, str, tuple[str, ...]]] = [
+    ("igni", "igni as a whole", ("igni.check_for_update", "igni.group_policy")),
+    (
+        "sessions",
+        "Sessions",
+        (
+            "igni.sessions",
+            "session.status",
+            "session.current_id",
+            "session.get_project_dir",
+            "session.is_processing",
+            "session.run_timeout",
+            "session.list_sessions",
+            "session.switch",
+            "session.cancel",
+            "session.shutdown",
+            "session.typing",
+            "session.upload_attachment",
+            "session.todos",
+            "session.display_config",
+            "session.toggle_verbose",
+            "session.extract_learnings",
+            "session.visualization_action",
+        ),
+    ),
+    ("runs", "Runs received but not finished", ("session.runs",)),
+    ("history-and-context", "History and context", ("session.history", "session.context")),
+    ("loop", "Loop", ("session.loop",)),
+    ("plans", "Plans", ("session.plan",)),
+    ("models", "Choosing a model", ("session.models",)),
+    ("permissions", "Permissions", ("session.permissions",)),
+    ("workspace", "Workspace trust", ("session.workspace",)),
+    ("files", "Files and folders", ("session.files", "igni.files")),
+    (
+        "shell-and-processes",
+        "Shell and background processes",
+        ("session.run_shell", "igni.processes"),
+    ),
+    ("agents", "Agents", ("session.agents", "igni.agents")),
+    (
+        "skills-and-commands",
+        "Skills, slash commands and output styles",
+        ("session.skills", "session.command", "session.slash_commands", "session.output_styles"),
+    ),
+    ("hooks", "Hooks", ("session.hooks", "session.fire_session_start_hook")),
+    ("scheduler", "Scheduled tasks", ("session.scheduler",)),
+    ("workflows", "Workflows", ("session.workflows",)),
+    ("mcp", "MCP servers", ("session.mcp",)),
+    ("plugins", "Plugins and marketplaces", ("session.plugins", "igni.marketplaces")),
+    ("extensions", "Extensions", ("igni.extensions",)),
+    ("notifications", "Notifications", ("igni.notifications",)),
+    ("sign-in-and-server", "Sign-in and server", ("igni.auth", "session.auth")),
+    ("approvers", "Approver tokens", ("igni.approvers",)),
+    ("window", "igni's window model", ("igni.window",)),
+]
+
 #: Namespaces igni-client extends by hand, and where. The generated class is
 #: their base; the client attaches the hand-written one.
 HAND_WRITTEN_NAMESPACES: dict[str, str] = {
@@ -405,6 +466,7 @@ __all__ = [
     "NAMESPACES",
     "NOT_FOR_CLIENTS",
     "OWN_SESSION_ARG",
+    "REFERENCE_PAGES",
     "SCOPE_EXCEPTIONS",
     "UNFOLLOWED",
     "UNION_NAMES",

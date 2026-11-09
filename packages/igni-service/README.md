@@ -1,5 +1,7 @@
 # igni-service
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/igni-service](https://ignite-ember.sh/docs/sdk/igni-service) — guides and the complete API reference, a page per topic.
+
 What a service needs to be part of an igni deployment, behind one object.
 Its own key, its registration, people's tokens, the directory,
 notifications, erasure and export, sign-in to its own pages, and the
