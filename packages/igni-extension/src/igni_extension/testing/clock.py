@@ -15,4 +15,5 @@ class ManualClock(Clock):
         return self._now
 
     def advance(self, seconds: float) -> None:
+        """Move the clock forward `seconds`."""
         self._now += seconds

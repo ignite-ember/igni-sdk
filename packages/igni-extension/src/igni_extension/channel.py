@@ -65,12 +65,12 @@ class HostConnection:
     `request` is how `ext.host` reaches the host; use `ext.host` instead.
     """
 
-    #: How long a request waits for its answer.
     TIMEOUT = 120.0
-    #: Between attempts to reach a host that is not answering yet.
+    """How long a request waits for its answer."""
     RETRY_SECONDS = 2.0
-    #: The largest frame either side sends.
+    """Between attempts to reach a host that is not answering yet."""
     MAX_FRAME = 8 * 1024 * 1024
+    """The largest frame either side sends."""
 
     def __init__(
         self,
@@ -90,9 +90,10 @@ class HostConnection:
         self._waiting: dict[int | str, asyncio.Future[Reply]] = {}
         self._hello: asyncio.Future[Hello] | None = None
         self._tasks: set[asyncio.Task[Any]] = set()
-        #: What the host said this extension holds, after connecting.
         self.granted: list[str] = []
+        """What the host said this extension holds, after connecting."""
         self.schema_version = ""
+        """The version of its object model the host said it speaks, after connecting."""
         signals.when_new(self._new_signal)
 
     @property
@@ -117,6 +118,12 @@ class HostConnection:
         params: dict[str, Any] | None = None,
         value: Any = None,
     ) -> Any:
+        """One `get`, `set` or `call` on the host, answered.
+
+        What `ext.host` is made of; use `ext.host` instead. Raises
+        `NotConfigured` outside igni, `HostUnavailable` when the host cannot be
+        reached, and `HostError` when it refuses.
+        """
         if not self.configured:
             raise NotConfigured(
                 f"host.{path}: igni did not give this process the host's address "

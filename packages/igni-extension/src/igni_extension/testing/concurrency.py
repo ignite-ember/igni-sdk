@@ -7,7 +7,7 @@ import contextlib
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_extension.caller import Caller, RequestMeta
 from igni_extension.extension import IgniExtension
@@ -17,28 +17,43 @@ from igni_extension.testing.host_harness import HostHarness
 class ConcurrentCall(BaseModel):
     """One call the harness makes, as one caller."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     tool: str
+    """The tool's name, as `ext.tool` registered it."""
     arguments: dict[str, Any] = {}
+    """Its arguments."""
     caller: Caller
+    """Whom the call is for: what `Caller.current()` must say during it."""
 
 
 class ConcurrentResult(BaseModel):
+    """One call's answer, and how long it took."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     call: ConcurrentCall
+    """The call it answers."""
     result: Any = None
+    """The tool's result: its structured content, or its text."""
     is_error: bool = False
-    #: Seconds from sending the call to its answer.
+    """Whether the tool raised."""
     took: float = 0.0
+    """Seconds from sending the call to its answer."""
 
 
 class ConcurrencyReport(BaseModel):
     """What one concurrent run found."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     results: list[ConcurrentResult]
-    #: The longest the extension's event loop went without running anything
-    #: else, in seconds — what a blocking call costs every other caller.
+    """Each call's answer, in the order the calls were given."""
     longest_stall: float
-    #: Calls during which `Caller.current()` named somebody else.
+    """The longest the extension's event loop went without running anything
+    else, in seconds — what a blocking call costs every other caller.
+    """
     leaks: list[str]
+    """Calls during which `Caller.current()` named somebody else."""
 
 
 class ConcurrencyProblem(AssertionError):
@@ -71,10 +86,10 @@ class ConcurrencyHarness:
     author's to assert on the results.
     """
 
-    #: The ticker's period, in seconds.
     TICK = 0.005
-    #: The `_meta` key the harness numbers its calls with.
+    """The ticker's period, in seconds."""
     CALL_KEY = "igni/test-call"
+    """The `_meta` key the harness numbers its calls with."""
 
     def __init__(
         self, ext: IgniExtension, *, stall_limit: float = 0.1, timeout: float = 10.0
@@ -117,6 +132,9 @@ class ConcurrencyHarness:
         return report
 
     def check(self, report: ConcurrencyReport) -> None:
+        """Raise `ConcurrencyProblem` when `report` found the loop held too long, or a caller
+        leaked.
+        """
         problems: list[str] = []
         if report.longest_stall > self._stall_limit:
             problems.append(
@@ -171,6 +189,9 @@ class ConcurrencyHarness:
 
     @staticmethod
     def compare(leaks: list[str], tool: str, when: str, expected: Caller) -> None:
+        """Add a line to `leaks` when the caller current now is not `expected`: the tool `tool` saw
+        another's caller `when`.
+        """
         seen = Caller.current()
         if seen != expected:
             leaks.append(

@@ -19,8 +19,8 @@ from igni_extension.threads import OffTheLoop
 
 logger = logging.getLogger(__name__)
 
-#: A reaction: `async def`, or a plain `def` the SDK runs in a worker thread.
 Handler = Callable[[Any], Awaitable[None] | None]
+"""A reaction: `async def`, or a plain `def` the SDK runs in a worker thread."""
 
 
 class SignalHandlers:

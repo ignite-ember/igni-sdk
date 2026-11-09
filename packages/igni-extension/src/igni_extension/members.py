@@ -35,8 +35,8 @@ class _NoResult:
     """A method that answers nothing."""
 
 
-#: Passed as a method's result type when it returns nothing.
 NO_RESULT: Final = _NoResult()
+"""Passed as a method's result type when it returns nothing."""
 
 
 class HostLink(Protocol):
@@ -74,6 +74,7 @@ class HostObject:
     `host.sessions.chat(id)`."""
 
     PATH = ""
+    """Where the object is in the host model: `chat`, `windows.ui`; empty for the root."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -101,14 +102,21 @@ class Property[T]:
     def __init__(self, owner: HostObject, name: str, annotation: Any, *, writable: bool) -> None:
         self._owner = owner
         self.name = name
+        """The property's name on its object: `processing`."""
         self.annotation = annotation
+        """The type its value is read as."""
         self.writable = writable
+        """Whether `set` may write it."""
 
     @property
     def path(self) -> str:
+        """Its full path in the host model: `chat.processing`."""
         return self._owner._member(self.name)
 
     async def get(self) -> T:
+        """Read it from the host; `await prop` is the same. Raises `HostError` when the host
+        refuses.
+        """
         answer = await self._owner._link.request(
             "get", self.path, window=self._owner._window, session=self._owner._session
         )
@@ -143,9 +151,12 @@ class Signal[T]:
 
     def __init__(self, name: str, carries: Any) -> None:
         self.name = name
+        """Its wire name."""
         self.carries = carries
+        """The type of the value it carries."""
 
     def parse(self, value: Any) -> T:
+        """The value the host sent, as `T`."""
         return parse(self.carries, value)  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:

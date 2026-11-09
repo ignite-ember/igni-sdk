@@ -63,19 +63,22 @@ class IgniExtension(ReleasedNames):
         if not extension_id:
             raise ValueError("an extension is named by its manifest id")
         self.id = extension_id
+        """The extension's manifest id."""
         self.environment = ExtensionEnvironment.read(environ)
+        """What igni granted the process, read once from its environment."""
         session = HostSession()
-        #: The MCP server igni talks to. Every message igni sends passes the
-        #: two middlewares: the request's `_meta` is current while it is
-        #: served (`Caller.current()`), and its session is kept so the
-        #: process can speak first (`igni_extension.session`).
         self.mcp = ExtensionMcpServer(
             extension_id,
             instructions=instructions,
             middleware=[RequestMeta.middleware, session.middleware],
         )
-        #: The tools `ext.tool` registered: their names and manifest lines.
+        """The MCP server igni talks to. Every message igni sends passes the
+        two middlewares: the request's `_meta` is current while it is
+        served (`Caller.current()`), and its session is kept so the
+        process can speak first (`igni_extension.session`).
+        """
         self.tools = ToolRegistry(extension_id, self.mcp)
+        """The tools `ext.tool` registered: their names and manifest lines."""
         self._handlers = ExtensionHandlers()
         self._connection = HostConnection(
             self.environment.host,
@@ -83,13 +86,14 @@ class IgniExtension(ReleasedNames):
             self._handlers.hooks,
             self._handlers.service_events,
         )
-        #: igni, as this extension sees it: `ext.host.chat`, `ext.host.ui`, …
-        #: Without the socket, only `notifications.notify` reaches it (`igni_extension.offline`).
         self.host = Host(self._connection if self._connection.configured else OfflineHost(session))
-        #: Which of the conditions its prompt contributions wait on hold.
+        """igni, as this extension sees it: `ext.host.chat`, `ext.host.ui`, …
+        Without the socket, only `notifications.notify` reaches it (`igni_extension.offline`).
+        """
         self.prompt = PromptConditions(session)
-        #: Leases that keep igni awake while the extension works on its own.
+        """Which of the conditions its prompt contributions wait on hold."""
         self.busy = BusyLeases(self.host.self)
+        """Leases that keep igni awake while the extension works on its own."""
         self._service = ServiceAccess(
             extension_id,
             self.environment.service,
@@ -310,6 +314,9 @@ class IgniExtension(ReleasedNames):
         await self._connection.connect()
 
     async def aclose(self) -> None:
+        """Close the host's socket and the HTTP clients. `run()` calls it on the way out; a test
+        that called `connect()` calls it itself.
+        """
         await self._connection.close()
         await self._service.aclose()
 

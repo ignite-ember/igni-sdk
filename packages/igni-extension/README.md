@@ -1,5 +1,7 @@
 # igni-extension
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/igni-extension](https://ignite-ember.sh/docs/sdk/igni-extension) — guides and the complete API reference, a page per topic.
+
 **The Python SDK for an igni extension's process.**
 
 An igni extension usually comes in two parts:

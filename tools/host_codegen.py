@@ -197,7 +197,12 @@ class PythonGenerator:
             modules.setdefault(module, []).append(name)
         for module, names in sorted(modules.items()):
             lines.append(f"from {module} import {', '.join(sorted(names))}")
-        lines += ["", f'SCHEMA_VERSION = "{self.schema.version}"', ""]
+        lines += [
+            "",
+            f'SCHEMA_VERSION = "{self.schema.version}"',
+            '"""The version of igni\'s host object model this SDK was generated from."""',
+            "",
+        ]
         for schema_name, (_, name) in sorted(self.EXTERNAL.items()):
             if schema_name != name:
                 lines.append(f"{schema_name} = {name}")
@@ -206,7 +211,11 @@ class PythonGenerator:
                 continue
             lines += ["", f"class {spec.name}(BaseModel):"]
             lines += self._doc(spec.doc, "    ")
-            lines += ["", '    model_config = ConfigDict(extra="allow")', ""]
+            lines += [
+                "",
+                '    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)',
+                "",
+            ]
             for f in spec.fields:
                 annotation = self.type(f.type)
                 if f.optional:
@@ -237,6 +246,12 @@ class PythonGenerator:
         out += [
             "",
             f'    PATH = "{spec.path}"',
+            *self._doc(
+                f"Where this object is in the host model: `host.{spec.path}`."
+                if spec.path
+                else "Where this object is in the host model: the root, `host`.",
+                "    ",
+            ),
             "",
             "    def __init__(",
             "        self, link: HostLink, window: str | None = None, session: str | None = None",
@@ -248,6 +263,7 @@ class PythonGenerator:
                 f"        self.{self.naming.attribute(child)} = "
                 f"{self.naming.class_name(child.path)}(link, window, session)"
             )
+            out += self._doc(f"`host.{child.path}`. {child.doc}", "        ")
         for p in spec.properties:
             out.append(
                 f"        self.{p.name}: Property[{self.type(p.type)}] = Property("
