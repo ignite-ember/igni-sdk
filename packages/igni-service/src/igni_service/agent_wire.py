@@ -20,13 +20,13 @@ from igni_service.events import (
 from igni_service.service_tokens import ServiceTokens
 from igni_service.urls import IgniPaths
 
-#: igni's limits, mirrored so a mistake is caught where it is made.
 MAX_TEXT = 65536
+"""igni's limits, mirrored so a mistake is caught where it is made."""
 MAX_THREAD = 200
 MAX_ATTACHMENTS = 10
 MAX_TITLE = 200
-#: What a person may attach in igni's composer.
 MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+"""What a person may attach in igni's composer."""
 
 ItemKind = Literal["event", "message", "chat", "action"]
 ItemState = Literal["pending", "delivered", "not_handled", "expired", "dropped", "failed"]
@@ -35,19 +35,24 @@ ItemState = Literal["pending", "delivered", "not_handled", "expired", "dropped",
 class Attachment(BaseModel):
     """A file to send with an item: any type igni's composer takes, at most 5 MiB."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     filename: str = Field(min_length=1, max_length=200)
+    """The file's name, as people see it in the chat (1-200 characters)."""
     content_type: str = "application/octet-stream"
+    """Its media type."""
     data: bytes = Field(min_length=1, max_length=MAX_ATTACHMENT_BYTES)
+    """Its bytes: at least one, at most 5 MiB."""
 
     @classmethod
     def from_bytes(cls, filename: str, data: bytes, content_type: str | None = None) -> Attachment:
+        """An attachment of `data`, its media type guessed from `filename` unless given."""
         guessed = content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
         return cls(filename=filename, content_type=guessed, data=data)
 
     @classmethod
     def from_path(cls, path: str | Path, content_type: str | None = None) -> Attachment:
+        """The file at `path`, read now, named by its file name."""
         source = Path(path)
         return cls.from_bytes(source.name, source.read_bytes(), content_type)
 
@@ -55,28 +60,39 @@ class Attachment(BaseModel):
 class AttachmentStored(BaseModel):
     """igni kept the file; an item names it by `attachment_id`."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     attachment_id: str
+    """The id an item names the file by."""
     filename: str
+    """Its name."""
     content_type: str
+    """Its media type."""
     size: int
+    """Its size in bytes."""
     sha256: str
+    """Its SHA-256, hex."""
     expires_at: datetime
+    """When igni deletes it if no item names it."""
 
 
 class ChatAction(BaseModel):
     """What an `action` item does to its thread's chat."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     op: Literal["show", "rename", "cancel"]
+    """`show` a view, `rename` the chat, or `cancel` its working run."""
     view: dict[str, Any] | None = None
+    """For `show`: the json-render view, `{root, elements}`."""
     title: str | None = Field(default=None, min_length=1, max_length=MAX_TITLE)
+    """For `show`, the view's title; for `rename`, the chat's new title."""
 
 
 class ServiceItemRequest(BaseModel):
     """`POST /v1/service-items`, as it goes on the wire."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     producer: Producer
     kind: ItemKind
@@ -93,23 +109,37 @@ class ServiceItemRequest(BaseModel):
 class ItemStatus(BaseModel):
     """What became of an item: `GET /v1/service-events/{event_id}`."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", use_attribute_docstrings=True)
 
     event_id: str
+    """The item's id, as `EventAccepted.event_id` gave it."""
     producer: Producer
+    """Whose igni the item was for."""
     kind: ItemKind = "event"
+    """`event`, `message`, `chat` or `action`."""
     type: str
+    """An event's type; for the other kinds, the kind igni recorded."""
     thread: str | None = None
+    """The chat thread the item belongs to, if any."""
     event_key: str | None = None
+    """The key the service sent it with, if any."""
     state: ItemState
+    """Where it stands: `pending`, `delivered`, `not_handled`, `expired`,
+    `dropped` or `failed` (`Agent.status` says what each means)."""
     dropped_reason: str | None = None
+    """Why it was dropped, when `state` is `dropped`."""
     failed_reason: str | None = None
-    #: An event no handler took: why.
+    """Why the platform gave up, when `state` is `failed`."""
     not_handled_reason: str | None = None
+    """An event no handler took: why."""
     created_at: datetime
+    """When igni stored it."""
     expires_at: datetime | None = None
+    """When it stops waiting to be taken."""
     delivered_at: datetime | None = None
+    """When the producer's igni took it, once it has."""
     updated_at: datetime
+    """When its state last changed."""
 
 
 class AgentWire:

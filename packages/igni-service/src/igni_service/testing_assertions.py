@@ -15,29 +15,31 @@ from __future__ import annotations
 
 import httpx
 import jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.clock import Clock
 from igni_service.crypto import ALGORITHM
 from igni_service.testing_clients import ClientState, FakeClient, FakeClientRegistry
 from igni_service.testing_wire import IgniAddresses, OAuthError, TokenForm
 
-#: The longest a client assertion may live, in seconds.
 MAX_ASSERTION_LIFETIME = 300
+"""The longest a client assertion may live, in seconds."""
 
-#: igni server's own words (its `assertions.py`).
 REVOKED = "this client has been revoked"
+"""igni server's own words (its `assertions.py`)."""
 WAITING = "this client is waiting for a super admin to approve it"
 
 
 class AssertionResult(BaseModel):
     """The client an assertion proved, or why it proved none."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client: FakeClient | None = None
-    #: igni's reason, when it gives one; most refusals give none.
     refusal: str | None = None
-    #: The registration's state, on a refusal for a client igni found.
+    """igni's reason, when it gives one; most refusals give none."""
     client_state: ClientState | None = None
+    """The registration's state, on a refusal for a client igni found."""
 
     def to_error(self) -> httpx.Response:
         return OAuthError(
@@ -62,13 +64,14 @@ class ClientAssertionVerifier:
         self.addresses = addresses
         self.clock = clock
         self.clients = clients
-        #: When set, a pending registration gets no service token.
         self.require_approval = require_approval
-        #: Whether a refusal names the client's state in `client_state`, as
-        #: igni server is to; `False` plays one that says it only in words.
+        """When set, a pending registration gets no service token."""
         self.names_client_state = True
-        #: Every `jti` already used: replay memory, which no reset forgets.
+        """Whether a refusal names the client's state in `client_state`, as
+        igni server is to; `False` plays one that says it only in words.
+        """
         self.jtis: set[str] = set()
+        """Every `jti` already used: replay memory, which no reset forgets."""
 
     def verify(self, form: TokenForm) -> AssertionResult:
         """The client `form`'s assertion proves, or the refusal."""

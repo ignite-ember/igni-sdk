@@ -58,12 +58,13 @@ if TYPE_CHECKING:
 class BearerRoutes:
     """Which routes take their caller's own bearer token, and nothing else."""
 
-    #: `IgniService`'s dependencies that read the caller's own bearer token.
-    #: Every dependency of `IgniService` that reads `Authorization` is here
-    #: or in `NOT_THE_PAGES`; a test holds the two lists to the class.
     DEPENDENCIES = ("person", "optional_person", "org_admin", "caller", "token", "optional_token")
-    #: Ones that read a bearer token too, but never the page's: igni's own calls.
+    """`IgniService`'s dependencies that read the caller's own bearer token.
+    Every dependency of `IgniService` that reads `Authorization` is here
+    or in `NOT_THE_PAGES`; a test holds the two lists to the class.
+    """
     NOT_THE_PAGES = ("igni_call",)
+    """Ones that read a bearer token too, but never the page's: igni's own calls."""
 
     def __init__(self, igni: IgniService) -> None:
         self._igni = igni
@@ -102,17 +103,20 @@ class BearerRoutes:
 class BearerCors:
     """ASGI middleware: cross-origin calls to bearer routes, from any origin, without credentials."""
 
-    #: The headers a page's token call sends that are not CORS-safelisted.
     ALLOW_HEADERS = frozenset({"authorization", "content-type"})
+    """The headers a page's token call sends that are not CORS-safelisted."""
     ALLOW_METHODS = ("DELETE", "GET", "HEAD", "PATCH", "POST", "PUT")
-    #: How long a browser may keep a preflight's answer.
+    """The methods a preflight allows."""
     MAX_AGE = 600
-    #: Never a bearer route: sign-in to the service's pages, and igni's own calls.
+    """How long a browser may keep a preflight's answer."""
     CLOSED = (WebSignIn.PREFIX + "/", IgniPaths.SUBJECTS + "/", IgniPaths.ORGANISATIONS + "/")
+    """Never a bearer route: sign-in to the service's pages, and igni's own calls."""
 
     def __init__(self, app: ASGIApp, *, igni: IgniService) -> None:
         self.app = app
+        """The ASGI app this middleware wraps."""
         self.routes = BearerRoutes(igni)
+        """Which routes are bearer routes, judged once per route from its dependencies."""
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         headers = Headers(scope=scope) if scope["type"] == "http" else None

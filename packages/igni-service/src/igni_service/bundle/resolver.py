@@ -20,9 +20,6 @@ from igni_service.errors import BundleError
 class Resolver:
     """Pins every dependency of one extension, by hash, for a platform."""
 
-    #: Where else to get the SDKs. Said when a resolution fails because one
-    #: of them cannot be found: the index is out of reach, or does not
-    #: mirror them.
     WHEELS_HINT = """\
 igni-extension and igni-service are on PyPI. If this machine cannot reach
 PyPI, take the wheels from igni-sdk's GitHub release and point the builder
@@ -34,9 +31,13 @@ at them:
 Or build them from an igni-sdk checkout into the same directory:
 
   uv build --wheel --out-dir ./sdk-wheels <igni-sdk checkout>/packages/igni-extension"""
+    """Where else to get the SDKs. Said when a resolution fails because one
+    of them cannot be found: the index is out of reach, or does not
+    mirror them.
+    """
 
-    #: The SDKs a resolution may fail to find.
     SDKS = ("igni-extension", "igni-service")
+    """The SDKs a resolution may fail to find."""
 
     def __init__(self, extension_dir: Path, sources: PackageSources, runner: CommandRunner) -> None:
         self._dir = extension_dir

@@ -1,5 +1,7 @@
 # igni-service
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/igni-service](https://ignite-ember.sh/docs/sdk/igni-service) — guides and the complete API reference, a page per topic.
+
 **The Python SDK for an extension's backend service.**
 
 An igni extension usually comes in two parts:

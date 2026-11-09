@@ -21,7 +21,7 @@ from igni_service.errors import BundleError
 class PythonPackaging(BaseModel):
     """The manifest's `python` packaging."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     package: str
     entry: str
@@ -31,7 +31,7 @@ class PythonPackaging(BaseModel):
 class ToolAnnotations(BaseModel):
     """MCP's four hints, every one stated: igni refuses a bundle that leaves one out."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     readOnlyHint: bool  # noqa: N815 — MCP's name for it
     destructiveHint: bool  # noqa: N815
@@ -50,18 +50,18 @@ class ToolAnnotations(BaseModel):
 class AgentTool(BaseModel):
     """A tool in `permissions.tools`: one the agent may call, and what it says it is."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     name: str
     annotations: ToolAnnotations
 
 
 class BundlePermissions(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     tools: list[AgentTool] = Field(default_factory=list)
-    #: igni's hook events its process answers (`PreToolUse`, `PlanSubmit`, …).
     hooks: list[str] = Field(default_factory=list)
+    """igni's hook events its process answers (`PreToolUse`, `PlanSubmit`, …)."""
 
 
 class ManifestEndpoint(BaseModel):
@@ -70,17 +70,17 @@ class ManifestEndpoint(BaseModel):
     Only its presence matters to the builder; the rest is igni's to read.
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
 
 class BundleManifest(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     version: str
     python: PythonPackaging
-    #: Read for `tools`, so a bundle igni would refuse is not built.
     permissions: BundlePermissions = Field(default_factory=BundlePermissions)
+    """Read for `tools`, so a bundle igni would refuse is not built."""
     endpoint: ManifestEndpoint | None = None
     assets: list[BundleAsset] = Field(default_factory=list)
 

@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict
 class PackageSources(BaseModel):
     """The index flags and build isolation every uv and pip run shares."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     find_links: tuple[Path, ...] = ()
     no_index: bool = False

@@ -27,6 +27,8 @@ ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 class IssuedTokens(BaseModel):
     """What the token endpoint answers."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     access_token: str
     expires_in: int = 600
     refresh_token: str = ""
@@ -44,7 +46,7 @@ class OAuthRefusal(BaseModel):
     server that predates it.
     """
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", use_attribute_docstrings=True)
 
     error: str = ""
     error_description: str = ""

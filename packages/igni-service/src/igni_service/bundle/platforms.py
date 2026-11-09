@@ -12,29 +12,32 @@ from igni_service.assets import AssetPlatform
 
 PYTHON_VERSION = "3.12"
 
-#: The oldest macOS a bundle installs on. Every customer runs 26 or 27;
-#: a wheel built for an older macOS still installs there, so this only
-#: stops the resolver choosing an old release for an old system.
 MACOS_TARGET = "26.0"
+"""The oldest macOS a bundle installs on. Every customer runs 26 or 27;
+a wheel built for an older macOS still installs there, so this only
+stops the resolver choosing an old release for an old system.
+"""
 
 
 class Platform(BaseModel):
     """One platform igni runs on, as uv and pip name it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     name: str
-    #: The manifest's name for it, in `assets[].platform`.
     asset: AssetPlatform
-    #: `uv pip compile --python-platform`.
+    """The manifest's name for it, in `assets[].platform`."""
     uv: str
-    #: `pip download --platform`, each one; pip does not widen a
-    #: `manylinux_2_x` tag to the older ones on its own. It does widen a
-    #: `macosx_26_0_arm64` one, to every older macOS and `universal2`.
+    """`uv pip compile --python-platform`."""
     pip: tuple[str, ...]
-    #: Set for `uv pip compile`: uv reads the macOS it resolves for from
-    #: `MACOSX_DEPLOYMENT_TARGET`, and assumes 13 without it.
+    """`pip download --platform`, each one; pip does not widen a
+    `manylinux_2_x` tag to the older ones on its own. It does widen a
+    `macosx_26_0_arm64` one, to every older macOS and `universal2`.
+    """
     uv_env: tuple[tuple[str, str], ...] = ()
+    """Set for `uv pip compile`: uv reads the macOS it resolves for from
+    `MACOSX_DEPLOYMENT_TARGET`, and assumes 13 without it.
+    """
 
     def pip_flags(self) -> list[str]:
         return [flag for tag in self.pip for flag in ("--platform", tag)]

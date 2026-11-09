@@ -43,11 +43,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from igni_service.errors import BundleError
 
-#: The largest single asset igni takes.
 MAX_ASSET_BYTES = 1024 * 1024 * 1024
+"""The largest single asset igni takes."""
 
-#: Suffixes igni can unpack on install.
 UNPACKABLE = (".tar.gz", ".tgz", ".zip")
+"""Suffixes igni can unpack on install."""
 
 _CHUNK = 1024 * 1024
 
@@ -56,9 +56,13 @@ class AssetPlatform(StrEnum):
     """Where an asset is for. `any` is every platform."""
 
     ANY = "any"
+    """Every platform: one file serves them all."""
     MACOS_ARM64 = "macos-arm64"
+    """macOS on Apple silicon."""
     LINUX_X86_64 = "linux-x86_64"
+    """Linux on x86-64 (a Fleet VM is this)."""
     WINDOWS_X86_64 = "windows-x86_64"
+    """Windows on x86-64."""
 
     @classmethod
     def specific(cls) -> tuple[AssetPlatform, ...]:
@@ -69,18 +73,22 @@ class AssetPlatform(StrEnum):
 class BundleAsset(BaseModel):
     """One declared asset."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, use_attribute_docstrings=True)
 
     name: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")
+    """The asset's name, as the extension asks for it: `ext.assets.path(name)`."""
     platform: AssetPlatform
-    #: A plain file name: no directory, nothing that climbs out.
+    """The platform this file is for."""
     file: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,199}$")
+    """A plain file name: no directory, nothing that climbs out."""
     size: int = Field(gt=0, le=MAX_ASSET_BYTES)
+    """Its size in bytes; at most igni's limit."""
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    #: Where the bundle builder fetches it. https only.
+    """Its SHA-256, hex: what igni checks it against."""
     source: str = Field(pattern=r"^https://[^\s]+$", max_length=2000)
-    #: Unpacked by igni on install (a `.tar.gz`, `.tgz` or `.zip`).
+    """Where the bundle builder fetches it. https only."""
     unpack: bool = False
+    """Unpacked by igni on install (a `.tar.gz`, `.tgz` or `.zip`)."""
 
     @model_validator(mode="after")
     def _unpackable(self) -> Self:
@@ -92,9 +100,10 @@ class BundleAsset(BaseModel):
 class BundleAssets(BaseModel):
     """Every asset a manifest declares, checked as a set."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     assets: list[BundleAsset] = Field(default_factory=list)
+    """The declared assets; each name covers every platform, or is `any`."""
 
     @field_validator("assets")
     @classmethod

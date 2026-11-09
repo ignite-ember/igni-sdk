@@ -51,6 +51,7 @@ class Agent:
 
     @property
     def producer(self) -> Producer:
+        """Whose igni this agent is: the person or app every item goes to."""
         return self._producer
 
     async def send_message(
@@ -186,6 +187,7 @@ class Chat:
     def __init__(self, agent: Agent, thread: str) -> None:
         self._agent = agent
         self.thread = thread
+        """The thread's id: the same id names the same chat on every call."""
 
     async def send_message(
         self,
@@ -229,6 +231,7 @@ class Chat:
         return await self._act(ChatAction(op="show", view=view, title=title), event_key)
 
     async def rename(self, title: str, *, event_key: str | None = None) -> EventAccepted:
+        """Give the chat a new title (1-200 characters). Starts no run."""
         return await self._act(ChatAction(op="rename", title=title), event_key)
 
     async def cancel(self, *, event_key: str | None = None) -> EventAccepted:

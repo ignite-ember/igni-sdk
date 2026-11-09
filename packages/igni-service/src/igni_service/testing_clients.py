@@ -12,7 +12,7 @@ import uuid
 from enum import StrEnum
 
 import httpx
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from igni_service.crypto import Jwk, RsaKeyPair
 from igni_service.registration import ClientMetadata
@@ -34,6 +34,8 @@ class ClientKind(StrEnum):
 class RegistrationResponse(BaseModel):
     """What igni answers a registration with (RFC 7591 §3.2.1, plus its state)."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
     client_id_issued_at: int = 0
     client_name: str
@@ -48,6 +50,8 @@ class RegistrationResponse(BaseModel):
 class FakeClient(BaseModel):
     """A registration, as igni keeps it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
     client_name: str
     client_uri: str
@@ -56,8 +60,8 @@ class FakeClient(BaseModel):
     state: ClientState = ClientState.PENDING
     thumbprint: str
     jwk: Jwk
-    #: An app's organisation; empty for a service.
     org_id: str = ""
+    """An app's organisation; empty for a service."""
 
     @property
     def is_revoked(self) -> bool:

@@ -22,12 +22,12 @@ from igni_service.testing_bearers import TokenHolder
 from igni_service.token_endpoint import ASSERTION_TYPE
 from igni_service.urls import IgniPaths, ServiceUrl
 
-#: Where the service reaches the fake.
 BASE = "http://igni.test"
-#: Its issuer: its public URL, deliberately not `BASE`.
+"""Where the service reaches the fake."""
 ISSUER = "https://igni.example.test"
-#: The service under test's own URL.
+"""Its issuer: its public URL, deliberately not `BASE`."""
 SERVICE_URL = "http://service.test"
+"""The service under test's own URL."""
 
 Body = TypeVar("Body", bound=BaseModel)
 
@@ -36,18 +36,24 @@ class FakeDiscovery(Discovery):
     """igni's metadata as the fake publishes it: every endpoint under its issuer."""
 
     jwks_uri: str
+    """Where igni's public keys are."""
     token_endpoint: str
+    """Where tokens are asked for."""
     revocation_endpoint: str
+    """Where a sign-in is ended."""
 
 
 class IgniAddresses(BaseModel):
     """Where the fake is reached, what it calls itself, and the service it signs for."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     base_url: str = BASE
+    """Where the fake is reached: `http://igni.test`."""
     issuer: str = ISSUER
+    """The issuer its tokens name, which is not where it is reached: `https://igni.example.test`."""
     service_url: str = SERVICE_URL
+    """The service's URL its tokens are for: `http://service.test`."""
 
     @field_validator("base_url", "issuer")
     @classmethod
@@ -74,6 +80,7 @@ class IgniAddresses(BaseModel):
         return [self.issuer, f"{self.issuer}{IgniPaths.TOKEN}", f"{self.issuer}{IgniPaths.REVOKE}"]
 
     def discovery(self) -> FakeDiscovery:
+        """The OpenID Connect discovery document these addresses make."""
         return FakeDiscovery(
             issuer=self.issuer,
             jwks_uri=f"{self.issuer}{IgniPaths.JWKS}",
@@ -86,8 +93,12 @@ class IgniAddresses(BaseModel):
 class DetailError(BaseModel):
     """`{"detail": ...}`, igni's error body everywhere but OAuth."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     detail: str
+    """igni's words: why."""
     status: int = Field(default=400, exclude=True)
+    """The HTTP status it is answered with; not part of the body."""
 
     @classmethod
     def not_found(cls) -> DetailError:
@@ -100,17 +111,21 @@ class DetailError(BaseModel):
         return cls(detail="Not authenticated", status=401)
 
     def to_response(self) -> httpx.Response:
+        """The error as igni answers it."""
         return httpx.Response(self.status, json=self.model_dump())
 
 
 class OAuthError(BaseModel):
     """`{"error": ..., "error_description": ...}`, RFC 6749 §5.2's error body."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     error: str
     error_description: str | None = None
-    #: igni's own field beside `invalid_client`: the state of the client's
-    #: registration when that is why it was refused (`token_endpoint.OAuthRefusal`).
     client_state: str | None = None
+    """igni's own field beside `invalid_client`: the state of the client's
+    registration when that is why it was refused (`token_endpoint.OAuthRefusal`).
+    """
     status: int = Field(default=400, exclude=True)
 
     def to_response(self) -> httpx.Response:
@@ -120,19 +135,30 @@ class OAuthError(BaseModel):
 class TokenForm(BaseModel):
     """A form posted to the token or the revocation endpoint, as igni reads it."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", use_attribute_docstrings=True)
 
     grant_type: str = ""
+    """`client_credentials`, `authorization_code` or `refresh_token`."""
     client_assertion_type: str = ""
+    """How the client authenticates: the JWT bearer assertion type."""
     client_assertion: str = ""
+    """The client's signed assertion."""
     organisation: str = ""
+    """The organisation a service token is asked for."""
     scope: str = ""
+    """The scope asked for, if any."""
     code: str = ""
+    """The authorization code a sign-in brought back."""
     redirect_uri: str = ""
+    """The callback address the code was issued for."""
     code_verifier: str = ""
+    """The PKCE verifier for `code`."""
     refresh_token: str = ""
+    """The refresh token a renewal presents."""
     token: str = ""
+    """The token a revocation names."""
     token_type_hint: str = ""
+    """What kind of token `token` is: `refresh_token`."""
 
     @property
     def is_jwt_bearer(self) -> bool:
@@ -143,14 +169,22 @@ class TokenForm(BaseModel):
 class SeenRequest(BaseModel):
     """One request the fake was sent."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     method: str
+    """The HTTP method."""
     path: str
+    """The path, without the query."""
     headers: dict[str, str]
+    """The headers, names lower-cased."""
     body: bytes
+    """The body's bytes."""
     query: dict[str, list[str]] = Field(default_factory=dict)
+    """The query string, parsed: each name to its values."""
 
     @classmethod
     def of(cls, request: httpx.Request) -> SeenRequest:
+        """What `request` was, read whole."""
         url = urlsplit(str(request.url))
         return cls(
             method=request.method,
@@ -161,6 +195,7 @@ class SeenRequest(BaseModel):
         )
 
     def json_body(self) -> Any:
+        """The body, read as JSON."""
         return json.loads(self.body)
 
     def json_model(self, model: type[Body]) -> Body | DetailError:
@@ -171,6 +206,7 @@ class SeenRequest(BaseModel):
             return DetailError(detail=str(exc), status=422)
 
     def form(self) -> TokenForm:
+        """The body, read as the form a token or revocation request posts."""
         return TokenForm.model_validate({k: v[0] for k, v in parse_qs(self.body.decode()).items()})
 
     def bearer(self) -> str:
@@ -185,9 +221,11 @@ class SeenRequest(BaseModel):
 class RoutedCall(BaseModel):
     """A request routed to a handler, with whoever its bearer token stands for."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     seen: SeenRequest
-    #: Empty on a route that needs no token.
     holder: TokenHolder = Field(default_factory=TokenHolder)
+    """Empty on a route that needs no token."""
 
 
 class RecordedTraffic:
@@ -195,8 +233,8 @@ class RecordedTraffic:
 
     def __init__(self) -> None:
         self.seen: list[SeenRequest] = []
-        #: Path prefix → status to answer instead, to play igni failing.
         self.failing: dict[str, int] = {}
+        """Path prefix → status to answer instead, to play igni failing."""
 
     def record(self, request: httpx.Request) -> SeenRequest:
         seen = SeenRequest.of(request)

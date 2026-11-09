@@ -20,12 +20,14 @@ from igni_service.testing_claims import PersonClaims
 from igni_service.testing_wire import DetailError, RoutedCall, SeenRequest
 from igni_service.urls import IgniPaths
 
-#: The most people the directory answers in one call.
 MAX_PEOPLE = 500
+"""The most people the directory answers in one call."""
 
 
 class MemberQuery(BaseModel):
     """`GET /v1/directory/members`'s query, as igni reads it."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     query: str = ""
     limit: int = 100
@@ -45,6 +47,8 @@ class MemberQuery(BaseModel):
 
 class FakeOrganisation(BaseModel):
     """One organisation in igni's directory, and its members by user id."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     organisation: Organisation
     members: dict[str, Member] = Field(default_factory=dict)
@@ -104,11 +108,14 @@ class FakeOrganisation(BaseModel):
 class OrganisationDeletion(BaseModel):
     """What igni sends a service when it deletes an organisation."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     org_id: str
+    """The organisation igni deleted."""
     path: str
+    """The service's route igni calls: `/v1/igni/organisations/<org_id>`."""
     headers: dict[str, str]
+    """igni's headers, its own token among them."""
 
     async def send(self, http: httpx.AsyncClient) -> httpx.Response:
         """Deliver it to the service `http` reaches, as igni does — again, if called again."""

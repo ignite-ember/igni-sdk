@@ -24,24 +24,30 @@ from igni_service.testing_wire import DetailError
 class ManifestAsset(BaseModel):
     """One asset a manifest declares; igni reads its name and digest."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     name: str = ""
+    """The asset's name."""
     sha256: str = ""
+    """Its SHA-256, hex."""
 
 
 class PageRef(BaseModel):
     """One page a manifest contributes; igni reads its kind."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str = ""
+    """The page's kind."""
 
 
 class Contributes(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    """A manifest's `contributes` section: what the extension adds to igni."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     pages: list[PageRef] = Field(default_factory=list)
+    """The pages it contributes."""
 
 
 class UploadedManifest(BaseModel):
@@ -52,14 +58,20 @@ class UploadedManifest(BaseModel):
     every platform, and igni takes it.
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str = ""
+    """The extension's id."""
     version: str = ""
+    """Its version."""
     name: str | None = None
+    """Its display name."""
     assets: list[ManifestAsset] = Field(default_factory=list)
+    """The assets it declares."""
     contributes: Contributes = Field(default_factory=Contributes)
+    """What it adds to igni: its pages, among others."""
     vm: dict[str, object] | None = None
+    """Its `vm` section: the VM profile it asks for, if any."""
 
     @classmethod
     def from_archive(cls, archive: bytes) -> UploadedManifest | DetailError:
@@ -75,21 +87,31 @@ class UploadedManifest(BaseModel):
 
     @property
     def pages(self) -> list[str]:
+        """The kind of each page it contributes."""
         return [page.kind for page in self.contributes.pages]
 
 
 class HeldExtension(BaseModel):
     """A bundle igni holds for a client."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
+    """The service that uploaded it."""
     extension_id: str
+    """Its manifest `id`."""
     version: str
+    """Its manifest `version`."""
     sha256: str
+    """The SHA-256 of the archive, hex."""
     archive: bytes
+    """The bundle's bytes, as uploaded."""
     manifest: UploadedManifest = Field(default_factory=UploadedManifest)
+    """What the fake read from its manifest."""
 
     @property
     def pages(self) -> list[str]:
+        """The kind of each page its manifest contributes."""
         return self.manifest.pages
 
     def published(self, reason: str | None = None) -> PublishedExtension:
@@ -105,6 +127,8 @@ class HeldExtension(BaseModel):
 
 class BundleSource(BaseModel):
     """A built bundle, or an extension's directory to archive as one."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     path: Path
 

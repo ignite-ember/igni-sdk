@@ -26,7 +26,7 @@ import asyncio
 from typing import Any
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.clock import Clock
 from igni_service.errors import IgniUnavailable, ServiceNotApproved, ServiceRevoked
@@ -38,6 +38,7 @@ from igni_service.token_endpoint import GrantRefused, IssuedTokens, TokenEndpoin
 
 
 class HeldToken(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     token: str
     expires_at: float
 
@@ -45,8 +46,8 @@ class HeldToken(BaseModel):
 class ServiceTokens:
     """Service tokens for igni, kept per organisation."""
 
-    #: How long before expiry a kept token is replaced, in seconds.
     RENEW_BEFORE = 60.0
+    """How long before expiry a kept token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -94,8 +95,8 @@ class ServiceTokens:
             return held.token
         return None
 
-    #: igni's registration states that refuse a service token, by what they mean.
     NOT_APPROVED = "pending"
+    """igni's registration states that refuse a service token, by what they mean."""
     REVOKED = "revoked"
 
     async def _issue(self, org_id: str) -> IssuedTokens:
