@@ -21,9 +21,9 @@ Allow(*, outcome: Literal['allow'] = 'allow')
 
 Let it happen as it is.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `outcome` | `Literal['allow']` | `'allow'` |  |
+| Field | Type | Default |
+|---|---|---|
+| `outcome` | `Literal['allow']` | `'allow'` |
 
 ### Allow.for_hook()
 
@@ -71,10 +71,10 @@ Modify(value: Any, *, outcome: Literal['modify'] = 'modify')
 
 Let it happen, changed: the whole value, with only the fields it may change changed.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `outcome` | `Literal['modify']` | `'modify'` |  |
-| `value` | `Any` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `outcome` | `Literal['modify']` | `'modify'` |
+| `value` | `Any` | required |
 
 ### Modify.for_hook()
 
@@ -91,10 +91,10 @@ Reject(reason: str, *, outcome: Literal['reject'] = 'reject')
 
 Stop it. `reason` reaches the agent or the person, so write it for them.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `outcome` | `Literal['reject']` | `'reject'` |  |
-| `reason` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `outcome` | `Literal['reject']` | `'reject'` |
+| `reason` | `str` | required |
 
 ### Reject.for_hook()
 

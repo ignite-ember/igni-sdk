@@ -191,3 +191,31 @@ def test_every_client_example_type_checks(tmp_path: Path) -> None:
         check=False,
     )
     assert done.returncode == 0, done.stdout + done.stderr
+
+
+def test_a_long_signature_is_one_parameter_a_line_as_black_writes_it() -> None:
+    from tools.markdown_pages import signature
+
+    assert signature("def f", "self, a: int") == "def f(self, a: int)"
+    long = signature(
+        "async def model",
+        "self, *, op: Literal['a', 'b'], window: str" + ", x: str = ''" * 8,
+        " -> R",
+    )
+    assert long.split("\n")[:4] == [
+        "async def model(",
+        "    self,",
+        "    *,",
+        "    op: Literal['a', 'b'],",
+    ]
+    assert long.endswith("\n) -> R")
+    assert all(len(line) <= 88 for line in long.split("\n"))
+
+
+def test_the_index_carries_each_package_version_from_its_pyproject() -> None:
+    import tomllib
+
+    index = json.loads((ROOT / INDEX).read_text(encoding="utf-8"))
+    for entry, package in zip(index["packages"], PACKAGES, strict=True):
+        project = tomllib.loads((ROOT / package.path / "pyproject.toml").read_text())["project"]
+        assert entry["version"] == project["version"], package.name

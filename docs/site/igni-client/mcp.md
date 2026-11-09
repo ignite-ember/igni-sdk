@@ -178,7 +178,13 @@ for mcp_server_summary in await session.mcp.servers():
 Switch one MCP server's tool on or off for this project.
 
 ```python
-async def set_tool_enabled(self, *, enabled: bool, server: str, tool: str) -> McpToolToggleResult
+async def set_tool_enabled(
+    self,
+    *,
+    enabled: bool,
+    server: str,
+    tool: str,
+) -> McpToolToggleResult
 ```
 
 `server` and `tool` name the tool; `enabled` is its new state.

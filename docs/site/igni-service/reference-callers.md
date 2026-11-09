@@ -24,9 +24,9 @@ IgniCall(*, org_id: str)
 
 igni itself calling this service, for one organisation.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `org_id` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `org_id` | `str` | required |
 
 ## PEOPLE_ONLY
 
@@ -43,11 +43,11 @@ App(*, app_id: str, org_id: str, name: str = '')
 
 An app acting as itself: igni's `app` token for this service.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `app_id` | `str` | required |  |
-| `org_id` | `str` | required |  |
-| `name` | `str` | `''` |  |
+| Field | Type | Default |
+|---|---|---|
+| `app_id` | `str` | required |
+| `org_id` | `str` | required |
+| `name` | `str` | `''` |
 
 ### App.kind
 
@@ -94,20 +94,29 @@ token_use: str
 
 ```python
 class Person(BaseModel)
-Person(*, user_id: str, org_id: str, org_name: str = '', org_role: str = 'member', email: str = '', name: str = '', super_admin: bool = False)
+Person(
+    *,
+    user_id: str,
+    org_id: str,
+    org_name: str = '',
+    org_role: str = 'member',
+    email: str = '',
+    name: str = '',
+    super_admin: bool = False,
+)
 ```
 
 A person, as their token describes them, in the one organisation it names.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `user_id` | `str` | required |  |
-| `org_id` | `str` | required |  |
-| `org_name` | `str` | `''` |  |
-| `org_role` | `str` | `'member'` |  |
-| `email` | `str` | `''` |  |
-| `name` | `str` | `''` |  |
-| `super_admin` | `bool` | `False` |  |
+| Field | Type | Default |
+|---|---|---|
+| `user_id` | `str` | required |
+| `org_id` | `str` | required |
+| `org_name` | `str` | `''` |
+| `org_role` | `str` | `'member'` |
+| `email` | `str` | `''` |
+| `name` | `str` | `''` |
+| `super_admin` | `bool` | `False` |
 
 ### Person.kind
 
@@ -146,12 +155,12 @@ Space(*, space_id: str, org_id: str, app_id: str, external_id: str = '')
 
 One end user of an app, a producer of its own: igni's `space` token for this service.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `space_id` | `str` | required |  |
-| `org_id` | `str` | required |  |
-| `app_id` | `str` | required |  |
-| `external_id` | `str` | `''` |  |
+| Field | Type | Default |
+|---|---|---|
+| `space_id` | `str` | required |
+| `org_id` | `str` | required |
+| `app_id` | `str` | required |
+| `external_id` | `str` | `''` |
 
 ### Space.kind
 

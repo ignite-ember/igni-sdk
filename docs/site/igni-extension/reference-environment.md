@@ -22,9 +22,9 @@ Assets(*, root: pathlib.Path | None = None)
 
 What the extension ships for this platform: `ext.assets.path("neo4j")`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `root` | `Path \| None` | `None` |  |
+| Field | Type | Default |
+|---|---|---|
+| `root` | `Path \| None` | `None` |
 
 ### Assets.path()
 
@@ -49,19 +49,27 @@ One file of an asset that is not unpacked: `<assets>/<name>/<file>`.
 
 ```python
 class ExtensionEnvironment(BaseModel)
-ExtensionEnvironment(*, workspace: Workspace = <factory>, data_dir: pathlib.Path | None = None, assets: Assets = <factory>, secrets: Secrets = <factory>, service: ServiceEndpoint = <factory>, host: HostEndpoint = <factory>)
+ExtensionEnvironment(
+    *,
+    workspace: Workspace = <factory>,
+    data_dir: pathlib.Path | None = None,
+    assets: Assets = <factory>,
+    secrets: Secrets = <factory>,
+    service: ServiceEndpoint = <factory>,
+    host: HostEndpoint = <factory>,
+)
 ```
 
 What igni granted this process, read from its environment.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `workspace` | `Workspace` | factory |  |
-| `data_dir` | `Path \| None` | `None` |  |
-| `assets` | `Assets` | factory |  |
-| `secrets` | `Secrets` | factory |  |
-| `service` | `ServiceEndpoint` | factory |  |
-| `host` | `HostEndpoint` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `workspace` | `Workspace` | factory |
+| `data_dir` | `Path \| None` | `None` |
+| `assets` | `Assets` | factory |
+| `secrets` | `Secrets` | factory |
+| `service` | `ServiceEndpoint` | factory |
+| `host` | `HostEndpoint` | factory |
 
 ### ExtensionEnvironment.read()
 
@@ -79,10 +87,10 @@ HostEndpoint(*, url: str = '', secret: str = '')
 
 Where the igni host's object model is: `IGNI_HOST_URL`, `IGNI_HOST_SECRET`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `url` | `str` | `''` |  |
-| `secret` | `str` | `''` |  |
+| Field | Type | Default |
+|---|---|---|
+| `url` | `str` | `''` |
+| `secret` | `str` | `''` |
 
 ### HostEndpoint.configured
 
@@ -100,9 +108,9 @@ Secrets(*, by_env_name: dict[str, str] = <factory>)
 
 Every declared secret the deployment supplied, by the manifest's name.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `by_env_name` | `dict[str, str]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `by_env_name` | `dict[str, str]` | factory |
 
 ### Secrets.env_name()
 
@@ -123,16 +131,21 @@ def get(name: str) -> str | None
 
 ```python
 class Workspace(BaseModel)
-Workspace(*, root: pathlib.Path | None = None, mode: WorkspaceMode = WorkspaceMode.NONE, paths: tuple[str, ...] = ())
+Workspace(
+    *,
+    root: pathlib.Path | None = None,
+    mode: WorkspaceMode = WorkspaceMode.NONE,
+    paths: tuple[str, ...] = (),
+)
 ```
 
 The project this process may read (or write), when it was granted one.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `root` | `Path \| None` | `None` |  |
-| `mode` | `WorkspaceMode` | `WorkspaceMode.NONE` |  |
-| `paths` | `tuple[str, ...]` | `()` |  |
+| Field | Type | Default |
+|---|---|---|
+| `root` | `Path \| None` | `None` |
+| `mode` | `WorkspaceMode` | `WorkspaceMode.NONE` |
+| `paths` | `tuple[str, ...]` | `()` |
 
 ### Workspace.granted
 

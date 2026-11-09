@@ -65,7 +65,13 @@ async def take_login(state: str) -> LoginAttempt | None
 
 ```python
 class SqlWebSessionStore
-SqlWebSessionStore(engine: AsyncEngine, cipher: KeyCipher, *, create_table: bool = True, clock: Clock | None = None)
+SqlWebSessionStore(
+    engine: AsyncEngine,
+    cipher: KeyCipher,
+    *,
+    create_table: bool = True,
+    clock: Clock | None = None,
+)
 ```
 
 Sessions in two of the service's tables, sealed. See `igni_service.tables`.
@@ -104,18 +110,25 @@ async def take_login(state: str) -> LoginAttempt | None
 
 ```python
 class WebSession(BaseModel)
-WebSession(*, person: Person, access_token: str, refresh_token: str, access_expires_at: float, expires_at: float)
+WebSession(
+    *,
+    person: Person,
+    access_token: str,
+    refresh_token: str,
+    access_expires_at: float,
+    expires_at: float,
+)
 ```
 
 One person signed in to the service's pages.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `person` | `Person` | required |  |
-| `access_token` | `str` | required |  |
-| `refresh_token` | `str` | required |  |
-| `access_expires_at` | `float` | required |  |
-| `expires_at` | `float` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `person` | `Person` | required |
+| `access_token` | `str` | required |
+| `refresh_token` | `str` | required |
+| `access_expires_at` | `float` | required |
+| `expires_at` | `float` | required |
 
 ## WebSessionStore
 
@@ -160,7 +173,15 @@ The attempt for `state`, once: a second take finds nothing.
 
 ```python
 class WebSignIn
-WebSignIn(igni: IgniServer, registration: ServiceRegistration, key: SigningKey, verifier: TokenVerifier, store: WebSessionStore, *, clock: Clock | None = None)
+WebSignIn(
+    igni: IgniServer,
+    registration: ServiceRegistration,
+    key: SigningKey,
+    verifier: TokenVerifier,
+    store: WebSessionStore,
+    *,
+    clock: Clock | None = None,
+)
 ```
 
 Sign-in to the service's own pages, and the dependencies that require it.
@@ -222,7 +243,12 @@ Send the browser to igni to sign in, and come back to `return_to`.
 ### WebSignIn.callback()
 
 ```python
-async def callback(request: Request, code: str = '', state: str = '', error: str = '') -> Response
+async def callback(
+    request: Request,
+    code: str = '',
+    state: str = '',
+    error: str = '',
+) -> Response
 ```
 
 igni sending the browser back: exchange the code, open a session.

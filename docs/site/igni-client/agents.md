@@ -81,7 +81,12 @@ for agent_info in await session.agents.list():
 Keep an agent made during this session, as a project or personal agent.
 
 ```python
-async def promote(self, name: str, *, target: str | None = None) -> PromoteEphemeralResult
+async def promote(
+    self,
+    name: str,
+    *,
+    target: str | None = None,
+) -> PromoteEphemeralResult
 ```
 
 `name` is the ephemeral agent; `target` is `project` (the

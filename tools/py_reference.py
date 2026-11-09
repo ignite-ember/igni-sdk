@@ -22,7 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from tools.markdown_pages import plain, site_id
+from tools.markdown_pages import plain, signature, site_id
 
 
 class ReferenceError_(ValueError):
@@ -309,7 +309,7 @@ class PythonReference:
             params, returns = signature_text(obj)
             prefix = "async def" if inspect.iscoroutinefunction(obj) else "def"
             arrow = f" -> {returns}" if returns else ""
-            out += ["```python", f"{prefix} {entry.name}({params}){arrow}", "```", ""]
+            out += ["```python", signature(f"{prefix} {entry.name}", params, arrow), "```", ""]
             doc = docstring_markdown(inspect.getdoc(obj))
             out += [doc, ""] if doc else []
             missing += 0 if doc else 1
@@ -331,7 +331,7 @@ class PythonReference:
         else:
             params, _ = signature_text(cls)
             head = f"class {name}({base_text})" if base_text else f"class {name}"
-            out += ["```python", head, f"{name}({params})", "```", ""]
+            out += ["```python", head, signature(name, params), "```", ""]
         documented_bases = [b for b in bases if self.link(b.__name__)]
         if documented_bases:
             out.append(
@@ -386,6 +386,10 @@ class PythonReference:
                 rows.append(f"| `{f.name}` | `{ann}` | {default} | |")
         if not rows:
             return []
+        if all(row.endswith("|  |") or row.endswith("| |") for row in rows):
+            # No field says what it is: no column to say it in.
+            rows = [row.rsplit("|", 2)[0].rstrip() + " |" for row in rows]
+            return ["| Field | Type | Default |", "|---|---|---|", *rows, ""]
         return ["| Field | Type | Default | Description |", "|---|---|---|---|", *rows, ""]
 
     def _member(self, owner: str, name: str, member: Any) -> tuple[list[str], bool]:
@@ -402,7 +406,7 @@ class PythonReference:
             prefix = "async def" if inspect.iscoroutinefunction(func) else "def"
             arrow = f" -> {returns}" if returns else ""
             heading = f"### {owner}.{name}()"
-            code = f"{prefix} {name}({params}){arrow}"
+            code = signature(f"{prefix} {name}", params, arrow)
             label = (
                 "classmethod"
                 if isinstance(member, classmethod)

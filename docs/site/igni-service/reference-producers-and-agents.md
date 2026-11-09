@@ -32,7 +32,16 @@ producer: Producer
 ### Agent.send_message()
 
 ```python
-async def send_message(text: str, *, attachments: list[Attachment] | None = None, thread: str | None = None, title: str | None = None, start_run: bool = True, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def send_message(
+    text: str,
+    *,
+    attachments: list[Attachment] | None = None,
+    thread: str | None = None,
+    title: str | None = None,
+    start_run: bool = True,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 Post `text` as this extension's message: it starts a run, or waits for the run going.
@@ -45,7 +54,13 @@ for files and a thread).
 ### Agent.send_event()
 
 ```python
-async def send_event(type: str, payload: dict[str, object] | None = None, *, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def send_event(
+    type: str,
+    payload: dict[str, object] | None = None,
+    *,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 Hand this extension an event. igni posts nothing for it: the extension's handler acts.
@@ -55,7 +70,15 @@ One no handler took reads `not_handled` (`status`). Needs no grant.
 ### Agent.new_chat()
 
 ```python
-async def new_chat(title: str, *, thread: str | None = None, text: str | None = None, attachments: list[Attachment] | None = None, event_key: str | None = None, expires_at: datetime | None = None) -> Chat
+async def new_chat(
+    title: str,
+    *,
+    thread: str | None = None,
+    text: str | None = None,
+    attachments: list[Attachment] | None = None,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> Chat
 ```
 
 Open a chat titled `title` — for `thread`, or a thread of its own — optionally with a first message.
@@ -79,7 +102,18 @@ async def status(event_id: str) -> ItemStatus
 ### Agent.send_item()
 
 ```python
-async def send_item(kind: ItemKind, *, text: str | None = None, attachments: list[Attachment] | None = None, thread: str | None = None, title: str | None = None, start_run: bool = True, action: ChatAction | None = None, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def send_item(
+    kind: ItemKind,
+    *,
+    text: str | None = None,
+    attachments: list[Attachment] | None = None,
+    thread: str | None = None,
+    title: str | None = None,
+    start_run: bool = True,
+    action: ChatAction | None = None,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 Any item: the methods above and `Chat`'s are this, spelled for one kind.
@@ -88,22 +122,31 @@ Any item: the methods above and `Chat`'s are this, spelled for one kind.
 
 ```python
 class Attachment(BaseModel)
-Attachment(*, filename: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)], content_type: str = 'application/octet-stream', data: Annotated[bytes, MinLen(min_length=1), MaxLen(max_length=5242880)])
+Attachment(
+    *,
+    filename: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+    content_type: str = 'application/octet-stream',
+    data: Annotated[bytes, MinLen(min_length=1), MaxLen(max_length=5242880)],
+)
 ```
 
 A file to send with an item: any type igni's composer takes, at most 5 MiB.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `filename` | `str` | required |  |
-| `content_type` | `str` | `'application/octet-stream'` |  |
-| `data` | `bytes` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `filename` | `str` | required |
+| `content_type` | `str` | `'application/octet-stream'` |
+| `data` | `bytes` | required |
 
 ### Attachment.from_bytes()
 
 ```python
 @classmethod
-def from_bytes(filename: str, data: bytes, content_type: str | None = None) -> Attachment
+def from_bytes(
+    filename: str,
+    data: bytes,
+    content_type: str | None = None,
+) -> Attachment
 ```
 
 ### Attachment.from_path()
@@ -125,7 +168,13 @@ The chat of one thread in one producer's igni.
 ### Chat.send_message()
 
 ```python
-async def send_message(text: str, *, attachments: list[Attachment] | None = None, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def send_message(
+    text: str,
+    *,
+    attachments: list[Attachment] | None = None,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 Post it: a run starts, or it waits for the run going.
@@ -133,7 +182,13 @@ Post it: a run starts, or it waits for the run going.
 ### Chat.queue()
 
 ```python
-async def queue(text: str, *, attachments: list[Attachment] | None = None, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def queue(
+    text: str,
+    *,
+    attachments: list[Attachment] | None = None,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 For the chat's next run; starts nothing.
@@ -141,7 +196,12 @@ For the chat's next run; starts nothing.
 ### Chat.show()
 
 ```python
-async def show(view: dict[str, Any], *, title: str | None = None, event_key: str | None = None) -> EventAccepted
+async def show(
+    view: dict[str, Any],
+    *,
+    title: str | None = None,
+    event_key: str | None = None,
+) -> EventAccepted
 ```
 
 A json-render view in the chat — `{root, elements}` — shown, never sent to the model.
@@ -164,42 +224,63 @@ Stop the chat's working run. A run waiting on a person's approval is left alone.
 
 ```python
 class EventAccepted(BaseModel)
-EventAccepted(*, event_id: str, expires_at: datetime.datetime | None = None, duplicate: bool = False)
+EventAccepted(
+    *,
+    event_id: str,
+    expires_at: datetime.datetime | None = None,
+    duplicate: bool = False,
+)
 ```
 
 igni stored the event. `expires_at` is the time igni kept.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `event_id` | `str` | required |  |
-| `expires_at` | `datetime \| None` | `None` |  |
-| `duplicate` | `bool` | `False` |  |
+| Field | Type | Default |
+|---|---|---|
+| `event_id` | `str` | required |
+| `expires_at` | `datetime \| None` | `None` |
+| `duplicate` | `bool` | `False` |
 
 ## ItemStatus
 
 ```python
 class ItemStatus(BaseModel)
-ItemStatus(*, event_id: str, producer: Producer, kind: Literal['event', 'message', 'chat', 'action'] = 'event', type: str, thread: str | None = None, event_key: str | None = None, state: Literal['pending', 'delivered', 'not_handled', 'expired', 'dropped', 'failed'], dropped_reason: str | None = None, failed_reason: str | None = None, not_handled_reason: str | None = None, created_at: datetime, expires_at: datetime.datetime | None = None, delivered_at: datetime.datetime | None = None, updated_at: datetime)
+ItemStatus(
+    *,
+    event_id: str,
+    producer: Producer,
+    kind: Literal['event', 'message', 'chat', 'action'] = 'event',
+    type: str,
+    thread: str | None = None,
+    event_key: str | None = None,
+    state: Literal['pending', 'delivered', 'not_handled', 'expired', 'dropped', 'failed'],
+    dropped_reason: str | None = None,
+    failed_reason: str | None = None,
+    not_handled_reason: str | None = None,
+    created_at: datetime,
+    expires_at: datetime.datetime | None = None,
+    delivered_at: datetime.datetime | None = None,
+    updated_at: datetime,
+)
 ```
 
 What became of an item: `GET /v1/service-events/{event_id}`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `event_id` | `str` | required |  |
-| `producer` | `Producer` | required |  |
-| `kind` | `ItemKind` | `'event'` |  |
-| `type` | `str` | required |  |
-| `thread` | `str \| None` | `None` |  |
-| `event_key` | `str \| None` | `None` |  |
-| `state` | `ItemState` | required |  |
-| `dropped_reason` | `str \| None` | `None` |  |
-| `failed_reason` | `str \| None` | `None` |  |
-| `not_handled_reason` | `str \| None` | `None` |  |
-| `created_at` | `datetime` | required |  |
-| `expires_at` | `datetime \| None` | `None` |  |
-| `delivered_at` | `datetime \| None` | `None` |  |
-| `updated_at` | `datetime` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `event_id` | `str` | required |
+| `producer` | `Producer` | required |
+| `kind` | `ItemKind` | `'event'` |
+| `type` | `str` | required |
+| `thread` | `str \| None` | `None` |
+| `event_key` | `str \| None` | `None` |
+| `state` | `ItemState` | required |
+| `dropped_reason` | `str \| None` | `None` |
+| `failed_reason` | `str \| None` | `None` |
+| `not_handled_reason` | `str \| None` | `None` |
+| `created_at` | `datetime` | required |
+| `expires_at` | `datetime \| None` | `None` |
+| `delivered_at` | `datetime \| None` | `None` |
+| `updated_at` | `datetime` | required |
 
 ## Producer
 
@@ -210,10 +291,10 @@ Producer(*, kind: Literal['person', 'app'], id: Annotated[str, MinLen(min_length
 
 Whose agent the event is for: a person or an app of the organisation.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `kind` | `ProducerKind` | required |  |
-| `id` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `kind` | `ProducerKind` | required |
+| `id` | `str` | required |
 
 ### Producer.person()
 

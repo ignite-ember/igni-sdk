@@ -16,20 +16,29 @@ Read from the code: every public name below, its signature and its docstring. Im
 
 ```python
 class Caller(BaseModel)
-Caller(*, kind: CallerKind, id: str, org: str | None = None, group: str | None = None, session: str | None = None, app: str | None = None, external_id: str | None = None)
+Caller(
+    *,
+    kind: CallerKind,
+    id: str,
+    org: str | None = None,
+    group: str | None = None,
+    session: str | None = None,
+    app: str | None = None,
+    external_id: str | None = None,
+)
 ```
 
 The producer one call is for.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `kind` | `CallerKind` | required |  |
-| `id` | `str` | required |  |
-| `org` | `str \| None` | `None` |  |
-| `group` | `str \| None` | `None` |  |
-| `session` | `str \| None` | `None` |  |
-| `app` | `str \| None` | `None` |  |
-| `external_id` | `str \| None` | `None` |  |
+| Field | Type | Default |
+|---|---|---|
+| `kind` | `CallerKind` | required |
+| `id` | `str` | required |
+| `org` | `str \| None` | `None` |
+| `group` | `str \| None` | `None` |
+| `session` | `str \| None` | `None` |
+| `app` | `str \| None` | `None` |
+| `external_id` | `str \| None` | `None` |
 
 ### Caller.ref
 
@@ -91,7 +100,13 @@ Asked for the caller outside a call igni made: in `on_start` work, say.
 
 ```python
 class ServiceClient(AsyncClient)
-ServiceClient(*, base_url: str, tokens: HostTokens, transport: httpx.AsyncBaseTransport | None = None, timeout: float = 30.0)
+ServiceClient(
+    *,
+    base_url: str,
+    tokens: HostTokens,
+    transport: httpx.AsyncBaseTransport | None = None,
+    timeout: float = 30.0,
+)
 ```
 
 `ext.service`: the extension's service, as the signed-in person.
@@ -147,12 +162,12 @@ Who the last token was for, read without checking it.
 For showing who is signed in and noticing that it changed. The service
 checks the token; this side never decides anything with what it says.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `user_id` | `str` | `''` |  |
-| `org_id` | `str` | `''` |  |
-| `email` | `str` | `''` |  |
-| `name` | `str` | `''` |  |
+| Field | Type | Default |
+|---|---|---|
+| `user_id` | `str` | `''` |
+| `org_id` | `str` | `''` |
+| `email` | `str` | `''` |
+| `name` | `str` | `''` |
 
 ### SignedIn.of()
 

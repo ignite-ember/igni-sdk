@@ -38,7 +38,12 @@ The organisation: name, slug, `tenant_number`, domains.
 ### Directory.members()
 
 ```python
-async def members(*, query: str = '', limit: int = 100, include_former: bool = False) -> list[Member]
+async def members(
+    *,
+    query: str = '',
+    limit: int = 100,
+    include_former: bool = False,
+) -> list[Member]
 ```
 
 Prefix search on address or name; at most 500.
@@ -63,7 +68,14 @@ User ids or addresses → members, keyed by casefolded id and address.
 
 ```python
 class Host
-Host(org_id: str, *, notifier: Notifier, directory: DirectoryClient, agents: AgentWire | None = None, vm_profiles: ServiceVmProfiles | None = None)
+Host(
+    org_id: str,
+    *,
+    notifier: Notifier,
+    directory: DirectoryClient,
+    agents: AgentWire | None = None,
+    vm_profiles: ServiceVmProfiles | None = None,
+)
 ```
 
 The floor a service stands on, for one organisation.
@@ -124,7 +136,14 @@ def agent(producer: Producer) -> Agent
 ### Host.send_event()
 
 ```python
-async def send_event(producer: Producer, type: str, payload: dict[str, object] | None = None, *, event_key: str | None = None, expires_at: datetime | None = None) -> EventAccepted
+async def send_event(
+    producer: Producer,
+    type: str,
+    payload: dict[str, object] | None = None,
+    *,
+    event_key: str | None = None,
+    expires_at: datetime | None = None,
+) -> EventAccepted
 ```
 
 Wake `producer`'s agent with an event for this service's extension.
@@ -140,19 +159,27 @@ going. Pass an `event_key` to make retries exact. Raises
 
 ```python
 class Member(BaseModel)
-Member(*, user_id: str, email: str = '', name: str = '', role: str = 'member', status: str = 'active', super_admin: bool = False)
+Member(
+    *,
+    user_id: str,
+    email: str = '',
+    name: str = '',
+    role: str = 'member',
+    status: str = 'active',
+    super_admin: bool = False,
+)
 ```
 
 One member of an organisation, present or former, as the directory describes them.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `user_id` | `str` | required |  |
-| `email` | `str` | `''` |  |
-| `name` | `str` | `''` |  |
-| `role` | `str` | `'member'` |  |
-| `status` | `str` | `'active'` |  |
-| `super_admin` | `bool` | `False` |  |
+| Field | Type | Default |
+|---|---|---|
+| `user_id` | `str` | required |
+| `email` | `str` | `''` |
+| `name` | `str` | `''` |
+| `role` | `str` | `'member'` |
+| `status` | `str` | `'active'` |
+| `super_admin` | `bool` | `False` |
 
 ### Member.is_active
 
@@ -172,15 +199,22 @@ display_name: str
 
 ```python
 class Organisation(BaseModel)
-Organisation(*, org_id: str, name: str = '', slug: str = '', tenant_number: int = 0, domains: list[str] = <factory>)
+Organisation(
+    *,
+    org_id: str,
+    name: str = '',
+    slug: str = '',
+    tenant_number: int = 0,
+    domains: list[str] = <factory>,
+)
 ```
 
 The organisation a token names.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `org_id` | `str` | required |  |
-| `name` | `str` | `''` |  |
-| `slug` | `str` | `''` |  |
-| `tenant_number` | `int` | `0` |  |
-| `domains` | `list[str]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `org_id` | `str` | required |
+| `name` | `str` | `''` |
+| `slug` | `str` | `''` |
+| `tenant_number` | `int` | `0` |
+| `domains` | `list[str]` | factory |

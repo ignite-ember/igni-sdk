@@ -22,28 +22,37 @@ How many deliveries igni wrote: fewer than named is normal, not an error.
 Somebody who is not an active member, was the actor, or was already
 told about the `event_key` is not delivered to.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `delivered` | `int` | `0` |  |
+| Field | Type | Default |
+|---|---|---|
+| `delivered` | `int` | `0` |
 
 ## Notification
 
 ```python
 class Notification(BaseModel)
-Notification(*, kind: Annotated[str, MinLen(min_length=1), MaxLen(max_length=64)], title: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)], body: str = '', actor: Annotated[str, MaxLen(max_length=320)] = '', target: igni_service.notifications.Target | None = None, event_key: Annotated[str, MaxLen(max_length=200)] = '', recipients: list[str] = <factory>)
+Notification(
+    *,
+    kind: Annotated[str, MinLen(min_length=1), MaxLen(max_length=64)],
+    title: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+    body: str = '',
+    actor: Annotated[str, MaxLen(max_length=320)] = '',
+    target: igni_service.notifications.Target | None = None,
+    event_key: Annotated[str, MaxLen(max_length=200)] = '',
+    recipients: list[str] = <factory>,
+)
 ```
 
 One thing that happened, and who it concerns.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `kind` | `str` | required |  |
-| `title` | `str` | required |  |
-| `body` | `str` | `''` |  |
-| `actor` | `str` | `''` |  |
-| `target` | `Target \| None` | `None` |  |
-| `event_key` | `str` | `''` |  |
-| `recipients` | `list[str]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `kind` | `str` | required |
+| `title` | `str` | required |
+| `body` | `str` | `''` |
+| `actor` | `str` | `''` |
+| `target` | `Target \| None` | `None` |
+| `event_key` | `str` | `''` |
+| `recipients` | `list[str]` | factory |
 
 ### Notification.split()
 
@@ -57,12 +66,16 @@ This notification with its recipients in groups of at most `size`.
 
 ```python
 class Target(BaseModel)
-Target(*, page: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)], params: Annotated[dict[str, str | int | float | bool | None], MaxLen(max_length=32)] = <factory>)
+Target(
+    *,
+    page: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+    params: Annotated[dict[str, str | int | float | bool | None], MaxLen(max_length=32)] = <factory>,
+)
 ```
 
 Where in the extension to go: one of its pages, and that page's params.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `page` | `str` | required |  |
-| `params` | `dict[str, ParamValue]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `page` | `str` | required |
+| `params` | `dict[str, ParamValue]` | factory |

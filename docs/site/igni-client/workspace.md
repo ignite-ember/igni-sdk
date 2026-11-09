@@ -18,7 +18,10 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Answer "Trust this folder?" for this session's project folder.
 
 ```python
-async def set_trust(self, decision: Literal['trust', 'distrust', 'once']) -> WorkspaceTrustStatus
+async def set_trust(
+    self,
+    decision: Literal['trust', 'distrust', 'once'],
+) -> WorkspaceTrustStatus
 ```
 
 `decision` is `trust` (remembered), `once` (until igni exits)

@@ -14,7 +14,16 @@ Read from the code: every public name below, its signature and its docstring. Im
 
 ```python
 class IgniService
-IgniService(settings: IgniSettings, *, key_store: KeyStore, web_store: WebSessionStore | None = None, http: httpx.AsyncClient | None = None, clock: Clock | None = None, retry_min: float | None = None, accepted_callers: Collection[CallerKind] = frozenset({CallerKind.PERSON}))
+IgniService(
+    settings: IgniSettings,
+    *,
+    key_store: KeyStore,
+    web_store: WebSessionStore | None = None,
+    http: httpx.AsyncClient | None = None,
+    clock: Clock | None = None,
+    retry_min: float | None = None,
+    accepted_callers: Collection[CallerKind] = frozenset({CallerKind.PERSON}),
+)
 ```
 
 A service's place in an igni deployment.
@@ -23,7 +32,13 @@ A service's place in an igni deployment.
 
 ```python
 @classmethod
-def from_settings(settings: IgniSettings, *, key_store: KeyStore | None = None, http: httpx.AsyncClient | None = None, clock: Clock | None = None) -> IgniService
+def from_settings(
+    settings: IgniSettings,
+    *,
+    key_store: KeyStore | None = None,
+    http: httpx.AsyncClient | None = None,
+    clock: Clock | None = None,
+) -> IgniService
 ```
 
 A service from its settings, keeping its key and its people's
@@ -95,7 +110,9 @@ Register what lists one person's data in one organisation.
 ### IgniService.on_organisation_deleted()
 
 ```python
-def on_organisation_deleted(handler: OrganisationDeletedHandler) -> OrganisationDeletedHandler
+def on_organisation_deleted(
+    handler: OrganisationDeletedHandler,
+) -> OrganisationDeletedHandler
 ```
 
 Register what stops routing to an organisation igni deleted.
@@ -106,7 +123,9 @@ until the service confirms.
 ### IgniService.person()
 
 ```python
-async def person(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> Person
+async def person(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person
 ```
 
 FastAPI dependency: the person a request's token names.
@@ -118,7 +137,9 @@ again would not help.
 ### IgniService.caller()
 
 ```python
-async def caller(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> Caller
+async def caller(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Caller
 ```
 
 FastAPI dependency: whoever a request's token names — a `Person`, an
@@ -136,7 +157,9 @@ async def caller_of(token: str) -> Caller
 ### IgniService.optional_person()
 
 ```python
-async def optional_person(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> Person | None
+async def optional_person(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person | None
 ```
 
 FastAPI dependency: the person, or `None` when no token was sent.
@@ -149,7 +172,9 @@ should be noticed, not quietly treated as anonymous.
 ### IgniService.token()
 
 ```python
-async def token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> str
+async def token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> str
 ```
 
 FastAPI dependency: the bearer token itself, not yet checked; 401
@@ -163,7 +188,9 @@ call it (`BearerCors`).
 ### IgniService.optional_token()
 
 ```python
-async def optional_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> str | None
+async def optional_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> str | None
 ```
 
 FastAPI dependency: the bearer token, not yet checked, or `None`.
@@ -184,7 +211,9 @@ its own protocol.
 ### IgniService.org_admin()
 
 ```python
-async def org_admin(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> Person
+async def org_admin(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person
 ```
 
 FastAPI dependency: the person, if they are an admin of the organisation
@@ -195,7 +224,9 @@ Being a super admin does not make somebody an organisation's admin.
 ### IgniService.igni_call()
 
 ```python
-async def igni_call(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]) -> IgniCall
+async def igni_call(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> IgniCall
 ```
 
 FastAPI dependency: igni itself, for the organisation its token names.
@@ -229,23 +260,65 @@ The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error othe
 
 ```python
 class IgniSettings(BaseSettings)
-IgniSettings(_case_sensitive: bool | None = None, _nested_model_default_partial_update: bool | None = None, _env_prefix: str | None = None, _env_prefix_target: EnvPrefixTarget | None = None, _env_file: DotenvType | None = PosixPath('.'), _env_file_encoding: str | None = None, _env_file_depth: int | None = None, _env_ignore_empty: bool | None = None, _env_nested_delimiter: str | None = None, _env_nested_max_split: int | None = None, _env_parse_none_str: str | None = None, _env_parse_enums: bool | None = None, _cli_prog_name: str | None = None, _cli_parse_args: bool | list[str] | tuple[str, ...] | None = None, _cli_settings_source: CliSettingsSource[Any] | None = None, _cli_parse_none_str: str | None = None, _cli_hide_none_type: bool | None = None, _cli_avoid_json: bool | None = None, _cli_enforce_required: bool | None = None, _cli_use_class_docs_for_groups: bool | None = None, _cli_show_env_vars: bool | None = None, _cli_exit_on_error: bool | None = None, _cli_prefix: str | None = None, _cli_flag_prefix_char: str | None = None, _cli_implicit_flags: bool | Literal['dual', 'toggle'] | None = None, _cli_ignore_unknown_args: bool | None = None, _cli_kebab_case: bool | Literal['all', 'no_enums'] | None = None, _cli_shortcuts: Mapping[str, str | list[str]] | None = None, _secrets_dir: PathType | None = None, _build_sources: tuple[tuple[PydanticBaseSettingsSource, ...], dict[str, Any]] | None = None, *, igni_server_url: str = '', public_base_url: str = '', service_name: str = '', client_kind: str = 'service', redirect_uris: list[str] = <factory>, key_encryption_key: str = '', key_database_url: str = '', extension_bundle_path: str = '', revocations_max_staleness: float = 30.0, timeout: float = 10.0)
+IgniSettings(
+    _case_sensitive: bool | None = None,
+    _nested_model_default_partial_update: bool | None = None,
+    _env_prefix: str | None = None,
+    _env_prefix_target: EnvPrefixTarget | None = None,
+    _env_file: DotenvType | None = PosixPath('.'),
+    _env_file_encoding: str | None = None,
+    _env_file_depth: int | None = None,
+    _env_ignore_empty: bool | None = None,
+    _env_nested_delimiter: str | None = None,
+    _env_nested_max_split: int | None = None,
+    _env_parse_none_str: str | None = None,
+    _env_parse_enums: bool | None = None,
+    _cli_prog_name: str | None = None,
+    _cli_parse_args: bool | list[str] | tuple[str, ...] | None = None,
+    _cli_settings_source: CliSettingsSource[Any] | None = None,
+    _cli_parse_none_str: str | None = None,
+    _cli_hide_none_type: bool | None = None,
+    _cli_avoid_json: bool | None = None,
+    _cli_enforce_required: bool | None = None,
+    _cli_use_class_docs_for_groups: bool | None = None,
+    _cli_show_env_vars: bool | None = None,
+    _cli_exit_on_error: bool | None = None,
+    _cli_prefix: str | None = None,
+    _cli_flag_prefix_char: str | None = None,
+    _cli_implicit_flags: bool | Literal['dual', 'toggle'] | None = None,
+    _cli_ignore_unknown_args: bool | None = None,
+    _cli_kebab_case: bool | Literal['all', 'no_enums'] | None = None,
+    _cli_shortcuts: Mapping[str, str | list[str]] | None = None,
+    _secrets_dir: PathType | None = None,
+    _build_sources: tuple[tuple[PydanticBaseSettingsSource, ...], dict[str, Any]] | None = None,
+    *,
+    igni_server_url: str = '',
+    public_base_url: str = '',
+    service_name: str = '',
+    client_kind: str = 'service',
+    redirect_uris: list[str] = <factory>,
+    key_encryption_key: str = '',
+    key_database_url: str = '',
+    extension_bundle_path: str = '',
+    revocations_max_staleness: float = 30.0,
+    timeout: float = 10.0,
+)
 ```
 
 Read from the environment. Every field can also be passed directly.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `igni_server_url` | `str` | `''` |  |
-| `public_base_url` | `str` | `''` |  |
-| `service_name` | `str` | `''` |  |
-| `client_kind` | `str` | `'service'` |  |
-| `redirect_uris` | `list[str]` | factory |  |
-| `key_encryption_key` | `str` | `''` |  |
-| `key_database_url` | `str` | `''` |  |
-| `extension_bundle_path` | `str` | `''` |  |
-| `revocations_max_staleness` | `float` | `30.0` |  |
-| `timeout` | `float` | `10.0` |  |
+| Field | Type | Default |
+|---|---|---|
+| `igni_server_url` | `str` | `''` |
+| `public_base_url` | `str` | `''` |
+| `service_name` | `str` | `''` |
+| `client_kind` | `str` | `'service'` |
+| `redirect_uris` | `list[str]` | factory |
+| `key_encryption_key` | `str` | `''` |
+| `key_database_url` | `str` | `''` |
+| `extension_bundle_path` | `str` | `''` |
+| `revocations_max_staleness` | `float` | `30.0` |
+| `timeout` | `float` | `10.0` |
 
 ## IgniTables
 

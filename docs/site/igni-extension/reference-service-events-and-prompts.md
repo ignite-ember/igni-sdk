@@ -55,18 +55,29 @@ Have igni fetch this extension's tool-sourced prompt text again.
 
 ```python
 class ServiceEvent(BaseModel)
-ServiceEvent(*, event_id: str, extension_id: str = '', client_id: str = '', type: str, payload: dict[str, Any] = <factory>, event_key: str | None = None, created_at: str | None = None, expires_at: str | None = None, **extra_data: Any)
+ServiceEvent(
+    *,
+    event_id: str,
+    extension_id: str = '',
+    client_id: str = '',
+    type: str,
+    payload: dict[str, Any] = <factory>,
+    event_key: str | None = None,
+    created_at: str | None = None,
+    expires_at: str | None = None,
+    **extra_data: Any,
+)
 ```
 
 One event from this extension's service.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `event_id` | `str` | required |  |
-| `extension_id` | `str` | `''` |  |
-| `client_id` | `str` | `''` |  |
-| `type` | `str` | required |  |
-| `payload` | `dict[str, Any]` | factory |  |
-| `event_key` | `str \| None` | `None` |  |
-| `created_at` | `str \| None` | `None` |  |
-| `expires_at` | `str \| None` | `None` |  |
+| Field | Type | Default |
+|---|---|---|
+| `event_id` | `str` | required |
+| `extension_id` | `str` | `''` |
+| `client_id` | `str` | `''` |
+| `type` | `str` | required |
+| `payload` | `dict[str, Any]` | factory |
+| `event_key` | `str \| None` | `None` |
+| `created_at` | `str \| None` | `None` |
+| `expires_at` | `str \| None` | `None` |

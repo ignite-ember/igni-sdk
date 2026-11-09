@@ -74,6 +74,7 @@ from tools.markdown_pages import (
     lift,
     plain,
     rewrite_links,
+    signature,
     site_id,
     tidy,
 )
@@ -455,9 +456,11 @@ class ClientReference:
         result = self.api.result_type(wire).replace("builtins.", "")
         followed = wire in FOLLOWED
         if followed:
-            code = f"def {placement.name}({sig}) -> Call[{result}, {self.api.event_alias(wire)}]"
+            code = signature(
+                f"def {placement.name}", sig, f" -> Call[{result}, {self.api.event_alias(wire)}]"
+            )
         else:
-            code = f"async def {placement.name}({sig}) -> {result}"
+            code = signature(f"async def {placement.name}", sig, f" -> {result}")
         doc_paragraphs = method.doc.strip().split("\n\n")
         summary = rst(doc_paragraphs[0].replace("\n", " "))
         rest = [rst(p) for p in doc_paragraphs[1:]]
@@ -650,7 +653,7 @@ class ClientReference:
             rst(paragraphs[0].replace("\n", " ")),
             "",
             "```python",
-            f"async def {placement.name}({sig}) -> {result}",
+            signature(f"async def {placement.name}", sig, f" -> {result}"),
             "```",
             "",
         ]

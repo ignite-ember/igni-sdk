@@ -49,7 +49,12 @@ print(listed.extensions)
 Change an installed extension's settings.
 
 ```python
-async def set_settings(self, *, extension_id: str, values: dict[str, JsonValue]) -> ExtensionListResult
+async def set_settings(
+    self,
+    *,
+    extension_id: str,
+    values: dict[str, JsonValue],
+) -> ExtensionListResult
 ```
 
 `extension_id` is the extension; `values` the settings to

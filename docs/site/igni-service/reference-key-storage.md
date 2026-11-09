@@ -121,7 +121,7 @@ StoredKey(*, kid: str, private_pem: str)
 
 A kept key: its `kid` (thumbprint) and its private half, unsealed.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `kid` | `str` | required |  |
-| `private_pem` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `kid` | `str` | required |
+| `private_pem` | `str` | required |

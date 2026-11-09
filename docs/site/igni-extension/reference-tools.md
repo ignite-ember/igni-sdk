@@ -23,10 +23,10 @@ One `permissions.tools` entry: the tool's namespaced name and its four hints.
 Dumped `by_alias`, the hints are spelled as MCP and a manifest spell them
 (`readOnlyHint`, ...).
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `name` | `str` | required |  |
-| `annotations` | `ToolAnnotations` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `name` | `str` | required |
+| `annotations` | `ToolAnnotations` | required |
 
 ### ManifestTool.wire()
 
@@ -46,12 +46,12 @@ Every name one tool goes by, from where each is written.
 `tool` is the name in this code (the function's, or `name=`); the
 others are derived from it and the extension's id, by igni's rules.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `tool` | `str` | required |  |
-| `manifest` | `str` | required |  |
-| `rpc` | `str` | required |  |
-| `registered` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `tool` | `str` | required |
+| `manifest` | `str` | required |
+| `rpc` | `str` | required |
+| `registered` | `str` | required |
 
 ### ToolNames.of()
 
@@ -69,12 +69,12 @@ ToolHints(*, read_only: bool, destructive: bool, idempotent: bool, open_world: b
 
 What a tool is, in the four words igni's permission modes read.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `read_only` | `bool` | required |  |
-| `destructive` | `bool` | required |  |
-| `idempotent` | `bool` | required |  |
-| `open_world` | `bool` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `read_only` | `bool` | required |
+| `destructive` | `bool` | required |
+| `idempotent` | `bool` | required |
+| `open_world` | `bool` | required |
 
 ### ToolHints.annotations()
 

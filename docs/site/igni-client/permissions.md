@@ -18,7 +18,13 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Look up the saved permission level for one tool call.
 
 ```python
-async def check(self, *, func_name: str, tool_args: ToolCallArgs, tool_name: str) -> Literal['allow', 'ask', 'deny']
+async def check(
+    self,
+    *,
+    func_name: str,
+    tool_args: ToolCallArgs,
+    tool_name: str,
+) -> Literal['allow', 'ask', 'deny']
 ```
 
 `tool_name` and `func_name` name the tool and its function;

@@ -216,6 +216,49 @@ def rewrite_links(
     return out
 
 
+#: Black's line length: a signature longer than this gets one parameter a line.
+SIGNATURE_WIDTH = 88
+
+
+def split_params(params: str) -> list[str]:
+    """``a: int, b: dict[str, int] = {}`` → its parameters, at top-level commas only."""
+    out: list[str] = []
+    depth = 0
+    quote = ""
+    current = ""
+    for char in params:
+        if quote:
+            current += char
+            if char == quote:
+                quote = ""
+            continue
+        if char in "'\"":
+            quote = char
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            out.append(current.strip())
+            current = ""
+            continue
+        current += char
+    if current.strip():
+        out.append(current.strip())
+    return out
+
+
+def signature(head: str, params: str, tail: str = "", width: int = SIGNATURE_WIDTH) -> str:
+    """``head(params)tail`` on one line when it fits in ``width``, else as black
+    writes it: one parameter a line, each with a trailing comma."""
+    one_line = f"{head}({params}){tail}"
+    parts = split_params(params)
+    if len(one_line) <= width or not parts:
+        return one_line
+    body = "".join(f"    {part},\n" for part in parts)
+    return f"{head}(\n{body}){tail}"
+
+
 def tidy(lines: list[str]) -> str:
     """Lines as a page body: no runs of blank lines, no blank start or end."""
     text = "\n".join(lines)
@@ -235,6 +278,8 @@ __all__ = [
     "lift",
     "plain",
     "rewrite_links",
+    "signature",
+    "split_params",
     "site_id",
     "strip_comments",
     "tidy",

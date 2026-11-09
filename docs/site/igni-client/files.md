@@ -157,7 +157,12 @@ for match in found.matches:
 List the folders inside a folder on igni's machine, for picking a project.
 
 ```python
-async def list_dirs(self, *, path: str | None = None, show_hidden: bool = False) -> DirListResult
+async def list_dirs(
+    self,
+    *,
+    path: str | None = None,
+    show_hidden: bool = False,
+) -> DirListResult
 ```
 
 `path` is the folder to list (the home folder when absent or

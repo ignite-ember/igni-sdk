@@ -34,7 +34,12 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Bind to a session — an existing one, or a new one in a project folder.
 
 ```python
-async def attach(self, *, project_dir: str = '', session_id: str = '') -> AttachSessionResult
+async def attach(
+    self,
+    *,
+    project_dir: str = '',
+    session_id: str = '',
+) -> AttachSessionResult
 ```
 
 `session_id` names the session to resume; `project_dir` the folder
@@ -375,7 +380,12 @@ await session.typing("")  # clears it
 Store a file for this session, so a message can refer to it.
 
 ```python
-async def upload_attachment(self, *, content_base64: str, filename: str) -> UploadAttachmentResult
+async def upload_attachment(
+    self,
+    *,
+    content_base64: str,
+    filename: str,
+) -> UploadAttachmentResult
 ```
 
 `filename` is the file's name (made safe for the disk; a clash gets
@@ -535,7 +545,12 @@ await session.extract_learnings(
 Tell this session the person used a control in a view the agent drew.
 
 ```python
-def visualization_action(self, *, action: str = '', params: dict[str, JsonValue] | None = None) -> Call[VisualizationActionResult, DispatchVisualizationActionEvent]
+def visualization_action(
+    self,
+    *,
+    action: str = '',
+    params: dict[str, JsonValue] | None = None,
+) -> Call[VisualizationActionResult, DispatchVisualizationActionEvent]
 ```
 
 `action` is the control's action name; `params` the values the

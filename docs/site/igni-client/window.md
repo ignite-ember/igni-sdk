@@ -17,7 +17,18 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Read or change the calling window's own model: its fields, toasts and dialog.
 
 ```python
-async def model(self, *, op: Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog'], window: str, connection_id: str = '', dialog_id: str = '', field: str = '', kind: str = '', token: str = '', value: JsonValue = None) -> WindowModelResult
+async def model(
+    self,
+    *,
+    op: Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog'],
+    window: str,
+    connection_id: str = '',
+    dialog_id: str = '',
+    field: str = '',
+    kind: str = '',
+    token: str = '',
+    value: JsonValue = None,
+) -> WindowModelResult
 ```
 
 A window spans sessions, so this is not tied to one. `op` says what

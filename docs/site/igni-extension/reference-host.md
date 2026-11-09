@@ -34,7 +34,10 @@ Ask igni's local decision model (Laya) typed questions about a context, in one p
 ### Host.decide_batch()
 
 ```python
-async def decide_batch(contexts: list[dict[str, str]], questions: list[DecisionQuestion]) -> list[Decision]
+async def decide_batch(
+    contexts: list[dict[str, str]],
+    questions: list[DecisionQuestion],
+) -> list[Decision]
 ```
 
 `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order.
@@ -43,18 +46,25 @@ async def decide_batch(contexts: list[dict[str, str]], questions: list[DecisionQ
 
 ```python
 class LocalNotification(BaseModel)
-LocalNotification(*, kind: Annotated[str, MinLen(min_length=1), MaxLen(max_length=64)], title: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)], body: str = '', target: Target, event_key: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)])
+LocalNotification(
+    *,
+    kind: Annotated[str, MinLen(min_length=1), MaxLen(max_length=64)],
+    title: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+    body: str = '',
+    target: Target,
+    event_key: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+)
 ```
 
 Something to tell the person using this igni. No recipients: it is them.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `kind` | `str` | required |  |
-| `title` | `str` | required |  |
-| `body` | `str` | `''` |  |
-| `target` | `Target` | required |  |
-| `event_key` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `kind` | `str` | required |
+| `title` | `str` | required |
+| `body` | `str` | `''` |
+| `target` | `Target` | required |
+| `event_key` | `str` | required |
 
 ## Notifications
 
@@ -76,7 +86,10 @@ Tell the person at this machine something. It never leaves the machine.
 ### Notifications.mark_read()
 
 ```python
-async def mark_read(ids: list[str] | None = None, source: str | None = None) -> NotificationCounts
+async def mark_read(
+    ids: list[str] | None = None,
+    source: str | None = None,
+) -> NotificationCounts
 ```
 
 Mark notifications read: these ids, one source, or all of them.
@@ -140,7 +153,11 @@ def parse(value: Any) -> T
 
 ```python
 class Target(BaseModel)
-Target(*, page: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)], params: Annotated[dict[str, str], MaxLen(max_length=32)] = <factory>)
+Target(
+    *,
+    page: Annotated[str, MinLen(min_length=1), MaxLen(max_length=200)],
+    params: Annotated[dict[str, str], MaxLen(max_length=32)] = <factory>,
+)
 ```
 
 Where in the extension to go: one of its pages, and that page's params.
@@ -149,7 +166,7 @@ Where in the extension to go: one of its pages, and that page's params.
 (`NotificationTarget` in the host schema, a page's route): a page
 reads them from its location, where everything is a string.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `page` | `str` | required |  |
-| `params` | `dict[str, str]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `page` | `str` | required |
+| `params` | `dict[str, str]` | factory |

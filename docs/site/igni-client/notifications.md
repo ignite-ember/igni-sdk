@@ -81,7 +81,12 @@ print(listed.counts, listed.notifications)
 Mark notifications read.
 
 ```python
-async def mark_read(self, *, ids: list[str] | None = None, source: str | None = None) -> NotificationsReadResult
+async def mark_read(
+    self,
+    *,
+    ids: list[str] | None = None,
+    source: str | None = None,
+) -> NotificationsReadResult
 ```
 
 `ids` names the notifications; `source` (an extension id) marks

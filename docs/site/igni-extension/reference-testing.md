@@ -23,7 +23,12 @@ Read from the code: every public name below, its signature and its docstring. Im
 
 ```python
 class ConcurrencyHarness
-ConcurrencyHarness(ext: IgniExtension, *, stall_limit: float = 0.1, timeout: float = 10.0)
+ConcurrencyHarness(
+    ext: IgniExtension,
+    *,
+    stall_limit: float = 0.1,
+    timeout: float = 10.0,
+)
 ```
 
 Fires calls from different callers at once, as igni does, and checks two things.
@@ -94,16 +99,21 @@ The extension blocked its loop, or let one call see another's caller.
 
 ```python
 class ConcurrencyReport(BaseModel)
-ConcurrencyReport(*, results: list[igni_extension.testing.concurrency.ConcurrentResult], longest_stall: float, leaks: list[str])
+ConcurrencyReport(
+    *,
+    results: list[igni_extension.testing.concurrency.ConcurrentResult],
+    longest_stall: float,
+    leaks: list[str],
+)
 ```
 
 What one concurrent run found.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `results` | `list[ConcurrentResult]` | required |  |
-| `longest_stall` | `float` | required |  |
-| `leaks` | `list[str]` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `results` | `list[ConcurrentResult]` | required |
+| `longest_stall` | `float` | required |
+| `leaks` | `list[str]` | required |
 
 ## ConcurrentCall
 
@@ -114,31 +124,44 @@ ConcurrentCall(*, tool: str, arguments: dict[str, Any] = {}, caller: Caller)
 
 One call the harness makes, as one caller.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `tool` | `str` | required |  |
-| `arguments` | `dict[str, Any]` | `{}` |  |
-| `caller` | `Caller` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `tool` | `str` | required |
+| `arguments` | `dict[str, Any]` | `{}` |
+| `caller` | `Caller` | required |
 
 ## ConcurrentResult
 
 ```python
 class ConcurrentResult(BaseModel)
-ConcurrentResult(*, call: ConcurrentCall, result: Any = None, is_error: bool = False, took: float = 0.0)
+ConcurrentResult(
+    *,
+    call: ConcurrentCall,
+    result: Any = None,
+    is_error: bool = False,
+    took: float = 0.0,
+)
 ```
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `call` | `ConcurrentCall` | required |  |
-| `result` | `Any` | `None` |  |
-| `is_error` | `bool` | `False` |  |
-| `took` | `float` | `0.0` |  |
+| Field | Type | Default |
+|---|---|---|
+| `call` | `ConcurrentCall` | required |
+| `result` | `Any` | `None` |
+| `is_error` | `bool` | `False` |
+| `took` | `float` | `0.0` |
 
 ## FakeHost
 
 ```python
 class FakeHost
-FakeHost(*, extension_id: str = 'acme.example', granted: tuple[str, ...] = (), values: dict[str, Any] | None = None, answers: dict[str, Any] | None = None, refusals: dict[str, tuple[str, str]] | None = None)
+FakeHost(
+    *,
+    extension_id: str = 'acme.example',
+    granted: tuple[str, ...] = (),
+    values: dict[str, Any] | None = None,
+    answers: dict[str, Any] | None = None,
+    refusals: dict[str, tuple[str, str]] | None = None,
+)
 ```
 
 igni's host object model for one extension process, on a loopback socket.
@@ -189,7 +212,13 @@ Fire `signal` (its wire name) at every connection that subscribed.
 ### FakeHost.hook()
 
 ```python
-async def hook(event: str, value: Any, timeout: float = 5.0, *, caller: Caller | None = None) -> dict[str, Any]
+async def hook(
+    event: str,
+    value: Any,
+    timeout: float = 5.0,
+    *,
+    caller: Caller | None = None,
+) -> dict[str, Any]
 ```
 
 Ask the connected extension about a deciding `event`, as igni does.
@@ -199,7 +228,13 @@ Its answer's parameters, as they crossed the wire.
 ### FakeHost.tell()
 
 ```python
-async def tell(event: str, value: Any, timeout: float = 5.0, *, caller: Caller | None = None) -> None
+async def tell(
+    event: str,
+    value: Any,
+    timeout: float = 5.0,
+    *,
+    caller: Caller | None = None,
+) -> None
 ```
 
 Tell the connected extension an `event` that decides nothing, as igni does.
@@ -216,7 +251,16 @@ Wait until the extension has subscribed to `signal`.
 
 ```python
 class FakeHostTokenEndpoint
-FakeHostTokenEndpoint(*, service_url: str = 'http://service.test', expires_in: float = 600, user_id: str = 'u-ada', org_id: str = 'org-acme', email: str = 'ada@acme.test', name: str = 'Ada', minter: Minter | None = None)
+FakeHostTokenEndpoint(
+    *,
+    service_url: str = 'http://service.test',
+    expires_in: float = 600,
+    user_id: str = 'u-ada',
+    org_id: str = 'org-acme',
+    email: str = 'ada@acme.test',
+    name: str = 'Ada',
+    minter: Minter | None = None,
+)
 ```
 
 The host's token endpoint for one extension process (service identity §9).
@@ -282,7 +326,15 @@ The default token: an unsigned JWT of `claims`.
 
 ```python
 class HostCall(BaseModel)
-HostCall(*, op: str, path: str, window: str | None = None, session: str | None = None, params: dict[str, Any] = {}, value: Any = None)
+HostCall(
+    *,
+    op: str,
+    path: str,
+    window: str | None = None,
+    session: str | None = None,
+    params: dict[str, Any] = {},
+    value: Any = None,
+)
 ```
 
 One `get`, `set` or `call` an extension made of `FakeHost`.
@@ -290,14 +342,14 @@ One `get`, `set` or `call` an extension made of `FakeHost`.
 What the request asked, without the number the connection gave it, so
 a test can compare it with one it writes down.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `op` | `str` | required |  |
-| `path` | `str` | required |  |
-| `window` | `str \| None` | `None` |  |
-| `session` | `str \| None` | `None` |  |
-| `params` | `dict[str, Any]` | `{}` |  |
-| `value` | `Any` | `None` |  |
+| Field | Type | Default |
+|---|---|---|
+| `op` | `str` | required |
+| `path` | `str` | required |
+| `window` | `str \| None` | `None` |
+| `session` | `str \| None` | `None` |
+| `params` | `dict[str, Any]` | `{}` |
+| `value` | `Any` | `None` |
 
 ### HostCall.of()
 
@@ -325,7 +377,12 @@ session: ClientSession
 ### HostHarness.call()
 
 ```python
-async def call(tool: str, arguments: dict[str, Any] | None = None, *, caller: Caller | None = None) -> types.CallToolResult
+async def call(
+    tool: str,
+    arguments: dict[str, Any] | None = None,
+    *,
+    caller: Caller | None = None,
+) -> types.CallToolResult
 ```
 
 Call a tool as igni does: for `caller`, named in the request's `_meta`.
@@ -390,17 +447,26 @@ Minter: type = Callable[[TokenClaims], str]
 
 ```python
 class TokenClaims(BaseModel)
-TokenClaims(*, sub: str, org: str, email: str = '', name: str = '', aud: str, token_use: str = 'user', jti: str)
+TokenClaims(
+    *,
+    sub: str,
+    org: str,
+    email: str = '',
+    name: str = '',
+    aud: str,
+    token_use: str = 'user',
+    jti: str,
+)
 ```
 
 What the fake host's tokens say: enough for `ext.tokens.signed_in`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `sub` | `str` | required |  |
-| `org` | `str` | required |  |
-| `email` | `str` | `''` |  |
-| `name` | `str` | `''` |  |
-| `aud` | `str` | required |  |
-| `token_use` | `str` | `'user'` |  |
-| `jti` | `str` | required |  |
+| Field | Type | Default |
+|---|---|---|
+| `sub` | `str` | required |
+| `org` | `str` | required |
+| `email` | `str` | `''` |
+| `name` | `str` | `''` |
+| `aud` | `str` | required |
+| `token_use` | `str` | `'user'` |
+| `jti` | `str` | required |

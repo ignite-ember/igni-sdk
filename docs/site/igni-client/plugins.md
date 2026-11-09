@@ -125,7 +125,13 @@ for plugin_info in await session.plugins.list():
 Show what a plugin contains without installing it.
 
 ```python
-async def preview(self, source: str, *, branch: str | None = None, subdir: str | None = None) -> PluginContents
+async def preview(
+    self,
+    source: str,
+    *,
+    branch: str | None = None,
+    subdir: str | None = None,
+) -> PluginContents
 ```
 
 `source` is the plugin's git URL (optionally followed by a

@@ -13,21 +13,32 @@ Read from the code: every public name below, its signature and its docstring. Im
 
 ```python
 class ExportSection(BaseModel)
-ExportSection(*, name: str, rows: list[dict[str, str | int | float | bool | None]] = <factory>)
+ExportSection(
+    *,
+    name: str,
+    rows: list[dict[str, str | int | float | bool | None]] = <factory>,
+)
 ```
 
 One section of a subject-access export. igni files it under the service's name.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `name` | `str` | required |  |
-| `rows` | `list[dict[str, CellValue]]` | factory |  |
+| Field | Type | Default |
+|---|---|---|
+| `name` | `str` | required |
+| `rows` | `list[dict[str, CellValue]]` | factory |
 
 ## Subject
 
 ```python
 class Subject(BaseModel)
-Subject(*, user_id: str, org_id: str, email: str = '', name: str = '', member: igni_service.directory.Member | None = None)
+Subject(
+    *,
+    user_id: str,
+    org_id: str,
+    email: str = '',
+    name: str = '',
+    member: igni_service.directory.Member | None = None,
+)
 ```
 
 The person a request is about, in the one organisation it is about.
@@ -37,10 +48,10 @@ present or former member — and are empty when it cannot. Data matched
 on an address should then still be erased by id; igni repeats an
 erasure until every service confirms it.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `user_id` | `str` | required |  |
-| `org_id` | `str` | required |  |
-| `email` | `str` | `''` |  |
-| `name` | `str` | `''` |  |
-| `member` | `Member \| None` | `None` |  |
+| Field | Type | Default |
+|---|---|---|
+| `user_id` | `str` | required |
+| `org_id` | `str` | required |
+| `email` | `str` | `''` |
+| `name` | `str` | `''` |
+| `member` | `Member \| None` | `None` |

@@ -19,7 +19,10 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Stop a running workflow of this session.
 
 ```python
-def cancel(self, workflow_run_id: str) -> Call[WorkflowCancelResponse, CancelWorkflowEvent]
+def cancel(
+    self,
+    workflow_run_id: str,
+) -> Call[WorkflowCancelResponse, CancelWorkflowEvent]
 ```
 
 `workflow_run_id` is the run (from `run_workflow`). The
@@ -88,7 +91,12 @@ for workflow_list_item in await session.workflows.list():
 Start a workflow in this session and return its run id at once.
 
 ```python
-def run(self, name: str, *, args: dict[str, JsonValue] | None = None) -> Call[WorkflowRunResponse, RunWorkflowEvent]
+def run(
+    self,
+    name: str,
+    *,
+    args: dict[str, JsonValue] | None = None,
+) -> Call[WorkflowRunResponse, RunWorkflowEvent]
 ```
 
 `name` is the workflow (from `list_workflows`); `args` its

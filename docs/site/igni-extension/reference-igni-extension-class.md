@@ -12,7 +12,15 @@ Read from the code: every public name below, its signature and its docstring. Im
 
 ```python
 class IgniExtension(ReleasedNames)
-IgniExtension(extension_id: str, *, instructions: str | None = None, environ: Mapping[str, str] | None = None, token_transport: httpx.AsyncBaseTransport | None = None, service_transport: httpx.AsyncBaseTransport | None = None, clock: Clock | None = None)
+IgniExtension(
+    extension_id: str,
+    *,
+    instructions: str | None = None,
+    environ: Mapping[str, str] | None = None,
+    token_transport: httpx.AsyncBaseTransport | None = None,
+    service_transport: httpx.AsyncBaseTransport | None = None,
+    clock: Clock | None = None,
+)
 ```
 
 One extension's process: its tools, its service, and the host.
@@ -25,7 +33,12 @@ process `run()` serves. 0.1.0's spellings (`ext.check_tools()`,
 ### IgniExtension.tool()
 
 ```python
-def tool(*, hints: ToolHints, name: str | None = None, description: str | None = None) -> Callable[[AnyFunction], AnyFunction]
+def tool(
+    *,
+    hints: ToolHints,
+    name: str | None = None,
+    description: str | None = None,
+) -> Callable[[AnyFunction], AnyFunction]
 ```
 
 Register a tool igni can call: `@ext.tool(hints=ToolHints(...))`.
@@ -43,7 +56,9 @@ raises reaches igni, and the model, as its message.
 ### IgniExtension.on()
 
 ```python
-def on(signal: Signal[T]) -> Callable[[Callable[[T], Awaitable[None] | None]], Callable[[T], Awaitable[None] | None]]
+def on(
+    signal: Signal[T],
+) -> Callable[[Callable[[T], Awaitable[None] | None]], Callable[[T], Awaitable[None] | None]]
 ```
 
 Handle a host signal: `@ext.on(ext.host.<object>.<signal>)`.
@@ -67,7 +82,9 @@ manifest lists in `permissions.hooks`; one handler per event.
 ### IgniExtension.on_service_event()
 
 ```python
-def on_service_event(event_type: str | None = None) -> Callable[[ServiceEventHandler], ServiceEventHandler]
+def on_service_event(
+    event_type: str | None = None,
+) -> Callable[[ServiceEventHandler], ServiceEventHandler]
 ```
 
 Handle the events this extension's service sends (`igni_extension.service_events`).
