@@ -1,7 +1,7 @@
 """Where uv and pip find packages, and whether they build in isolation.
 
-Until the SDKs are on PyPI, `igni-extension` is built from an igni
-checkout and handed to the builder with `--find-links`.
+A machine that cannot reach PyPI hands the builder the SDKs' wheels with
+`--find-links`: from igni-sdk's GitHub release, or built from a checkout.
 """
 
 from __future__ import annotations

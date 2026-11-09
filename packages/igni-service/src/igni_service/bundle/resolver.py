@@ -20,16 +20,22 @@ from igni_service.errors import BundleError
 class Resolver:
     """Pins every dependency of one extension, by hash, for a platform."""
 
-    #: What to do while the SDKs are not on PyPI. Said when a resolution
-    #: fails because one of them cannot be found.
-    CHECKOUT_HINT = """\
-The igni SDKs are not on PyPI yet. Build them from an igni-sdk checkout and
-point the builder at the wheels:
+    #: Where else to get the SDKs. Said when a resolution fails because one
+    #: of them cannot be found: the index is out of reach, or does not
+    #: mirror them.
+    WHEELS_HINT = """\
+igni-extension and igni-service are on PyPI. If this machine cannot reach
+PyPI, take the wheels from igni-sdk's GitHub release and point the builder
+at them:
 
-  uv build --wheel --out-dir ./sdk-wheels <igni-sdk checkout>/packages/igni-extension
-  igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels"""
+  gh release download sdk-v<version> --repo ignite-ember/igni-sdk --pattern '*.whl' --dir ./sdk-wheels
+  igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels
 
-    #: The SDKs a resolution may fail to find before they are published.
+Or build them from an igni-sdk checkout into the same directory:
+
+  uv build --wheel --out-dir ./sdk-wheels <igni-sdk checkout>/packages/igni-extension"""
+
+    #: The SDKs a resolution may fail to find.
     SDKS = ("igni-extension", "igni-service")
 
     def __init__(self, extension_dir: Path, sources: PackageSources, runner: CommandRunner) -> None:
@@ -83,4 +89,4 @@ point the builder at the wheels:
             re.search(rf"\b{sdk}\b.*(not found|was not found|no versions)", stderr)
             for sdk in self.SDKS
         )
-        return f"\n{self.CHECKOUT_HINT}" if missing_sdk else ""
+        return f"\n{self.WHEELS_HINT}" if missing_sdk else ""
