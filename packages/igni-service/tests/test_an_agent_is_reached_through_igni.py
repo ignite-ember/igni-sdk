@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
-from igni_service import Attachment, EventRefused, IgniService, Producer
+from igni_service import Agent, Attachment, EventRefused, IgniService, Producer
+from igni_service.agent_wire import ItemState
 from igni_service.testing import FakeIgni
 from igni_service.urls import IgniPaths
 
@@ -142,6 +144,11 @@ async def test_what_became_of_an_item_is_polled(igni: IgniService, fake: FakeIgn
     with pytest.raises(EventRefused) as unknown:
         await agent.status("ev-404")
     assert unknown.value.status == 404
+
+
+def test_status_documents_every_state_igni_answers() -> None:
+    documented = Agent.status.__doc__ or ""
+    assert [state for state in get_args(ItemState) if f"`{state}`" not in documented] == []
 
 
 async def test_what_the_extension_does_not_declare_is_refused(

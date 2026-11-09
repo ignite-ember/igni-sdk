@@ -131,7 +131,23 @@ class Agent:
         return Chat(self, thread)
 
     async def status(self, event_id: str) -> ItemStatus:
-        """`pending`, `delivered`, `expired`, `dropped` or `failed`, with the reason."""
+        """Where an item igni accepted stands, as igni holds it now.
+
+        `state` is one of:
+
+        - `pending` — stored; the producer's igni has not taken it yet.
+        - `delivered` — a message posted, or an event a handler took.
+        - `not_handled` — an event no handler took: no handler for its
+          type, no running extension, or the handler raised;
+          `not_handled_reason` says which.
+        - `expired` — not taken before `expires_at`.
+        - `dropped` — the producer no longer has the extension;
+          `dropped_reason` says why.
+        - `failed` — the platform gave up; `failed_reason` says why.
+
+        Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
+        `IgniUnavailable` otherwise.
+        """
         return await self._wire.status(self._org_id, event_id)
 
     async def send_item(

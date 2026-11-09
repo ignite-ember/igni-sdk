@@ -1043,7 +1043,7 @@ class Agent:
   `title` for `thread` (or a new thread of its own, `chat:<uuid>`),
   optionally with a first message. Returns its `Chat`.
 - `chat(thread)` — a handle on a thread's chat. Sends nothing by itself.
-- `status(event_id)` — what became of any item sent.
+- `status(event_id)` — what became of any item sent: an `ItemStatus` whose `state` is `pending`, `delivered`, `not_handled`, `expired`, `dropped` or `failed` ([the states](#eventaccepted-itemstatus)).
 - `send_item(kind, ...)` — the low-level call all the others use. `kind`
   is `"event"`, `"message"`, `"chat"` or `"action"`.
 
