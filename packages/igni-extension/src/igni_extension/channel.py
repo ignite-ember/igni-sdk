@@ -45,7 +45,25 @@ logger = logging.getLogger(__name__)
 
 
 class HostConnection:
-    """One extension process's connection to the igni host."""
+    """One extension process's connection to the igni host (`ext.connection`).
+
+    What an extension author may read or call:
+
+    - `configured` — whether igni gave the process the host's address;
+      `False` outside igni.
+    - `connected` — whether the socket is open now.
+    - `granted`, `schema_version` — what the host said on connecting: the
+      `permissions.host` grants this extension holds, and the version of
+      its object model. Empty until the first connection.
+    - `await connect()` — connect, and subscribe to every handled signal.
+      Idempotent. Raises `HostUnavailable` when the host does not answer.
+    - `await serve_forever()` — stay connected, reconnecting every
+      `RETRY_SECONDS`, until cancelled; returns at once when not
+      `configured`. `ext.run()` runs it.
+    - `await close()` — close the socket and stop what it was running.
+
+    `request` is how `ext.host` reaches the host; use `ext.host` instead.
+    """
 
     #: How long a request waits for its answer.
     TIMEOUT = 120.0
@@ -79,10 +97,12 @@ class HostConnection:
 
     @property
     def configured(self) -> bool:
+        """Whether igni gave this process the host's address (`IGNI_HOST_URL`, `IGNI_HOST_SECRET`)."""
         return self._endpoint.configured
 
     @property
     def connected(self) -> bool:
+        """Whether the socket to the host is open now."""
         return self._socket is not None
 
     # ── HostLink ──────────────────────────────────────────────────
@@ -175,6 +195,7 @@ class HostConnection:
             await asyncio.sleep(self.RETRY_SECONDS)
 
     async def close(self) -> None:
+        """Close the socket, and cancel the signal, hook and service event work it started."""
         await self._drop()
         for task in list(self._tasks):
             task.cancel()

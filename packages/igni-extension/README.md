@@ -1148,9 +1148,9 @@ The environment is read once, in the constructor.
 | `ext.prompt` | `PromptConditions`: which of its prompt conditions hold. |
 | `ext.busy` | Busy leases: `take(reason, ttl)`, `release(reason)`, `during(reason, ttl)`. |
 | `ext.mcp` | The underlying `mcp` `MCPServer`, for what the decorators do not cover (`ext.mcp.add_tool`, resources, prompts). |
-| `ext.signals` | The signal handlers `@ext.on` registered. |
-| `ext.process` | What `run()` serves; `await ext.process.serve(read, write)` serves one MCP session over memory streams. |
-| `ext.connection` | The socket to the host. You rarely need it. |
+| `ext.signals` | The `SignalHandlers` `@ext.on` registered into: list them, or run them in a test. See [`ext.signals`](#extsignals). |
+| `ext.process` | The `ExtensionProcess` `run()` serves; `await ext.process.serve(read, write)` serves one MCP session over streams you hold. See [`ext.process`](#extprocess). |
+| `ext.connection` | The `HostConnection`, the socket to the host: whether there is one, what it granted. You rarely need it. See [`ext.connection`](#extconnection). |
 
 **`@ext.tool(*, hints, name=None, description=None)`**
 
@@ -1209,6 +1209,125 @@ Idempotent. Raises `HostUnavailable` if the host does not answer.
 
 Closes the socket and the HTTP clients. `run()` calls it on the way out;
 call it yourself after `connect()` in a test.
+
+#### `ext.signals`
+
+```text
+ext.signals -> SignalHandlers
+```
+
+The handlers `@ext.on` registered, by signal. The host's socket
+subscribes to the signals it holds and delivers into it. A test can run
+the handlers itself, with no host at all.
+
+| Member | What it does |
+|---|---|
+| `wires() -> list[str]` | Every handled signal, by wire name (`"session.switched"`), sorted. This is what the socket subscribes to. |
+| `handlers(signal) -> list` | One signal's handlers, in registration order. Empty when it has none. |
+| `await emit(signal, value)` | Runs the signal's handlers with a typed `value`, in registration order, as a delivery from the host does. A handler that raises is logged, and the others still run. |
+| `await deliver(wire, raw)` | The same from the wire name and the JSON value the host sends, parsed into the signal's type first. A signal nobody handles is ignored. A value that does not parse is logged and skipped. |
+| `on(signal)` | What `@ext.on(signal)` does. |
+
+```python
+from igni_extension import IgniExtension
+from igni_extension.host_model import SessionChange
+
+ext = IgniExtension("acme.example")
+followed: list[str] = []
+
+
+@ext.on(ext.host.sessions.current_changed)
+async def follow(change: SessionChange) -> None:
+    followed.append(change.session_id)
+
+
+assert ext.signals.wires() == ["session.switched"]
+await ext.signals.emit(ext.host.sessions.current_changed, SessionChange(session_id="s-2"))
+await ext.signals.deliver("session.switched", {"session_id": "s-3"})
+assert followed == ["s-2", "s-3"]
+```
+
+#### `ext.connection`
+
+```text
+ext.connection -> HostConnection
+```
+
+The WebSocket to the igni backend that `ext.host`, signals, hooks and
+service events travel on. igni starts the process with `IGNI_HOST_URL`
+and `IGNI_HOST_SECRET`, which say where it is. `run()` keeps it open,
+and the first `ext.host` call opens it, so an extension rarely needs it.
+
+| Member | What it is |
+|---|---|
+| `configured` | Whether igni gave the process the host's address. `False` outside igni: then `ext.host` reaches igni only through `notifications.notify`. |
+| `connected` | Whether the socket is open now. |
+| `granted` | Once connected, the `permissions.host` grants the host says this extension holds. Empty before. |
+| `schema_version` | Once connected, the version of the host's object model. Empty before. |
+| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `HostUnavailable`. |
+| `await serve_forever()` | Stays connected, connecting again every two seconds after the host goes away, until cancelled. Returns at once when not `configured`. `run()` runs it; run it as a task in a test that needs signals, hooks and service events to keep arriving. |
+| `await close()` | Closes the socket. `ext.aclose()` calls it. |
+
+Its other methods are the SDK's own wire to the host. Use `ext.host`.
+
+```python
+from igni_extension import IgniExtension
+from igni_extension.testing import FakeHost
+
+assert not IgniExtension("acme.example", environ={}).connection.configured
+
+async with FakeHost(granted=("chat.read", "sessions")) as host:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    assert ext.connection.configured and not ext.connection.connected
+    await ext.connect()
+    assert ext.connection.connected
+    assert ext.connection.granted == ["chat.read", "sessions"]
+    await ext.aclose()
+```
+
+#### `ext.process`
+
+```text
+ext.process -> ExtensionProcess
+```
+
+What `ext.run()` serves: the MCP server, the host's socket beside it, and
+the `@ext.on_start` work.
+
+| Member | What it does |
+|---|---|
+| `run()` | What `ext.run()` does: checks the tools' hints, then serves MCP over stdio until igni closes the pipe, with the host's socket open and every `on_start` function running; on the way out, cancels them and calls `ext.aclose()`. |
+| `await serve(read_stream, write_stream)` | Checks every tool's hints (raising `ToolHintsMissing`), then serves one MCP session over the streams until they close. It does not connect to the host or start the `on_start` work. |
+| `on_start(fn)` | What `@ext.on_start` does. |
+
+`HostHarness` serves this way, and is the usual way to call a tool in a
+test. `serve` is for an MCP client of your own, or a program that embeds
+the extension:
+
+```python
+import anyio
+from mcp import ClientSession
+
+from igni_extension import IgniExtension, ToolHints
+
+ext = IgniExtension("acme.example", environ={})
+
+
+@ext.tool(hints=ToolHints(read_only=True, destructive=False, idempotent=True, open_world=False))
+def ping() -> str:
+    """Answer pong."""
+    return "pong"
+
+
+to_server, server_reads = anyio.create_memory_object_stream(16)
+server_writes, to_client = anyio.create_memory_object_stream(16)
+async with anyio.create_task_group() as tasks:
+    tasks.start_soon(ext.process.serve, server_reads, server_writes)
+    async with ClientSession(to_client, to_server) as session:
+        await session.initialize()
+        assert [tool.name for tool in (await session.list_tools()).tools] == ["ping"]
+    tasks.cancel_scope.cancel()
+```
 
 ### `ToolHints`, `ToolHintsMissing`
 
@@ -1732,6 +1851,10 @@ On purpose:
 - The work `IgniExtension` did itself moved to `ext.tools`, `ext.busy` and
   `ext.process`. The 0.1.0 spellings still work (see
   [Names kept from 0.1.0](#names-kept-from-010)).
+- `ext.connection` is a read-only property, as `ext.process` and
+  `ext.signals` are. In 0.1.0 it was a plain attribute, but one assigned
+  over left `ext.host` on the old socket: assigning it now raises
+  `AttributeError`.
 
 ## License
 

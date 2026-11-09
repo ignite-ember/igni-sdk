@@ -24,7 +24,11 @@ class ReleasedNames:
 
     tools: ToolRegistry
     busy: BusyLeases
-    process: ExtensionProcess
+
+    @property
+    def process(self) -> ExtensionProcess:
+        """What `run()` serves; `IgniExtension.process` is the one."""
+        raise NotImplementedError
 
     def tool_names(self, tool: str) -> ToolNames:
         """`ext.tools.names(tool)`."""

@@ -24,7 +24,13 @@ Handler = Callable[[Any], Awaitable[None] | None]
 
 
 class SignalHandlers:
-    """Handlers by signal, and the wire names they need subscribed."""
+    """Handlers by signal, and the wire names they need subscribed.
+
+    One per extension, as `ext.signals`; `@ext.on(signal)` is its `on`.
+    The host's socket subscribes to `wires()` and hands each signal that
+    arrives to `deliver`. A test runs the handlers with `emit` (a typed
+    value) or `deliver` (the host's JSON), with no socket at all.
+    """
 
     def __init__(self) -> None:
         self._handlers: dict[str, list[Handler]] = {}
@@ -34,6 +40,12 @@ class SignalHandlers:
     def on[T](
         self, signal: Signal[T]
     ) -> Callable[[Callable[[T], Awaitable[None] | None]], Callable[[T], Awaitable[None] | None]]:
+        """Register a handler of `signal` (what `@ext.on(signal)` does); returns it unchanged.
+
+        Several handlers per signal run in registration order. The first
+        handler of a signal subscribes to it on a connected socket.
+        """
+
         def register(
             handler: Callable[[T], Awaitable[None] | None],
         ) -> Callable[[T], Awaitable[None] | None]:
@@ -56,6 +68,7 @@ class SignalHandlers:
         return sorted(self._handlers)
 
     def handlers(self, signal: Signal[Any]) -> list[Handler]:
+        """`signal`'s handlers, in registration order; empty when it has none."""
         return list(self._handlers.get(signal.name, []))
 
     async def emit[T](self, signal: Signal[T], value: T) -> None:
@@ -71,7 +84,12 @@ class SignalHandlers:
                 logger.exception("igni: a handler of %s failed", signal.name)
 
     async def deliver(self, wire: str, raw: Any) -> None:
-        """A signal arrived from the host: parse it and run its handlers."""
+        """A signal arrived from the host: parse it and run its handlers.
+
+        `wire` is the signal's wire name and `raw` its JSON value. A
+        signal nobody handles is ignored; a value that does not parse is
+        logged and skipped.
+        """
         signal = self._signals.get(wire)
         if signal is None:
             return

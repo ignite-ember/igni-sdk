@@ -21,7 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class ExtensionProcess:
-    """Serves the extension's MCP server, the host's socket and its `on_start` work."""
+    """Serves the extension's MCP server, the host's socket and its `on_start` work (`ext.process`).
+
+    - `run()` — what `ext.run()` does: check the tools' hints, then serve
+      MCP over stdio until igni closes the pipe, with the host's socket
+      kept open and every `on_start` function running beside it; on the
+      way out, cancel them and close the extension.
+    - `await serve(read_stream, write_stream)` — check the tools' hints,
+      then serve one MCP session over the given streams until they close.
+      No host socket and no `on_start` work: for a test or an embedding
+      program (`igni_extension.testing.HostHarness` uses it).
+    - `on_start(fn)` — what `@ext.on_start` does.
+    """
 
     def __init__(
         self,
