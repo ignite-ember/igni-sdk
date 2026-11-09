@@ -268,6 +268,15 @@ and agents. The SDK gets and renews these for you. Until approval every
 call that needs one raises `ServiceNotApproved`; after a revoke,
 `ServiceRevoked`.
 
+igni refuses such a token with `invalid_client`, and the SDK tells the
+two apart by the registration's **state**, a field, never by the words
+of igni's message: the `client_state` igni sends beside `invalid_client`
+(`pending` or `revoked`). An igni server that does not send
+`client_state` yet is asked for the state the way every start asks it —
+the same key registered again answers the same registration, with its
+`state`, and changes nothing. Any other refusal is a plain
+`IgniUnavailable`.
+
 ### The extension bundle
 
 The **extension bundle** is one `.tar.gz` file: the extension's
@@ -1403,7 +1412,9 @@ split is about what to do next.
 | `TokenRefused` | `IgniError` | `person_of` / `caller_of`: the token is not acceptable; `.reason` | ask the caller for a new token |
 
 `ServiceNotApproved` and `ServiceRevoked` are `IgniUnavailable`, so code
-written for that still catches them. `IgniUnavailable` is also what a
+written for that still catches them. Which one is raised comes from the
+registration's state, not from igni's wording
+([how](#registration-and-approval)). `IgniUnavailable` is also what a
 failed revocation check raises inside `person_of` when the revocations
 are not fresh.
 
@@ -1518,7 +1529,7 @@ Each part of igni server is an attribute a test talks to directly.
 | `fake.directory` | `add_member(org_id, Member(...))`, `add_organisation(Organisation(...))`, `ensure(org_id)`, `member(org_id, identity)`, `is_member(org_id, user_id)`, `delete_organisation(org_id, igni_token)` (returns an `OrganisationDeletion`; `await deletion.send(http)` delivers it) |
 | `fake.clients` | `approve(client_id=None)` and `revoke(client_id=None)` play a super admin (every client when no id); `registration` is the one registered client; `clients` all of them |
 | `fake.signer` | `person_token(user_id, *, org_id, overrides=None)`, `app_token(app_id, *, org_id, name="", overrides=None)`, `space_token(space_id, SpaceClaims(org=..., app=..., external_id=...), overrides=None)`, `igni_token(org_id, overrides=None)`; `keys.rotate()` |
-| `fake.oauth` | `grants` (each grant type asked for), `revoked` (refresh tokens revoked at sign-out), `sign_ins.authorize(location, *, user_id, org_id)` plays the portal signing somebody in (raises `PortalRefused` for what the portal would refuse) |
+| `fake.oauth` | `grants` (each grant type asked for), `revoked` (refresh tokens revoked at sign-out), `sign_ins.authorize(location, *, user_id, org_id)` plays the portal signing somebody in (raises `PortalRefused` for what the portal would refuse); `verifier.names_client_state = False` plays an igni server that refuses a pending or revoked service without `client_state` |
 | `fake.extensions` | `hold(reason)` holds every new version from an approved service; `release()`; `shipped(client_id)` is what devices receive; `latest(client_id)` the last upload, held or not; `held`, `assets` |
 | `fake.notifications` | `calls` (each `NotifyCall` as sent), `deliveries` (each `Delivery`: `org_id`, `user_id`, `source`, `notification`) |
 | `fake.revocations` | `publish(subject_id, *, org_id, kind=RevokedKind.PERSON, reason="removed")`: `org_id=None` is every organisation; `RevokedKind` is in `igni_service.revocations` |

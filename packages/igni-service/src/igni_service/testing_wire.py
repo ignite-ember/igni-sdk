@@ -108,6 +108,9 @@ class OAuthError(BaseModel):
 
     error: str
     error_description: str | None = None
+    #: igni's own field beside `invalid_client`: the state of the client's
+    #: registration when that is why it was refused (`token_endpoint.OAuthRefusal`).
+    client_state: str | None = None
     status: int = Field(default=400, exclude=True)
 
     def to_response(self) -> httpx.Response:
