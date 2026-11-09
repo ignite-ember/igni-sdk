@@ -537,7 +537,7 @@ model it sets; nulls and zero when igni follows no group.
 Sub-agents' runs, wherever they are going.
 
 <details>
-<summary><code>await igni.agents.cancel_run(*, run_id: str = '')</code> → <code>CancelAgentRunResult</code></summary>
+<summary><code>await igni.agents.cancel_run(run_id: str = '')</code> → <code>CancelAgentRunResult</code></summary>
 
 Wire method `cancel_agent_run` · access `client`
 
@@ -749,7 +749,7 @@ was last fetched, and the plugins it offers.
 </details>
 
 <details>
-<summary><code>await igni.marketplaces.refresh(*, name: str | None = None)</code> → <code>InfoMessage</code></summary>
+<summary><code>await igni.marketplaces.refresh(name: str | None = None)</code> → <code>InfoMessage</code></summary>
 
 Wire method `refresh_marketplaces` · access `client`
 
@@ -1072,7 +1072,7 @@ none) and every style's `name` and `description`.
 </details>
 
 <details>
-<summary><code>await session.run_shell(*, command: str = '')</code> → <code>RunShellResult</code></summary>
+<summary><code>await session.run_shell(command: str = '')</code> → <code>RunShellResult</code></summary>
 
 Wire method `run_shell` · access `window` · streams `background_process_done`, `process_exited`, `process_line`, `process_started`
 
@@ -1388,7 +1388,7 @@ per session.
 </details>
 
 <details>
-<summary><code>await session.files.pick_dir(*, start: str | None = None)</code> → <code>PickDirResult</code></summary>
+<summary><code>await session.files.pick_dir(start: str | None = None)</code> → <code>PickDirResult</code></summary>
 
 Wire method `pick_dir_native` · access `client`
 
@@ -1761,7 +1761,7 @@ Access: `window`. Through Fleet's gateway every connection stands as igni's wind
 Plan mode: the plan the agent submitted, and the person's decision.
 
 <details>
-<summary><code>session.plan.approve(*, run_id: str = '')</code> → <code>Call[PlanDecisionResult, ApprovePlanEvent]</code></summary>
+<summary><code>session.plan.approve(run_id: str = '')</code> → <code>Call[PlanDecisionResult, ApprovePlanEvent]</code></summary>
 
 Wire method `approve_plan` · access `approver` · streams `permission_mode_changed`, `plan_decided`
 
@@ -1782,7 +1782,7 @@ Access: `approver`. Through Fleet's gateway every connection stands as igni's wi
 </details>
 
 <details>
-<summary><code>session.plan.dismiss(*, run_id: str = '')</code> → <code>Call[PlanDecisionResult, DismissPlanEvent]</code></summary>
+<summary><code>session.plan.dismiss(run_id: str = '')</code> → <code>Call[PlanDecisionResult, DismissPlanEvent]</code></summary>
 
 Wire method `dismiss_plan` · access `client` · streams `plan_decided`
 
@@ -2013,7 +2013,7 @@ Not followed: what the task's tools push carries nothing that says which run it 
 </details>
 
 <details>
-<summary><code>await session.scheduler.list(*, include_done: bool = True)</code> → <code>list[ScheduledTask]</code></summary>
+<summary><code>await session.scheduler.list(include_done: bool = True)</code> → <code>list[ScheduledTask]</code></summary>
 
 Wire method `get_scheduled_tasks` · access `client`
 

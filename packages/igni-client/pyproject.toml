@@ -38,7 +38,14 @@ Source = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-clien
 Issues = "https://github.com/ignite-ember/igni-sdk/issues"
 
 [dependency-groups]
-dev = ["pytest>=9.0.2", "pytest-asyncio>=1.3.0", "ruff>=0.15", "mypy>=1.19"]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15",
+    "mypy>=1.19",
+    "jsonschema>=4.23",
+    "types-jsonschema>=4.26.0.20261006",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/igni_client"]

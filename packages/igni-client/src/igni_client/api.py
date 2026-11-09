@@ -1299,7 +1299,7 @@ class IgniAgents:
     def __init__(self, caller: Caller) -> None:
         self._caller = caller
 
-    async def cancel_run(self, *, run_id: str = "") -> CancelAgentRunResult:
+    async def cancel_run(self, run_id: str = "") -> CancelAgentRunResult:
         """Stop one sub-agent's run, leaving the rest of the turn going.
 
         ``run_id`` is the sub-agent run's id, as its events carry it.
@@ -1499,7 +1499,7 @@ class IgniMarketplaces:
         """
         return await self._caller.rpc("get_marketplaces", NoArgs, {}, _GET_MARKETPLACES)
 
-    async def refresh(self, *, name: str | None = None) -> InfoMessage:
+    async def refresh(self, name: str | None = None) -> InfoMessage:
         """Fetch marketplaces' catalogues again.
 
         ``name`` is one marketplace; absent or empty refreshes every one.
@@ -1857,7 +1857,7 @@ class SessionFiles:
             "complete_files", CompleteFilesArgs, {"limit": limit, "query": query}, _COMPLETE_FILES
         )
 
-    async def pick_dir(self, *, start: str | None = None) -> PickDirResult:
+    async def pick_dir(self, start: str | None = None) -> PickDirResult:
         """Open the operating system's folder picker on igni's machine and return the choice.
 
         ``start`` is the folder the picker opens in (this session's project
@@ -2199,7 +2199,7 @@ class SessionPlan:
     def __init__(self, caller: Caller) -> None:
         self._caller = caller
 
-    def approve(self, *, run_id: str = "") -> Call[PlanDecisionResult, ApprovePlanEvent]:
+    def approve(self, run_id: str = "") -> Call[PlanDecisionResult, ApprovePlanEvent]:
         """Approve the plan the agent submitted, so it leaves plan mode and carries it out.
 
         ``run_id`` is the run that submitted the plan (``plan_submitted``
@@ -2216,7 +2216,7 @@ class SessionPlan:
         """
         return self._caller.follow("approve_plan", PlanRunArgs, {"run_id": run_id}, _APPROVE_PLAN)
 
-    def dismiss(self, *, run_id: str = "") -> Call[PlanDecisionResult, DismissPlanEvent]:
+    def dismiss(self, run_id: str = "") -> Call[PlanDecisionResult, DismissPlanEvent]:
         """Send the submitted plan back for refining, staying in plan mode.
 
         ``run_id`` is the run that submitted the plan. The decision is
@@ -2448,7 +2448,7 @@ class SessionScheduler:
             _EXECUTE_SCHEDULED_TASK,
         )
 
-    async def list(self, *, include_done: bool = True) -> builtins.list[ScheduledTask]:
+    async def list(self, include_done: bool = True) -> builtins.list[ScheduledTask]:
         """List the scheduled tasks of this session's project.
 
         ``include_done`` (default ``true``) lists finished, failed and
@@ -2818,7 +2818,7 @@ class SessionApi:
         """
         return await self._caller.rpc("get_output_styles", NoArgs, {}, _GET_OUTPUT_STYLES)
 
-    async def run_shell(self, *, command: str = "") -> RunShellResult:
+    async def run_shell(self, command: str = "") -> RunShellResult:
         """Run a shell command in this session's project folder and return its output.
 
         ``command`` is the command line (what follows ``$`` in the

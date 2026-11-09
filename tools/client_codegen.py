@@ -885,12 +885,12 @@ class ApiGenerator:
     def signature(self, placement: Placement, params: list[Param]) -> str:
         """``self``, then a lone required argument by position, then the rest by keyword.
 
-        A message sent as a method (``session.command(text)``) takes its one
-        field by position too.
+        A method of one argument takes it by position too, required or not:
+        ``session.plan.approve(run_id)``, ``session.command(text)``.
         """
         shown = [p for p in params if p.annotation]
         required = [p for p in shown if p.default is None]
-        if placement.wire in MESSAGE_METHODS and len(shown) == 1:
+        if len(shown) == 1:
             required = shown
         parts = ["self"]
         if len(required) == 1:
