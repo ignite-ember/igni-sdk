@@ -1,6 +1,6 @@
 {
   "name": "@ignite-ember/ui-react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The React components an igni extension is allowed to build on. Everything exported here is under the compatibility floor.",
   "keywords": [
     "igni",
