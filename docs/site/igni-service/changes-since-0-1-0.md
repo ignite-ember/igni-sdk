@@ -2,8 +2,71 @@
 
 # Changes since 0.1.0
 
-Changed on purpose, in `igni_service.testing`:
+Changed on purpose, in `igni_service.testing`.
 
+**The fake is one object of collaborators now.** Each part of igni is
+separate, and a test talks to the one it means: `fake.directory`
+(organisations and members), `fake.clients` (registrations),
+`fake.signer` (the tokens igni signs, and its keys), `fake.oauth` (the
+token endpoint, and the portal's sign-in), `fake.extensions` (bundles
+and assets), `fake.notifications`, `fake.revocations`, `fake.agents`,
+`fake.vm_profiles`, `fake.traffic` (every request) and `fake.router`
+(what answers them). In 0.1.0 all of that was on `FakeIgni` itself, and
+the names below are where each one went.
+
+- `FakeIgni(base_url=…, issuer=…, service_url=…)` is gone: the three
+  addresses are one model now,
+  `FakeIgni(addresses=IgniAddresses(base_url=…, issuer=…,
+  service_url=…))`. `FakeIgni()` still means the same three defaults,
+  and `clock=` and `require_approval=` are unchanged.
+- The directory is `fake.directory`, and its methods take models:
+  `fake.add_organisation(org_id, name=…)` is
+  `fake.directory.add_organisation(Organisation(org_id=…, name=…))`;
+  `fake.add_member(org_id, user_id, email=…)` is
+  `fake.directory.add_member(org_id, Member(user_id=…, email=…))`;
+  `fake.delete_organisation(org_id)` is
+  `fake.directory.delete_organisation(org_id, igni_token)` — it needs
+  the token the call now carries.
+- The tokens igni signs are `fake.signer`'s: `fake.person_token(…)`,
+  `fake.app_token(…)`, `fake.space_token(…)` and `fake.igni_token(…)`
+  are the same four calls on `fake.signer`, and `fake.rotate()` is
+  `fake.signer.keys.rotate()`. The general
+  `fake.token(sub, **claims)` is
+  `fake.signer.sign(sub, claims, overrides=TokenOverrides(…))`: what a
+  test bent the token with is one model now, and the claims are a model
+  too (`PersonClaims`, `SpaceClaims`).
+- `fake.approve(client_id)` and `fake.revoke(client_id)` are
+  `fake.clients.approve(…)` and `fake.clients.revoke(…)`, and
+  `fake.registration` is `fake.clients.registration`. `fake.clients`
+  is the registry now, not the dict it was; the dict is
+  `fake.clients.clients`.
+- The portal's sign-in is `fake.oauth.sign_ins.authorize(…)`, and the
+  token endpoint's own records are `fake.oauth.grants` and
+  `fake.oauth.revoked`.
+- `fake.expire_service_tokens()` is
+  `fake.oauth.bearers.expire_service()`.
+- `fake.publish_revocation(…)` is
+  `fake.revocations.publish(subject_id, *, org_id=…)`. `fake.revocations`
+  is that publisher now; what it published is
+  `fake.revocations.revocations`.
+- `fake.failing[prefix] = status` is `fake.traffic.fail(prefix, status)`
+  (`fake.traffic.heal()` stops it); `fake.seen` is `fake.traffic.seen`,
+  and `fake.requests_to(path)` is `fake.traffic.requests_to(path)`.
+- `fake.notify_calls` and `fake.deliveries` are
+  `fake.notifications.calls` and `fake.notifications.deliveries`;
+  `fake.events` is `fake.agents.items`.
+- `fake.extensions` is the store of bundles and assets, not a dict:
+  `fake.extensions.shipped(client_id)` is the bundle machines get and
+  `fake.extensions.latest(client_id)` the last one uploaded;
+  `fake.hold_uploads = "reason"` is `fake.extensions.hold("reason")`
+  (`fake.extensions.release()` stops it).
+- `fake.pair`, `fake.kid` and `fake.published` are `fake.signer.keys`'s.
+- `fake.deactivate(org_id, user_id)` is
+  `fake.directory.organisations[org_id].deactivate(user_id)`.
+- `fake.settings(**overrides)` takes a `SettingsOverrides` model now:
+  `fake.settings(SettingsOverrides(service_name="…"))`. Only the fields
+  it sets are applied; the rest are the fake's own addresses and
+  `IgniSettings`' defaults.
 - `FakeIgni.handle(request)` is gone. Call `fake.router.handle(request)`
   instead; `fake.transport()` and `fake.http_client()` route through it.
 - `FakeIgni.approve_vm_profile(org_id, app=..., extension=...)` and
@@ -13,6 +76,11 @@ Changed on purpose, in `igni_service.testing`:
 - `FakeVmProfiles.request`, `approve` and `reject` take
   `(org_id, subject: VmProfileSubject, ...)`. The 0.1.0 form
   `(org_id, kind, subject_id, ...)` raises `TypeError`.
+
+New and worth knowing: `IgniAddresses`, `TokenOverrides`,
+`SettingsOverrides`, `PersonClaims` and `SpaceClaims` are all exported
+from `igni_service.testing`, and the collaborators are named in
+[The fake's collaborators](/docs/sdk/igni-service/api-reference#the-fake-s-collaborators) above.
 
 ---
 
