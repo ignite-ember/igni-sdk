@@ -8,12 +8,12 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`MarkdownProps`](#markdownprops) | interface | `Markdown.tsx` | — |
+| [`MarkdownProps`](#markdownprops) | interface | `Markdown.tsx` | What a `Markdown` takes. |
 | [`Markdown`](#markdown) | function | `Markdown.tsx` | Render markdown as prose. |
-| [`MarkdownInline`](#markdowninline) | function | `MarkdownInline.tsx` | — |
+| [`MarkdownInline`](#markdowninline) | function | `MarkdownInline.tsx` | Markdown rendered as one flowing line of text. |
 | [`loadMermaid`](#loadmermaid) | function | `Mermaid.tsx` | Mermaid, configured for the theme in force right now. |
-| [`MermaidBlock`](#mermaidblock) | function | `Mermaid.tsx` | — |
-| [`fenceInfo`](#fenceinfo) | function | `fenceInfo.ts` | — |
+| [`MermaidBlock`](#mermaidblock) | function | `Mermaid.tsx` | A mermaid diagram. |
+| [`fenceInfo`](#fenceinfo) | function | `fenceInfo.ts` | The language on a fenced block, or null. |
 
 ## MarkdownProps
 
@@ -21,10 +21,12 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 interface MarkdownProps
 ```
 
+What a `Markdown` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `children` | field | `string` | The source. Rendered as a document, not flattened. |
-| `className` | field | `string` |  |
+| `className` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
 
 ## Markdown
 
@@ -48,6 +50,13 @@ extension's frame has a CSP precisely so that it cannot.
 function MarkdownInline({ text, name = "", limit = 320, className = "", }: { text: string; name?: string; limit?: number; className?: string; })
 ```
 
+Markdown rendered as one flowing line of text.
+
+See the note at the top of this file for what it does to blocks and
+why. `limit` bounds the work, not the appearance: the clamp is
+visual, and a document longer than `limit` is cut at a word
+boundary with an ellipsis.
+
 ## loadMermaid
 
 ```typescript
@@ -68,8 +77,19 @@ dark has to be drawn in dark.
 function MermaidBlock({ source }: { source: string })
 ```
 
+A mermaid diagram.
+
+`source` is the text inside the fence. A diagram that does not
+parse is shown as its own source rather than as a blank box: it is
+usually a diagram somebody is halfway through writing.
+
 ## fenceInfo
 
 ```typescript
 function fenceInfo(children: ReactNode): Fence | null
 ```
+
+The language on a fenced block, or null.
+
+Null when the child is not a code element, or carries no
+`language-` class — an unfenced block, or a fence with no language.

@@ -9,9 +9,9 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
 | [`SortDirection`](#sortdirection) | type | `DataTable.tsx` | Which way a column is sorted, or not. |
-| [`SortableThProps`](#sortablethprops) | interface | `DataTable.tsx` | — |
+| [`SortableThProps`](#sortablethprops) | interface | `DataTable.tsx` | What a `SortableTh` takes. |
 | [`SortableTh`](#sortableth) | function | `DataTable.tsx` | A column heading you can sort by. |
-| [`StatusProps`](#statusprops) | interface | `DataTable.tsx` | — |
+| [`StatusProps`](#statusprops) | interface | `DataTable.tsx` | What a `Status` takes. |
 | [`Status`](#status) | function | `DataTable.tsx` | A state, as a coloured dot and the word it stands for. |
 
 ## SortDirection
@@ -27,6 +27,8 @@ Which way a column is sorted, or not.
 ```typescript
 interface SortableThProps extends Omit<ThHTMLAttributes<HTMLTableCellElement>, "onClick" | "aria-sort">
 ```
+
+What a `SortableTh` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
@@ -59,6 +61,8 @@ rather than a word inside it.
 ```typescript
 interface StatusProps
 ```
+
+What a `Status` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|

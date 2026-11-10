@@ -29,7 +29,15 @@ export type HostErrorCode =
 
 /** The host said no, or it went wrong there. `code` is for code; the message, for people. */
 export class HostError extends Error {
+  /**
+   * The failure, as the host reported it.
+   *
+   * @param code — why it failed: one of the {@link HostErrorCode}s, or
+   *   whatever the host said.
+   * @param message — a sentence for a person to read.
+   */
   constructor(
+    /** Why it failed: one of the {@link HostErrorCode}s, or the host's own. */
     readonly code: HostErrorCode | string,
     message: string,
   ) {
@@ -40,13 +48,26 @@ export class HostError extends Error {
 
 /** How requests reach the igni host. */
 export interface HostLink {
+  /**
+   * Send one request to the host.
+   *
+   * @param op — what to do: read a property, write one, or call a method.
+   * @param path — where in the model, as `host.chat.processing`.
+   * @param options — the window or session it is about, the arguments
+   *   of a call, and the value of a write.
+   * @returns — whatever the host answered with.
+   */
   request(
     op: "get" | "set" | "call",
     path: string,
     options: {
+      /** The window to ask about, when it is not this page's own. */
       window?: string | null;
+      /** The session to ask about, when it is not the one on screen. */
       session?: string | null;
+      /** The arguments of a call, by name. */
       params?: Record<string, unknown>;
+      /** The value of a write. */
       value?: unknown;
     },
   ): Promise<unknown>;
@@ -54,10 +75,25 @@ export interface HostLink {
 
 /** One object of the host model: `host.chat`, `host.windows.ui(id)`, `host.sessions.chat(id)`. */
 export class HostObject {
+  /**
+   * One object of the model, bound to a host.
+   *
+   * A page never builds one: `bridge.host` is already the right one,
+   * and a second would be a second conversation.
+   *
+   * @param link — how requests reach the host.
+   * @param path — where in the model this object sits.
+   * @param window — the window it belongs to, when it belongs to one.
+   * @param session — the session it belongs to, when it belongs to one.
+   */
   constructor(
+    /** How requests reach the host. */
     protected readonly link: HostLink,
+    /** Where in the model this object sits: `host.chat`. */
     readonly path: string,
+    /** The window it belongs to, when it belongs to one. */
     protected readonly window: string | null = null,
+    /** The session it belongs to, when it belongs to one. */
     protected readonly session: string | null = null,
   ) {}
 
@@ -81,6 +117,13 @@ export class HostObject {
     return this.session;
   }
 
+  /**
+   * Call a method on the host.
+   *
+   * @param name — the method's name, as the schema spells it.
+   * @param params — its arguments, by name.
+   * @returns — whatever the host answered with.
+   */
   protected async call<T>(
     name: string,
     params: Record<string, unknown>,
@@ -99,16 +142,32 @@ export class HostObject {
 
 /** A value of a host object: `get()` reads it, `set()` writes it. */
 export class Property<T> {
+  /**
+   * One value of one host object.
+   *
+   * @param owner — the object it belongs to.
+   * @param name — its name, as the schema spells it.
+   * @param writable — whether it may be written.
+   */
   constructor(
+    /** The object it belongs to. */
     private readonly owner: HostObject,
+    /** Its name, as the schema spells it. */
     readonly name: string,
+    /** Whether it may be written. */
     readonly writable: boolean,
   ) {}
 
+  /** Where in the model this value sits: `host.chat.processing`. */
   get path(): string {
     return this.owner.memberPath(this.name);
   }
 
+  /**
+   * Read it.
+   *
+   * @returns — the value the host holds right now.
+   */
   async get(): Promise<T> {
     return (await this.owner.hostLink().request("get", this.path, {
       window: this.owner.windowId(),
@@ -138,5 +197,13 @@ export class Signal<T> {
   /** Only for the type parameter; never set. */
   declare readonly carries?: T;
 
-  constructor(readonly name: string) {}
+  /**
+   * One signal of one host object.
+   *
+   * @param name — its wire name, as the host sends it.
+   */
+  constructor(
+    /** Its wire name, as the host sends it: `chat.run_completed`. */
+    readonly name: string,
+  ) {}
 }

@@ -8,55 +8,55 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`ButtonVariant`](#buttonvariant) | type | `primitives.tsx` | — |
-| [`ButtonSize`](#buttonsize) | type | `primitives.tsx` | — |
-| [`ButtonProps`](#buttonprops) | interface | `primitives.tsx` | — |
-| [`Button`](#button) | function | `primitives.tsx` | — |
-| [`InputProps`](#inputprops) | interface | `primitives.tsx` | — |
-| [`Input`](#input) | function | `primitives.tsx` | — |
-| [`Tone`](#tone) | type | `primitives.tsx` | — |
+| [`ButtonVariant`](#buttonvariant) | type | `primitives.tsx` | How a button reads. |
+| [`ButtonSize`](#buttonsize) | type | `primitives.tsx` | `md` unless the row is dense, in which case `sm` or `xs`. |
+| [`ButtonProps`](#buttonprops) | interface | `primitives.tsx` | What a `Button` takes. |
+| [`Button`](#button) | function | `primitives.tsx` | A button. |
+| [`InputProps`](#inputprops) | interface | `primitives.tsx` | What an `Input` takes. |
+| [`Input`](#input) | function | `primitives.tsx` | A single-line text field. |
+| [`Tone`](#tone) | type | `primitives.tsx` | How loud a status is. |
 | [`ChipProps`](#chipprops) | interface | `primitives.tsx` | A tag the reader can scan past. |
-| [`Chip`](#chip) | function | `primitives.tsx` | — |
+| [`Chip`](#chip) | function | `primitives.tsx` | A tag the reader can scan past. See `ChipProps` for when to reach for a chip and when for a badge. |
 | [`BadgeProps`](#badgeprops) | interface | `primitives.tsx` | A state the reader is meant to notice. |
-| [`Badge`](#badge) | function | `primitives.tsx` | — |
+| [`Badge`](#badge) | function | `primitives.tsx` | A state the reader is meant to notice. See `BadgeProps` for what the tone does and does not say. |
 | [`Row`](#row) | function | `primitives.tsx` | A horizontal run of things, vertically centred. |
 | [`Actions`](#actions) | function | `primitives.tsx` | A horizontal run of buttons. Separate from `Row` because it is what a reader looks for at the foot of a panel. |
 | [`List`](#list) | function | `primitives.tsx` | A vertical stack. |
-| [`Toolbar`](#toolbar) | function | `primitives.tsx` | — |
+| [`Toolbar`](#toolbar) | function | `primitives.tsx` | A row of controls at the top of a panel: what the panel is, and what you can do to it. |
 | [`Card`](#card) | function | `primitives.tsx` | A surface: background, border, radius, padding. |
 | [`Item`](#item) | function | `primitives.tsx` | One selectable row inside a list. Renders a button, because something clickable that is not a button is a keyboard trap. |
-| [`Table`](#table) | function | `primitives.tsx` | — |
+| [`Table`](#table) | function | `primitives.tsx` | A table. |
 | [`EmptyProps`](#emptyprops) | interface | `primitives.tsx` | What to show where there is nothing. |
-| [`Empty`](#empty) | function | `primitives.tsx` | — |
-| [`DialogProps`](#dialogprops) | interface | `primitives.tsx` | — |
+| [`Empty`](#empty) | function | `primitives.tsx` | What to show where there is nothing. |
+| [`DialogProps`](#dialogprops) | interface | `primitives.tsx` | What a `Dialog` takes. |
 | [`Dialog`](#dialog) | function | `primitives.tsx` | The one primitive here that is behaviour rather than a box. |
-| [`SelectProps`](#selectprops) | interface | `primitives.tsx` | — |
-| [`Select`](#select) | function | `primitives.tsx` | — |
-| [`TextareaProps`](#textareaprops) | interface | `primitives.tsx` | — |
-| [`Textarea`](#textarea) | function | `primitives.tsx` | — |
-| [`CheckboxProps`](#checkboxprops) | interface | `primitives.tsx` | — |
+| [`SelectProps`](#selectprops) | interface | `primitives.tsx` | What a `Select` takes. |
+| [`Select`](#select) | function | `primitives.tsx` | A drop-down. |
+| [`TextareaProps`](#textareaprops) | interface | `primitives.tsx` | What a `Textarea` takes. |
+| [`Textarea`](#textarea) | function | `primitives.tsx` | A multi-line text field. |
+| [`CheckboxProps`](#checkboxprops) | interface | `primitives.tsx` | What a `Checkbox` takes. |
 | [`Checkbox`](#checkbox) | function | `primitives.tsx` | A native checkbox, wrapped in its own label. |
-| [`RadioProps`](#radioprops) | interface | `primitives.tsx` | — |
-| [`Radio`](#radio) | function | `primitives.tsx` | — |
-| [`SwitchProps`](#switchprops) | interface | `primitives.tsx` | — |
+| [`RadioProps`](#radioprops) | interface | `primitives.tsx` | What a `Radio` takes. |
+| [`Radio`](#radio) | function | `primitives.tsx` | A native radio, wrapped in its own label. |
+| [`SwitchProps`](#switchprops) | interface | `primitives.tsx` | What a `Switch` takes. |
 | [`Switch`](#switch) | function | `primitives.tsx` | A switch, which is a button rather than a checkbox. |
 | [`FieldProps`](#fieldprops) | interface | `primitives.tsx` | A label, a control, and room for the reason it is wrong. |
-| [`Field`](#field) | function | `primitives.tsx` | — |
+| [`Field`](#field) | function | `primitives.tsx` | A label, a control, and room for the reason it is wrong. |
 | [`SpinnerProps`](#spinnerprops) | interface | `primitives.tsx` | Work whose duration is unknown. `Skeleton` is for known shapes. |
-| [`Spinner`](#spinner) | function | `primitives.tsx` | — |
-| [`ProgressProps`](#progressprops) | interface | `primitives.tsx` | — |
-| [`Progress`](#progress) | function | `primitives.tsx` | — |
-| [`TabsProps`](#tabsprops) | interface | `primitives.tsx` | — |
+| [`Spinner`](#spinner) | function | `primitives.tsx` | Work whose duration is unknown. |
+| [`ProgressProps`](#progressprops) | interface | `primitives.tsx` | What a `Progress` takes. |
+| [`Progress`](#progress) | function | `primitives.tsx` | A bar that fills. |
+| [`TabsProps`](#tabsprops) | interface | `primitives.tsx` | What a `Tabs` takes. |
 | [`Tabs`](#tabs) | function | `primitives.tsx` | Tabs with the arrow keys wired, because a tab strip that only responds to clicks is a tab strip half the people cannot use. |
 | [`TabPanelProps`](#tabpanelprops) | interface | `primitives.tsx` | The panel a tab controls. Needs the same `base` the strip used. |
-| [`TabPanel`](#tabpanel) | function | `primitives.tsx` | — |
-| [`Divider`](#divider) | function | `primitives.tsx` | — |
-| [`HeadingProps`](#headingprops) | interface | `primitives.tsx` | — |
-| [`Heading`](#heading) | function | `primitives.tsx` | — |
+| [`TabPanel`](#tabpanel) | function | `primitives.tsx` | The panel a tab controls. |
+| [`Divider`](#divider) | function | `primitives.tsx` | A horizontal rule. |
+| [`HeadingProps`](#headingprops) | interface | `primitives.tsx` | What a `Heading` takes. |
+| [`Heading`](#heading) | function | `primitives.tsx` | A heading, at the level you say. |
 | [`TextTone`](#texttone) | type | `primitives.tsx` | How loud. Not `Tone`: this is emphasis, not status. |
-| [`TextProps`](#textprops) | interface | `primitives.tsx` | — |
-| [`Text`](#text) | function | `primitives.tsx` | — |
-| [`Code`](#code) | function | `primitives.tsx` | — |
+| [`TextProps`](#textprops) | interface | `primitives.tsx` | What a `Text` takes. |
+| [`Text`](#text) | function | `primitives.tsx` | A paragraph. |
+| [`Code`](#code) | function | `primitives.tsx` | Inline code: a name, a path, a flag. |
 
 ## ButtonVariant
 
@@ -64,11 +64,20 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 type ButtonVariant = "default" | "primary" | "danger" | "warn" | "quiet"
 ```
 
+How a button reads.
+
+`default` is a plain button, `primary` is the one action on the
+panel, `danger` is the one that destroys something, `warn` says the
+action is not what it sounds like, and `quiet` is a button that
+should not be the first thing the eye lands on.
+
 ## ButtonSize
 
 ```typescript
 type ButtonSize = "md" | "sm" | "xs"
 ```
+
+`md` unless the row is dense, in which case `sm` or `xs`.
 
 ## ButtonProps
 
@@ -76,16 +85,25 @@ type ButtonSize = "md" | "sm" | "xs"
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 ```
 
-| Member | Kind | Type |
-|---|---|---|
-| `variant` | field | `ButtonVariant` |
-| `size` | field | `ButtonSize` |
+What a `Button` takes.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `variant` | field | `ButtonVariant` | How it reads. |
+| `size` | field | `ButtonSize` | Its size. |
 
 ## Button
 
 ```typescript
 function Button({ variant = "default", size = "md", className, ...rest }: ButtonProps)
 ```
+
+A button.
+
+The variant is a prop rather than a class name you spell:
+`btn-primery` is a typo that renders as a plain button and looks
+like nothing at all, which is exactly why the name is one the
+compiler checks.
 
 **Also** [`ButtonProps`](/docs/sdk/ui-react/reference-the-primitives#buttonprops).
 
@@ -95,11 +113,15 @@ function Button({ variant = "default", size = "md", className, ...rest }: Button
 interface InputProps extends InputHTMLAttributes<HTMLInputElement>
 ```
 
+What an `Input` takes.
+
 ## Input
 
 ```typescript
 function Input({ className, ...rest }: InputProps)
 ```
+
+A single-line text field.
 
 **Also** [`InputProps`](/docs/sdk/ui-react/reference-the-primitives#inputprops).
 
@@ -108,6 +130,11 @@ function Input({ className, ...rest }: InputProps)
 ```typescript
 type Tone = "neutral" | "success" | "warning" | "danger"
 ```
+
+How loud a status is.
+
+`neutral` for a state nothing is wrong with, and the three that
+mean something.
 
 ## ChipProps
 
@@ -127,15 +154,18 @@ changes — ready, failed, three unread — it is a `Badge`,
 which is filled by tone and bold so it is noticed. If it is a fact
 about the thing, it is a `Chip`.
 
-| Member | Kind | Type |
-|---|---|---|
-| `tone` | field | `Tone` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `tone` | field | `Tone` | How loud it is. |
 
 ## Chip
 
 ```typescript
 function Chip({ tone = "neutral", className, ...rest }: ChipProps)
 ```
+
+A tag the reader can scan past. See `ChipProps` for when to
+reach for a chip and when for a badge.
 
 **Also** [`ChipProps`](/docs/sdk/ui-react/reference-the-primitives#chipprops).
 
@@ -155,15 +185,18 @@ state in the text too. "Failed" in a danger badge survives being
 read aloud and being looked at by somebody who cannot tell it from
 the success one; an empty red badge does not.
 
-| Member | Kind | Type |
-|---|---|---|
-| `tone` | field | `Tone` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `tone` | field | `Tone` | How loud it is. |
 
 ## Badge
 
 ```typescript
 function Badge({ tone = "neutral", className, ...rest }: BadgeProps)
 ```
+
+A state the reader is meant to notice. See `BadgeProps` for
+what the tone does and does not say.
 
 **Also** [`BadgeProps`](/docs/sdk/ui-react/reference-the-primitives#badgeprops).
 
@@ -198,6 +231,9 @@ A vertical stack.
 function Toolbar({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
 
+A row of controls at the top of a panel: what the panel is, and what
+you can do to it.
+
 ## Card
 
 ```typescript
@@ -220,6 +256,12 @@ One selectable row inside a list. Renders a button, because
 ```typescript
 function Table({ className, ...rest }: HTMLAttributes<HTMLTableElement>)
 ```
+
+A table.
+
+The class only; the head, the rows and the cells are yours, because
+a table that decides its own columns is a table you cannot use for
+anything the app has not already seen.
 
 ## EmptyProps
 
@@ -244,6 +286,10 @@ panel wastes the one moment it had the reader's attention. The
 function Empty({ children, action, className, ...rest }: EmptyProps)
 ```
 
+What to show where there is nothing.
+
+See `EmptyProps` for why the `action` slot exists.
+
 **Also** [`EmptyProps`](/docs/sdk/ui-react/reference-the-primitives#emptyprops).
 
 ## DialogProps
@@ -252,11 +298,13 @@ function Empty({ children, action, className, ...rest }: EmptyProps)
 interface DialogProps extends Omit<HTMLAttributes<HTMLDivElement>, "title">
 ```
 
+What a `Dialog` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `title` | field | `ReactNode` |  |
+| `title` | field | `ReactNode` | Its title. Also the accessible name of the dialog. |
 | `sub` | field | `ReactNode` | Shown under the title. A sentence, not a paragraph. |
-| `children` | field | `ReactNode` |  |
+| `children` | field | `ReactNode` | The body. |
 | `actions` | field | `ReactNode` | The buttons. Rendered in an `Actions` row at the foot. |
 | `onClose` | field | `() => void` | Escape, or a click on the backdrop. |
 
@@ -282,11 +330,15 @@ keyboard and screen-reader users notice.
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement>
 ```
 
+What a `Select` takes.
+
 ## Select
 
 ```typescript
 function Select({ className, ...rest }: SelectProps)
 ```
+
+A drop-down.
 
 **Also** [`SelectProps`](/docs/sdk/ui-react/reference-the-primitives#selectprops).
 
@@ -296,11 +348,15 @@ function Select({ className, ...rest }: SelectProps)
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement>
 ```
 
+What a `Textarea` takes.
+
 ## Textarea
 
 ```typescript
 function Textarea({ className, ...rest }: TextareaProps)
 ```
+
+A multi-line text field.
 
 **Also** [`TextareaProps`](/docs/sdk/ui-react/reference-the-primitives#textareaprops).
 
@@ -310,9 +366,11 @@ function Textarea({ className, ...rest }: TextareaProps)
 interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement>
 ```
 
-| Member | Kind | Type |
-|---|---|---|
-| `label` | field | `ReactNode` |
+What a `Checkbox` takes.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `label` | field | `ReactNode` | The text beside the box. It is the accessible name too. |
 
 ## Checkbox
 
@@ -334,15 +392,23 @@ else's box — and nothing about the page looks wrong when it does.
 interface RadioProps extends InputHTMLAttributes<HTMLInputElement>
 ```
 
-| Member | Kind | Type |
-|---|---|---|
-| `label` | field | `ReactNode` |
+What a `Radio` takes.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `label` | field | `ReactNode` | The text beside the box. It is the accessible name too. |
 
 ## Radio
 
 ```typescript
 function Radio({ label, className, ...rest }: RadioProps)
 ```
+
+A native radio, wrapped in its own label.
+
+Wrapped for the same reason a `Checkbox` is: an `id` an
+extension forgets to make unique is a label that picks somebody
+else's radio.
 
 **Also** [`RadioProps`](/docs/sdk/ui-react/reference-the-primitives#radioprops).
 
@@ -352,10 +418,12 @@ function Radio({ label, className, ...rest }: RadioProps)
 interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange">
 ```
 
+What a `Switch` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `checked` | field | `boolean` |  |
-| `onChange` | field | `(next: boolean) => void` |  |
+| `checked` | field | `boolean` | Whether it is on. |
+| `onChange` | field | `(next: boolean) => void` | Called with the next value. It takes effect at once. |
 | `label` | field | `ReactNode` | Shown beside the switch, and used as its accessible name. |
 
 ## Switch
@@ -387,9 +455,9 @@ rejects input without saying why is the one people abandon. When
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `label` | field | `ReactNode` |  |
-| `hint` | field | `ReactNode` |  |
-| `error` | field | `ReactNode` |  |
+| `label` | field | `ReactNode` | The label. It is visible, not a placeholder. |
+| `hint` | field | `ReactNode` | A sentence under the control, for when nothing is wrong. |
+| `error` | field | `ReactNode` | Why the control is wrong. It replaces the hint while it is set. |
 | `htmlFor` | field | `string` | The id of the control, so the label points at it. |
 
 ## Field
@@ -397,6 +465,12 @@ rejects input without saying why is the one people abandon. When
 ```typescript
 function Field({ label, hint, error, htmlFor, children, className, ...rest }: FieldProps)
 ```
+
+A label, a control, and room for the reason it is wrong.
+
+See `FieldProps`. The error slot is the part that gets left
+out, and a form that rejects input without saying why is the one
+people abandon.
 
 **Also** [`FieldProps`](/docs/sdk/ui-react/reference-the-primitives#fieldprops).
 
@@ -423,6 +497,10 @@ watched something spin.
 function Spinner({ label, className, ...rest }: SpinnerProps)
 ```
 
+Work whose duration is unknown.
+
+See `SpinnerProps` for why `label` is required.
+
 **Also** [`SpinnerProps`](/docs/sdk/ui-react/reference-the-primitives#spinnerprops).
 
 ## ProgressProps
@@ -431,17 +509,25 @@ function Spinner({ label, className, ...rest }: SpinnerProps)
 interface ProgressProps extends HTMLAttributes<HTMLDivElement>
 ```
 
+What a `Progress` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `value` | field | `number` | How far along, against `max`. Omit for indeterminate, which slides rather than sits. |
 | `max` | field | `number` | Defaults to 100. |
-| `label` | field | `string` |  |
+| `label` | field | `string` | Its name, for a screen reader. |
 
 ## Progress
 
 ```typescript
 function Progress({ value, max = 100, label, className, ...rest }: ProgressProps)
 ```
+
+A bar that fills.
+
+See `ProgressProps`. Without a `value` it slides, because a
+bar that sits still while unknown work is happening is a bar that
+looks broken.
 
 **Also** [`ProgressProps`](/docs/sdk/ui-react/reference-the-primitives#progressprops).
 
@@ -451,12 +537,14 @@ function Progress({ value, max = 100, label, className, ...rest }: ProgressProps
 interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange">
 ```
 
+What a `Tabs` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tabs` | field | `{ id: string; label: ReactNode }[]` |  |
-| `active` | field | `string` |  |
-| `onChange` | field | `(id: string) => void` |  |
-| `label` | field | `string` |  |
+| `tabs` | field | `{ id: string; label: ReactNode }[]` | The tabs. The `id` is what `TabPanel`s match on. |
+| `active` | field | `string` | Which tab is showing. |
+| `onChange` | field | `(id: string) => void` | Called with the id of the tab the reader chose. |
+| `label` | field | `string` | The strip's name, for a screen reader. |
 | `base` | field | `string` | The id prefix shared with this strip's `TabPanel`s. |
 
 ## Tabs
@@ -494,6 +582,12 @@ for it to control.
 function TabPanel({ base, id, active, children, className, ...rest }: TabPanelProps)
 ```
 
+The panel a tab controls.
+
+See `TabPanelProps`. It renders nothing at all when its tab is
+not the active one, so the content of a panel that is not showing
+is not in the page.
+
 **Also** [`TabPanelProps`](/docs/sdk/ui-react/reference-the-primitives#tabpanelprops).
 
 ## Divider
@@ -502,11 +596,15 @@ function TabPanel({ base, id, active, children, className, ...rest }: TabPanelPr
 function Divider({ className, ...rest }: HTMLAttributes<HTMLHRElement>)
 ```
 
+A horizontal rule.
+
 ## HeadingProps
 
 ```typescript
 interface HeadingProps extends HTMLAttributes<HTMLHeadingElement>
 ```
+
+What a `Heading` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
@@ -517,6 +615,11 @@ interface HeadingProps extends HTMLAttributes<HTMLHeadingElement>
 ```typescript
 function Heading({ level = 2, className, style, ...rest }: HeadingProps)
 ```
+
+A heading, at the level you say.
+
+The size follows the level, so the outline and the type cannot
+disagree — which is the whole reason there is no `Title`.
 
 **Also** [`HeadingProps`](/docs/sdk/ui-react/reference-the-primitives#headingprops).
 
@@ -534,15 +637,22 @@ How loud. Not `Tone`: this is emphasis, not status.
 interface TextProps extends HTMLAttributes<HTMLParagraphElement>
 ```
 
-| Member | Kind | Type |
-|---|---|---|
-| `tone` | field | `TextTone` |
+What a `Text` takes.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `tone` | field | `TextTone` | How loud it is. |
 
 ## Text
 
 ```typescript
 function Text({ tone = "default", className, ...rest }: TextProps)
 ```
+
+A paragraph.
+
+`TextTone` says how loud it is — emphasis, not status. A
+status is a `Badge`.
 
 **Also** [`TextProps`](/docs/sdk/ui-react/reference-the-primitives#textprops).
 
@@ -551,3 +661,5 @@ function Text({ tone = "default", className, ...rest }: TextProps)
 ```typescript
 function Code({ className, ...rest }: HTMLAttributes<HTMLElement>)
 ```
+
+Inline code: a name, a path, a flag.

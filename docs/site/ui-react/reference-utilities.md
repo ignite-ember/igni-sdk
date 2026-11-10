@@ -8,17 +8,17 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`SplitProps`](#splitprops) | interface | `Split.tsx` | — |
-| [`Split`](#split) | function | `Split.tsx` | — |
+| [`SplitProps`](#splitprops) | interface | `Split.tsx` | What a `Split` takes. |
+| [`Split`](#split) | function | `Split.tsx` | Two panes and a rule you can move. |
 | [`MenuIconName`](#menuiconname) | type | `MenuIcon.tsx` | The small glyphs beside a menu item. |
-| [`MenuIconProps`](#menuiconprops) | interface | `MenuIcon.tsx` | — |
-| [`MenuIcon`](#menuicon) | function | `MenuIcon.tsx` | — |
-| [`Monogram`](#monogram) | function | `Monogram.tsx` | — |
-| [`OverflowAction`](#overflowaction) | interface | `OverflowMenu.tsx` | A row of actions collapsed behind one button. |
-| [`OverflowMenu`](#overflowmenu) | function | `OverflowMenu.tsx` | — |
+| [`MenuIconProps`](#menuiconprops) | interface | `MenuIcon.tsx` | What a `MenuIcon` takes. |
+| [`MenuIcon`](#menuicon) | function | `MenuIcon.tsx` | One of igni's own icons, drawn on a 16×16 grid. |
+| [`Monogram`](#monogram) | function | `Monogram.tsx` | Two letters standing in for a face. |
+| [`OverflowAction`](#overflowaction) | interface | `OverflowMenu.tsx` | One action in an `OverflowMenu`. |
+| [`OverflowMenu`](#overflowmenu) | function | `OverflowMenu.tsx` | A row of actions collapsed behind one button. |
 | [`Skeleton`](#skeleton) | const | `Skeleton.tsx` | Animated placeholder block. Render at the same approximate size and rhythm as the eventual content so the layout doesn't jump when async data lands. |
-| [`TooltipProps`](#tooltipprops) | interface | `Tooltip.tsx` | — |
-| [`Tooltip`](#tooltip) | function | `Tooltip.tsx` | — |
+| [`TooltipProps`](#tooltipprops) | interface | `Tooltip.tsx` | What a `Tooltip` takes. |
+| [`Tooltip`](#tooltip) | function | `Tooltip.tsx` | What an icon means, on hover and on focus. |
 
 ## SplitProps
 
@@ -26,14 +26,16 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 interface SplitProps extends Omit<HTMLAttributes<HTMLDivElement>, "onResize">
 ```
 
+What a `Split` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `aside` | field | `ReactNode` | The fixed-width pane. |
 | `children` | field | `ReactNode` | The pane that takes what is left. |
 | `side` | field | `"start" | "end"` | Which side `aside` is on. Defaults to the left. |
 | `defaultWidth` | field | `number` | Starting width of `aside`, in pixels. |
-| `min` | field | `number` |  |
-| `max` | field | `number` |  |
+| `min` | field | `number` | The narrowest `aside` may be, in pixels. |
+| `max` | field | `number` | The widest `aside` may be, in pixels — and never more than 60% of the window. |
 | `label` | field | `string` | Said to a screen reader, and shown on hover. |
 | `onResize` | field | `(width: number) => void` | The width changed. Called on release and on each keypress, not on every pointer move — a handler that fires sixty times a second is a handler somebody writes a round trip into. |
 
@@ -42,6 +44,11 @@ interface SplitProps extends Omit<HTMLAttributes<HTMLDivElement>, "onResize">
 ```typescript
 function Split({ aside, children, side = "start", defaultWidth = 280, min = 160, max = 640, label, onResize, className, ...rest }: SplitProps)
 ```
+
+Two panes and a rule you can move.
+
+See the note at the top of this file: it drives a CSS variable
+rather than React state, and it does not remember the width.
 
 **Also** [`SplitProps`](/docs/sdk/ui-react/reference-utilities#splitprops).
 
@@ -77,17 +84,26 @@ has.
 interface MenuIconProps
 ```
 
+What a `MenuIcon` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `name` | field | `MenuIconName` | One of igni's own icons. |
 | `path` | field | `string` | An SVG path, for an icon igni does not have. |
-| `className` | field | `string` |  |
+| `className` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
 
 ## MenuIcon
 
 ```typescript
 function MenuIcon({ name, path, className }: MenuIconProps)
 ```
+
+One of igni's own icons, drawn on a 16×16 grid.
+
+See the note at the top of this file for why there is one set and
+one grammar. A name that is not in the set draws nothing, rather
+than a broken box: the label says what the item does, and the icon
+is only how it is found.
 
 **Also** [`MenuIconProps`](/docs/sdk/ui-react/reference-utilities#menuiconprops).
 
@@ -97,33 +113,29 @@ function MenuIcon({ name, path, className }: MenuIconProps)
 function Monogram({ name, size = 18 }: { name: string; size?: number })
 ```
 
+Two letters standing in for a face.
+
+See the note at the top of this file. The colour comes from the
+name, so the same person is the same colour on every machine and
+across restarts.
+
 ## OverflowAction
 
 ```typescript
 interface OverflowAction
 ```
 
-A row of actions collapsed behind one button.
-
-For the case where the actions are real but secondary: four buttons
-across a header give each of them the same weight as the page
-title, and the one that deletes the thing ends up the same size as
-the one that exports it.
-
-Hiding them costs discoverability, so everything that made them
-usable as buttons has to survive the move — focus, the keyboard,
-and the names screen readers announce. That is most of what is
-below.
+One action in an `OverflowMenu`.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `key` | field | `string` | Stable across renders; the label changes on toggles. |
-| `label` | field | `string` |  |
+| `label` | field | `string` | What it is called. |
 | `onSelect` | field | `() => void` | What picking it does. Omitted when `items` makes it a submenu. |
 | `items` | field | `OverflowAction[]` | Variants of this action, opened as a submenu rather than run. Use it when one verb has several objects — export as HTML, as Markdown, as PDF — so the menu stays a list of things you can do rather… |
 | `danger` | field | `boolean` | Destructive — rendered apart from the rest and in the danger colour. |
 | `active` | field | `boolean` | A toggle that is currently on. Announced as such, not just coloured. |
-| `disabled` | field | `boolean` |  |
+| `disabled` | field | `boolean` | Whether it can be picked. Shown as it is, and kept out of the tab order. |
 | `title` | field | `string` | Why you would pick this. Shown on hover, same as the buttons had. |
 | `icon` | field | `MenuIconName` | The glyph beside the label. |
 
@@ -132,6 +144,12 @@ below.
 ```typescript
 function OverflowMenu({ actions, label = "More actions", }: { actions: OverflowAction[]; label?: string; })
 ```
+
+A row of actions collapsed behind one button.
+
+See the note at the top of this file. Everything that made the
+buttons usable as buttons survives the move: focus, the keyboard,
+and the names screen readers announce.
 
 **Also** [`OverflowAction`](/docs/sdk/ui-react/reference-utilities#overflowaction).
 
@@ -163,15 +181,22 @@ Usage:
 interface TooltipProps
 ```
 
+What a `Tooltip` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `text` | field | `string` | The word. Nothing is rendered when it is empty. |
-| `children` | field | `React.ReactNode` |  |
+| `children` | field | `React.ReactNode` | The control the word is about. |
 
 ## Tooltip
 
 ```typescript
 function Tooltip({ text, children }: TooltipProps)
 ```
+
+What an icon means, on hover and on focus.
+
+See the note at the top of this file. It replaces the browser's own
+`title` rather than sitting beside it.
 
 **Also** [`TooltipProps`](/docs/sdk/ui-react/reference-utilities#tooltipprops).

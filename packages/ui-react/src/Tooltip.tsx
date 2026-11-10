@@ -36,12 +36,20 @@ interface At {
   below: boolean;
 }
 
+/** What a {@link Tooltip} takes. */
 export interface TooltipProps {
   /** The word. Nothing is rendered when it is empty. */
   text: string;
+  /** The control the word is about. */
   children: React.ReactNode;
 }
 
+/**
+ * What an icon means, on hover and on focus.
+ *
+ * See the note at the top of this file. It replaces the browser's own
+ * `title` rather than sitting beside it.
+ */
 export function Tooltip({ text, children }: TooltipProps) {
   const wrap = useRef<HTMLSpanElement>(null);
   const bubble = useRef<HTMLDivElement>(null);

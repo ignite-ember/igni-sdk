@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** Which way to say it. */
 export type Urgency = "polite" | "assertive";
 
+/** A live region and the function that speaks into it. */
 export interface Announcer {
   /** Say something. Re-saying the same thing still announces. */
   announce: (message: string, urgency?: Urgency) => void;
@@ -87,9 +88,11 @@ export function useAnnounce(): Announcer {
   return { announce, region };
 }
 
+/** What a {@link LiveRegion} takes. */
 export interface LiveRegionProps {
   /** What to say. Changing it announces; clearing it says nothing. */
   children?: string;
+  /** How insistently it is announced: politely, or assertively. */
   urgency?: Urgency;
 }
 

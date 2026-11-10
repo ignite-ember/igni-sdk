@@ -574,7 +574,7 @@ class Module:
                 if value.startswith("{") and value.endswith("}"):
                     # An object literal: what it holds is its members.
                     body = value[1:-1]
-                    members = self._members(body)
+                    members = self._members(body, statements=True)
                 else:
                     literal = _one_line(value)
                     if literal and len(literal) <= 80:
@@ -589,12 +589,18 @@ class Module:
             exported_from=self.name,
         )
 
-    def _members(self, body: str) -> list[Member]:
+    def _members(self, body: str, statements: bool = False) -> list[Member]:
         """The members of an interface or a class body.
 
         A member starts at the top level of the body — a parameter line
         is inside one, however much it looks like a member — and runs to
         the next member.
+
+        ``statements`` says the body is an object literal rather than a
+        declaration: there a word like ``default`` is a statement of a
+        ``switch`` and not a member. In a declaration it is a name —
+        ``default`` is a field of igni's model registry, and a reserved
+        word is a fine name for a field.
         """
         depths = _line_depths(body)
         starts: list[re.Match[str]] = []
@@ -616,9 +622,13 @@ class Module:
             doc = _doc_before(body, match.start())
             modifiers = match.group(1)
             name = match.group(2)
-            if name in _KEYWORDS:
+            if statements and name in _KEYWORDS:
                 continue
             rest = chunk[match.end() - match.start() :]
+            if _is_internal(doc):
+                # Marked internal: not part of the surface a reader is
+                # looking at, and nothing is owed about it.
+                continue
             if re.search(r"(?:^|\s)(get|set)\s+$", modifiers):
                 out.append(Member(name, "accessor", _accessor_type(rest, modifiers), doc))
             elif rest.lstrip().startswith("="):

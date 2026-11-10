@@ -380,6 +380,12 @@ class TypeScriptGenerator:
             "",
             'import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";',
             "",
+            "/**",
+            " * The version of igni's host schema this file was generated from.",
+            " *",
+            " * It moves when igni's host model moves. The bridge carries it on the",
+            " * wire, so a host and a page can say which model they are speaking.",
+            " */",
             f'export const SCHEMA_VERSION = "{self.schema.version}";',
             "",
         ]
@@ -402,6 +408,7 @@ class TypeScriptGenerator:
         out.append(f'  static readonly PATH = "{spec.path}";')
         children = self.naming.children(spec.path)
         for child in children:
+            out += self._doc(f"`host.{child.path}`. {child.doc}", "  ")
             out.append(
                 f"  readonly {self.naming.attribute(child)}: {self.naming.class_name(child.path)};"
             )
@@ -413,6 +420,13 @@ class TypeScriptGenerator:
             out.append(f"  readonly {s.name}: Signal<{self.type(s.type)}>;")
         out += [
             "",
+            "  /**",
+            "   * The object igni hands a page, bound to a host and to the window",
+            "   * or session it was reached through.",
+            "   *",
+            "   * A page never builds one of these: `bridge.host` is already the",
+            "   * right one, and a second would be a second conversation.",
+            "   */",
             "  constructor(",
             "    link: HostLink,",
             "    window: string | null = null,",

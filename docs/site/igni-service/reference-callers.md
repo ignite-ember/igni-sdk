@@ -7,9 +7,9 @@ Read from the code: every public name below, its signature and its docstring. Im
 | Name | What it is |
 |---|---|
 | [`IgniCall`](#ignicall) | igni itself calling this service, for one organisation. |
-| [`PEOPLE_ONLY`](#people-only) | — |
+| [`PEOPLE_ONLY`](#people-only) | What a service accepts unless it says otherwise: people only. |
 | [`App`](#app) | An app acting as itself: igni's `app` token for this service. |
-| [`Caller`](#caller) | — |
+| [`Caller`](#caller) | Whoever a request comes from, typed: a person, an app or an app's space. |
 | [`CallerKind`](#callerkind) | Who a request may come from: a person, an app, or an app's space. |
 | [`Person`](#person) | A person, as their token describes them, in the one organisation it names. |
 | [`Space`](#space) | One end user of an app, a producer of its own: igni's `space` token for this service. |
@@ -33,6 +33,8 @@ igni itself calling this service, for one organisation.
 ```python
 PEOPLE_ONLY: frozenset = frozenset({CallerKind.PERSON})
 ```
+
+What a service accepts unless it says otherwise: people only.
 
 ## App
 
@@ -72,6 +74,8 @@ The app a verified `app` token's claims describe.
 ```python
 Caller: UnionType = Person | App | Space
 ```
+
+Whoever a request comes from, typed: a person, an app or an app's space.
 
 ## CallerKind
 

@@ -29,6 +29,18 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = SdkDocs(ROOT)
 PAGES = DOCS.pages()
 
+#: Igni's host schema, the contract the host object's fields come from.
+SCHEMA_TYPES = {
+    spec["name"]: spec
+    for spec in json.loads((ROOT / "contracts/host-schema.json").read_text(encoding="utf-8"))[
+        "types"
+    ]
+}
+
+#: A section of a reference page: the name, the declaration it shows, the
+#: header of its table, and the table's rows.
+Section = tuple[str, str, list[str], list[list[str]]]
+
 
 def test_the_checked_in_pages_are_what_the_sources_generate() -> None:
     stale = DOCS.stale()
@@ -247,6 +259,137 @@ def test_the_index_names_each_package_the_way_the_site_routes_it() -> None:
             assert entry["pypi"] == package.registry_url
         else:
             assert "pypi" not in entry
+
+
+def test_no_reference_page_leaves_a_name_or_a_member_undocumented() -> None:
+    """Every name on a reference page says what it is.
+
+    A dash in the "what it is" column is a name the page shows and
+    does not explain. The page would still be correct — but a reader
+    looking for the thing in the reference would find it, and find
+    nothing about it.
+    """
+    undated = [
+        page.file
+        for page in PAGES
+        if page.category == "reference"
+        for line in page.body.split("\n")
+        if line.rstrip().endswith("| — |")
+    ]
+    assert not undated, sorted(set(undated))
+
+
+def test_the_generator_leaves_no_package_undocumented() -> None:
+    """The generator counts what it could not explain; the count is zero.
+
+    This is the generator's own answer, not the page's: it counts a
+    name the code does not document, whatever the page then shows.
+    """
+    docs = SdkDocs(ROOT)
+    docs.pages()
+    for package, notes in docs.report.items():
+        assert notes.get("undocumented", 0) == 0, (package, notes)
+
+
+def _cells(row: str) -> list[str]:
+    """A table row's cells, split on the pipes that are not in `code`.
+
+    A cell may hold a type or a description with a pipe in it — in
+    backticks, or escaped as `\\|` — and the row is split on the rest.
+    """
+    cells: list[str] = []
+    current: list[str] = []
+    in_code = False
+    body = row.strip()
+    if body.startswith("|"):
+        body = body[1:]
+    if body.endswith("|"):
+        body = body[:-1]
+    for index, char in enumerate(body):
+        if char == "`":
+            in_code = not in_code
+        if char == "|" and not in_code and not (index and body[index - 1] == "\\"):
+            cells.append("".join(current).strip())
+            current = []
+            continue
+        current.append(char)
+    cells.append("".join(current).strip())
+    return cells
+
+
+def _sections(page) -> list[Section]:  # type: ignore[no-untyped-def]
+    """Every section of a reference page.
+
+    A section is what a page says about one name: the name, the
+    declaration it shows, the header of its table and the table's rows.
+    The table of names at the top of a page is a section of its own,
+    with no name and no declaration.
+    """
+    out = []
+    for index, chunk in enumerate(page.body.split("\n## ")):
+        heading = chunk.split("\n", 1)[0].strip() if index else ""
+        declared = ""
+        for block in re.findall(r"```typescript\n(.*?)\n```", chunk, re.S):
+            declared = block.strip().split("\n", 1)[0].strip().rsplit(" ", 1)[-1]
+        for table in re.findall(r"(?:^\|.*\n)+", chunk, re.M):
+            lines = table.strip().split("\n")
+            out.append((heading, declared, _cells(lines[0]), [_cells(line) for line in lines[2:]]))
+    return out
+
+
+def test_every_reference_row_says_what_it_is() -> None:
+    """Every row of a reference table says what it is.
+
+    A blank cell is a name the page shows and does not explain. The
+    page would still be right — but a reader looking for the thing in
+    the reference would find it, and find nothing about it.
+
+    The host object's own fields are the one place a blank is allowed,
+    and only there: they come from igni's host schema, and the schema
+    does not describe all of them. The next test says which, and checks
+    that the SDK neither drops a description the schema has nor writes
+    one it has not.
+    """
+    blank = []
+    for page in PAGES:
+        if page.category != "reference":
+            continue
+        for _heading, declared, header, rows in _sections(page):
+            if header[-1] not in ("What it is", "Description"):
+                continue
+            for row in rows:
+                if not row[-1] and declared not in SCHEMA_TYPES:
+                    blank.append(f"{page.file}: {declared or 'the names table'} — {row[0]}")
+    assert not blank, blank[:20]
+
+
+def test_the_host_model_page_says_what_the_contract_says() -> None:
+    """The host model's fields are described as igni's schema describes them.
+
+    A field the schema describes is described here; a field it does not
+    describe is not. The SDK has nothing to add to the contract, and
+    would rather leave a field blank than write what it does not know.
+    """
+    page = next(
+        p
+        for p in PAGES
+        if p.package == "extension-bridge" and p.slug == "reference-the-host-object-model"
+    )
+    shown: dict[str, dict[str, str]] = {}
+    for _heading, declared, header, rows in _sections(page):
+        if declared not in SCHEMA_TYPES or header[-1] not in ("What it is", "Description"):
+            continue
+        shown[declared] = {row[0].strip("`"): row[-1] for row in rows}
+    wrong = []
+    for name, spec in SCHEMA_TYPES.items():
+        if name not in shown:
+            continue
+        for field in spec.get("fields", []):
+            described = bool((field.get("doc") or "").strip())
+            cell = shown[name].get(field["name"], "")
+            if described != bool(cell.strip()):
+                wrong.append((name, field["name"], described, cell))
+    assert not wrong, wrong[:20]
 
 
 def test_the_pages_are_the_same_whatever_the_hash_seed_is() -> None:

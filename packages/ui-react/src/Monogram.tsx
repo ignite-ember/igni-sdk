@@ -74,6 +74,13 @@ export function hexOf(
   return `#${byte(r)}${byte(g)}${byte(b)}`;
 }
 
+/**
+ * Two letters standing in for a face.
+ *
+ * See the note at the top of this file. The colour comes from the
+ * name, so the same person is the same colour on every machine and
+ * across restarts.
+ */
 export function Monogram({ name, size = 18 }: { name: string; size?: number }) {
   const hue = hueOf(name);
   return (

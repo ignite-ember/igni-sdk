@@ -54,6 +54,7 @@ const BIG_STEP = 48;
  */
 const MOST_OF_WINDOW = 0.6;
 
+/** What a {@link Split} takes. */
 export interface SplitProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   "onResize"
@@ -66,7 +67,9 @@ export interface SplitProps extends Omit<
   side?: "start" | "end";
   /** Starting width of `aside`, in pixels. */
   defaultWidth?: number;
+  /** The narrowest `aside` may be, in pixels. */
   min?: number;
+  /** The widest `aside` may be, in pixels — and never more than 60% of the window. */
   max?: number;
   /**
    * Said to a screen reader, and shown on hover.
@@ -83,6 +86,12 @@ export interface SplitProps extends Omit<
   onResize?: (width: number) => void;
 }
 
+/**
+ * Two panes and a rule you can move.
+ *
+ * See the note at the top of this file: it drives a CSS variable
+ * rather than React state, and it does not remember the width.
+ */
 export function Split({
   aside,
   children,

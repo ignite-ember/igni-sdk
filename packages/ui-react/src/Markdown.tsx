@@ -43,9 +43,11 @@ const COMPONENTS: Components = {
   ),
 };
 
+/** What a {@link Markdown} takes. */
 export interface MarkdownProps {
   /** The source. Rendered as a document, not flattened. */
   children: string;
+  /** Added to the element's classes, beside the one the theme gives it. */
   className?: string;
 }
 

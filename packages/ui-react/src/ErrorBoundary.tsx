@@ -23,7 +23,9 @@
  */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+/** What an {@link ErrorBoundary} takes. */
 export interface ErrorBoundaryProps {
+  /** The subtree this boundary guards. */
   children: ReactNode;
   /**
    * Shown instead of the subtree. Receives the error and a function
@@ -55,6 +57,12 @@ function changed(a: readonly unknown[], b: readonly unknown[]): boolean {
   return a.length !== b.length || a.some((value, i) => !Object.is(value, b[i]));
 }
 
+/**
+ * What is shown where a subtree threw.
+ *
+ * See the note at the top of this file: it catches less than people
+ * expect, and the default fallback shows the message on purpose.
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   state: State = { error: null };
 

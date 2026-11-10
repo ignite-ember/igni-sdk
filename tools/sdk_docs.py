@@ -1608,7 +1608,10 @@ NPM_AREAS: dict[str, list[Area]] = {
             ("hostModel.ts", "hostModel.generated.ts"),
             "How igni appears to a page: the objects, their properties and "
             "their signals. The generated half comes from igni's own host "
-            "schema, and `SCHEMA_VERSION` says which version of it.",
+            "schema, and `SCHEMA_VERSION` says which version of it. A field "
+            "the schema does not describe is listed without a description: "
+            "the SDK has none to give, and would rather say nothing than "
+            "write what it does not know.",
         ),
         Area(
             "the-extensions-service",

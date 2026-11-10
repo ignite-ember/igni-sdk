@@ -46,7 +46,9 @@ const DEFAULT_MS = 5_000;
 /** Beyond this, the oldest goes. A wall of toasts is not a message. */
 const MAX_VISIBLE = 4;
 
+/** What a toast says and how long it stays. */
 export interface ToastOptions {
+  /** How loud it is. `danger` interrupts; the rest wait for a pause. */
   tone?: Tone;
   /**
    * Milliseconds before it goes. `null` keeps it until dismissed,
@@ -57,15 +59,21 @@ export interface ToastOptions {
   action?: ReactNode;
 }
 
+/** A toast that is on screen. */
 export interface Toast extends ToastOptions {
+  /** Its id, so it can be dismissed early. */
   id: string;
+  /** What it says. */
   message: ReactNode;
 }
 
+/** How to raise and dismiss toasts. */
 export interface ToastApi {
   /** Show one. Returns its id, so it can be dismissed early. */
   show: (message: ReactNode, options?: ToastOptions) => string;
+  /** Take one away before its time is up. */
   dismiss: (id: string) => void;
+  /** Take every one away. */
   clear: () => void;
 }
 
@@ -205,7 +213,9 @@ export function useToast(): ToastApi {
   return api;
 }
 
+/** What a {@link Banner} takes. */
 export interface BannerProps extends HTMLAttributes<HTMLDivElement> {
+  /** How loud it is. */
   tone?: Tone;
   /** A dismiss affordance appears when this is given. */
   onDismiss?: () => void;

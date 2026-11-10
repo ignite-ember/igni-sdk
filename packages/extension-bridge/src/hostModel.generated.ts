@@ -5,6 +5,12 @@
 
 import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";
 
+/**
+ * The version of igni's host schema this file was generated from.
+ *
+ * It moves when igni's host model moves. The bridge carries it on the
+ * wire, so a host and a page can say which model they are speaking.
+ */
 export const SCHEMA_VERSION = "1.13.0";
 
 /** One change anywhere in the model, as `host.changed` reports it. */
@@ -1164,6 +1170,13 @@ export class HostAppState extends HostObject {
   /** A key was set or deleted. */
   readonly changed: Signal<StateChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1204,6 +1217,13 @@ export class HostChatApprovals extends HostObject {
   /** An approval appeared or went away, whoever answered and whenever — including after a restart. For an app following approvals through the API. */
   readonly changed: Signal<ApprovalChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1238,6 +1258,13 @@ export class HostChatViews extends HostObject {
   /** The person used a control in a view. */
   readonly action: Signal<ViewAction>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1258,6 +1285,7 @@ export class HostChatViews extends HostObject {
 /** igni itself: how it presents things, which version, whether it is connected. */
 export class HostApp extends HostObject {
   static readonly PATH = "app";
+  /** `host.app.state`. Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys. */
   readonly state: HostAppState;
   /** Theme, verbosity, output style. */
   readonly display: Property<Display>;
@@ -1278,6 +1306,13 @@ export class HostApp extends HostObject {
   /** igni started or stopped doing something. */
   readonly activity_changed: Signal<Activity>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1331,6 +1366,13 @@ export class HostWindows extends HostObject {
   /** A window took focus or lost it; `focused` says which. */
   readonly focus_changed: Signal<WindowInfo>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1394,6 +1436,13 @@ export class HostUi extends HostObject {
   /** The transcript came to rest somewhere else, or started or stopped following the newest message. */
   readonly scrolled: Signal<Scroll>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1504,6 +1553,13 @@ export class HostSessions extends HostObject {
   /** A session got its name. */
   readonly named: Signal<SessionNamed>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1542,7 +1598,9 @@ export class HostSessions extends HostObject {
 /** The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen. */
 export class HostChat extends HostObject {
   static readonly PATH = "chat";
+  /** `host.chat.approvals`. The agent asking to act, and the answers. Through `host.sessions.chat(id)` `waiting` reads that session; an approval is answered only in the session on screen. */
   readonly approvals: HostChatApprovals;
+  /** `host.chat.views`. json-render blocks in the transcript — the visualizer's and extensions'. Through `host.sessions.chat(id)` `list` reads that session; `dispatch` acts only in the session on screen. */
   readonly views: HostChatViews;
   /** The current session. */
   readonly session_id: Property<string>;
@@ -1601,6 +1659,13 @@ export class HostChat extends HostObject {
   /** Turns were truncated or discarded. */
   readonly history_changed: Signal<HistoryChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1708,6 +1773,13 @@ export class HostPlan extends HostObject {
   /** A plan was submitted or decided. */
   readonly changed: Signal<PlanChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1745,6 +1817,13 @@ export class HostTasks extends HostObject {
   /** The todo list changed. */
   readonly todos_changed: Signal<Todos>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1768,6 +1847,13 @@ export class HostLoop extends HostObject {
   /** It paused, resumed, advanced or stopped. */
   readonly changed: Signal<LoopStatus>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1811,6 +1897,13 @@ export class HostCommands extends HostObject {
   /** Each skill's details. */
   readonly skill_details: Property<SkillDetails[]>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1837,6 +1930,13 @@ export class HostAgents extends HostObject {
   /** An agent was promoted or discarded. */
   readonly changed: Signal<CollectionChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1866,6 +1966,13 @@ export class HostWorkflows extends HostObject {
   /** A workflow run moved on. */
   readonly changed: Signal<CollectionChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1895,6 +2002,13 @@ export class HostScheduler extends HostObject {
   /** A task started, finished or changed. */
   readonly event: Signal<SchedulerEvent>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1929,6 +2043,13 @@ export class HostProcesses extends HostObject {
   /** A shell started, printed or exited. */
   readonly changed: Signal<ProcessEvent>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -1967,6 +2088,13 @@ export class HostWorkspace extends HostObject {
   /** Files changed, as git sees them, within the grant. */
   readonly files_changed: Signal<FilesChanged>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2020,6 +2148,13 @@ export class HostModels extends HostObject {
   /** The model in use changed. */
   readonly changed: Signal<ModelChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2044,6 +2179,13 @@ export class HostMcp extends HostObject {
   /** A server connected, disconnected or changed tools. */
   readonly changed: Signal<CollectionChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2087,6 +2229,13 @@ export class HostPlugins extends HostObject {
   /** A plugin or marketplace changed. */
   readonly changed: Signal<CollectionChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2152,6 +2301,13 @@ export class HostExtensions extends HostObject {
   /** An extension's health moved. */
   readonly state_changed: Signal<ExtensionStateChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2176,6 +2332,13 @@ export class HostHooks extends HostObject {
   /** Hooks were reloaded. */
   readonly changed: Signal<CollectionChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2205,6 +2368,13 @@ export class HostPermissions extends HostObject {
   /** The mode changed. */
   readonly mode_changed: Signal<PermissionModeChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2232,6 +2402,13 @@ export class HostPolicy extends HostObject {
   /** The group's policy pack. */
   readonly pack: Property<PolicyPack>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2250,6 +2427,13 @@ export class HostAccount extends HostObject {
   /** Someone signed in or out. */
   readonly changed: Signal<Account>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2281,6 +2465,13 @@ export class HostNotifications extends HostObject {
   /** The counts moved. */
   readonly changed: Signal<NotificationCounts>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2319,6 +2510,13 @@ export class HostSelf extends HostObject {
   /** Its health moved. */
   readonly state_changed: Signal<ExtensionStateChange>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,
@@ -2347,33 +2545,64 @@ export class HostSelf extends HostObject {
 /** The root. `changed` reports every change anywhere in the model, for an extension that wants to see all of it; each delivery needs the grant of the member that changed. */
 export class Host extends HostObject {
   static readonly PATH = "";
+  /** `host.app`. igni itself: how it presents things, which version, whether it is connected. */
   readonly app: HostApp;
+  /** `host.windows`. Every open igni window. Address one window's UI with `host.windows.ui(id)`. */
   readonly windows: HostWindows;
+  /** `host.ui`. What a window shows — the model its views bind to. `host.ui` is the active window, the one the person last used; `host.windows.ui(id)` any window. igni's own views write here too, by the same path, so every change below is a signal whoever made it. */
   readonly ui: HostUi;
+  /** `host.sessions`. The sessions of this project, and which one the active window shows. Reach any session's chat, without showing it, with `host.sessions.chat(id)`. */
   readonly sessions: HostSessions;
+  /** `host.chat`. The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen. */
   readonly chat: HostChat;
+  /** `host.plan`. Plan mode: the plan the agent proposed. */
   readonly plan: HostPlan;
+  /** `host.tasks`. The agent's todo list and its sub-agent tasks. */
   readonly tasks: HostTasks;
+  /** `host.loop`. `/loop`: a prompt repeated until done. */
   readonly loop: HostLoop;
+  /** `host.commands`. Slash commands and skills. */
   readonly commands: HostCommands;
+  /** `host.agents`. Agent definitions. */
   readonly agents: HostAgents;
+  /** `host.workflows`. Workflows: scripted runs. */
   readonly workflows: HostWorkflows;
+  /** `host.scheduler`. Scheduled tasks. */
   readonly scheduler: HostScheduler;
+  /** `host.processes`. Background shells. */
   readonly processes: HostProcesses;
+  /** `host.workspace`. The project, as far as the extension's workspace grant reaches. */
   readonly workspace: HostWorkspace;
+  /** `host.models`. Models. */
   readonly models: HostModels;
+  /** `host.mcp`. MCP servers. */
   readonly mcp: HostMcp;
+  /** `host.plugins`. Plugins and marketplaces. */
   readonly plugins: HostPlugins;
+  /** `host.extensions`. Installed extensions. Read-only, apart from this extension's own settings. */
   readonly extensions: HostExtensions;
+  /** `host.hooks`. Hooks. */
   readonly hooks: HostHooks;
+  /** `host.permissions`. What the agent may do without asking. */
   readonly permissions: HostPermissions;
+  /** `host.policy`. The group policy in force. */
   readonly policy: HostPolicy;
+  /** `host.account`. Whether the person is signed in to igni. Never their session or a credential. */
   readonly account: HostAccount;
+  /** `host.notifications`. The floor's notifications. Its own always; everyone's with `notifications`. */
   readonly notifications: HostNotifications;
+  /** `host.self`. This extension, as the host sees it. */
   readonly self: HostSelf;
   /** Anything changed. Carries the member's path and its new value. */
   readonly changed: Signal<Change>;
 
+  /**
+   * The object igni hands a page, bound to a host and to the window
+   * or session it was reached through.
+   *
+   * A page never builds one of these: `bridge.host` is already the
+   * right one, and a second would be a second conversation.
+   */
   constructor(
     link: HostLink,
     window: string | null = null,

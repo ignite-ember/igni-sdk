@@ -8,9 +8,9 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`AppShellProps`](#appshellprops) | interface | `Shell.tsx` | — |
+| [`AppShellProps`](#appshellprops) | interface | `Shell.tsx` | What an `AppShell` takes. |
 | [`AppShell`](#appshell) | function | `Shell.tsx` | Header, body, footer — with exactly one part allowed to grow. |
-| [`ScrollProps`](#scrollprops) | interface | `Shell.tsx` | — |
+| [`ScrollProps`](#scrollprops) | interface | `Shell.tsx` | What a `Scroll` takes. |
 | [`Scroll`](#scroll) | function | `Shell.tsx` | The part that scrolls. |
 
 ## AppShellProps
@@ -18,6 +18,8 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 ```typescript
 interface AppShellProps extends HTMLAttributes<HTMLDivElement>
 ```
+
+What an `AppShell` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
@@ -42,6 +44,8 @@ inside it fills what is left over rather than the whole frame.
 ```typescript
 interface ScrollProps extends HTMLAttributes<HTMLDivElement>
 ```
+
+What a `Scroll` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|

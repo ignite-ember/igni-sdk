@@ -8,19 +8,19 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`ErrorBoundaryProps`](#errorboundaryprops) | interface | `ErrorBoundary.tsx` | — |
-| [`ErrorBoundary`](#errorboundary) | class | `ErrorBoundary.tsx` | — |
-| [`ToastOptions`](#toastoptions) | interface | `Toast.tsx` | — |
-| [`Toast`](#toast) | interface | `Toast.tsx` | — |
-| [`ToastApi`](#toastapi) | interface | `Toast.tsx` | — |
+| [`ErrorBoundaryProps`](#errorboundaryprops) | interface | `ErrorBoundary.tsx` | What an `ErrorBoundary` takes. |
+| [`ErrorBoundary`](#errorboundary) | class | `ErrorBoundary.tsx` | What is shown where a subtree threw. |
+| [`ToastOptions`](#toastoptions) | interface | `Toast.tsx` | What a toast says and how long it stays. |
+| [`Toast`](#toast) | interface | `Toast.tsx` | A toast that is on screen. |
+| [`ToastApi`](#toastapi) | interface | `Toast.tsx` | How to raise and dismiss toasts. |
 | [`ToastHost`](#toasthost) | function | `Toast.tsx` | Wrap the part of the app that raises toasts. |
 | [`useToast`](#usetoast) | function | `Toast.tsx` | Raise a toast. |
-| [`BannerProps`](#bannerprops) | interface | `Toast.tsx` | — |
+| [`BannerProps`](#bannerprops) | interface | `Toast.tsx` | What a `Banner` takes. |
 | [`Banner`](#banner) | function | `Toast.tsx` | A condition that is still true. |
 | [`Urgency`](#urgency) | type | `LiveRegion.tsx` | Which way to say it. |
-| [`Announcer`](#announcer) | interface | `LiveRegion.tsx` | — |
+| [`Announcer`](#announcer) | interface | `LiveRegion.tsx` | A live region and the function that speaks into it. |
 | [`useAnnounce`](#useannounce) | function | `LiveRegion.tsx` | A live region and the function that speaks into it. |
-| [`LiveRegionProps`](#liveregionprops) | interface | `LiveRegion.tsx` | — |
+| [`LiveRegionProps`](#liveregionprops) | interface | `LiveRegion.tsx` | What a `LiveRegion` takes. |
 | [`LiveRegion`](#liveregion) | function | `LiveRegion.tsx` | The declarative form, for a value that already lives in state. |
 
 ## ErrorBoundaryProps
@@ -29,9 +29,11 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 interface ErrorBoundaryProps
 ```
 
+What an `ErrorBoundary` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `children` | field | `ReactNode` |  |
+| `children` | field | `ReactNode` | The subtree this boundary guards. |
 | `fallback` | field | `(error: Error, reset: () => void) => ReactNode` | Shown instead of the subtree. Receives the error and a function that clears the boundary and remounts the children. |
 | `onError` | field | `(error: Error, info: ErrorInfo) => void` | Somewhere to send this — a logger, telemetry, a toast. |
 | `resetKeys` | field | `readonly unknown[]` | Changing any of these clears the boundary. |
@@ -41,6 +43,11 @@ interface ErrorBoundaryProps
 ```typescript
 class ErrorBoundary extends Component<ErrorBoundaryProps, State>
 ```
+
+What is shown where a subtree threw.
+
+See the note at the top of this file: it catches less than people
+expect, and the default fallback shows the message on purpose.
 
 **Also** [`ErrorBoundaryProps`](/docs/sdk/ui-react/reference-feedback#errorboundaryprops).
 
@@ -58,9 +65,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, State>
 interface ToastOptions
 ```
 
+What a toast says and how long it stays.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` |  |
+| `tone` | field | `Tone` | How loud it is. `danger` interrupts; the rest wait for a pause. |
 | `duration` | field | `number | null` | Milliseconds before it goes. `null` keeps it until dismissed, which is the default when there is an `action`. |
 | `action` | field | `ReactNode` | One thing to do about it. Keeps the toast until dismissed. |
 
@@ -70,12 +79,14 @@ interface ToastOptions
 interface Toast extends ToastOptions
 ```
 
+A toast that is on screen.
+
 **Also** [`ToastOptions`](/docs/sdk/ui-react/reference-feedback#toastoptions).
 
-| Member | Kind | Type |
-|---|---|---|
-| `id` | field | `string` |
-| `message` | field | `ReactNode` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `id` | field | `string` | Its id, so it can be dismissed early. |
+| `message` | field | `ReactNode` | What it says. |
 
 ## ToastApi
 
@@ -83,11 +94,13 @@ interface Toast extends ToastOptions
 interface ToastApi
 ```
 
+How to raise and dismiss toasts.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `show` | field | `(message: ReactNode, options?: ToastOptions) => string` | Show one. Returns its id, so it can be dismissed early. |
-| `dismiss` | field | `(id: string) => void` |  |
-| `clear` | field | `() => void` |  |
+| `dismiss` | field | `(id: string) => void` | Take one away before its time is up. |
+| `clear` | field | `() => void` | Take every one away. |
 
 ## ToastHost
 
@@ -120,9 +133,11 @@ nothing, which looks exactly like a save that did not happen.
 interface BannerProps extends HTMLAttributes<HTMLDivElement>
 ```
 
+What a `Banner` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` |  |
+| `tone` | field | `Tone` | How loud it is. |
 | `onDismiss` | field | `() => void` | A dismiss affordance appears when this is given. |
 
 ## Banner
@@ -153,6 +168,8 @@ Which way to say it.
 interface Announcer
 ```
 
+A live region and the function that speaks into it.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `announce` | field | `(message: string, urgency?: Urgency) => void` | Say something. Re-saying the same thing still announces. |
@@ -180,10 +197,12 @@ urgency the implementation noticed first.
 interface LiveRegionProps
 ```
 
+What a `LiveRegion` takes.
+
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `children` | field | `string` | What to say. Changing it announces; clearing it says nothing. |
-| `urgency` | field | `Urgency` |  |
+| `urgency` | field | `Urgency` | How insistently it is announced: politely, or assertively. |
 
 ## LiveRegion
 

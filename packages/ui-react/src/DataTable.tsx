@@ -22,6 +22,7 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 /** Which way a column is sorted, or not. */
 export type SortDirection = "ascending" | "descending";
 
+/** What a {@link SortableTh} takes. */
 export interface SortableThProps
   extends Omit<ThHTMLAttributes<HTMLTableCellElement>, "onClick" | "aria-sort"> {
   /** The heading. */
@@ -79,6 +80,7 @@ export function SortableTh({
   );
 }
 
+/** What a {@link Status} takes. */
 export interface StatusProps {
   /** The four states the health contract defines. */
   state: "READY" | "PREPARING" | "DISABLED" | "FAILED";

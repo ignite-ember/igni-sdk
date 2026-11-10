@@ -15,9 +15,11 @@ import { MenuIcon, type MenuIconName } from "./MenuIcon";
  * below.
  */
 
+/** One action in an {@link OverflowMenu}. */
 export interface OverflowAction {
   /** Stable across renders; the label changes on toggles. */
   key: string;
+  /** What it is called. */
   label: string;
   /** What picking it does. Omitted when `items` makes it a submenu. */
   onSelect?: () => void;
@@ -30,6 +32,7 @@ export interface OverflowAction {
   danger?: boolean;
   /** A toggle that is currently on. Announced as such, not just coloured. */
   active?: boolean;
+  /** Whether it can be picked. Shown as it is, and kept out of the tab order. */
   disabled?: boolean;
   /** Why you would pick this. Shown on hover, same as the buttons had. */
   title?: string;
@@ -64,6 +67,13 @@ function moveFocus(root: HTMLElement | null, key: string): boolean {
   return true;
 }
 
+/**
+ * A row of actions collapsed behind one button.
+ *
+ * See the note at the top of this file. Everything that made the
+ * buttons usable as buttons survives the move: focus, the keyboard,
+ * and the names screen readers announce.
+ */
 export function OverflowMenu({
   actions,
   label = "More actions",
