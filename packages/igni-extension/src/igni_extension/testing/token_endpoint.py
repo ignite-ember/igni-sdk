@@ -59,6 +59,15 @@ class FakeHostTokenEndpoint:
         host = FakeHostTokenEndpoint(
             minter=lambda claims: igni.signer.person_token(claims.sub, org_id=claims.org)
         )
+
+    Args:
+        service_url: The service's URL, as the token's audience and `IGNI_SERVICE_URL`.
+        expires_in: The lifetime it says each token has, in seconds.
+        user_id: The person signed in to begin with: `u-ada`.
+        org_id: The organisation that person belongs to: `org-acme`.
+        email: That person's email address: `ada@acme.test`.
+        name: That person's name: `Ada`.
+        minter: What makes each token; `unsigned` when none is given.
     """
 
     TOKEN_URL = "http://127.0.0.1:47011/igni/service-token"  # noqa: S105 — a loopback URL for tests, not a secret
@@ -94,7 +103,11 @@ class FakeHostTokenEndpoint:
         """Every request, including refused ones."""
 
     def environment(self, **extra: str) -> dict[str, str]:
-        """The variables igni starts the process with, for its service."""
+        """The variables igni starts the process with, for its service.
+
+        Args:
+            extra: More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`.
+        """
         return {
             "IGNI_SERVICE_URL": self.service_url,
             "IGNI_SERVICE_TOKEN_URL": self.TOKEN_URL,
@@ -103,7 +116,14 @@ class FakeHostTokenEndpoint:
         }
 
     def sign_in(self, *, user_id: str, org_id: str, email: str = "", name: str = "") -> None:
-        """Play somebody signing in to igni: tokens are theirs from now on."""
+        """Play somebody signing in to igni: tokens are theirs from now on.
+
+        Args:
+            user_id: The person's igni user id: `u-ada`.
+            org_id: The organisation the person belongs to: `org-acme`.
+            email: The person's email address: `ada@acme.test`.
+            name: The person's name: `Ada`.
+        """
         self.person = TokenClaims(
             sub=user_id, org=org_id, email=email, name=name, aud=self.service_url, jti=""
         )
@@ -120,7 +140,11 @@ class FakeHostTokenEndpoint:
         return httpx.MockTransport(self.handle)
 
     def handle(self, request: httpx.Request) -> httpx.Response:
-        """Answer one request as the host's token endpoint does."""
+        """Answer one request as the host's token endpoint does.
+
+        Args:
+            request: The request the extension made to the token endpoint.
+        """
         self.requests.append(request)
         if request.method != "GET" or str(request.url) != self.TOKEN_URL:
             return httpx.Response(404)
@@ -146,7 +170,11 @@ class FakeHostTokenEndpoint:
 
     @staticmethod
     def unsigned(claims: TokenClaims) -> str:
-        """The default token: an unsigned JWT of `claims`."""
+        """The default token: an unsigned JWT of `claims`.
+
+        Args:
+            claims: What the token says: who it is for, and which service it is for.
+        """
 
         def part(value: bytes) -> str:
             return base64.urlsafe_b64encode(value).rstrip(b"=").decode()

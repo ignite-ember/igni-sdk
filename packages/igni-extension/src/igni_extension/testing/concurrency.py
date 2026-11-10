@@ -84,6 +84,11 @@ class ConcurrencyHarness:
     It checks the SDK's view of the caller; what the extension does with
     it — a cache keyed by nothing, a module-level "current user" — is the
     author's to assert on the results.
+
+    Args:
+        ext: The extension to call, as igni would.
+        stall_limit: The longest the event loop may be held, in seconds, before a run fails.
+        timeout: Seconds to wait for the extension before giving up.
     """
 
     TICK = 0.005
@@ -99,7 +104,12 @@ class ConcurrencyHarness:
         self._timeout = timeout
 
     async def run(self, calls: list[ConcurrentCall], *, check: bool = True) -> ConcurrencyReport:
-        """Make every call at once; `ConcurrencyProblem` on a stall or a leak, unless `check=False`."""
+        """Make every call at once; `ConcurrencyProblem` on a stall or a leak, unless `check=False`.
+
+        Args:
+            calls: The calls to make, one a caller.
+            check: Whether to check the run and raise `ConcurrencyProblem` when it found one.
+        """
         leaks: list[str] = []
         restore = self._watch(calls, leaks)
         stalls: list[float] = []
@@ -134,6 +144,9 @@ class ConcurrencyHarness:
     def check(self, report: ConcurrencyReport) -> None:
         """Raise `ConcurrencyProblem` when `report` found the loop held too long, or a caller
         leaked.
+
+        Args:
+            report: What the run found.
         """
         problems: list[str] = []
         if report.longest_stall > self._stall_limit:
@@ -182,7 +195,11 @@ class ConcurrencyHarness:
 
     @staticmethod
     def sent_index(key: str) -> int:
-        """Which of the harness's calls the request being served is."""
+        """Which of the harness's calls the request being served is.
+
+        Args:
+            key: The `_meta` key the harness numbers its calls with: `igni/test-call`.
+        """
         meta = RequestMeta.current()
         raw = meta.get(key) if meta is not None else None
         return int(raw) if raw is not None else -1
@@ -191,6 +208,12 @@ class ConcurrencyHarness:
     def compare(leaks: list[str], tool: str, when: str, expected: Caller) -> None:
         """Add a line to `leaks` when the caller current now is not `expected`: the tool `tool` saw
         another's caller `when`.
+
+        Args:
+            leaks: The lines found so far, which this one is added to.
+            tool: The tool the call was made to.
+            when: When the caller was read: `as it started`, `as it ended`.
+            expected: The caller the call was sent with.
         """
         seen = Caller.current()
         if seen != expected:

@@ -82,7 +82,12 @@ class Caller(BaseModel):
 
     @classmethod
     def of(cls, raw: Any) -> Caller | None:
-        """A caller from the wire, or `None` when there is none or it is malformed."""
+        """A caller from the wire, or `None` when there is none or it is malformed.
+
+        Args:
+            raw: The principal as the host sent it: the request's `_meta` entry
+                `igni/principal`, or a hook frame's `principal` field.
+        """
         if not isinstance(raw, dict):
             return None
         try:

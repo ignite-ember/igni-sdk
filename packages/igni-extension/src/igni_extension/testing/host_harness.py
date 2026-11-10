@@ -34,7 +34,12 @@ from igni_extension.notifications import (
 
 
 class HostHarness:
-    """The igni host's MCP session with one extension, in this process."""
+    """The igni host's MCP session with one extension, in this process.
+
+    Args:
+        ext: The extension to serve and talk to.
+        timeout: Seconds to wait for the extension before giving up.
+    """
 
     IGNI_METHODS: ClassVar[frozenset[str]] = frozenset({NOTIFY_METHOD, CONDITIONS_METHOD})
     """igni's own notifications, which the harness keeps as they crossed the wire."""
@@ -118,7 +123,13 @@ class HostHarness:
     async def call(
         self, tool: str, arguments: dict[str, Any] | None = None, *, caller: Caller | None = None
     ) -> types.CallToolResult:
-        """Call a tool as igni does: for `caller`, named in the request's `_meta`."""
+        """Call a tool as igni does: for `caller`, named in the request's `_meta`.
+
+        Args:
+            tool: The tool's name, as it was registered: `do_thing`.
+            arguments: The tool's arguments, as the model would pass them.
+            caller: The producer the call is for; nobody when it is `None`.
+        """
         meta = (
             self.request_meta({Caller.META_KEY: caller.model_dump(mode="json")})
             if caller is not None
@@ -133,11 +144,18 @@ class HostHarness:
         `RequestParamsMeta` is an open TypedDict (PEP 728 `extra_items`),
         which mypy cannot yet check for keys it does not name, so the
         dict is declared what it is here, once.
+
+        Args:
+            values: The entries the request's `_meta` carries, by key.
         """
         return cast(types.RequestParamsMeta, values)
 
     async def received(self, count: int) -> list[LocalNotification]:
-        """Wait until the host has `count` notifications from the extension."""
+        """Wait until the host has `count` notifications from the extension.
+
+        Args:
+            count: How many notifications to wait for.
+        """
         with anyio.fail_after(self._timeout):
             while len(self.notifications) < count:
                 await self._changed.wait()
@@ -145,7 +163,11 @@ class HostHarness:
         return list(self.notifications)
 
     async def conditions_said(self, count: int) -> list[dict[str, bool]]:
-        """Wait until the extension has said `count` things about its conditions."""
+        """Wait until the extension has said `count` things about its conditions.
+
+        Args:
+            count: How many statements to wait for.
+        """
         with anyio.fail_after(self._timeout):
             while len(self.conditions) < count:
                 await self._changed.wait()

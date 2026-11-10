@@ -6,7 +6,11 @@ from igni_extension.clock import Clock
 
 
 class ManualClock(Clock):
-    """A clock that moves only when told to."""
+    """A clock that moves only when told to.
+
+    Args:
+        start: The time it starts at, in seconds on the monotonic clock.
+    """
 
     def __init__(self, start: float = 1_000.0) -> None:
         self._now = start
@@ -15,5 +19,9 @@ class ManualClock(Clock):
         return self._now
 
     def advance(self, seconds: float) -> None:
-        """Move the clock forward `seconds`."""
+        """Move the clock forward `seconds`.
+
+        Args:
+            seconds: How far to move it, in seconds.
+        """
         self._now += seconds

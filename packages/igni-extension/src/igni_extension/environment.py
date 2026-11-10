@@ -81,12 +81,19 @@ class Secrets(BaseModel):
 
     @staticmethod
     def env_name(name: str) -> str:
-        """`ledger-token` → `LEDGER_TOKEN`, the way igni writes it."""
+        """`ledger-token` → `LEDGER_TOKEN`, the way igni writes it.
+
+        Args:
+            name: The secret's name as the manifest writes it: `ledger-token`.
+        """
         return "".join(ch if ch.isalnum() else "_" for ch in name).upper()
 
     def get(self, name: str) -> str | None:
         """The secret the manifest names `name` (`ledger-token`), or `None` when the deployment
         supplied none.
+
+        Args:
+            name: The secret's name as the manifest writes it: `ledger-token`.
         """
         return self.by_env_name.get(self.env_name(name))
 
@@ -138,6 +145,9 @@ class Assets(BaseModel):
 
         Raises `NotConfigured` when igni laid out no asset of that name —
         the manifest does not declare it, or this is not running in igni.
+
+        Args:
+            name: The asset's name as the manifest declares it: `neo4j`.
         """
         if self.root is None:
             raise NotConfigured(
@@ -150,7 +160,12 @@ class Assets(BaseModel):
         return where
 
     def file(self, name: str, file: str) -> Path:
-        """One file of an asset that is not unpacked: `<assets>/<name>/<file>`."""
+        """One file of an asset that is not unpacked: `<assets>/<name>/<file>`.
+
+        Args:
+            name: The asset's name as the manifest declares it: `neo4j`.
+            file: The file's name within that asset: `neo4j.conf`.
+        """
         where = self.path(name) / file
         if not where.is_file():
             raise NotConfigured(f"asset {name!r} has no file {file!r}")
@@ -179,7 +194,12 @@ class ExtensionEnvironment(BaseModel):
 
     @classmethod
     def read(cls, environ: Mapping[str, str] | None = None) -> ExtensionEnvironment:
-        """What igni granted, read from `environ` (`os.environ` when `None`)."""
+        """What igni granted, read from `environ` (`os.environ` when `None`).
+
+        Args:
+            environ: The environment variables to read, as igni set them; `os.environ` when
+                `None`.
+        """
         env = dict(os.environ if environ is None else environ)
         secrets = Secrets(
             by_env_name={

@@ -126,7 +126,14 @@ class Told(BaseModel):
 
 
 class HookEvent[T: BaseModel]:
-    """One of igni's hook events, and the value a handler is handed."""
+    """One of igni's hook events, and the value a handler is handed.
+
+    Args:
+        name: igni's name for the event: `PreToolUse`.
+        value: The model a handler is handed for the event's value.
+        decides: Whether the handler's answer counts; `False` for an event it is only told.
+        modify: The fields of the value a `Modify` may change.
+    """
 
     def __init__(
         self, name: str, value: type[T], *, decides: bool, modify: tuple[str, ...] = ()
@@ -143,6 +150,9 @@ class HookEvent[T: BaseModel]:
     def parse(self, raw: Any) -> T:
         """The value igni sent, as the handler's model. Raises `ValidationError` for one it cannot
         read.
+
+        Args:
+            raw: The event's value as igni sent it, before it was read as the model.
         """
         return self.value.model_validate(raw)
 
@@ -215,7 +225,11 @@ class Allow(BaseModel):
     """Always `allow`."""
 
     def for_hook(self, hook_id: str) -> HookAnswer:
-        """The answer as it goes to igni for the hook `hook_id`."""
+        """The answer as it goes to igni for the hook `hook_id`.
+
+        Args:
+            hook_id: The `id` of the hook message this answers.
+        """
         return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
 
 
@@ -233,7 +247,11 @@ class Reject(BaseModel):
         super().__init__(reason=reason, **data)
 
     def for_hook(self, hook_id: str) -> HookAnswer:
-        """The answer as it goes to igni for the hook `hook_id`."""
+        """The answer as it goes to igni for the hook `hook_id`.
+
+        Args:
+            hook_id: The `id` of the hook message this answers.
+        """
         return HookAnswer(hook=hook_id, outcome=Outcome.REJECT, reason=self.reason)
 
 
@@ -251,7 +269,11 @@ class Modify(BaseModel):
         super().__init__(value=value, **data)
 
     def for_hook(self, hook_id: str) -> HookAnswer:
-        """The answer as it goes to igni for the hook `hook_id`."""
+        """The answer as it goes to igni for the hook `hook_id`.
+
+        Args:
+            hook_id: The `id` of the hook message this answers.
+        """
         return HookAnswer(hook=hook_id, outcome=Outcome.MODIFY, value=self.value)
 
 

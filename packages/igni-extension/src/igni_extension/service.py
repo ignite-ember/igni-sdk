@@ -63,7 +63,14 @@ class ServiceWebSocket:
 
 
 class ServiceClient(httpx.AsyncClient):
-    """`ext.service`: the extension's service, as the signed-in person."""
+    """`ext.service`: the extension's service, as the signed-in person.
+
+    Args:
+        base_url: The service's base URL, as igni set it: `http://service.test`.
+        tokens: The person's tokens for the service, which every request carries.
+        transport: The HTTP transport the service is reached through, so a test can answer it.
+        timeout: Seconds to wait for the service before giving up.
+    """
 
     def __init__(
         self,
@@ -91,6 +98,9 @@ class ServiceClient(httpx.AsyncClient):
         The token is fetched from the host for that caller, and kept apart
         from every other caller's. The service sees exactly who the call
         is for, as it checks every token.
+
+        Args:
+            caller: The producer the service is reached as: the person a tool was handed.
         """
         found = self._for.get(caller.ref)
         if found is None:
@@ -118,6 +128,11 @@ class ServiceClient(httpx.AsyncClient):
         """A WebSocket to `path` on the service, with the person's token.
 
         `options` go to `websockets.asyncio.client.connect`.
+
+        Args:
+            path: The path on the service, relative to its base URL: `/v1/rooms/runbook`.
+            options: The options the WebSocket connection takes, as
+                `websockets.asyncio.client.connect` spells them.
         """
         base = str(self.base_url).rstrip("/")
         if base.startswith("https://"):

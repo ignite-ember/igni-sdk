@@ -30,7 +30,12 @@ from igni_extension.session import HostSession
 
 
 class PromptConditions:
-    """The conditions this extension's prompt contributions wait on."""
+    """The conditions this extension's prompt contributions wait on.
+
+    Args:
+        session: The session to the igni host, which the conditions are sent on
+            (`igni_extension.session`).
+    """
 
     def __init__(self, session: HostSession) -> None:
         self._session = session
@@ -42,11 +47,20 @@ class PromptConditions:
         return dict(self._holding)
 
     async def hold(self, condition: str, holds: bool = True) -> None:
-        """Say whether one condition holds. Saying the same again sends nothing."""
+        """Say whether one condition holds. Saying the same again sends nothing.
+
+        Args:
+            condition: The condition's name, as the manifest writes it: `index-covers-head`.
+            holds: Whether the condition is met now; `True` when it is.
+        """
         await self.set({condition: holds})
 
     async def set(self, conditions: dict[str, bool]) -> None:
-        """Say several at once; only the ones that changed are sent."""
+        """Say several at once; only the ones that changed are sent.
+
+        Args:
+            conditions: What each condition now holds, by the name the manifest writes it under.
+        """
         changed = {
             name: holds for name, holds in conditions.items() if self._holding.get(name) != holds
         }
