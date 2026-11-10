@@ -44,17 +44,34 @@ export interface Bridge<
    * than a CSS variable — a canvas, a chart library.
    */
   readonly tokens: ThemeTokens;
-  /** Call a backend RPC. Rejects with the host's refusal, as a sentence. */
+  /**
+   * Call a backend RPC. Rejects with the host's refusal, as a sentence.
+   *
+   * @param method — the method to call, as `ext.<extension-id>.<method>`
+   *   names it.
+   * @param args — the method's arguments, by name.
+   * @param timeoutMs — how long to wait for the answer before giving up,
+   *   in milliseconds. The host has a timeout of its own, and the
+   *   shorter of the two is the one that fires.
+   */
   rpc<T = unknown>(
     method: string,
     args?: RpcArgs,
     timeoutMs?: number,
   ): Promise<T>;
-  /** Ask the host app to navigate. It decides whether to. */
+  /**
+   * Ask the host app to navigate. It decides whether to.
+   *
+   * @param to — the page to go to; the host decides whether it exists.
+   */
   navigate(to: string): void;
   /** Tell the host this surface is finished. */
   close(): void;
-  /** Follow the host's theme. Returns an unsubscribe. */
+  /**
+   * Follow the host's theme. Returns an unsubscribe.
+   *
+   * @param fn — called with the theme whenever it changes.
+   */
   onTheme(fn: (theme: string) => void): () => void;
   /**
    * Follow the launch parameters.
@@ -67,6 +84,8 @@ export interface Bridge<
    *
    * Fires only on change, never for the initial value; read
    * {@link params} for that.
+   *
+   * @param fn — called with the parameters whenever they change.
    */
   onParams(fn: (params: P) => void): () => void;
   /**
@@ -82,6 +101,9 @@ export interface Bridge<
    * Strings only, and keep it small — it ends up in the host's URL.
    * Call it when the user lands somewhere worth returning to, not on
    * every keystroke.
+   *
+   * @param state — where inside the extension the user is now, in
+   *   strings, for the host to fold into its own URL.
    */
   setLocation(state: LocationState): void;
 
@@ -106,6 +128,11 @@ export interface Bridge<
    * one unsubscribes. A signal whose object is not granted never
    * arrives; the refusal goes to `onRefused`, or to the console when
    * there is none. Returns an unsubscribe.
+   *
+   * @param signal — the host signal to follow.
+   * @param fn — called with the signal's value each time it arrives.
+   * @param onRefused — called with the refusal when the host will not
+   *   grant the signal; without one the refusal goes to the console.
    */
   on<T>(
     signal: Signal<T>,

@@ -27,6 +27,13 @@
 
 /** Why `bridge.service` could not do what was asked. */
 export class ServiceError extends Error {
+  /**
+   * Why the service could not do what was asked.
+   *
+   * @param code — why it failed: `no_service`, `refused`,
+   *   `other_origin`, `closed` or `failed`.
+   * @param message — a sentence for a person to read.
+   */
   constructor(
     /**
      * `no_service` (none a page may reach), `refused` (igni gave no
@@ -77,12 +84,20 @@ export interface ServiceBridge {
   /**
    * `fetch` against the service, with the token. `path` is relative
    * to {@link url}. A `401` fetches a new token and is sent once more.
+   *
+   * @param path — where to go, relative to the service's URL.
+   * @param init — what to send, as `fetch` takes it.
    */
   fetch(path: string, init?: RequestInit): Promise<Response>;
   /**
    * A WebSocket to `path` on the service (`https` → `wss`), resolved
    * once it is open and has said who it is (see
    * {@link ServiceSocketOptions.authFrame}).
+   *
+   * @param path — where to open the socket, relative to the service's
+   *   URL.
+   * @param options — how the socket says who it is: the first frame,
+   *   and the sub-protocols.
    */
   websocket(path: string, options?: ServiceSocketOptions): Promise<WebSocket>;
 }
@@ -90,7 +105,11 @@ export interface ServiceBridge {
 /** Fetch a new token when the held one has less than this left. */
 export const RENEW_BEFORE_MS = 60_000;
 
-/** The default first frame: `{"type": "auth", "token": …}`. */
+/**
+ * The default first frame: `{"type": "auth", "token": …}`.
+ *
+ * @param token — the bearer token the frame carries.
+ */
 export function authMessage(token: string): string {
   return JSON.stringify({ type: "auth", token });
 }
@@ -220,7 +239,13 @@ export class ServiceLink implements ServiceBridge {
     return this.fetching;
   }
 
-  /** `path` on the service, or a refusal if it is anywhere else. */
+  /**
+   * `path` on the service, or a refusal if it is anywhere else.
+   *
+   * @param path — the path on the service, relative to its URL.
+   * @param socket — whether the path is opened as a socket, which turns
+   *   `https` into `wss`.
+   */
   private resolve(path: string, socket: boolean): string {
     if (this.url === null) {
       throw new ServiceError(

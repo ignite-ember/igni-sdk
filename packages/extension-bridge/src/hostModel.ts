@@ -175,7 +175,11 @@ export class Property<T> {
     })) as T;
   }
 
-  /** Write it, as the person's UI would. Refused where theirs would be. */
+  /**
+   * Write it, as the person's UI would. Refused where theirs would be.
+   *
+   * @param value — what the host should hold for it from now on.
+   */
   async set(value: T): Promise<void> {
     if (!this.writable) {
       throw new HostError("read_only", `host.${this.path} cannot be set`);
