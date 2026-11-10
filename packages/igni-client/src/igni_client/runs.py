@@ -7,14 +7,22 @@ and one for each answered approval (see `igni_client.approvals`).
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 from igni_client.approvals import ApprovalRequested
 from igni_client.connection import Connection
 from igni_client.errors import NotAllowed
-from igni_client.events import ErrorMessage, Event, RequirementDetails, RunPaused, StreamEnd
-from igni_client.frames import HitlDecision, HitlResponseBatch, UserMessage
+from igni_client.models import (
+    ErrorMessage,
+    HitlDecision,
+    HitlResponseBatch,
+    RequirementDetails,
+    RunPaused,
+    StreamEnd,
+    UserMessage,
+)
 from igni_client.routing import Interruption
+from igni_client.wire import Event
 
 
 class Run:
@@ -70,3 +78,22 @@ class Run:
         await self._start(
             HitlResponseBatch(id=request_id, session_id=self._session_id, decisions=decisions)
         )
+
+
+def answer_elsewhere(
+    conn: Connection, session_id: str
+) -> Callable[[list[HitlDecision]], Awaitable[None]]:
+    """How to answer a pause seen outside a run of this client's (`Session.events()`).
+
+    The answer is sent; the resumed run is broadcast like any other, so
+    whoever watches the session sees it go on.
+    """
+
+    async def answer(decisions: list[HitlDecision]) -> None:
+        await conn.send(
+            HitlResponseBatch(
+                id=conn.router.new_id("hitl"), session_id=session_id, decisions=decisions
+            )
+        )
+
+    return answer

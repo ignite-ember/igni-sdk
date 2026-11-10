@@ -111,6 +111,21 @@ async def test_a_revoked_client_is_told_so_in_igni_s_words(
     assert response.json() == {
         "error": "invalid_client",
         "error_description": "this client has been revoked",
+        "client_state": "revoked",
+    }
+
+
+async def test_a_fake_playing_an_older_igni_says_the_state_in_words_only(
+    fake: FakeIgni, pair: RsaKeyPair
+) -> None:
+    fake.clients.revoke(APP)
+    fake.oauth.verifier.names_client_state = False
+
+    response = await post(fake, IgniPaths.TOKEN, grant(assertion(fake, pair)))
+
+    assert response.json() == {
+        "error": "invalid_client",
+        "error_description": "this client has been revoked",
     }
 
 

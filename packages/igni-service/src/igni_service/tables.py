@@ -22,7 +22,15 @@ from sqlalchemy import Column, DateTime, Float, MetaData, Table, Text
 
 
 class IgniTables:
+    """The SDK's own tables in the service's database, on one `MetaData`.
+
+    `SqlKeyStore` and `SqlWebSessionStore` create them on first use. A
+    service that owns its schema in migrations adds `IgniTables.metadata`
+    to Alembic's `target_metadata` and passes `create_table=False`.
+    """
+
     metadata = MetaData()
+    """The `MetaData` all three tables are on: add it to Alembic's `target_metadata`."""
 
     service_key = Table(
         "igni_service_key",
@@ -34,6 +42,7 @@ class IgniTables:
         Column("private_key_encrypted", Text, nullable=False),
         Column("created_at", DateTime(timezone=True), nullable=False),
     )
+    """`igni_service_key`: the service's private key, sealed, in one row."""
 
     web_session = Table(
         "igni_web_session",
@@ -45,6 +54,7 @@ class IgniTables:
         #: When the refresh token runs out: past this the row is dead.
         Column("expires_at", Float, nullable=False, index=True),
     )
+    """`igni_web_session`: people signed in to the service's pages, sealed, by a digest of their cookie."""
 
     web_login = Table(
         "igni_web_login",
@@ -54,3 +64,4 @@ class IgniTables:
         Column("sealed", Text, nullable=False),
         Column("expires_at", Float, nullable=False, index=True),
     )
+    """`igni_web_login`: sign-ins in flight at igni's portal, sealed, by a digest of their `state`."""

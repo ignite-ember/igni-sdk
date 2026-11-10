@@ -67,32 +67,35 @@ class RevokedKind(StrEnum):
 class Revocation(BaseModel):
     """One watermark, as igni publishes it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     kind: RevokedKind
-    #: Its organisation; ``None`` for every organisation (sessions withdrawn).
     org_id: str | None = None
-    #: The token's ``sub``: a person's user id, an app's or a space's id.
+    """Its organisation; ``None`` for every organisation (sessions withdrawn)."""
     subject_id: str
-    #: A person's membership revoked (§11.3); informational here.
+    """The token's ``sub``: a person's user id, an app's or a space's id."""
     incarnation: str | None = None
-    #: Unix milliseconds: a token issued (``iat_ms``) at or before it is refused.
+    """A person's membership revoked (§11.3); informational here."""
     not_before_ms: int
-    #: ``removed``, ``inactive``, ``erased``, ``sessions_withdrawn``.
+    """Unix milliseconds: a token issued (``iat_ms``) at or before it is refused."""
     reason: str = ""
+    """``removed``, ``inactive``, ``erased``, ``sessions_withdrawn``."""
 
 
 class RevocationPage(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     revocations: list[Revocation] = Field(default_factory=list)
     cursor: str | None = None
 
 
 class ServedOrganisation(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     org_id: str
     name: str = ""
 
 
 class ServedOrganisations(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     organisations: list[ServedOrganisation] = Field(default_factory=list)
 
 
@@ -118,8 +121,8 @@ class RevocationList:
         "app": RevokedKind.APP,
         "space": RevokedKind.SPACE,
     }
-    #: igni keeps a revocation 31 days, past the longest a token lives.
     KEPT_MS: ClassVar[int] = 31 * 86_400_000
+    """igni keeps a revocation 31 days, past the longest a token lives."""
 
     def __init__(self, *, max_staleness: float = 30.0, clock: Clock | None = None) -> None:
         self.max_staleness = max_staleness
@@ -189,15 +192,15 @@ class RevocationList:
 class RevocationFeed:
     """Follows the revocations of every organisation this service serves."""
 
-    #: How long igni is asked to hold a request with nothing new (0–30).
     WAIT_SECONDS: ClassVar[float] = 25.0
-    #: Between tries while igni fails.
+    """How long igni is asked to hold a request with nothing new (0–30)."""
     POLL_SECONDS: ClassVar[float] = 2.0
+    """Between tries while igni fails."""
 
-    #: The token's scope: no organisation, these two calls only.
     SCOPE: ClassVar[str] = "revocations"
-    #: How long before expiry the token is replaced, in seconds.
+    """The token's scope: no organisation, these two calls only."""
     RENEW_BEFORE: ClassVar[float] = 60.0
+    """How long before expiry the token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -217,8 +220,8 @@ class RevocationFeed:
         self._token: str | None = None
         self._token_expires = 0.0
         self._stop: asyncio.Event | None = None
-        #: What ``/v1/organisations/served`` last answered.
         self.served: list[ServedOrganisation] = []
+        """What ``/v1/organisations/served`` last answered."""
 
     @property
     def running(self) -> bool:

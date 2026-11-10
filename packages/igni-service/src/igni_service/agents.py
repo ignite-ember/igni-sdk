@@ -51,6 +51,7 @@ class Agent:
 
     @property
     def producer(self) -> Producer:
+        """Whose igni this agent is: the person or app every item goes to."""
         return self._producer
 
     async def send_message(
@@ -131,7 +132,23 @@ class Agent:
         return Chat(self, thread)
 
     async def status(self, event_id: str) -> ItemStatus:
-        """`pending`, `delivered`, `expired`, `dropped` or `failed`, with the reason."""
+        """Where an item igni accepted stands, as igni holds it now.
+
+        `state` is one of:
+
+        - `pending` — stored; the producer's igni has not taken it yet.
+        - `delivered` — a message posted, or an event a handler took.
+        - `not_handled` — an event no handler took: no handler for its
+          type, no running extension, or the handler raised;
+          `not_handled_reason` says which.
+        - `expired` — not taken before `expires_at`.
+        - `dropped` — the producer no longer has the extension;
+          `dropped_reason` says why.
+        - `failed` — the platform gave up; `failed_reason` says why.
+
+        Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
+        `IgniUnavailable` otherwise.
+        """
         return await self._wire.status(self._org_id, event_id)
 
     async def send_item(
@@ -170,6 +187,7 @@ class Chat:
     def __init__(self, agent: Agent, thread: str) -> None:
         self._agent = agent
         self.thread = thread
+        """The thread's id: the same id names the same chat on every call."""
 
     async def send_message(
         self,
@@ -213,6 +231,7 @@ class Chat:
         return await self._act(ChatAction(op="show", view=view, title=title), event_key)
 
     async def rename(self, title: str, *, event_key: str | None = None) -> EventAccepted:
+        """Give the chat a new title (1-200 characters). Starts no run."""
         return await self._act(ChatAction(op="rename", title=title), event_key)
 
     async def cancel(self, *, event_key: str | None = None) -> EventAccepted:

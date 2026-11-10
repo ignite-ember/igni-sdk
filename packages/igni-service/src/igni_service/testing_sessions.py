@@ -13,7 +13,7 @@ import hashlib
 import uuid
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.clock import Clock
 from igni_service.crypto import Base64Url
@@ -21,8 +21,8 @@ from igni_service.testing_clients import FakeClientRegistry
 from igni_service.testing_directory import FakeDirectory
 from igni_service.testing_wire import IgniAddresses, TokenForm
 
-#: How long a code the portal hands a browser stays good, in seconds.
 CODE_LIFETIME = 60
+"""How long a code the portal hands a browser stays good, in seconds."""
 
 
 class PortalRefused(ValueError):
@@ -31,6 +31,8 @@ class PortalRefused(ValueError):
 
 class IssuedCode(BaseModel):
     """An authorization code the portal handed a browser, until it is used."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     client_id: str
     redirect_uri: str
@@ -53,15 +55,19 @@ class IssuedCode(BaseModel):
 class HeldRefresh(BaseModel):
     """A refresh token igni still honours: whose, for which client and organisation."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
     user_id: str
     org_id: str
-    #: The sign-in it belongs to: what a revocation ends.
     grant: str
+    """The sign-in it belongs to: what a revocation ends."""
 
 
 class AuthorizeRequest(BaseModel):
     """The query a service sends a browser to the portal's `/authorize` with."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     client_id: str = ""
     response_type: str = ""

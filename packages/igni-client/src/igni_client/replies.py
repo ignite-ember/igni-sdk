@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from igni_client.approvals import ApprovalRequested, Approver
 from igni_client.errors import RunFailed
-from igni_client.events import ContentDelta, Event, RunCompleted, RunError, ToolCompleted
+from igni_client.models import ContentDelta, RunCompleted, RunError, ToolCompleted
+from igni_client.wire import Event
 
 
 class Reply(BaseModel):

@@ -9,6 +9,15 @@ made with a token about to expire can reach igni after it has.
 A 401 from igni with a token that should still be good means igni has
 stopped honouring it (the service was revoked, or igni's keys moved):
 `request` drops it and tries once more with a fresh one.
+
+A token refused because of the service's registration is raised as what
+it means: `ServiceNotApproved` while no super admin has approved it,
+`ServiceRevoked` after one revoked it. Which of the two is read from a
+field, never from igni's sentence: the `client_state` igni sends with
+`invalid_client`, or — from an igni server that does not send it yet —
+the `state` igni answers a registration with, asked for again the way
+every start asks it (the same key gets the same registration back, and
+changes nothing: re-registering cannot un-revoke).
 """
 
 from __future__ import annotations
@@ -17,7 +26,7 @@ import asyncio
 from typing import Any
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.clock import Clock
 from igni_service.errors import IgniUnavailable, ServiceNotApproved, ServiceRevoked
@@ -29,6 +38,7 @@ from igni_service.token_endpoint import GrantRefused, IssuedTokens, TokenEndpoin
 
 
 class HeldToken(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     token: str
     expires_at: float
 
@@ -36,8 +46,8 @@ class HeldToken(BaseModel):
 class ServiceTokens:
     """Service tokens for igni, kept per organisation."""
 
-    #: How long before expiry a kept token is replaced, in seconds.
     RENEW_BEFORE = 60.0
+    """How long before expiry a kept token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -48,6 +58,7 @@ class ServiceTokens:
         clock: Clock | None = None,
     ) -> None:
         self._igni = igni
+        self._registration = registration
         self._endpoint = TokenEndpoint(igni, registration, key)
         self._clock = clock or Clock()
         self._held: dict[str, HeldToken] = {}
@@ -84,27 +95,50 @@ class ServiceTokens:
             return held.token
         return None
 
+    NOT_APPROVED = "pending"
+    """igni's registration states that refuse a service token, by what they mean."""
+    REVOKED = "revoked"
+
     async def _issue(self, org_id: str) -> IssuedTokens:
         try:
             return await self._endpoint.grant(ClientCredentialsGrant(organisation=org_id))
         except GrantRefused as exc:
             # `invalid_client` while a super admin has not approved this
-            # service yet, or after they revoked it. Said in igni's own
-            # words, because that is the sentence to act on — and as its
-            # own kind, because "try again later" is the wrong advice.
-            raise self.refusal(exc) from exc
+            # service yet, or after they revoked it: raised as its own
+            # kind, because "try again later" is the wrong advice.
+            raise self.refusal(exc, await self.client_state(exc)) from exc
 
-    @staticmethod
-    def refusal(exc: GrantRefused) -> IgniUnavailable:
-        """What igni's refusal of a service token means, as the error to raise."""
+    async def client_state(self, exc: GrantRefused) -> str | None:
+        """The state igni holds this service's registration in, when `exc` is about it.
+
+        `None` for any refusal but `invalid_client`. Otherwise igni's
+        `client_state`; from an igni server that does not send one, the
+        `state` of this key's registration, registering it again to ask —
+        `None` if that cannot be had either.
+        """
+        if exc.refusal.error != "invalid_client":
+            return None
+        if exc.refusal.client_state is not None:
+            return exc.refusal.client_state
+        try:
+            return (await self._registration.register()).state
+        except IgniUnavailable:
+            return None
+
+    @classmethod
+    def refusal(cls, exc: GrantRefused, client_state: str | None = None) -> IgniUnavailable:
+        """What igni's refusal of a service token means, as the error to raise.
+
+        `client_state` is the registration's state (`client_state`); the
+        error's message carries igni's own words, which are for people.
+        """
         message = f"igni server refused a service token: {exc}"
-        said = exc.detail.lower()
-        if "waiting for a super admin" in said or "not approved" in said:
+        if client_state == cls.NOT_APPROVED:
             return ServiceNotApproved(
                 f"{message}. A super admin approves this service in igni's portal under "
                 "Services, after checking the thumbprint this service logged at start-up."
             )
-        if "revoked" in said:
+        if client_state == cls.REVOKED:
             return ServiceRevoked(message)
         return IgniUnavailable(message)
 

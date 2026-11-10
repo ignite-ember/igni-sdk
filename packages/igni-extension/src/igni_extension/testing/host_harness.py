@@ -36,8 +36,8 @@ from igni_extension.notifications import (
 class HostHarness:
     """The igni host's MCP session with one extension, in this process."""
 
-    #: igni's own notifications, which the harness keeps as they crossed the wire.
     IGNI_METHODS: ClassVar[frozenset[str]] = frozenset({NOTIFY_METHOD, CONDITIONS_METHOD})
+    """igni's own notifications, which the harness keeps as they crossed the wire."""
 
     def __init__(self, ext: IgniExtension, *, timeout: float = 5.0) -> None:
         self._ext = ext
@@ -46,15 +46,18 @@ class HostHarness:
         self._tasks: TaskGroup | None = None
         self._session: ClientSession | None = None
         self._changed = anyio.Event()
-        #: What the extension told the host, parsed as the host parses it.
         self.notifications: list[LocalNotification] = []
-        #: The same messages exactly as they crossed the wire.
+        """What the extension told the host, parsed as the host parses it."""
         self.raw: list[dict[str, Any]] = []
-        #: What the extension said about its conditions, in order.
+        """The same messages exactly as they crossed the wire."""
         self.conditions: list[dict[str, bool]] = []
+        """What the extension said about its conditions, in order."""
 
     @property
     def session(self) -> ClientSession:
+        """The MCP client session talking to the extension, for what `call` does not cover. Raises
+        `RuntimeError` outside `async with`.
+        """
         if self._session is None:
             raise RuntimeError("enter the harness first: async with HostHarness(ext) as host")
         return self._session

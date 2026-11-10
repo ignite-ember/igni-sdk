@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from igni_extension.host_model import Host, HostNotifications
 
-#: `ext.host.notifications`, under the name it had before the model.
 Notifications = HostNotifications
+"""`ext.host.notifications`, under the name it had before the model."""
 
 __all__ = ["Host", "Notifications"]

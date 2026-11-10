@@ -9,7 +9,7 @@ and a difference stops the build.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from igni_service.bundle.code_tools import CodeToolsRead
 from igni_service.bundle.manifest import AgentTool, BundleManifest
@@ -19,8 +19,10 @@ from igni_service.errors import BundleError
 class ToolsOutcome(BaseModel):
     """What the bundle's manifest should say about its tools, and what was said about it."""
 
-    #: The tools to write into the bundle's manifest; `None` leaves it as written.
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     written: list[AgentTool] | None = None
+    """The tools to write into the bundle's manifest; `None` leaves it as written."""
     notes: list[str] = Field(default_factory=list)
 
 

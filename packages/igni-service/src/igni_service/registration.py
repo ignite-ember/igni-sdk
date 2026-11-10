@@ -26,7 +26,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from igni_service.assets import BundleAsset, BundleAssets, BundleLayout, FileDigest
 from igni_service.bundle.archive import BundleArchive
@@ -38,18 +38,21 @@ from igni_service.urls import IgniPaths
 
 logger = logging.getLogger(__name__)
 
-#: The header igni reads a bundle's signature from.
 SIGNATURE_HEADER = "X-Igni-Bundle-Signature"
-#: The header igni reads an asset's signature from.
+"""The header igni reads a bundle's signature from."""
 ASSET_SIGNATURE_HEADER = "X-Igni-Asset-Signature"
+"""The header igni reads an asset's signature from."""
 
 
 class ClientJwks(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     keys: list[Jwk]
 
 
 class ClientMetadata(BaseModel):
     """The RFC 7591 body a service registers with."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     client_name: str
     client_uri: str
@@ -62,6 +65,8 @@ class ClientMetadata(BaseModel):
 class Registration(BaseModel):
     """What igni answers a registration with (RFC 7591 §3.2.1, plus its state)."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
     client_uri: str = ""
     state: str = ""
@@ -71,16 +76,23 @@ class Registration(BaseModel):
 class PublishedExtension(BaseModel):
     """What igni holds for this client's extension."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     extension_id: str
+    """The extension's manifest `id`."""
     version: str
+    """The version igni holds."""
     sha256: str
-    #: An approved service's version that asks for more than the approved
-    #: one is taken and **held** for a super admin; machines keep receiving
-    #: the approved version until one approves it (service-identity §8.1).
+    """The SHA-256 of the bundle igni holds, hex."""
     held: bool = False
-    #: igni's reason for holding it, and the grants it adds.
+    """An approved service's version that asks for more than the approved
+    one is taken and **held** for a super admin; machines keep receiving
+    the approved version until one approves it (service-identity §8.1).
+    """
     reason: str | None = None
+    """igni's reason for holding it, and the grants it adds."""
     added: list[str] = Field(default_factory=list)
+    """The grants the held version adds over the approved one."""
 
 
 class ExtensionRefused(IgniError):
@@ -92,16 +104,20 @@ class ExtensionBundle:
 
     def __init__(self, archive: bytes, *, assets_dir: Path | None = None) -> None:
         self.archive = archive
+        """The bundle's bytes."""
         self.sha256 = hashlib.sha256(archive).hexdigest()
+        """Their SHA-256, hex: what igni compares to know whether it holds this bundle."""
         manifest = BundleArchive.read_manifest(archive)
         try:
             self.extension_id, self.version = str(manifest["id"]), str(manifest["version"])
             self.assets = BundleAssets.model_validate(
                 {"assets": manifest.get("assets") or []}
             ).assets
+            """The assets its manifest declares."""
         except (KeyError, ValueError) as exc:
             raise BundleError(f"the extension bundle's manifest is unreadable: {exc}") from exc
         self.assets_dir = assets_dir
+        """Where the assets' files are: `<bundle>.assets/`, as the bundle builder writes them."""
 
     @classmethod
     def at(cls, path: str | Path) -> ExtensionBundle | None:
@@ -117,6 +133,7 @@ class ExtensionBundle:
 
     @property
     def claim(self) -> BundleClaim:
+        """What the bundle's signature says: its extension, version and digest."""
         return BundleClaim(extension=self.extension_id, version=self.version, sha256=self.sha256)
 
     def asset_file(self, asset: BundleAsset) -> Path:
@@ -147,13 +164,13 @@ class AssetBody:
 class ServiceRegistration:
     """This service's registration with igni, and its extension there."""
 
-    #: Backoff while igni cannot be reached at start, in seconds.
     RETRY_MIN = 5.0
+    """Backoff while igni cannot be reached at start, in seconds."""
     RETRY_MAX = 300.0
-    #: An upload may be large; it gets longer than an ordinary call.
     UPLOAD_TIMEOUT = 120.0
-    #: An asset may be a JVM or a database distribution.
+    """An upload may be large; it gets longer than an ordinary call."""
     ASSET_UPLOAD_TIMEOUT = 900.0
+    """An asset may be a JVM or a database distribution."""
 
     def __init__(
         self,
@@ -429,7 +446,6 @@ class ServiceRegistration:
             logger.error("igni: %s; nothing more uploaded", exc)
         return registration
 
-    #: What comes next, by the state igni answered the registration with.
     NEXT_STEPS: dict[str, tuple[str, ...]] = {
         "pending": (
             "A super admin approves this service in igni's portal under",
@@ -444,6 +460,7 @@ class ServiceRegistration:
             "and stops distributing its extension. Ask a super admin.",
         ),
     }
+    """What comes next, by the state igni answered the registration with."""
 
     @classmethod
     def next_step(cls, state: str) -> str:

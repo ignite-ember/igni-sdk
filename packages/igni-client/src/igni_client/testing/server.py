@@ -9,14 +9,14 @@ from collections.abc import Awaitable, Callable
 from http import HTTPStatus
 from typing import Any, Protocol
 
-from pydantic import ValidationError
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 from websockets.http11 import Request, Response
 
-from igni_client.events import Event, Welcome
+from igni_client.models import PushNotification, Welcome
 from igni_client.targets import TOKEN_PROTOCOL_PREFIX
-from igni_client.testing.inbound import CLIENT_FRAME, ClientFrame, Received
+from igni_client.testing.inbound import ClientFrame, Received, read_frame
+from igni_client.wire import Event
 
 SUBPROTOCOL = "igni.v1"
 
@@ -46,7 +46,10 @@ class LocalHandshake:
         return connection.respond(HTTPStatus.FORBIDDEN, "Forbidden\n")
 
 
-FrameHandler = Callable[[ClientFrame], Awaitable[None]]
+#: Sends one message to the client that sent the frame being handled, and no other.
+Reply = Callable[[Event], Awaitable[None]]
+#: Handles one frame a client sent; `Reply` answers that client alone.
+FrameHandler = Callable[[ClientFrame, Reply], Awaitable[None]]
 
 
 class FakeSocket:
@@ -115,6 +118,12 @@ class FakeSocket:
         for socket in list(self._clients):
             await self._send(socket, event)
 
+    async def push(self, channel: str, payload: dict[str, Any], *, session_id: str = "") -> None:
+        """Broadcast a push notification on `channel`, as igni's tools and handlers do."""
+        await self.broadcast(
+            PushNotification(channel=channel, payload=payload, session_id=session_id)
+        )
+
     # ── The socket ──
 
     async def _serve(self, socket: ServerConnection) -> None:
@@ -135,11 +144,15 @@ class FakeSocket:
 
     def _receive(self, socket: ServerConnection, raw: str | bytes) -> None:
         try:
-            frame = CLIENT_FRAME.validate_json(raw)
-        except ValidationError:  # not a message igni reads: igni passes it over too
+            frame = read_frame(raw)
+        except ValueError:  # not a message igni reads: igni passes it over too
             return
         self.received.append(Received(client_id=self._clients.get(socket, ""), frame=frame))
-        task = asyncio.ensure_future(self._handler(frame))
+
+        async def reply(event: Event) -> None:
+            await self._send(socket, event)
+
+        task = asyncio.ensure_future(self._handler(frame, reply))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
@@ -149,7 +162,7 @@ class FakeSocket:
     @staticmethod
     async def _send(socket: ServerConnection, event: Event) -> None:
         with contextlib.suppress(ConnectionClosed):  # it left; the broadcast goes on
-            await socket.send(event.model_dump_json(exclude_none=True))
+            await socket.send(event.model_dump_json(by_alias=True))
 
 
-__all__ = ["FakeSocket", "FrameHandler", "Handshake", "LocalHandshake"]
+__all__ = ["FakeSocket", "FrameHandler", "Handshake", "LocalHandshake", "Reply"]

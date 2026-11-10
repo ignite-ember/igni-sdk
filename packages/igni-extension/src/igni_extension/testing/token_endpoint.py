@@ -12,7 +12,7 @@ import secrets
 from collections.abc import Callable
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_extension.caller import Caller, CallerKind
 
@@ -20,18 +20,28 @@ from igni_extension.caller import Caller, CallerKind
 class TokenClaims(BaseModel):
     """What the fake host's tokens say: enough for `ext.tokens.signed_in`."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     sub: str
+    """The person's user id."""
     org: str
+    """Their organisation."""
     email: str = ""
+    """Their email address."""
     name: str = ""
+    """Their name."""
     aud: str
+    """The service's URL: whom the token is for."""
     token_use: str = "user"  # noqa: S105 — a claim's value, not a secret
+    """Always `user`: a person's token."""
     jti: str
+    """The token's own id, fresh for each one handed out."""
 
 
-#: Makes the token a fake host hands out for one person — see
-#: `FakeHostTokenEndpoint(minter=...)`.
 Minter = Callable[[TokenClaims], str]
+"""Makes the token a fake host hands out for one person — see
+`FakeHostTokenEndpoint(minter=...)`.
+"""
 
 
 class FakeHostTokenEndpoint:
@@ -52,7 +62,9 @@ class FakeHostTokenEndpoint:
     """
 
     TOKEN_URL = "http://127.0.0.1:47011/igni/service-token"  # noqa: S105 — a loopback URL for tests, not a secret
+    """The endpoint's address, as `IGNI_SERVICE_TOKEN_URL` names it."""
     SERVICE_URL = "http://service.test"
+    """The service's URL unless another is given."""
 
     def __init__(
         self,
@@ -66,15 +78,20 @@ class FakeHostTokenEndpoint:
         minter: Minter | None = None,
     ) -> None:
         self.service_url = service_url
+        """The service's URL: `IGNI_SERVICE_URL`, and every token's audience."""
         self.minter: Minter = minter or self.unsigned
+        """What makes each token: `unsigned` unless one was given."""
         self.secret = secrets.token_urlsafe(24)
+        """The secret the process presents: `IGNI_SERVICE_TOKEN_SECRET` in `environment()`."""
         self.expires_in = expires_in
+        """The lifetime it says each token has, in seconds."""
         self.person: TokenClaims | None = None
+        """Who is signed in; `None` after `sign_out`, when every request is answered 503."""
         self.sign_in(user_id=user_id, org_id=org_id, email=email, name=name)
-        #: Every token handed out, in order.
         self.issued: list[str] = []
-        #: Every request, including refused ones.
+        """Every token handed out, in order."""
         self.requests: list[httpx.Request] = []
+        """Every request, including refused ones."""
 
     def environment(self, **extra: str) -> dict[str, str]:
         """The variables igni starts the process with, for its service."""
@@ -86,18 +103,24 @@ class FakeHostTokenEndpoint:
         }
 
     def sign_in(self, *, user_id: str, org_id: str, email: str = "", name: str = "") -> None:
+        """Play somebody signing in to igni: tokens are theirs from now on."""
         self.person = TokenClaims(
             sub=user_id, org=org_id, email=email, name=name, aud=self.service_url, jti=""
         )
 
     def sign_out(self) -> None:
+        """Play the person signing out: token requests are refused until `sign_in`."""
         self.person = None
 
     @property
     def transport(self) -> httpx.MockTransport:
+        """An `httpx` transport answering as the endpoint: pass it as
+        `IgniExtension(token_transport=...)`.
+        """
         return httpx.MockTransport(self.handle)
 
     def handle(self, request: httpx.Request) -> httpx.Response:
+        """Answer one request as the host's token endpoint does."""
         self.requests.append(request)
         if request.method != "GET" or str(request.url) != self.TOKEN_URL:
             return httpx.Response(404)

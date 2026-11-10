@@ -53,8 +53,8 @@ class AppId:
 class IgniApp:
     """An app's place in an igni deployment: its key, its token, its VM's profile."""
 
-    #: How long before expiry the token is replaced, in seconds.
     RENEW_BEFORE = 60.0
+    """How long before expiry the token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -71,11 +71,15 @@ class IgniApp:
         if not igni_server_url.strip():
             raise ConfigurationError("igni: IGNI_SERVER_URL must be set")
         self.app_id = app_id
+        """The app's id, as an org admin registered it."""
         self.clock = clock or Clock()
-        #: Its VM profile: `.request(wanted)`, `.status()`, `.effective()`.
+        """The clock the token's age is read from; tests pass a `ManualClock`."""
         self.vm_profile = AppVmProfiles(app_id, self)
+        """Its VM profile: `.request(wanted)`, `.status()`, `.effective()`."""
         self.server = IgniServer(base_url=igni_server_url, timeout=timeout, http=http)
+        """igni server as the app reaches it."""
         self.key = SigningKey(key_store, clock=self.clock)
+        """The app's signing key; `await app.public_jwk()` is what an org admin registers."""
         self._endpoint = TokenEndpoint(self.server, AppId(app_id), self.key)
         self._held: HeldToken | None = None
         self._lock = asyncio.Lock()
@@ -92,6 +96,7 @@ class IgniApp:
         await self.aclose()
 
     async def aclose(self) -> None:
+        """Close the HTTP client this object opened."""
         await self.server.aclose()
 
     # ── The key an org admin registers ──────────────────────────────

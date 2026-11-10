@@ -25,8 +25,8 @@ from igni_service.testing_claims import (
 from igni_service.testing_directory import FakeDirectory
 from igni_service.testing_wire import IgniAddresses, RoutedCall
 
-#: How long a token igni signs lives, in seconds.
 LIFETIME = 600.0
+"""How long a token igni signs lives, in seconds."""
 
 
 class KeyRing:
@@ -60,8 +60,8 @@ class FakeSigner:
         self.clock = clock
         self.directory = directory
         self.keys = KeyRing()
-        #: How long a service may keep igni's keys, in seconds.
         self.max_age = 300
+        """How long a service may keep igni's keys, in seconds."""
 
     def sign(self, sub: str, claims: OrgClaims, overrides: TokenOverrides | None = None) -> str:
         """A token for `sub` carrying `claims`, as igni signs one, bent by `overrides`."""

@@ -25,11 +25,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from igni_client.errors import ApprovalRequired
-from igni_client.events import Requirement, RunPaused
-from igni_client.frames import HitlDecision, Scope
+from igni_client.models import HitlDecision, Requirement, RunPaused
 
-#: How far an allowed call's answer reaches.
+#: How far an allowed call's answer reaches: this call (`once`), every
+#: identical call (`always`), or similar calls (`similar`). Only igni's window
+#: saves a rule; an approver answers `once`.
 Choice = Literal["once", "always", "similar"]
+#: How far any answer reaches: an allowed call's `Choice`, or — for a
+#: refusal — `deny`, refusing such calls from now on.
+Scope = Literal["once", "always", "similar", "deny"]
 
 
 class Decision(BaseModel):

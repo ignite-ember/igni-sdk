@@ -28,12 +28,12 @@ class RouteAuth(StrEnum):
     """The token a route needs."""
 
     NONE = "none"
-    #: A service token for one organisation.
     SERVICE = "service"
-    #: A service token, for one organisation or for none (revocations, served).
+    """A service token for one organisation."""
     SERVICE_ANY_ORG = "service_any_org"
-    #: An app's own token.
+    """A service token, for one organisation or for none (revocations, served)."""
     APP = "app"
+    """An app's own token."""
 
     @property
     def is_service(self) -> bool:
@@ -43,13 +43,13 @@ class RouteAuth(StrEnum):
 class Route(BaseModel):
     """One path the fake serves, and what answers it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     path: str
-    #: Whether `path` is a prefix rather than the whole path.
     prefix: bool = False
-    #: The method it takes; `None` for any.
+    """Whether `path` is a prefix rather than the whole path."""
     method: str | None = None
+    """The method it takes; `None` for any."""
     auth: RouteAuth = RouteAuth.NONE
     handler: Handler
 
@@ -62,6 +62,8 @@ class Route(BaseModel):
 
 class AppPath(BaseModel):
     """`/v1/apps/{app_id}/{what}`."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     app_id: str
     what: str

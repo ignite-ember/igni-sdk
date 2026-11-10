@@ -86,12 +86,12 @@ if TYPE_CHECKING:
 class FakeIgni:
     """Every igni endpoint a service calls, composed of one collaborator per part of igni."""
 
-    #: Where the service reaches the fake.
     BASE = BASE
-    #: Its issuer: its public URL, deliberately not `BASE`.
+    """Where the service reaches the fake."""
     ISSUER = ISSUER
-    #: The service under test's own URL.
+    """Its issuer: its public URL, deliberately not `BASE`."""
     SERVICE_URL = SERVICE_URL
+    """The service under test's own URL."""
 
     def __init__(
         self,
@@ -101,13 +101,21 @@ class FakeIgni:
         require_approval: bool = False,
     ) -> None:
         self.addresses = addresses or IgniAddresses()
+        """The fake's three addresses: `base_url`, `issuer`, `service_url`."""
         self.clock = clock or Clock()
+        """The clock the fake signs and expires by; pass a `ManualClock` to move it."""
         self.traffic = RecordedTraffic()
+        """Every request the fake was sent; `fail(path, status)` plays igni failing."""
         self.directory = FakeDirectory()
+        """The organisations and their members: `add_member`, `add_organisation`, ..."""
         self.clients = FakeClientRegistry()
+        """The registered services and apps: `approve()` and `revoke()` play a super admin."""
         self.signer = FakeSigner(
             addresses=self.addresses, clock=self.clock, directory=self.directory
         )
+        """Signs the tokens a service receives: `person_token`, `app_token`, `space_token`,
+        `igni_token`.
+        """
         self.oauth = FakeTokenEndpoint(
             verifier=ClientAssertionVerifier(
                 addresses=self.addresses,
@@ -124,13 +132,17 @@ class FakeIgni:
             ),
             signer=self.signer,
         )
+        """The token and revocation endpoints, and the portal's sign-in."""
         self.extensions = FakeExtensionStore(self.clients)
+        """The extension bundles and assets services uploaded; `hold(reason)` holds new versions."""
         self.notifications = FakeNotifications(directory=self.directory, extensions=self.extensions)
+        """Every notification call, and every delivery after igni's rules."""
         self.revocations = FakeRevocations(self.clock)
-        #: The agent channel: items, uploaded files, their states.
+        """What igni has revoked: `publish(subject_id, org_id=...)` removes somebody."""
         self.agents = FakeAgents(is_member=self.directory.is_member, clock=self.clock.wall)
-        #: VM profiles: requests, an org admin's decisions, what a VM gets.
+        """The agent channel: items, uploaded files, their states."""
         self.vm_profiles = FakeVmProfiles(clock=self.clock.wall)
+        """VM profiles: requests, an org admin's decisions, what a VM gets."""
         self._routes = self._route_table()
 
     @property
@@ -232,9 +244,11 @@ class FakeIgni:
     # ── The wire ────────────────────────────────────────────────────
 
     def transport(self) -> httpx.MockTransport:
+        """An `httpx` transport that reaches the fake: pass it as a service's `http`."""
         return httpx.MockTransport(self._answer)
 
     def http_client(self) -> httpx.AsyncClient:
+        """An `httpx.AsyncClient` that reaches the fake."""
         return httpx.AsyncClient(transport=self.transport())
 
     def _answer(self, request: httpx.Request) -> httpx.Response:

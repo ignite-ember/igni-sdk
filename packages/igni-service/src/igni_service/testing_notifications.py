@@ -24,26 +24,35 @@ from igni_service.testing_wire import DetailError, RoutedCall
 class NotifyCall(BaseModel):
     """One `POST /v1/service-notifications`, as the service sent it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     org_id: str
+    """The organisation the service token named."""
     client_id: str
+    """The service that sent it: its client id at igni."""
     notifications: list[Notification]
+    """The notifications in the call, as sent."""
 
 
 class Delivery(BaseModel):
     """One person told about one notification, after igni's rules."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     org_id: str
+    """The organisation the person was told in."""
     user_id: str
+    """Who was told."""
     source: str
+    """The service that told them: its client id."""
     notification: Notification
+    """What they were told."""
 
 
 class DeliveryKey(BaseModel):
     """What igni tells a person about once: one source's one `event_key`."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     user_id: str
     source: str

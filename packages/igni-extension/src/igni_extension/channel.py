@@ -45,14 +45,32 @@ logger = logging.getLogger(__name__)
 
 
 class HostConnection:
-    """One extension process's connection to the igni host."""
+    """One extension process's connection to the igni host (`ext.connection`).
 
-    #: How long a request waits for its answer.
+    What an extension author may read or call:
+
+    - `configured` — whether igni gave the process the host's address;
+      `False` outside igni.
+    - `connected` — whether the socket is open now.
+    - `granted`, `schema_version` — what the host said on connecting: the
+      `permissions.host` grants this extension holds, and the version of
+      its object model. Empty until the first connection.
+    - `await connect()` — connect, and subscribe to every handled signal.
+      Idempotent. Raises `HostUnavailable` when the host does not answer.
+    - `await serve_forever()` — stay connected, reconnecting every
+      `RETRY_SECONDS`, until cancelled; returns at once when not
+      `configured`. `ext.run()` runs it.
+    - `await close()` — close the socket and stop what it was running.
+
+    `request` is how `ext.host` reaches the host; use `ext.host` instead.
+    """
+
     TIMEOUT = 120.0
-    #: Between attempts to reach a host that is not answering yet.
+    """How long a request waits for its answer."""
     RETRY_SECONDS = 2.0
-    #: The largest frame either side sends.
+    """Between attempts to reach a host that is not answering yet."""
     MAX_FRAME = 8 * 1024 * 1024
+    """The largest frame either side sends."""
 
     def __init__(
         self,
@@ -72,17 +90,20 @@ class HostConnection:
         self._waiting: dict[int | str, asyncio.Future[Reply]] = {}
         self._hello: asyncio.Future[Hello] | None = None
         self._tasks: set[asyncio.Task[Any]] = set()
-        #: What the host said this extension holds, after connecting.
         self.granted: list[str] = []
+        """What the host said this extension holds, after connecting."""
         self.schema_version = ""
+        """The version of its object model the host said it speaks, after connecting."""
         signals.when_new(self._new_signal)
 
     @property
     def configured(self) -> bool:
+        """Whether igni gave this process the host's address (`IGNI_HOST_URL`, `IGNI_HOST_SECRET`)."""
         return self._endpoint.configured
 
     @property
     def connected(self) -> bool:
+        """Whether the socket to the host is open now."""
         return self._socket is not None
 
     # ── HostLink ──────────────────────────────────────────────────
@@ -97,6 +118,12 @@ class HostConnection:
         params: dict[str, Any] | None = None,
         value: Any = None,
     ) -> Any:
+        """One `get`, `set` or `call` on the host, answered.
+
+        What `ext.host` is made of; use `ext.host` instead. Raises
+        `NotConfigured` outside igni, `HostUnavailable` when the host cannot be
+        reached, and `HostError` when it refuses.
+        """
         if not self.configured:
             raise NotConfigured(
                 f"host.{path}: igni did not give this process the host's address "
@@ -175,6 +202,7 @@ class HostConnection:
             await asyncio.sleep(self.RETRY_SECONDS)
 
     async def close(self) -> None:
+        """Close the socket, and cancel the signal, hook and service event work it started."""
         await self._drop()
         for task in list(self._tasks):
             task.cancel()

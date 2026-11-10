@@ -16,7 +16,7 @@ import tempfile
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from igni_service.assets import AssetFetcher, BundleAsset, BundleLayout
 from igni_service.bundle.archive import BundleArchive
@@ -34,14 +34,16 @@ from igni_service.bundle.wheelhouse import Wheelhouse
 class BundleReport(BaseModel):
     """What was built, and what was said about it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     out: Path
     extension_id: str
     version: str
     sha256: str
     size: int
     wheels: list[str] = Field(default_factory=list)
-    #: `<out>.assets`, where every declared asset was written by digest.
     assets_dir: Path
+    """`<out>.assets`, where every declared asset was written by digest."""
     assets: list[BundleAsset] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
@@ -49,10 +51,11 @@ class BundleReport(BaseModel):
 class BundleBuilder:
     """Builds one extension directory into a bundle."""
 
-    #: What goes into the bundle from the extension directory, besides the
-    #: wheelhouse. Sources travel inside the extension's wheel; tests do not
-    #: travel at all.
     SHIPPED = ("manifest.json", "README.md", "plugin", "ui")
+    """What goes into the bundle from the extension directory, besides the
+    wheelhouse. Sources travel inside the extension's wheel; tests do not
+    travel at all.
+    """
 
     def __init__(
         self,

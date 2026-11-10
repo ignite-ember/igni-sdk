@@ -29,9 +29,10 @@ from igni_client import (
 )
 from igni_client import backoff as backoff_module
 from igni_client import connection as connection_module
-from igni_client.connection import Connection
+from igni_client.api import NOT_FOR_CLIENTS
+from igni_client.connection import REFUSED_METHODS, Connection
 from igni_client.events import ContentDelta, PushNotification, RpcResponse, parse_event
-from igni_client.frames import REFUSED_METHODS, RpcRequest
+from igni_client.frames import RpcRequest
 from igni_client.lifecycle import Lifecycle, Link, Phase
 from igni_client.routing import Interruption, Router
 from igni_client.testing import Delay, FakeGateway, FakeIgni, Steps
@@ -170,7 +171,7 @@ async def test_a_producer_no_longer_active_is_final() -> None:
             await fake.socket.drop(1008, "not an active producer")
             await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
             with pytest.raises(NotAllowed, match="not an active producer"):
-                await igni.rpc("get_todos")
+                await igni.processes.list()
         assert fake.socket.connections == 1
 
 
@@ -179,7 +180,7 @@ async def test_a_local_igni_that_closed_is_not_reopened() -> None:
         await fake.socket.drop(1001, "going away")
         await _until(lambda: igni._conn._lifecycle.phase is Phase.FAILED)
         with pytest.raises(Unavailable):
-            await igni.rpc("get_todos")
+            await igni.processes.list()
         assert fake.socket.connections == 1
 
 
@@ -304,13 +305,13 @@ async def test_a_message_igni_cannot_mean_is_passed_over_and_the_connection_goes
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     async with FakeIgni() as fake:
-        fake.methods.answers["get_todos"] = []
+        fake.methods.answers["list_background_processes"] = []
         async with IgniClient(fake.local()) as igni:
             with caplog.at_level(logging.WARNING, logger="igni_client.connection"):
                 for socket in list(fake.socket._clients):
                     await socket.send("not json")
                     await socket.send(json.dumps(["not", "an", "object"]))
-                assert await igni.rpc("get_todos") == []
+                assert await igni.processes.list() == []
 
     said = [record.getMessage() for record in caplog.records]
     assert any("not JSON" in line for line in said)
@@ -359,8 +360,8 @@ async def test_events_stop_listening_when_left_and_never_yield_a_welcome() -> No
 
 async def test_the_connection_module_keeps_only_the_socket() -> None:
     assert connection_module.__all__ == ["REFUSED_METHODS", "Connection"]
-    assert connection_module.REFUSED_METHODS is REFUSED_METHODS, (
-        "igni-core's protocol test reads it"
+    assert frozenset(NOT_FOR_CLIENTS) == REFUSED_METHODS, (
+        "igni-core's protocol test reads it: the methods no client sends"
     )
     assert not hasattr(connection_module, "Interruption"), "now igni_client.routing.Interruption"
     for moved in ("new_id", "open_stream", "close_stream", "listen", "unlisten"):
@@ -431,7 +432,7 @@ async def test_a_dropped_connection_that_stays_busy_gives_up() -> None:
             with pytest.raises(
                 Unavailable, match=r"could not be reached again after it closed \(1011\)"
             ):
-                await igni.rpc("get_todos")
+                await igni.processes.list()
         assert fake.socket.connections == 3
 
 
@@ -446,14 +447,16 @@ async def test_an_igni_that_never_says_welcome_is_unavailable() -> None:
 async def test_a_call_igni_never_answers_is_unavailable() -> None:
     async with _igni_that(welcomes=True) as target, IgniClient(target) as igni:
         igni._conn.RPC_TIMEOUT = 0.05
-        with pytest.raises(Unavailable, match="get_todos got no answer from igni at"):
-            await igni.rpc("get_todos")
+        with pytest.raises(
+            Unavailable, match="list_background_processes got no answer from igni at"
+        ):
+            await igni.processes.list()
 
 
 async def test_closing_ends_every_call_in_flight() -> None:
     async with _igni_that(welcomes=True) as target:
         igni = await IgniClient(target).connect()
-        call = asyncio.ensure_future(igni.rpc("get_todos"))
+        call = asyncio.ensure_future(igni.processes.list())
         await asyncio.sleep(0.05)
         await igni.close()
         with pytest.raises(Unavailable, match="the client was closed"):
@@ -569,3 +572,16 @@ async def _igni_that(*, welcomes: bool) -> AsyncIterator[Local]:
     async with serve(serve_one, "127.0.0.1", 0, subprotocols=[Subprotocol("igni.v1")]) as server:
         port = next(iter(server.sockets)).getsockname()[1]
         yield Local(url=f"ws://127.0.0.1:{port}")
+
+
+async def test_the_fake_answers_a_call_to_the_client_that_made_it_alone() -> None:
+    async with FakeIgni() as fake:
+        fake.methods.answers["list_background_processes"] = []
+        async with IgniClient(fake.local()) as caller, IgniClient(fake.local()) as other:
+            seen = other._conn.router.listen()
+            assert await caller.processes.list() == []
+            await fake.socket.push("session_named", {"session_id": "s", "name": "n"})
+            await _until(lambda: not seen.empty())
+            assert [seen.get_nowait().type] == ["push_notification"], (
+                "igni answers a call to its caller; only a broadcast reaches the rest"
+            )

@@ -38,7 +38,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/ignite-ember/igni-sdk"
-Documentation = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service#readme"
+Documentation = "https://ignite-ember.sh/docs/sdk/igni-service"
 Source = "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service"
 Issues = "https://github.com/ignite-ember/igni-sdk/issues"
 

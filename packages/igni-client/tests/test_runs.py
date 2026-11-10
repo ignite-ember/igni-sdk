@@ -4,46 +4,51 @@ from __future__ import annotations
 
 import asyncio
 import json
-import math
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
 from typing import get_args
 
 import pytest
 from pydantic import ValidationError
-from websockets.asyncio.client import connect
-from websockets.typing import Subprotocol
 
 from igni_client import (
+    AccessRefused,
     ApprovalRequested,
     ApprovalRequired,
     ContentDelta,
     Decision,
     IgniClient,
     InfoMessage,
+    InvalidArguments,
+    MethodFailed,
     NotAllowed,
     Requirement,
-    RpcError,
     RunCompleted,
     RunFailed,
     RunStarted,
     StatusUpdate,
     ToolCompleted,
     ToolStarted,
+    UnexpectedAnswer,
+    UnknownMethod,
 )
-from igni_client.approvals import Approver
+from igni_client.api import NOT_FOR_CLIENTS
+from igni_client.approvals import Approver, Scope
 from igni_client.events import ErrorMessage, Event, RequirementDetails, RunError, RunPaused
 from igni_client.frames import (
     HitlDecision,
     HitlResponseBatch,
     QueueMessage,
     RpcRequest,
-    Scope,
     UserMessage,
 )
-from igni_client.methods import ATTACHED_SESSION, HISTORY, HistoryTurn
+from igni_client.models import RpcResponse, ToolTurn, UserTurn
 from igni_client.replies import Reply
 from igni_client.testing import Delay, FakeIgni, Pause, Steps
+
+
+def _refuse(error: str) -> RpcResponse:
+    """An answer the fake sends as it is: igni's error, as an `rpc_response`."""
+    return RpcResponse(error=error)
 
 
 async def test_a_prompt_streams_typed_events_to_its_end() -> None:
@@ -212,65 +217,97 @@ async def test_sessions_are_created_opened_listed_and_switched() -> None:
         opened = await igni.sessions.open(created.id)
         listed = await igni.sessions.list()
         default = await igni.sessions.default()
-        notice = await created.use_model("igni-1")
+        notice = await created.models.switch("igni-1")
         status = await created.status()
-        catalogue = await igni.models.list()
+        registry = await created.models.list()
 
     assert opened is created and created.project_dir == "/workspace/payments"
     assert created.id in [entry.session_id for entry in listed]
     assert default.id == "s-default"
-    assert notice == "Switched to igni-1"
-    assert status.model == "igni-1"
-    assert catalogue.default == "igni-1" and catalogue.models["igni-1"].provider == "igni"
+    assert isinstance(notice, InfoMessage) and notice.text == "Switched to igni-1"
+    assert isinstance(status, StatusUpdate) and status.model == "igni-1"
+    assert registry.default == "igni-1" and registry.registry["igni-1"].provider == "igni"
 
 
-async def test_a_session_reads_its_history_as_turns() -> None:
+async def test_a_session_reads_its_history_as_typed_turns() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
         fake.methods.history[session.id] = [
-            HistoryTurn(role="user", content="hello", created_at=1),
-            HistoryTurn.model_validate({"role": "tool", "tool_name": "read_file", "content": "ok"}),
+            UserTurn(run_id="r-1", created_at=1, content="hello"),
+            ToolTurn(
+                run_id="r-1",
+                created_at=2,
+                tool_name="read_file",
+                friendly_name="Read file",
+                args="a.py",
+                content="ok",
+                is_error=False,
+                is_rejected=False,
+            ),
         ]
-        history = await session.history()
+        history = await session.history.get()
 
     assert [turn.role for turn in history] == ["user", "tool"]
-    assert history[0].content == "hello" and history[1].model_extra == {"tool_name": "read_file"}
+    user, tool = history
+    assert isinstance(user, UserTurn) and user.content == "hello"
+    assert isinstance(tool, ToolTurn) and tool.tool_name == "read_file"
+    asked = [c for c in fake.methods.calls if c.method == "get_chat_history"]
+    assert asked[0].args == {"session_id": session.id}, "a session names itself"
 
 
 async def test_an_answer_not_shaped_as_the_method_returns_raises() -> None:
     async with FakeIgni() as fake:
-        fake.methods.answers["get_turns"] = {"not": "a list"}
+        fake.methods.answers["get_todos"] = {"not": "a list"}
         async with IgniClient(fake.local()) as igni:
-            with pytest.raises(RpcError, match="get_turns"):
-                await igni._conn.rpc("get_turns", HISTORY)
+            session = await igni.sessions.create()
+            with pytest.raises(UnexpectedAnswer, match="get_todos"):
+                await session.todos()
 
 
-async def test_any_method_is_reachable_and_an_error_raises() -> None:
-    async with FakeIgni() as fake:
-        fake.methods.answers["get_todos"] = lambda args: [{"text": "write tests", "done": False}]
-        async with IgniClient(fake.local()) as igni:
-            todos = await igni.rpc("get_todos")
-            with pytest.raises(RpcError, match="Unknown RPC method"):
-                await igni.rpc("no_such_method")
+async def test_each_kind_of_error_igni_answers_is_its_own_type() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["get_todos"] = lambda args: _refuse("Unknown RPC method: get_todos")
+        with pytest.raises(UnknownMethod):
+            await session.todos()
+        fake.methods.answers["get_todos"] = lambda args: _refuse(
+            "get_todos: only igni's window may do this"
+        )
+        with pytest.raises(AccessRefused) as refused:
+            await session.todos()
+        assert isinstance(refused.value, NotAllowed), "a refusal is also NotAllowed"
+        fake.methods.answers["get_todos"] = lambda args: _refuse("the disk is full")
+        with pytest.raises(MethodFailed, match="the disk is full") as failed:
+            await session.todos()
+        assert failed.value.method == "get_todos" and failed.value.message == "the disk is full"
 
-    assert todos == [{"text": "write tests", "done": False}]
+
+async def test_arguments_are_checked_before_they_are_sent() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with pytest.raises(InvalidArguments, match="read_process_tail"):
+            await igni.processes.tail("not a pid")  # type: ignore[arg-type]
+
+    assert not any(
+        r.frame.type == "rpc_request" and r.frame.method == "read_process_tail"  # type: ignore[union-attr]
+        for r in fake.socket.received
+    )
 
 
 async def test_a_vm_not_yet_bound_is_asked_again() -> None:
     async with FakeIgni() as fake:
-        fake.methods.answers["get_todos"] = []
+        fake.methods.answers["list_background_processes"] = []
         async with IgniClient(fake.local()) as igni:
             igni._conn.UNBOUND_RETRY_SECONDS = 0.01
             fake.methods.unbound_for(3)
-            assert await igni.rpc("get_todos") == []
+            assert await igni.processes.list() == []
 
 
-async def test_a_client_never_sends_what_stops_igni() -> None:
+async def test_a_client_never_sends_a_page_s_or_the_platform_s_call() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-        for method in ("shutdown", "vm_sign_in", "deliver_service_events"):
+        for method in NOT_FOR_CLIENTS:
+            assert not hasattr(igni, method)
             with pytest.raises(ValueError) as refused:
-                await igni.rpc(method)
-            assert type(refused.value) is ValueError, "a plain ValueError, as 0.1.0 raised"
+                await igni._conn.ask(method)
             assert str(refused.value) == f"{method} is not a client's to send"
 
     assert not any(r.frame.type == "rpc_request" for r in fake.socket.received)
@@ -288,10 +325,10 @@ def test_an_approval_answer_reaches_only_as_far_as_igni_knows() -> None:
 
 async def test_an_attach_answer_without_its_project_is_refused() -> None:
     async with FakeIgni() as fake:
-        fake.methods.answers["attach_elsewhere"] = {"session_id": "s-9"}
+        fake.methods.answers["attach_session"] = {"session_id": "s-9"}
         async with IgniClient(fake.local()) as igni:
-            with pytest.raises(RpcError, match="attach_elsewhere"):
-                await igni._conn.rpc("attach_elsewhere", ATTACHED_SESSION)
+            with pytest.raises(UnexpectedAnswer, match="attach_session"):
+                await igni.sessions.create()
 
 
 async def test_an_approval_is_answered_once() -> None:
@@ -315,8 +352,8 @@ async def test_an_approval_is_answered_once() -> None:
 async def test_the_calls_of_a_pause_are_answered_in_their_order() -> None:
     pause = Pause(
         requirements=[
-            Requirement(requirement_id="req-a", tool_name="read_file"),
-            Requirement(requirement_id="req-b", tool_name="write_file", friendly_name="Write"),
+            _requirement("req-a", "read_file"),
+            _requirement("req-b", "write_file").model_copy(update={"friendly_name": "Write"}),
         ]
     )
     async with FakeIgni() as fake:
@@ -373,8 +410,8 @@ async def test_an_approver_on_its_own_answers_each_call_and_refuses_without_a_po
     paused = RunPaused(
         run_id="r-9",
         requirements=[
-            Requirement(requirement_id="req-a", tool_name="read_file"),
-            Requirement(requirement_id="req-b", tool_name="deploy"),
+            _requirement("req-a", "read_file"),
+            _requirement("req-b", "deploy"),
         ],
     )
     await Approver(lambda r: r.tool_name == "read_file").answer(ApprovalRequested(paused, answer))
@@ -467,38 +504,12 @@ async def test_the_details_of_a_waiting_call_fill_in_its_requirement() -> None:
     assert not seen[0].requirements[0].details_pending
 
 
-def test_an_approval_frame_refuses_a_scope_igni_does_not_know() -> None:
+def test_an_approval_s_scope_is_checked_by_the_decision_and_sent_as_igni_types_it() -> None:
+    """igni's contract types `choice` as a string; `Decision` holds the values igni knows."""
     assert get_args(Scope) == ("once", "always", "similar", "deny")
     assert HitlDecision(requirement_id="r", action="reject", choice="deny").choice == "deny"
     with pytest.raises(ValidationError, match="choice"):
-        HitlDecision(requirement_id="r", action="confirm", choice="sometimes")  # type: ignore[arg-type]
-
-
-async def test_the_fake_passes_over_an_answer_with_a_scope_igni_does_not_know() -> None:
-    def batch(choice: str) -> str:
-        decision = {"requirement_id": "req-x", "action": "confirm", "choice": choice}
-        return json.dumps(
-            {
-                "type": "hitl_response_batch",
-                "id": choice,
-                "session_id": "s",
-                "decisions": [decision],
-            }
-        )
-
-    async with (
-        FakeIgni() as fake,
-        connect(fake.socket.url, subprotocols=[Subprotocol("igni.v1")]) as ws,
-    ):
-        await ws.recv()  # the welcome
-        await ws.send(batch("sometimes"))
-        await ws.send(batch("once"))
-        await _until(lambda: len(fake.runs.decisions) == 1)
-
-    assert fake.runs.decisions == [
-        [HitlDecision(requirement_id="req-x", action="confirm", choice="once")]
-    ]
-    assert [r.frame.type for r in fake.socket.received] == ["hitl_response_batch"]
+        Decision(action="confirm", choice="sometimes")  # type: ignore[arg-type]
 
 
 def test_approvals_and_replies_live_in_their_own_modules() -> None:
@@ -523,16 +534,8 @@ def test_an_approval_batch_goes_to_igni_field_for_field() -> None:
         "type": "hitl_response_batch",
         "id": "req-9",
         "session_id": "s-1",
-        "decisions": [
-            {
-                "type": "hitl_decision",
-                "requirement_id": "req-a",
-                "action": "reject",
-                "choice": "deny",
-                "set_permission_mode": "",
-            }
-        ],
-    }
+        "decisions": [{"requirement_id": "req-a", "action": "reject", "choice": "deny"}],
+    }, "each row the fields given; igni applies the rest's defaults"
 
 
 async def test_an_approval_stays_open_when_its_answer_fails_to_send() -> None:
@@ -543,9 +546,7 @@ async def test_an_approval_stays_open_when_its_answer_fails_to_send() -> None:
         if len(attempts) == 1:
             raise ConnectionError("the socket closed")
 
-    paused = RunPaused(
-        run_id="r-9", requirements=[Requirement(requirement_id="req-a", tool_name="deploy")]
-    )
+    paused = RunPaused(run_id="r-9", requirements=[_requirement("req-a", "deploy")])
     request = ApprovalRequested(paused, answer)
 
     assert request.paused is paused and repr(request) == "ApprovalRequested(deploy)"
@@ -593,9 +594,7 @@ async def test_a_reply_answers_each_approval_with_its_approver() -> None:
     async def answer(decisions: list[HitlDecision]) -> None:
         sent.append(decisions)
 
-    paused = RunPaused(
-        run_id="r-1", requirements=[Requirement(requirement_id="req-a", tool_name="deploy")]
-    )
+    paused = RunPaused(run_id="r-1", requirements=[_requirement("req-a", "deploy")])
 
     async def events() -> AsyncIterator[Event | ApprovalRequested]:
         yield ApprovalRequested(paused, answer)
@@ -748,99 +747,86 @@ async def test_a_reply_passes_over_what_is_not_part_of_the_answer() -> None:
     assert reply == Reply(text="done") and str(reply) == "done"
 
 
-async def test_a_prompt_goes_to_igni_byte_for_byte_as_before() -> None:
+async def test_what_the_client_sends_is_the_contract_s_messages_field_for_field() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
         wire = _wire(igni)
         await _collect(session.send("héllo", files={"a.py": "x"}, force=True))
         await session.queue("then this")
         await session.cancel()
-        await _until(lambda: _sent(fake, "cancel") == 1)
+        await _until(lambda: len(wire) == 3)
 
     [prompt] = [r.frame for r in fake.socket.received if isinstance(r.frame, UserMessage)]
-    assert wire[0] == json.dumps(
-        {
-            "type": "user_message",
-            "id": prompt.id,
-            "session_id": session.id,
-            "text": "héllo",
-            "file_contents": {"a.py": "x"},
-            "client_id": igni.client_id,
-            "force": True,
+    assert json.loads(wire[0]) == {
+        "type": "user_message",
+        "id": prompt.id,
+        "session_id": session.id,
+        "text": "héllo",
+        "file_contents": {"a.py": "x"},
+        "client_id": igni.client_id,
+        "force": True,
+    }
+    assert json.loads(wire[1]) == {
+        "type": "queue_message",
+        "session_id": session.id,
+        "text": "then this",
+        "client_id": igni.client_id,
+    }
+    cancel = json.loads(wire[2])
+    assert cancel == {
+        "type": "rpc_request",
+        "id": cancel["id"],
+        "method": "cancel_run",
+        "args": {},
+        "session_id": session.id,
+    }, "cancel_run answers, so session.cancel() calls it"
+
+
+async def test_a_call_s_args_go_to_igni_by_the_contract_s_names_with_its_defaults() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["read_process_tail"] = {
+            "pid": 7,
+            "output": "",
+            "is_running": False,
+            "exit_code": None,
         }
-    ), "0.1.0's json.dumps: its spacing, and \\u escapes"
-    assert wire[-2:] == [
-        json.dumps(
-            {
-                "type": "queue_message",
-                "session_id": session.id,
-                "text": "then this",
-                "client_id": igni.client_id,
-            }
-        ),
-        json.dumps({"type": "cancel", "session_id": session.id}),
-    ]
-
-
-async def test_a_prompt_goes_to_igni_as_it_was_given() -> None:
-    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
+        fake.methods.answers["search_chat"] = []
         wire = _wire(igni)
-        run = session.send(5, force=1)  # type: ignore[arg-type]
-        following = asyncio.ensure_future(_collect(run))
-        await _until(lambda: len(wire) == 1)
-        following.cancel()
-        await session.queue(None)  # type: ignore[arg-type]
-
-        unsendable = session.send("x", files={"a.py": b"x"})  # type: ignore[dict-item]
-        with pytest.raises(TypeError):
-            await _collect(unsendable)
-
-    sent = [json.loads(line) for line in wire]
-    assert (sent[0]["text"], sent[0]["force"]) == (5, 1), "igni decides, as in 0.1.0"
-    assert sent[1]["text"] is None
-
-
-async def test_a_call_s_args_go_to_igni_as_0_1_0_sent_them() -> None:
-    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-        fake.methods.answers["get_todos"] = []
-        session = await igni.sessions.create()
-        wire = _wire(igni)
-        await igni.rpc("get_todos", note=None, ratio=math.nan)
-        await session.rpc("get_todos")
-        await igni._conn.ask("get_todos", {1: "one"})  # type: ignore[dict-item]
-        with pytest.raises(TypeError):
-            await igni.rpc("get_todos", since=datetime(2026, 1, 1, tzinfo=UTC))
+        await igni.processes.tail(7)
+        await session.history.search(query="deploy")
 
     calls = [json.loads(line) for line in wire]
-    assert wire[0] == json.dumps(
-        {
-            "type": "rpc_request",
-            "id": calls[0]["id"],
-            "method": "get_todos",
-            "args": {"note": None, "ratio": math.nan},
-        }
-    ), "no session_id when none is named; None and NaN as json.dumps writes them"
+    assert calls[0] == {
+        "type": "rpc_request",
+        "id": calls[0]["id"],
+        "method": "read_process_tail",
+        "args": {"pid": 7, "tail": 200},
+    }, "no session_id for igni as a whole; every argument, its default included"
     assert calls[1]["session_id"] == session.id
-    assert calls[2]["args"] == {"1": "one"}
-    assert len(wire) == 3, "a value JSON cannot hold is never sent"
+    assert calls[1]["args"] == {"session_id": session.id, "query": "deploy", "limit": 50}
 
 
 def test_a_frame_built_from_its_fields_is_checked() -> None:
     with pytest.raises(ValidationError):
-        RpcRequest(id="rpc-1", method="shutdown")
+        RpcRequest(id="rpc-1", method="get_todos", args="all")  # type: ignore[arg-type]
     with pytest.raises(ValidationError):
         UserMessage(id="run-1", session_id="s-1", text=5, client_id="")  # type: ignore[arg-type]
+    with pytest.raises(ValidationError):
+        UserMessage(id="run-1", session_id="s-1", txt="hi")  # type: ignore[call-arg]
 
 
 # ── helpers ──
 
 
-def _paused(*tools: str) -> RunPaused:
-    return RunPaused(
-        run_id="r-1",
-        requirements=[Requirement(requirement_id=f"req-{t}", tool_name=t) for t in tools],
+def _requirement(requirement_id: str, tool_name: str) -> Requirement:
+    return Requirement(
+        requirement_id=requirement_id, tool_name=tool_name, tool_args={}, agent_path=[]
     )
+
+
+def _paused(*tools: str) -> RunPaused:
+    return RunPaused(run_id="r-1", requirements=[_requirement(f"req-{t}", t) for t in tools])
 
 
 async def _collect(run: object) -> list[object]:

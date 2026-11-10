@@ -2,49 +2,51 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+import json
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Discriminator, Tag, TypeAdapter
+from pydantic import BaseModel, ConfigDict, ValidationError
 
-from igni_client.frames import Cancel, HitlResponseBatch, QueueMessage, RpcRequest, UserMessage
+from igni_client.models import FRAME_TYPES
+from igni_client.wire import Event, Frame
 
 
 class UnknownFrame(BaseModel):
-    """A message the fake does not play. Everything it carried is kept."""
+    """A message the fake does not read. Everything it carried is kept."""
 
     model_config = ConfigDict(extra="allow", frozen=True)
 
     type: str = ""
 
 
-_KINDS = frozenset(
-    {"rpc_request", "user_message", "queue_message", "cancel", "hitl_response_batch"}
-)
+#: One message a client sent: a typed frame (`igni_client.frames`), or `UnknownFrame`.
+ClientFrame = Frame | Event | UnknownFrame
 
 
-def _frame_kind(value: Any) -> str:
-    kind = value.get("type") if isinstance(value, dict) else getattr(value, "type", None)
-    return kind if isinstance(kind, str) and kind in _KINDS else "unknown"
-
-
-ClientFrame = Annotated[
-    Annotated[RpcRequest, Tag("rpc_request")]
-    | Annotated[UserMessage, Tag("user_message")]
-    | Annotated[QueueMessage, Tag("queue_message")]
-    | Annotated[Cancel, Tag("cancel")]
-    | Annotated[HitlResponseBatch, Tag("hitl_response_batch")]
-    | Annotated[UnknownFrame, Tag("unknown")],
-    Discriminator(_frame_kind),
-]
-
-CLIENT_FRAME: TypeAdapter[ClientFrame] = TypeAdapter(ClientFrame)
+def read_frame(raw: str | bytes) -> ClientFrame:
+    """The typed message a client sent, as igni reads it; `ValueError` for what is not one."""
+    try:
+        decoded: Any = json.loads(raw)
+    except ValueError as exc:
+        raise ValueError("not JSON") from exc
+    if not isinstance(decoded, dict):
+        raise ValueError("not a JSON object")
+    cls = FRAME_TYPES.get(str(decoded.get("type", "")))
+    if cls is None:
+        return UnknownFrame.model_validate(decoded)
+    try:
+        return cls.model_validate(decoded)
+    except ValidationError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 class Received(BaseModel):
     """One message a client sent the fake."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     client_id: str
     frame: ClientFrame
 
 
-__all__ = ["CLIENT_FRAME", "ClientFrame", "Received", "UnknownFrame"]
+__all__ = ["ClientFrame", "Received", "UnknownFrame", "read_frame"]

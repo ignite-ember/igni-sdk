@@ -23,6 +23,8 @@ from igni_service.errors import BundleError
 class ProjectTable(BaseModel):
     """`[project]`."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str = ""
     scripts: dict[str, str] = Field(default_factory=dict)
 
@@ -30,14 +32,16 @@ class ProjectTable(BaseModel):
 class IgniBundleTable(BaseModel):
     """`[tool.igni.bundle]`."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, use_attribute_docstrings=True)
 
-    #: Dependencies with no wheel that may be built from their sdist.
     sdist_only: list[str] = Field(default_factory=list, alias="sdist-only")
+    """Dependencies with no wheel that may be built from their sdist."""
 
 
 class IgniTable(BaseModel):
     """`[tool.igni]`."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     bundle: IgniBundleTable = Field(default_factory=IgniBundleTable)
 
@@ -45,17 +49,21 @@ class IgniTable(BaseModel):
 class ToolTable(BaseModel):
     """`[tool]`, for igni's own table only."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     igni: IgniTable = Field(default_factory=IgniTable)
 
 
 class ExtensionProject(BaseModel):
     """An extension's `pyproject.toml`."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     project: ProjectTable = Field(default_factory=ProjectTable)
     tool: ToolTable = Field(default_factory=ToolTable)
 
-    #: Where `sdist-only` sits, as a validation error locates it.
     SDIST_ONLY: ClassVar[tuple[str, ...]] = ("tool", "igni", "bundle", "sdist-only")
+    """Where `sdist-only` sits, as a validation error locates it."""
 
     @classmethod
     def read(cls, directory: Path) -> ExtensionProject:

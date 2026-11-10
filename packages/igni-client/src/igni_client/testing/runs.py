@@ -6,14 +6,18 @@ import asyncio
 
 from pydantic import BaseModel
 
-from igni_client.events import (
+from igni_client.models import (
+    Cancel,
+    HitlDecision,
+    HitlResponseBatch,
     InfoMessage,
+    QueueMessage,
     RequirementResolved,
     RunPaused,
     StreamEnd,
+    UserMessage,
     UserMessageReceived,
 )
-from igni_client.frames import Cancel, HitlDecision, HitlResponseBatch, QueueMessage, UserMessage
 from igni_client.testing.server import FakeSocket
 from igni_client.testing.steps import Delay, Pause, Script, Step, Steps
 
@@ -50,6 +54,10 @@ class FakeRuns:
         await self._socket.broadcast(
             UserMessageReceived(session_id=message.session_id, text=message.text, queued=True)
         )
+
+    def running(self, session_id: str) -> bool:
+        """Whether a turn is running in `session_id`."""
+        return bool(self._active.get(session_id))
 
     async def cancel(self, cancel: Cancel) -> None:
         active = self._active.pop(cancel.session_id, "")

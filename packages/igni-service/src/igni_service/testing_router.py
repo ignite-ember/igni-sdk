@@ -30,11 +30,11 @@ from igni_service.testing_wire import (
 class RouteTable(BaseModel):
     """Every path igni serves a service, in the order they are matched."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     routes: tuple[Route, ...]
-    #: What answers an authenticated service path no route takes.
     fallback: Handler
+    """What answers an authenticated service path no route takes."""
 
     def family(self, path: str) -> Route | None:
         """The first route serving `path`: it says which token the path needs."""
@@ -80,9 +80,13 @@ class FakeRouter:
         table: RouteTable,
     ) -> None:
         self.addresses = addresses
+        """The fake's addresses: a request to any other host is answered 404."""
         self.traffic = traffic
+        """Where every request is recorded, and the failures a test asked for are read."""
         self.guard = guard
+        """Checks the bearer token each route needs."""
         self.table = table
+        """The routes, by method and path."""
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         """Answer `request` as igni would: failures a test asked for first, then the route.

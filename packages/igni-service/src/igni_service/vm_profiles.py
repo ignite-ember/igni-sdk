@@ -37,20 +37,21 @@ from igni_service.errors import IgniUnavailable, VmProfileRefused
 from igni_service.service_tokens import ServiceTokens
 from igni_service.urls import IgniPaths
 
-#: One package as its manager names it — `chromium`, `requests==2.32.3`,
-#: `@playwright/mcp@0.0.41` — and nothing a shell would read as more than
-#: one word. igni server's own rule, mirrored so a mistake is caught here.
 PackageName = Annotated[
     str,
     StringConstraints(
         pattern=r"^[A-Za-z0-9@][A-Za-z0-9@/._+:=<>~^*!,-]{0,199}$", strip_whitespace=True
     ),
 ]
+"""One package as its manager names it — `chromium`, `requests==2.32.3`,
+`@playwright/mcp@0.0.41` — and nothing a shell would read as more than
+one word. igni server's own rule, mirrored so a mistake is caught here.
+"""
 
-#: At most this many packages per manager.
 MAX_PACKAGES = 200
-#: The longest setup script, in characters.
+"""At most this many packages per manager."""
 MAX_SETUP_SCRIPT = 65536
+"""The longest setup script, in characters."""
 
 RequestState = Literal["pending", "approved", "rejected"]
 
@@ -58,11 +59,14 @@ RequestState = Literal["pending", "approved", "rejected"]
 class VmPackages(BaseModel):
     """What the profile's read-only layer is built with, per package manager."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     apt: list[PackageName] = Field(default_factory=list, max_length=MAX_PACKAGES)
+    """Debian packages, as `apt-get install` names them: `chromium`."""
     pip: list[PackageName] = Field(default_factory=list, max_length=MAX_PACKAGES)
+    """Python packages, as `pip install` names them: `requests==2.32.3`."""
     npm: list[PackageName] = Field(default_factory=list, max_length=MAX_PACKAGES)
+    """npm packages, installed globally: `@playwright/mcp@0.0.41`."""
 
 
 class VmProfileRequest(BaseModel):
@@ -74,31 +78,35 @@ class VmProfileRequest(BaseModel):
     pausing, which the platform's caps may refuse.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
-    #: The most memory the VM may have, in MiB: its size at boot.
     memory_mib: int | None = Field(default=None, ge=128, le=1_048_576)
-    #: What it normally has, in MiB; the node lends the rest while it needs it.
+    """The most memory the VM may have, in MiB: its size at boot."""
     normal_memory_mib: int | None = Field(default=None, ge=128, le=1_048_576)
-    #: What the node expects it to use, for placing it; `None`: the node's rule.
+    """What it normally has, in MiB; the node lends the rest while it needs it."""
     expected_memory_mib: int | None = Field(default=None, ge=128, le=1_048_576)
+    """What the node expects it to use, for placing it; `None`: the node's rule."""
     vcpus: int | None = Field(default=None, ge=1, le=256)
-    #: Seconds idle before the VM is paused; `None` is never.
+    """Virtual CPUs (1-256)."""
     idle_before_pause_s: int | None = Field(default=None, ge=0)
+    """Seconds idle before the VM is paused; `None` is never."""
     packages: VmPackages | None = None
-    #: Run as root when the profile's layer is built, after the packages.
+    """What the profile's read-only layer is built with."""
     setup_script: str | None = Field(default=None, max_length=MAX_SETUP_SCRIPT)
-    #: A new VM's volume, and how far an admin may grow it, in GiB.
+    """Run as root when the profile's layer is built, after the packages."""
     volume_gib: int | None = Field(default=None, ge=1)
+    """A new VM's volume, and how far an admin may grow it, in GiB."""
     volume_max_gib: int | None = Field(default=None, ge=1)
-    #: Days unwoken after which the app's VM is erased; `None` is never.
+    """The largest an admin may grow the volume to, in GiB."""
     erase_after_idle_days: int | None = Field(default=None, ge=1, le=3650)
-    #: Whether the VM may reach the internet. Left out (or False): internal
-    #: only — igni and the deployment's own allowed addresses. True asks the
-    #: org admin for internet egress, a security grant they see as such;
-    #: a node that is air-gapped, or not allowed to grant internet, still
-    #: starts the VM internal-only.
+    """Days unwoken after which the app's VM is erased; `None` is never."""
     internet: bool | None = None
+    """Whether the VM may reach the internet. Left out (or False): internal
+    only — igni and the deployment's own allowed addresses. True asks the
+    org admin for internet egress, a security grant they see as such;
+    a node that is air-gapped, or not allowed to grant internet, still
+    starts the VM internal-only.
+    """
 
     def body(self) -> dict[str, object]:
         """The JSON igni is sent: only what was set."""
@@ -108,122 +116,185 @@ class VmProfileRequest(BaseModel):
 class RequestedVmProfile(BaseModel):
     """A request as igni resolved it: every value, the Standard ones filled in — what would run."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     memory_mib: int
+    """The most memory the VM may have, in MiB."""
     normal_memory_mib: int
+    """What it normally has, in MiB."""
     expected_memory_mib: int | None = None
+    """What the node expects it to use; `None`: the node's rule."""
     vcpus: int
+    """Virtual CPUs."""
     idle_before_pause_s: int | None = None
+    """Seconds idle before the VM is paused; `None` is never."""
     packages: VmPackages = Field(default_factory=VmPackages)
+    """What the profile's layer is built with."""
     setup_script: str | None = None
+    """Run as root when the layer is built, after the packages."""
     volume_gib: int
+    """A new VM's volume, in GiB."""
     volume_max_gib: int
+    """The largest an admin may grow the volume to, in GiB."""
     erase_after_idle_days: int | None = None
-    #: Internet egress asked for; False is internal only.
+    """Days unwoken after which the VM is erased; `None` is never."""
     internet: bool = False
+    """Internet egress asked for; False is internal only."""
 
 
 class RequestSubject(BaseModel):
     """Whose request it is: an app, or an extension."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     kind: Literal["app", "extension"]
+    """`app` or `extension`."""
     id: str
+    """The app's id, or the extension's manifest id."""
     name: str = ""
+    """Its display name."""
 
 
 class Requester(BaseModel):
+    """Who sent the request: an app, or a service for its extension."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     kind: str
+    """`app` or `service`."""
     id: str
+    """The app's id, or the service's client id."""
 
 
 class Decider(BaseModel):
     """The admin who approved or rejected it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     kind: str
+    """What decided: a `user`."""
     id: str
-    #: `org_admin` or `super_admin`.
+    """The admin's user id."""
     acting_as: str
+    """`org_admin` or `super_admin`."""
 
 
 class VmProfileRequestRecord(BaseModel):
     """One request, and what became of it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     id: str
+    """The request's id."""
     org_id: str
+    """The organisation it was made in."""
     subject: RequestSubject
+    """Whose request it is: an app, or an extension."""
     state: RequestState
+    """`pending`, `approved` or `rejected`."""
     requested: RequestedVmProfile
-    #: Changes whenever anything requested does; an approval names it.
+    """What it asks for, with igni's Standard values filled in."""
     version: str
-    #: Changes whenever the packages or the setup script do: the layer Fleet builds.
+    """Changes whenever anything requested does; an approval names it."""
     packages_version: str
-    #: False when it asks for more than the platform's caps allow now.
+    """Changes whenever the packages or the setup script do: the layer Fleet builds."""
     within_caps: bool
+    """False when it asks for more than the platform's caps allow now."""
     requested_by: Requester
+    """Who sent it."""
     requested_at: datetime
+    """When it was last sent (or changed)."""
     decided_by: Decider | None = None
+    """The admin who approved or rejected it; `None` while pending."""
     decided_at: datetime | None = None
-    #: Why it was rejected, when the admin said.
+    """When they did."""
     reason: str | None = None
-    #: The profile an approval made, holding what was last approved.
+    """Why it was rejected, when the admin said."""
     profile_id: str | None = None
+    """The profile an approval made, holding what was last approved."""
 
     @property
     def is_pending(self) -> bool:
+        """Whether an org admin has yet to decide (`state == "pending"`)."""
         return self.state == "pending"
 
     @property
     def is_approved(self) -> bool:
+        """Whether an org admin approved it (`state == "approved"`)."""
         return self.state == "approved"
 
     @property
     def is_rejected(self) -> bool:
+        """Whether an org admin rejected it (`state == "rejected"`); `reason` may say why."""
         return self.state == "rejected"
 
 
 class EffectiveVmProfile(BaseModel):
     """What a VM gets from a profile: its values, clamped to the platform's caps."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     profile_id: str
+    """The profile's id."""
     profile_name: str
+    """Its name, as the portal shows it."""
     memory_mib: int
+    """The most memory the VM may have, in MiB."""
     normal_memory_mib: int
+    """What it normally has, in MiB."""
     expected_memory_mib: int | None = None
+    """What the node expects it to use; `None`: the node's rule."""
     vcpus: int
+    """Virtual CPUs."""
     idle_before_pause_s: int | None = None
+    """Seconds idle before the VM is paused; `None` is never."""
     packages: VmPackages = Field(default_factory=VmPackages)
+    """What its read-only layer is built with."""
     setup_script: str | None = None
+    """Run as root when the layer is built."""
     volume_max_gib: int
+    """The largest an admin may grow a volume to, in GiB."""
     erase_after_idle_days: int | None = None
-    #: Whether the VM may reach the internet (where its node may grant it);
-    #: False, and absent from an older igni server: internal only.
+    """Days unwoken after which a VM is erased; `None` is never."""
     internet: bool = False
+    """Whether the VM may reach the internet (where its node may grant it);
+    False, and absent from an older igni server: internal only.
+    """
 
 
 class AppVmProfile(EffectiveVmProfile):
     """What the app's own VM gets now, with its volume."""
 
-    #: The app's volume, in GiB: the profile's, or more where an admin grew it.
     volume_gib: int
+    """The app's volume, in GiB: the profile's, or more where an admin grew it."""
 
 
 class Assigned(BaseModel):
     """How many of the organisation's groups and apps have a profile."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     groups: int = 0
+    """How many groups were given the profile."""
     apps: int = 0
+    """How many apps were given the profile."""
 
 
 class ServiceVmProfile(BaseModel):
     """A service's extension's request in one organisation, and the profile it became."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     org_id: str
-    #: `None` when this service ships no extension, or its manifest has no `vm`.
+    """The organisation asked about."""
     extension_id: str | None = None
+    """`None` when this service ships no extension, or its manifest has no `vm`."""
     request: VmProfileRequestRecord | None = None
-    #: What the approval made, clamped to the caps; `None` until approved.
+    """The extension's request there; `None` when none was made."""
     profile: EffectiveVmProfile | None = None
-    #: Who the org admin gave that profile to.
+    """What the approval made, clamped to the caps; `None` until approved."""
     assigned: Assigned = Field(default_factory=Assigned)
+    """Who the org admin gave that profile to."""
 
 
 def refusal(response: httpx.Response) -> VmProfileRefused:

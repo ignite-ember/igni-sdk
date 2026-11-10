@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.errors import IgniUnavailable
 from igni_service.urls import IgniPaths, ServiceUrl
@@ -27,11 +27,15 @@ from igni_service.urls import IgniPaths, ServiceUrl
 class Discovery(BaseModel):
     """The parts of igni's metadata a service relies on."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     issuer: str
-    #: The portal's sign-in page, where a person's browser is sent (§5).
-    #: The one URL from the metadata that is used as published: the
-    #: browser, not this service, goes there.
+    """igni's issuer: what its tokens name as `iss`, and what an assertion is addressed to."""
     authorization_endpoint: str = ""
+    """The portal's sign-in page, where a person's browser is sent (§5).
+    The one URL from the metadata that is used as published: the
+    browser, not this service, goes there.
+    """
 
 
 class IgniServer:

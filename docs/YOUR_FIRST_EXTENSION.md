@@ -57,28 +57,17 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
   it has made its account, yours is no longer the first.
 - **`uv`** and Python 3.12.
 
-### Until the SDKs are on PyPI: build them from this checkout
+### One environment for the walk-through
 
-`igni-extension` and `igni-service` are not on PyPI yet. From your igni
-checkout, build their wheels once, into a directory every install below
-points at:
-
-```bash
-uv build --wheel --out-dir ~/igni-wheels packages/igni-extension
-uv build --wheel --out-dir ~/igni-wheels packages/igni-service
-```
-
-Then one environment for the walk-through, in `~/ticket-lookup` — every
+Make it in `~/ticket-lookup`. Every
 command from here on runs there, in it:
 
 ```bash
 cd ~/ticket-lookup
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install --find-links ~/igni-wheels igni-extension igni-service uvicorn aiosqlite pytest anyio
+uv pip install igni-extension igni-service uvicorn aiosqlite pytest anyio
 ```
-
-Once they are published, drop `--find-links` and the build step.
 
 ## 1. Write the extension
 
@@ -321,13 +310,6 @@ Check it:
 igni ext doctor extension
 ```
 
-Until the SDK is on PyPI, `doctor` builds the extension from source with
-pip, so point it at your wheels:
-
-```bash
-PIP_FIND_LINKS=~/igni-wheels igni ext doctor extension
-```
-
 `doctor` validates the manifest, starts the extension, asks it for its
 tools over MCP (with a timeout), and says what is wrong, with the fix. The
 end of what it prints:
@@ -368,7 +350,7 @@ the extension's wheel and every dependency's, for each platform igni runs
 on — a machine installs from it with no index.
 
 ```bash
-igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ~/igni-wheels
+igni-service-bundle --extension extension --out extension-bundle.tar.gz
 ```
 
 ## 3. Run the service

@@ -21,6 +21,11 @@ class BundleArchive:
 
     @staticmethod
     def write(staging: Path, out: Path) -> bytes:
+        """Write `staging`'s files to `out` as a gzipped tar and answer its bytes.
+
+        The same files make the same bytes every time: sorted, with no times,
+        owners or modes of their own.
+        """
         buffer = io.BytesIO()
         with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as tar:
             for path in sorted(staging.rglob("*")):

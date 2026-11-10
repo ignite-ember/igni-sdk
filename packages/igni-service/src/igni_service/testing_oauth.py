@@ -53,10 +53,10 @@ class FakeTokenEndpoint:
         self.bearers = bearers
         self.sign_ins = sign_ins
         self.signer = signer
-        #: Every grant the token endpoint answered, by `grant_type`.
         self.grants: list[str] = []
-        #: Every refresh token revoked at `/v1/oauth/revoke`, as presented.
+        """Every grant the token endpoint answered, by `grant_type`."""
         self.revoked: list[str] = []
+        """Every refresh token revoked at `/v1/oauth/revoke`, as presented."""
 
     def reset(self) -> None:
         """Forget what was asked and every sign-in; issued bearer tokens and `jti`s stay."""

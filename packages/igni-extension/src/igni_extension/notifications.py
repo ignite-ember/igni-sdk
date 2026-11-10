@@ -21,11 +21,11 @@ from typing import Final, Literal
 from mcp import types
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-#: The MCP method the host listens for.
 NOTIFY_METHOD: Final = "notifications/igni/notify"
+"""The MCP method the host listens for."""
 
-#: igni's limits, mirrored so a mistake is caught where it is made.
 MAX_KIND = 64
+"""igni's limits, mirrored so a mistake is caught where it is made."""
 MAX_TITLE = 200
 MAX_KEY = 200
 MAX_BODY = 1000
@@ -41,10 +41,12 @@ class Target(BaseModel):
     reads them from its location, where everything is a string.
     """
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     page: str = Field(min_length=1, max_length=MAX_KEY)
+    """The page's id, as the extension's manifest declares it."""
     params: dict[str, str] = Field(default_factory=dict, max_length=MAX_TARGET_PARAMS)
+    """What the page is opened with: strings only, as a page reads them from its location."""
 
     @field_validator("params")
     @classmethod
@@ -57,19 +59,20 @@ class Target(BaseModel):
 class LocalNotification(BaseModel):
     """Something to tell the person using this igni. No recipients: it is them."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
-    #: The extension's own word for what happened: `export_ready`.
     kind: str = Field(min_length=1, max_length=MAX_KIND)
-    #: What it is about.
+    """The extension's own word for what happened: `export_ready`."""
     title: str = Field(min_length=1, max_length=MAX_TITLE)
-    #: One line. Whitespace is collapsed here.
+    """What it is about."""
     body: str = ""
-    #: Where opening it goes: one of this extension's pages. Required —
-    #: the host shows nothing it cannot open.
+    """One line. Whitespace is collapsed here."""
     target: Target
-    #: The same event is shown once, however often it is sent. Required.
+    """Where opening it goes: one of this extension's pages. Required —
+    the host shows nothing it cannot open.
+    """
     event_key: str = Field(min_length=1, max_length=MAX_KEY)
+    """The same event is shown once, however often it is sent. Required."""
 
     @field_validator("body")
     @classmethod
@@ -80,9 +83,10 @@ class LocalNotification(BaseModel):
         return line
 
 
-#: igni's notifications spell their fields as written (`event_key`); `mcp` 2's
-#: own models would send them camelCased (`eventKey`), which igni does not read.
-AS_WRITTEN = ConfigDict(alias_generator=None)
+AS_WRITTEN = ConfigDict(alias_generator=None, use_attribute_docstrings=True)
+"""igni's notifications spell their fields as written (`event_key`); `mcp` 2's
+own models would send them camelCased (`eventKey`), which igni does not read.
+"""
 
 
 class NotifyParams(types.NotificationParams):
@@ -111,14 +115,14 @@ class NotifyNotification(types.Notification[NotifyParams, Literal["notifications
         return LocalNotification.model_validate(self.params.model_dump(exclude={"meta"}))
 
 
-#: The MCP method an extension says which of its conditions hold with.
 CONDITIONS_METHOD: Final = "notifications/igni/conditions"
+"""The MCP method an extension says which of its conditions hold with."""
 
-#: How many conditions one message may carry — igni's limit.
 MAX_CONDITIONS = 64
+"""How many conditions one message may carry — igni's limit."""
 
-#: A condition's name, as a manifest's `when` spells it.
 CONDITION = r"^[a-z][a-z0-9-]*$"
+"""A condition's name, as a manifest's `when` spells it."""
 
 
 class ConditionsParams(types.NotificationParams):
@@ -132,8 +136,8 @@ class ConditionsParams(types.NotificationParams):
     model_config = AS_WRITTEN
 
     conditions: dict[str, bool] = Field(max_length=MAX_CONDITIONS)
-    #: Present only when asking; absent, it is just conditions.
     refresh: bool | None = None
+    """Present only when asking; absent, it is just conditions."""
 
     @field_validator("conditions")
     @classmethod

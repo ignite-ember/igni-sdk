@@ -18,8 +18,8 @@ from igni_extension.threads import OffTheLoop
 
 AnyFunction = Callable[..., Any]
 
-#: Entered around each tool call, given the tool's name, in the call's context.
 ToolObserver = Callable[[str], contextlib.AbstractContextManager[Any]]
+"""Entered around each tool call, given the tool's name, in the call's context."""
 
 
 class ToolNames(BaseModel):
@@ -29,20 +29,25 @@ class ToolNames(BaseModel):
     others are derived from it and the extension's id, by igni's rules.
     """
 
-    #: What `ext.tool` registered, and `HostHarness.call` takes.
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     tool: str
-    #: The manifest's `permissions.tools[].name` (and `permissions.rpc` is
-    #: `rpc` below): namespaced by the extension's id, so an administrator
-    #: reading it knows whose tool it is.
+    """What `ext.tool` registered, and `HostHarness.call` takes."""
     manifest: str
-    #: What a page calls with `bridge.rpc(...)`, and `permissions.rpc` grants.
+    """The manifest's `permissions.tools[].name` (and `permissions.rpc` is
+    `rpc` below): namespaced by the extension's id, so an administrator
+    reading it knows whose tool it is.
+    """
     rpc: str
-    #: What igni registers it as for its agent, and the name its permission
-    #: rules and settings-file hooks match: `mcp_ext:<id>_<tool>`.
+    """What a page calls with `bridge.rpc(...)`, and `permissions.rpc` grants."""
     registered: str
+    """What igni registers it as for its agent, and the name its permission
+    rules and settings-file hooks match: `mcp_ext:<id>_<tool>`.
+    """
 
     @classmethod
     def of(cls, extension_id: str, tool: str) -> ToolNames:
+        """Every name the tool `tool` of the extension `extension_id` goes by."""
         return cls(
             tool=tool,
             manifest=f"{extension_id}.{tool}",
@@ -58,12 +63,15 @@ class ManifestTool(BaseModel):
     (`readOnlyHint`, ...).
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     name: str
+    """The tool's namespaced name: `<extension id>.<tool>`."""
     annotations: ToolAnnotations
+    """Its four hints, as MCP spells them."""
 
     def wire(self) -> dict[str, Any]:
+        """The entry as the manifest's JSON spells it."""
         return self.model_dump(by_alias=True, exclude_none=True)
 
 
