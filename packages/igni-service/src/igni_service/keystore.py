@@ -29,19 +29,29 @@ from igni_service.errors import KeyStoreError
 class StoredKey(BaseModel):
     """A kept key: its `kid` (thumbprint) and its private half, unsealed."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     kid: str
+    """The key's id: its RFC 7638 thumbprint."""
     private_pem: str
+    """The private half, PEM-encoded, unsealed."""
 
 
 @runtime_checkable
 class KeyStore(Protocol):
     """Keeps one key. See the module note for the contract."""
 
-    async def get(self) -> StoredKey | None: ...
+    async def get(self) -> StoredKey | None:
+        """The kept key, or `None` before there is one."""
+        ...
 
-    async def claim(self, key: StoredKey) -> StoredKey: ...
+    async def claim(self, key: StoredKey) -> StoredKey:
+        """Keep `key` unless one is already kept, and answer with whichever is kept.
+
+        Two replicas that each made a key both call it: one wins, and both
+        sign with the winner's from then on.
+        """
+        ...
 
 
 class KeyCipher:
@@ -66,9 +76,11 @@ class KeyCipher:
             raise KeyStoreError("IGNI_KEY_ENCRYPTION_KEY is not a Fernet key.") from exc
 
     def seal(self, plaintext: str) -> str:
+        """`plaintext` encrypted under the key encryption key, as Fernet text."""
         return self._fernet().encrypt(plaintext.encode()).decode()
 
     def open(self, sealed: str) -> str:
+        """What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed."""
         try:
             return self._fernet().decrypt(sealed.encode()).decode()
         except InvalidToken as exc:
@@ -87,9 +99,11 @@ class MemoryKeyStore:
         self._lock = asyncio.Lock()
 
     async def get(self) -> StoredKey | None:
+        """The key this process kept, or `None` before there is one."""
         return self._kept
 
     async def claim(self, key: StoredKey) -> StoredKey:
+        """Keep `key` unless one is already kept; answer with whichever is."""
         async with self._lock:
             if self._kept is None:
                 self._kept = key

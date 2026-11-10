@@ -31,37 +31,60 @@ from igni_service.tokens import Person
 class WebSession(BaseModel):
     """One person signed in to the service's pages."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     person: Person
+    """Who is signed in."""
     access_token: str
+    """Their current access token for this service."""
     refresh_token: str
-    #: Wall-clock second the access token stops working.
+    """What renews it, until the sign-in ends."""
     access_expires_at: float
-    #: Wall-clock second the session is dead: the refresh token's life.
+    """Wall-clock second the access token stops working."""
     expires_at: float
+    """Wall-clock second the session is dead: the refresh token's life."""
 
 
 class LoginAttempt(BaseModel):
     """A sign-in in flight: sent to igni, not yet back."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     state: str
+    """The OAuth `state` sent to igni: what the callback is matched by."""
     verifier: str
+    """The PKCE code verifier for the code igni sends back."""
     return_to: str
+    """Where to send the person once they are signed in."""
     expires_at: float
+    """Wall-clock second after which the attempt is void."""
 
 
 @runtime_checkable
 class WebSessionStore(Protocol):
-    async def get(self, session_id: str) -> WebSession | None: ...
+    """Where `igni.web` keeps its people's sessions and sign-ins in flight.
 
-    async def put(self, session_id: str, session: WebSession) -> None: ...
+    `MemoryWebSessionStore` keeps them in the process; `SqlWebSessionStore`
+    in the service's database, for several replicas. A store of your own
+    implements these five methods. Session ids and `state`s are secrets:
+    keep a digest of them, not the value.
+    """
 
-    async def delete(self, session_id: str) -> None: ...
+    async def get(self, session_id: str) -> WebSession | None:
+        """The session `session_id` names, or `None` when there is none or it has expired."""
+        ...
 
-    async def put_login(self, attempt: LoginAttempt) -> None: ...
+    async def put(self, session_id: str, session: WebSession) -> None:
+        """Keep `session` under `session_id`, replacing what was there."""
+        ...
+
+    async def delete(self, session_id: str) -> None:
+        """Forget the session `session_id` names. Not an error when there is none."""
+        ...
+
+    async def put_login(self, attempt: LoginAttempt) -> None:
+        """Keep a sign-in in flight until igni sends the person back."""
+        ...
 
     async def take_login(self, state: str) -> LoginAttempt | None:
         """The attempt for `state`, once: a second take finds nothing."""
@@ -84,6 +107,7 @@ class MemoryWebSessionStore:
         self._lock = asyncio.Lock()
 
     async def get(self, session_id: str) -> WebSession | None:
+        """The session `session_id` names, or `None` when there is none or it has expired."""
         session = self._sessions.get(Digest.of(session_id))
         if session is not None and self._clock.wall() >= session.expires_at:
             self._sessions.pop(Digest.of(session_id), None)
@@ -91,15 +115,19 @@ class MemoryWebSessionStore:
         return session
 
     async def put(self, session_id: str, session: WebSession) -> None:
+        """Keep `session` under `session_id`, replacing what was there."""
         self._sessions[Digest.of(session_id)] = session
 
     async def delete(self, session_id: str) -> None:
+        """Forget the session `session_id` names."""
         self._sessions.pop(Digest.of(session_id), None)
 
     async def put_login(self, attempt: LoginAttempt) -> None:
+        """Keep a sign-in in flight until igni sends the person back."""
         self._logins[Digest.of(attempt.state)] = attempt
 
     async def take_login(self, state: str) -> LoginAttempt | None:
+        """The attempt for `state`, once and unexpired: a second take finds nothing."""
         async with self._lock:
             attempt = self._logins.pop(Digest.of(state), None)
         if attempt is None or self._clock.wall() >= attempt.expires_at:
@@ -126,6 +154,7 @@ class SqlWebSessionStore:
         )
 
     async def get(self, session_id: str) -> WebSession | None:
+        """The session `session_id` names, unsealed, or `None` when there is none or it has expired."""
         await self._tables.ensure()
         table = IgniTables.web_session
         async with self._engine.connect() as connection:
@@ -141,6 +170,7 @@ class SqlWebSessionStore:
         return WebSession.model_validate_json(self._cipher.open(str(row.sealed)))
 
     async def put(self, session_id: str, session: WebSession) -> None:
+        """Keep `session`, sealed, under a digest of `session_id`, replacing what was there."""
         await self._tables.ensure()
         table = IgniTables.web_session
         values = {
@@ -157,12 +187,14 @@ class SqlWebSessionStore:
                 )
 
     async def delete(self, session_id: str) -> None:
+        """Forget the session `session_id` names."""
         await self._tables.ensure()
         table = IgniTables.web_session
         async with self._engine.begin() as connection:
             await connection.execute(delete(table).where(table.c.id_hash == Digest.of(session_id)))
 
     async def put_login(self, attempt: LoginAttempt) -> None:
+        """Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are deleted on the way."""
         await self._tables.ensure()
         table = IgniTables.web_login
         now = self._clock.wall()
@@ -181,6 +213,7 @@ class SqlWebSessionStore:
             )
 
     async def take_login(self, state: str) -> LoginAttempt | None:
+        """The attempt for `state`, once and unexpired: of two replicas taking it, one gets it."""
         await self._tables.ensure()
         table = IgniTables.web_login
         async with self._engine.begin() as connection:

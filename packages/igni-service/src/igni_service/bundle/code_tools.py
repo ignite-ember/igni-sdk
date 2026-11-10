@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from igni_service.bundle.manifest import AgentTool
 from igni_service.bundle.requirements import Requirement
@@ -21,12 +21,16 @@ class CodeToolsRead(BaseModel):
     not a problem).
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     tools: list[AgentTool] | None = None
     problem: str = ""
 
 
 class ManifestListing(BaseModel):
     """What `python -m igni_extension.manifest` prints."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     tools: list[AgentTool]
 

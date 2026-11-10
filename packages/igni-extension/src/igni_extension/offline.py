@@ -19,8 +19,8 @@ from igni_extension.session import HostSession
 class OfflineHost:
     """A `HostLink` with no socket behind it: notify goes over MCP, the rest refuses."""
 
-    #: The one member that works without the socket.
     NOTIFY = "notifications.notify"
+    """The one member that works without the socket."""
 
     def __init__(self, session: HostSession) -> None:
         self._session = session

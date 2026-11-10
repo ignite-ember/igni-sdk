@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import json
+
 import jwt
 import pytest
 
-from igni_service import IgniService, IgniUnavailable, ServiceNotApproved, ServiceRevoked
+from igni_service import (
+    IgniService,
+    IgniUnavailable,
+    ServiceNotApproved,
+    ServiceRevoked,
+    testing_assertions,
+)
 from igni_service.testing import FakeIgni, ManualClock
+from igni_service.token_endpoint import GrantRefused
 from igni_service.urls import IgniPaths
 
 from .conftest import ORG, OTHER_ORG
@@ -95,12 +104,15 @@ async def test_a_service_waiting_for_approval_is_told_it_is_not_approved(
     """Not "unavailable": nothing will change by retrying until a super admin approves it."""
     fake = FakeIgni(clock=clock, require_approval=True)
     igni = fake.service()
+    await igni.registration.register()
 
     with pytest.raises(ServiceNotApproved, match="waiting for a super admin") as refused:
         await igni.tokens.token(ORG)
 
     # Every `except IgniUnavailable` written before still catches it.
     assert isinstance(refused.value, IgniUnavailable)
+    # igni named the state, so the registration was not asked again.
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1
 
 
 async def test_a_revoked_service_is_told_it_is_revoked(igni: IgniService, fake: FakeIgni) -> None:
@@ -112,6 +124,121 @@ async def test_a_revoked_service_is_told_it_is_revoked(igni: IgniService, fake: 
         await igni.tokens.token(ORG)
 
     assert isinstance(refused.value, IgniUnavailable)
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1
+
+
+def swap_igni_words(monkeypatch: pytest.MonkeyPatch) -> None:
+    """igni saying each state in the other's words: the words must decide nothing."""
+    waiting, revoked = testing_assertions.WAITING, testing_assertions.REVOKED
+    monkeypatch.setattr(testing_assertions, "WAITING", revoked)
+    monkeypatch.setattr(testing_assertions, "REVOKED", waiting)
+
+
+async def test_the_state_is_read_from_igni_s_field_not_its_words(
+    clock: ManualClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    swap_igni_words(monkeypatch)
+    fake = FakeIgni(clock=clock, require_approval=True)
+    igni = fake.service()
+
+    with pytest.raises(ServiceNotApproved, match="has been revoked"):
+        await igni.tokens.token(ORG)
+
+    fake.clients.revoke()
+    with pytest.raises(ServiceRevoked, match="waiting for a super admin"):
+        await igni.tokens.token(ORG)
+
+
+@pytest.mark.parametrize(
+    ("revoke", "raised"), [(False, ServiceNotApproved), (True, ServiceRevoked)]
+)
+async def test_an_igni_that_names_no_state_is_asked_for_its_registration(
+    clock: ManualClock,
+    monkeypatch: pytest.MonkeyPatch,
+    revoke: bool,
+    raised: type[IgniUnavailable],
+) -> None:
+    """An igni server from before `client_state` says the state only in
+    words; the registration's `state` field says it too, and is read."""
+    swap_igni_words(monkeypatch)
+    fake = FakeIgni(clock=clock, require_approval=True)
+    fake.oauth.verifier.names_client_state = False
+    igni = fake.service()
+    await igni.registration.register()
+    if revoke:
+        fake.clients.revoke()
+
+    with pytest.raises(raised):
+        await igni.tokens.token(ORG)
+
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 2
+    assert igni.registration.current is not None
+    assert igni.registration.current.state == ("revoked" if revoke else "pending")
+
+
+def refused(**body: str) -> GrantRefused:
+    return GrantRefused(401, json.dumps(body))
+
+
+async def test_a_refusal_that_is_not_invalid_client_is_igni_unavailable(
+    igni: IgniService, fake: FakeIgni
+) -> None:
+    await igni.registration.register()
+    fake.traffic.fail(IgniPaths.TOKEN, 401)
+
+    with pytest.raises(IgniUnavailable) as raised:
+        await igni.tokens.token(ORG)
+
+    assert type(raised.value) is IgniUnavailable
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1, "not asked: not about the client"
+
+
+async def test_a_state_igni_names_that_the_sdk_does_not_know_is_igni_unavailable(
+    igni: IgniService,
+) -> None:
+    exc = refused(error="invalid_client", client_state="suspended")
+
+    state = await igni.tokens.client_state(exc)
+
+    assert state == "suspended"
+    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
+
+
+async def test_invalid_client_for_an_approved_service_is_igni_unavailable(
+    igni: IgniService, fake: FakeIgni
+) -> None:
+    """From an igni naming no state, `invalid_client` while the registration
+    is approved is some other refusal (a replayed assertion, a moved key)."""
+    await igni.registration.register()
+    fake.clients.approve()
+    exc = refused(error="invalid_client", error_description="this client has been revoked")
+
+    state = await igni.tokens.client_state(exc)
+
+    assert state == "approved"
+    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
+
+
+async def test_invalid_client_with_no_registration_to_ask_is_igni_unavailable(
+    igni: IgniService, fake: FakeIgni
+) -> None:
+    fake.traffic.fail(IgniPaths.CLIENTS, 503)
+    exc = refused(error="invalid_client")
+
+    state = await igni.tokens.client_state(exc)
+
+    assert state is None
+    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
+
+
+@pytest.mark.parametrize("body", ["", "not json", "[1, 2]", '{"error": 7}'])
+async def test_a_refusal_body_that_is_not_rfc_6749_reads_as_no_error(
+    igni: IgniService, body: str
+) -> None:
+    exc = GrantRefused(401, body)
+
+    assert exc.refusal.error == "" and exc.refusal.client_state is None
+    assert await igni.tokens.client_state(exc) is None
 
 
 async def test_a_token_names_one_organisation(igni: IgniService) -> None:

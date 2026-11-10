@@ -60,9 +60,14 @@ class Resolved(RequestedVmProfile):
 class FakeProfile(BaseModel):
     """A profile an approval made, or the organisation's Standard default."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     id: str
+    """The profile's id."""
     name: str
+    """Its name."""
     settings: Resolved
+    """What a VM it is given gets, every value filled in."""
 
     @classmethod
     def default(cls, org_id: str) -> FakeProfile:
@@ -73,10 +78,16 @@ class FakeProfile(BaseModel):
 class FakeCaps(BaseModel):
     """The platform's caps; igni server's defaults."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     max_memory_mib: int = 8192
+    """The most memory a VM may have, in MiB."""
     max_vcpus: int = 4
+    """The most virtual CPUs."""
     max_idle_before_pause_s: int | None = 3600
+    """The longest a VM may stay idle before it is paused; `None` allows never pausing."""
     max_volume_gib: int = 200
+    """The largest volume, in GiB."""
 
     def refusal(self, wanted: Resolved) -> str | None:
         """Why igni refuses `wanted` on this platform; `None` when it fits."""

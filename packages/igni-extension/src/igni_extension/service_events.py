@@ -42,24 +42,31 @@ from igni_extension.wire import HookAnswer, Outcome
 
 logger = logging.getLogger(__name__)
 
-#: The frame's event name on the host socket.
 SERVICE_EVENT = "ServiceEvent"
+"""The frame's event name on the host socket."""
 
 
 class ServiceEvent(BaseModel):
     """One event from this extension's service."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     event_id: str
+    """igni's id for it; a repeat has the same one."""
     extension_id: str = ""
-    #: The service that sent it (its client id).
+    """The extension it is for: this one."""
     client_id: str = ""
+    """The service that sent it (its client id)."""
     type: str
+    """The service's own word for what happened: `claim.created`."""
     payload: dict[str, Any] = Field(default_factory=dict)
+    """What the service sent with it."""
     event_key: str | None = None
+    """The key the service sent it with, if any: one event per key."""
     created_at: str | None = None
+    """When igni stored it, ISO 8601."""
     expires_at: str | None = None
+    """When igni stops trying to deliver it, ISO 8601."""
 
 
 ServiceEventHandler = Callable[[ServiceEvent], Awaitable[None] | None]
@@ -68,8 +75,8 @@ ServiceEventHandler = Callable[[ServiceEvent], Awaitable[None] | None]
 class ServiceEventHandlers:
     """One handler per event type, and one for any type."""
 
-    #: Registered for every type the others do not name.
     ANY = "*"
+    """Registered for every type the others do not name."""
 
     def __init__(self) -> None:
         self._handlers: dict[str, ServiceEventHandler] = {}

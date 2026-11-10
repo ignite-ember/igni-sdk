@@ -117,22 +117,29 @@ class IgniService:
                 timeout=settings.timeout,
                 http=http,
             )
+            """igni server as this service reaches it: its address, this service's own URL, the HTTP client."""
         except ValueError as exc:
             raise ConfigurationError(f"igni: PUBLIC_BASE_URL: {exc}") from exc
         self.settings = settings
+        """The settings the service was made with."""
         self.clock = clock or Clock()
+        """The clock every token's age and expiry is read from; tests pass a `ManualClock`."""
         self.key = SigningKey(key_store, clock=self.clock)
+        """This deployment's signing key: its identity at igni. `await igni.thumbprint()` is its thumbprint."""
         self.keys = IgniKeys(self.server, clock=self.clock)
-        #: What igni has revoked, kept fresh by `lifespan` (`igni_service.revocations`).
+        """igni server's public keys (its JWKS), fetched and cached, that people's tokens are checked against."""
         self.revocations = RevocationList(
             max_staleness=settings.revocations_max_staleness, clock=self.clock
         )
+        """What igni has revoked, kept fresh by `lifespan` (`igni_service.revocations`)."""
         self.verifier = TokenVerifier(self.server, self.keys, clock=self.clock)
-        #: Who `caller` lets in: people only unless the service says more
-        #: (an app, an app's spaces — igni's service-identity §9.2, §17).
+        """Checks the tokens igni signed for this service; what `person`, `caller` and `igni_call` use."""
         self.accepted_callers: frozenset[CallerKind] = frozenset(
             CallerKind(kind) for kind in accepted_callers
         )
+        """Who `caller` lets in: people only unless the service says more
+        (an app, an app's spaces — igni's service-identity §9.2, §17).
+        """
         self.registration = ServiceRegistration(
             self.server,
             self.key,
@@ -146,19 +153,27 @@ class IgniService:
             bundle_path=settings.extension_bundle_path,
             retry_min=retry_min,
         )
+        """This service's registration with igni and the shipping of its extension (`ServiceRegistration`)."""
         self.tokens = ServiceTokens(self.server, self.registration, self.key, clock=self.clock)
+        """This service's own tokens for igni, one per organisation (`ServiceTokens`)."""
         self.revocation_feed = RevocationFeed(
             self.server,
             TokenEndpoint(self.server, self.registration, self.key),
             self.revocations,
             clock=self.clock,
         )
+        """Keeps `revocations` fresh while `lifespan` runs (`igni_service.revocations`)."""
         self.verifier.revocations = self.revocation_feed
         self.directory = DirectoryClient(self.tokens, clock=self.clock)
+        """igni's directory for any organisation; `igni.host(org_id).directory` is one organisation's."""
         self.notifier = Notifier(self.tokens)
+        """Sends notifications; `igni.host(org_id).notify` is the way to use it."""
         self.events = EventSender(self.tokens)
+        """Sends events to an extension; `igni.host(org_id).agent(producer)` is the way to use it."""
         self.agents = AgentWire(self.tokens, self.events)
+        """The calls behind `Agent`: uploads, items and statuses."""
         self.vm_profiles = ServiceVmProfiles(self.tokens)
+        """The extension's VM profile request; `igni.host(org_id).extension_vm_profile()` reads it."""
         self.web = WebSignIn(
             self.server,
             self.registration,
@@ -167,6 +182,7 @@ class IgniService:
             web_store or MemoryWebSessionStore(clock=self.clock),
             clock=self.clock,
         )
+        """Sign-in to the service's own pages, with cookies (`WebSignIn`): `igni.web.person`, `igni.web.router`."""
         self._handlers = SubjectHandlers()
         self._organisations = OrganisationHandlers()
         self._router: APIRouter | None = None
@@ -243,8 +259,9 @@ class IgniService:
         """Put igni's part of the service on `app`: igni's calls
         (`router`), sign-in to the service's own pages (`web.router`), and
         cross-origin calls from the extension's page to every route that
-        takes a person's token (`BearerCors`) — any origin, the token and
-        nothing else, never cookies.
+        takes its caller's bearer token (`BearerCors`: `person`,
+        `optional_person`, `org_admin`, `caller`, `token`, `optional_token`)
+        — any origin, the token and nothing else, never cookies.
         """
         app.include_router(self.router)
         app.include_router(self.web.router)
@@ -304,6 +321,9 @@ class IgniService:
         """FastAPI dependency: whoever a request's token names — a `Person`, an
         `App` or a `Space` — among the kinds this service accepts
         (`accepted_callers`, people only by default). 401 for anybody else.
+
+        A bearer route like `person`'s: the extension's page may call it
+        (`BearerCors`).
         """
         token = self._bare(credentials)
         try:

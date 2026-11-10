@@ -24,6 +24,7 @@ class ManualClock(Clock):
         return self._now
 
     def advance(self, seconds: float) -> None:
+        """Move the clock forward `seconds`; both `monotonic` and `wall` move."""
         self._now += seconds
 
 

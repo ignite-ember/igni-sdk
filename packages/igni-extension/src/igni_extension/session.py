@@ -24,8 +24,8 @@ from mcp.server.session import ServerSession
 
 from igni_extension.notifications import ConditionsNotification, NotifyNotification
 
-#: What the process says to the host on its own.
 HostNotification = NotifyNotification | ConditionsNotification
+"""What the process says to the host on its own."""
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 class HostSession:
     """The session to the host, once there is one, and what waits for it."""
 
-    #: Notifications kept while nobody is connected; the oldest go first.
     MAX_PENDING = 100
+    """Notifications kept while nobody is connected; the oldest go first."""
 
     def __init__(self) -> None:
         self._session: ServerSession | None = None

@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Grant(BaseModel):
     """A token request, sent as a form. Fields left `None` are not sent."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     def form(self) -> dict[str, str]:
         return self.model_dump(exclude_none=True)

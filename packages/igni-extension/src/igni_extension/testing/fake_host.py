@@ -19,7 +19,7 @@ from types import TracebackType
 from typing import Any
 
 import anyio
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
@@ -45,16 +45,24 @@ class HostCall(BaseModel):
     a test can compare it with one it writes down.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     op: str
+    """`get`, `set` or `call`."""
     path: str
+    """The member asked: `chat.processing`, `chat.post`."""
     window: str | None = None
-    #: The session, for `host.sessions.chat(id)`.
+    """The window, for `host.windows.ui(id)`."""
     session: str | None = None
+    """The session, for `host.sessions.chat(id)`."""
     params: dict[str, Any] = {}
+    """A call's parameters, by name."""
     value: Any = None
+    """The value of a `set`."""
 
     @classmethod
     def of(cls, request: Request) -> HostCall:
+        """What `request` asked, without its number."""
         return cls(
             op=request.op.value,
             path=request.path,
@@ -94,14 +102,23 @@ class FakeHost:
         refusals: dict[str, tuple[str, str]] | None = None,
     ) -> None:
         self.extension_id = extension_id
+        """The extension the host serves."""
         self.granted = list(granted)
+        """The `permissions.host` grants the hello says the extension holds."""
         self.values: dict[str, Any] = dict(values or {})
+        """`path -> value` for a `get`; a `set` stores into it. An unknown path is `not_found`."""
         self.answers: dict[str, Any] = dict(answers or {})
+        """`path -> value`, or a callable of the params, for a `call`."""
         self.refusals: dict[str, tuple[str, str]] = dict(refusals or {})
+        """`path -> (code, message)`: that member is refused with that code."""
         self.secret = secrets.token_urlsafe(16)
+        """The secret a process must present: `IGNI_HOST_SECRET` in `environment()`."""
         self.calls: list[HostCall] = []
+        """Every `get`, `set` and `call` the extension made, in order."""
         self.subscribed: set[str] = set()
+        """The signals the extension subscribed to, by wire name."""
         self.url = ""
+        """The socket's address once started: `IGNI_HOST_URL` in `environment()`."""
         self._subscribed_changed = asyncio.Event()
         self._sockets: set[ServerConnection] = set()
         self._server: Server | None = None
@@ -132,11 +149,13 @@ class FakeHost:
         await self.stop()
 
     async def start(self) -> None:
+        """Listen on a free loopback port. `async with FakeHost()` calls it."""
         self._server = await serve(self._serve, "127.0.0.1", 0, compression=None)
         port = int(next(iter(self._server.sockets)).getsockname()[1])
         self.url = f"ws://127.0.0.1:{port}/v1/host"
 
     async def stop(self) -> None:
+        """Stop listening and close every socket. `async with` calls it on the way out."""
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()

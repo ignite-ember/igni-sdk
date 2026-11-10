@@ -36,6 +36,8 @@ OTHER_BYTES = "the signature is for other bytes"
 class SignedBody(BaseModel):
     """Bytes a client uploaded, and the JWS header that says what they are."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     signature: str
     body: bytes
 
@@ -55,9 +57,11 @@ class SignedBody(BaseModel):
 class ClientPath(BaseModel):
     """`/v1/clients/{client_id}/extension[/assets/{sha256}]`."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client_id: str
-    #: The asset's digest; `None` for the bundle itself.
     sha256: str | None = None
+    """The asset's digest; `None` for the bundle itself."""
 
     @classmethod
     def parse(cls, path: str) -> ClientPath | None:
@@ -72,7 +76,7 @@ class ClientPath(BaseModel):
 class AssetKey(BaseModel):
     """An uploaded asset: whose, and its digest."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     client_id: str
     sha256: str
@@ -80,6 +84,8 @@ class AssetKey(BaseModel):
 
 class AssetStored(BaseModel):
     """What igni answers an asset upload with."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     sha256: str
     size: int
@@ -91,13 +97,14 @@ class FakeExtensionStore:
     def __init__(self, clients: FakeClientRegistry) -> None:
         self.clients = clients
         self.extensions: dict[str, HeldExtension] = {}
-        #: Uploads held for a super admin (`hold`), by client.
         self.held: dict[str, HeldExtension] = {}
+        """Uploads held for a super admin (`hold`), by client."""
         self.assets: dict[AssetKey, bytes] = {}
-        #: When set, an upload replacing an approved service's extension is
-        #: **held** with this reason, as igni holds a version that asks for
-        #: more than the approved one (service-identity §8.1).
         self.hold_uploads: str | None = None
+        """When set, an upload replacing an approved service's extension is
+        **held** with this reason, as igni holds a version that asks for
+        more than the approved one (service-identity §8.1).
+        """
 
     def hold(self, reason: str) -> None:
         """Hold every new version from an approved service, for `reason`."""

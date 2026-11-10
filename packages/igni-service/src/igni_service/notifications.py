@@ -33,8 +33,8 @@ from igni_service.urls import IgniPaths
 
 logger = logging.getLogger(__name__)
 
-#: igni's limits, mirrored so a mistake is caught where it is made.
 MAX_KIND = 64
+"""igni's limits, mirrored so a mistake is caught where it is made."""
 MAX_TITLE = 200
 MAX_KEY = 200
 MAX_IDENTITY = 320
@@ -47,10 +47,12 @@ ParamValue = str | int | float | bool | None
 class Target(BaseModel):
     """Where in the extension to go: one of its pages, and that page's params."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     page: str = Field(min_length=1, max_length=MAX_KEY)
+    """The page's id, as the extension's manifest declares it."""
     params: dict[str, ParamValue] = Field(default_factory=dict, max_length=MAX_TARGET_PARAMS)
+    """What the page is opened with: strings, numbers, booleans or null; small as JSON."""
 
     @field_validator("params")
     @classmethod
@@ -63,22 +65,22 @@ class Target(BaseModel):
 class Notification(BaseModel):
     """One thing that happened, and who it concerns."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
-    #: The extension's own word for what happened: `comment`, `access_requested`.
     kind: str = Field(min_length=1, max_length=MAX_KIND)
-    #: What it is about.
+    """The extension's own word for what happened: `comment`, `access_requested`."""
     title: str = Field(min_length=1, max_length=MAX_TITLE)
-    #: One line. Whitespace is collapsed here; igni cuts a long one short.
+    """What it is about."""
     body: str = ""
-    #: Who did it: a user id or an address. Never told about it.
+    """One line. Whitespace is collapsed here; igni cuts a long one short."""
     actor: str = Field(default="", max_length=MAX_IDENTITY)
-    #: Where to go: one of this service's extension pages.
+    """Who did it: a user id or an address. Never told about it."""
     target: Target | None = None
-    #: The same event is delivered once per person, however often it is sent.
+    """Where to go: one of this service's extension pages."""
     event_key: str = Field(default="", max_length=MAX_KEY)
-    #: User ids or addresses, in this organisation.
+    """The same event is delivered once per person, however often it is sent."""
     recipients: list[str] = Field(default_factory=list)
+    """User ids or addresses, in this organisation."""
 
     @field_validator("body")
     @classmethod
@@ -105,6 +107,8 @@ class Notification(BaseModel):
 class NotificationBatch(BaseModel):
     """`POST /v1/service-notifications`, as it goes on the wire."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     notifications: list[Notification]
 
 
@@ -115,7 +119,10 @@ class Delivered(BaseModel):
     told about the `event_key` is not delivered to.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     delivered: int = 0
+    """How many people igni wrote a delivery for."""
 
 
 Sleep = Callable[[float], Awaitable[None]]
@@ -126,8 +133,8 @@ class Notifier:
 
     MAX_BATCH = 100
     MAX_RECIPIENTS = 1000
-    #: Calls per batch before giving up, and the first pause between them.
     ATTEMPTS = 3
+    """Calls per batch before giving up, and the first pause between them."""
     BACKOFF = 0.5
 
     def __init__(

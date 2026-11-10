@@ -23,16 +23,16 @@ from pydantic import BaseModel, ConfigDict, model_validator
 class ToolHints(BaseModel):
     """What a tool is, in the four words igni's permission modes read."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
-    #: It changes nothing anywhere.
     read_only: bool
-    #: A change it makes can delete or overwrite something. `False` for a read.
+    """It changes nothing anywhere."""
     destructive: bool
-    #: Calling it again with the same arguments changes nothing more.
+    """A change it makes can delete or overwrite something. `False` for a read."""
     idempotent: bool
-    #: It reaches beyond its own system: the web, another service, somebody else's data.
+    """Calling it again with the same arguments changes nothing more."""
     open_world: bool
+    """It reaches beyond its own system: the web, another service, somebody else's data."""
 
     @model_validator(mode="after")
     def _a_read_destroys_nothing(self) -> ToolHints:
@@ -59,6 +59,7 @@ class ToolHintsMissing(Exception):
 
     def __init__(self, tools: list[str]) -> None:
         self.tools = tools
+        """The tools that leave a hint unstated, by name."""
         super().__init__(
             "every tool states all four hints (readOnlyHint, destructiveHint, "
             "idempotentHint, openWorldHint) and these do not: "

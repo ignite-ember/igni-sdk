@@ -87,14 +87,17 @@ class WebSignIn:
     """Sign-in to the service's own pages, and the dependencies that require it."""
 
     PREFIX = "/auth"
+    """Where the sign-in routes are mounted: `/auth/login`, `/auth/callback`, `/auth/logout`."""
     COOKIE = "igni_session"
+    """The cookie holding a signed-in person's session id (HttpOnly, SameSite=Lax)."""
     LOGIN_COOKIE = "igni_login"
-    #: How long a sign-in may take at igni's portal.
+    """The cookie tying a sign-in in flight to the browser that started it."""
     LOGIN_TTL = 600.0
-    #: A refresh token's life at igni: a session idle longer is dead.
+    """How long a sign-in may take at igni's portal."""
     SESSION_TTL = 30 * 24 * 3600.0
-    #: How long before the access token expires it is renewed.
+    """A refresh token's life at igni: a session idle longer is dead."""
     RENEW_BEFORE = 60.0
+    """How long before the access token expires it is renewed."""
 
     def __init__(
         self,
@@ -117,10 +120,12 @@ class WebSignIn:
 
     @classmethod
     def redirect_uri_for(cls, own_url: str) -> str:
+        """The callback address igni sends a person back to, for a service at `own_url`."""
         return f"{own_url}{cls.PREFIX}/callback"
 
     @property
     def redirect_uri(self) -> str:
+        """This service's callback address: `PUBLIC_BASE_URL` + `/auth/callback`."""
         return self.redirect_uri_for(self._igni.own_url)
 
     @property
@@ -135,6 +140,7 @@ class WebSignIn:
 
     @property
     def store(self) -> WebSessionStore:
+        """Where the sessions and sign-ins in flight are kept."""
         return self._store
 
     @property
@@ -145,6 +151,7 @@ class WebSignIn:
 
     @property
     def router(self) -> APIRouter:
+        """The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `POST /auth/logout`. `igni.install(app)` mounts them."""
         if self._router is None:
             router = APIRouter(prefix=self.PREFIX, tags=["sign-in"])
             router.add_api_route("/login", self.login, methods=["GET"], include_in_schema=False)

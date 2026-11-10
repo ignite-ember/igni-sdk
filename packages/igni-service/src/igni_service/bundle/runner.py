@@ -11,9 +11,10 @@ from pathlib import Path
 class CommandRunner:
     """Runs uv and pip, with a fixed timestamp for anything they build."""
 
-    #: Wheels built here carry this as every file's timestamp, so building
-    #: the same source twice gives the same bytes.
     SOURCE_DATE_EPOCH = "315532800"
+    """Wheels built here carry this as every file's timestamp, so building
+    the same source twice gives the same bytes.
+    """
 
     def run(
         self,

@@ -44,24 +44,38 @@ class Subject(BaseModel):
     erasure until every service confirms it.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     user_id: str
+    """The person's igni user id: erase and export by this."""
     org_id: str
+    """The organisation the request is about; data in other organisations is not."""
     email: str = ""
+    """Their email address from igni's directory; empty when it could not be asked."""
     name: str = ""
+    """Their name from igni's directory; empty when it could not be asked."""
     member: Member | None = None
+    """The directory's whole entry for them, when it could be asked."""
 
 
 class ExportSection(BaseModel):
     """One section of a subject-access export. igni files it under the service's name."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str
+    """The section's title: what the data is (`Notes`, `Comments`)."""
     rows: list[dict[str, CellValue]] = Field(default_factory=list)
+    """The person's data, one dict per row: column name to a string, number, boolean or null."""
 
 
 class SubjectExport(BaseModel):
+    """What the export route answers igni with: every section of one person's data."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     sections: list[ExportSection] = Field(default_factory=list)
+    """The sections, as the `on_export` handler returned them."""
 
 
 EraseHandler = Callable[[Subject], Awaitable[None]]

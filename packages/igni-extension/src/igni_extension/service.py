@@ -39,6 +39,7 @@ class ServiceWebSocket:
 
     def __init__(self, url: str, tokens: HostTokens, options: dict[str, Any]) -> None:
         self.url = url
+        """The socket's address on the service: `ws://` or `wss://`."""
         self._tokens = tokens
         self._options = options
         self._socket: ClientConnection | None = None
@@ -126,6 +127,7 @@ class ServiceClient(httpx.AsyncClient):
         return ServiceWebSocket(f"{base}/{path.lstrip('/')}", self._tokens, options)
 
     async def aclose(self) -> None:
+        """Close this client, and the clients `for_(caller)` made."""
         for client in self._for.values():
             await client.aclose()
         self._for.clear()
@@ -149,8 +151,8 @@ class ServiceAccess:
     ) -> None:
         self._extension_id = extension_id
         self._endpoint = endpoint
-        #: The person's tokens for the service, which the client attaches.
         self.tokens = HostTokens(endpoint, transport=token_transport, clock=clock)
+        """The person's tokens for the service, which the client attaches."""
         self._transport = transport
         self._client: ServiceClient | None = None
 

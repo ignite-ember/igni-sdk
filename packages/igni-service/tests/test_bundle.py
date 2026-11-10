@@ -381,8 +381,8 @@ class TestEveryFileIsPinnedByHash:
         assert status == 0
 
 
-class TestUntilTheSdksAreOnPyPI:
-    def test_a_missing_igni_extension_says_how_to_build_it_from_a_checkout(
+class TestAMissingSdkSaysWhereElseToGetIt:
+    def test_a_missing_igni_extension_names_the_release_wheels_and_a_checkout_build(
         self, tmp_path: Path, index: Path
     ) -> None:
         extension = write_extension(tmp_path / "extension", dependencies=["igni-extension"])
@@ -391,6 +391,8 @@ class TestUntilTheSdksAreOnPyPI:
             builder(extension, index).build(tmp_path / "bundle.tar.gz")
 
         said = str(failed.value)
+        assert "are on PyPI" in said
+        assert "gh release download sdk-v<version>" in said
         assert "uv build --wheel --out-dir" in said
         assert "packages/igni-extension" in said
         assert "--find-links" in said

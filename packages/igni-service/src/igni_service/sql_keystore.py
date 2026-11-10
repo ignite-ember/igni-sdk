@@ -26,16 +26,17 @@ from igni_service.keystore import KeyCipher, StoredKey
 from igni_service.sql_tables import TableMaker
 from igni_service.tables import IgniTables
 
-#: The one row's primary key.
 THE_KEY = "service"
+"""The one row's primary key."""
 
 
 class SqlKeyStore:
     """Keeps the service's key sealed in one row of `igni_service_key`."""
 
-    #: Include in Alembic's `target_metadata` to own the table in migrations.
     metadata = IgniTables.metadata
+    """Include in Alembic's `target_metadata` to own the table in migrations."""
     table = IgniTables.service_key
+    """The `igni_service_key` table: one row, the sealed key."""
 
     def __init__(
         self, engine: AsyncEngine, cipher: KeyCipher, *, create_table: bool = True
@@ -46,9 +47,12 @@ class SqlKeyStore:
 
     @property
     def engine(self) -> AsyncEngine:
+        """The database engine the key is kept through."""
         return self._engine
 
     async def get(self) -> StoredKey | None:
+        """The kept key, unsealed, or `None` before there is one. Creates the table first
+        unless `create_table=False`."""
         await self._tables.ensure()
         async with self._engine.connect() as connection:
             row = (
@@ -65,6 +69,7 @@ class SqlKeyStore:
         )
 
     async def claim(self, key: StoredKey) -> StoredKey:
+        """Keep `key`, sealed, unless another replica kept one first; answer with the kept one."""
         await self._tables.ensure()
         sealed = self._cipher.seal(key.private_pem)
         try:

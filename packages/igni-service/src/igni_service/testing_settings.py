@@ -16,18 +16,28 @@ class SettingsOverrides(BaseModel):
     own default. A field `IgniSettings` lacks is refused, not ignored.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     igni_server_url: str = ""
+    """`IGNI_SERVER_URL`; the fake's address unless set."""
     public_base_url: str = ""
+    """`PUBLIC_BASE_URL`; `http://service.test` unless set."""
     service_name: str = ""
+    """`SERVICE_NAME`."""
     client_kind: str = "service"
+    """`IGNI_CLIENT_KIND`: `service`."""
     redirect_uris: list[str] = Field(default_factory=list)
+    """`IGNI_REDIRECT_URIS`: more addresses igni may send a signed-in person back to."""
     key_encryption_key: str = ""
+    """`IGNI_KEY_ENCRYPTION_KEY`."""
     key_database_url: str = ""
+    """`IGNI_KEY_DATABASE_URL`."""
     extension_bundle_path: str = ""
+    """`IGNI_EXTENSION_BUNDLE_PATH`: the bundle the service uploads at start-up."""
     revocations_max_staleness: float = 30.0
+    """`IGNI_REVOCATIONS_MAX_STALENESS`, in seconds."""
     timeout: float = 10.0
+    """`IGNI_SERVER_TIMEOUT`: each call to igni, in seconds."""
 
     def settings_for(self, addresses: IgniAddresses) -> IgniSettings:
         """Settings that reach the fake at `addresses`, with what this sets."""

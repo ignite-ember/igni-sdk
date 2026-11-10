@@ -32,8 +32,8 @@ from igni_service.urls import IgniPaths
 
 logger = logging.getLogger(__name__)
 
-#: igni's limits, mirrored so a mistake is caught where it is made.
 MAX_TYPE = 100
+"""igni's limits, mirrored so a mistake is caught where it is made."""
 MAX_KEY = 200
 MAX_PAYLOAD_BYTES = 65536
 
@@ -43,32 +43,36 @@ ProducerKind = Literal["person", "app"]
 class Producer(BaseModel):
     """Whose agent the event is for: a person or an app of the organisation."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     kind: ProducerKind
+    """`person` or `app`."""
     id: str = Field(min_length=1)
+    """The person's user id, or the app's id."""
 
     @classmethod
     def person(cls, user_id: str) -> Producer:
+        """The igni of the person `user_id`."""
         return cls(kind="person", id=user_id)
 
     @classmethod
     def app(cls, app_id: str) -> Producer:
+        """The igni of the app `app_id`, in its Fleet VM."""
         return cls(kind="app", id=app_id)
 
 
 class ServiceEventRequest(BaseModel):
     """`POST /v1/service-events`, as it goes on the wire."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True)
 
     producer: Producer
-    #: The extension's own word for what happened: `claim.created`.
     type: str = Field(min_length=1, max_length=MAX_TYPE)
+    """The extension's own word for what happened: `claim.created`."""
     payload: dict[str, object] = Field(default_factory=dict)
     event_key: str | None = Field(default=None, min_length=1, max_length=MAX_KEY)
-    #: Not delivered after this; igni keeps at most 14 days.
     expires_at: datetime | None = None
+    """Not delivered after this; igni keeps at most 14 days."""
 
     @field_validator("payload")
     @classmethod
@@ -81,10 +85,14 @@ class ServiceEventRequest(BaseModel):
 class EventAccepted(BaseModel):
     """igni stored the event. `expires_at` is the time igni kept."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     event_id: str
+    """The item's id: pass it to `Agent.status`."""
     expires_at: datetime | None = None
-    #: True when `event_key` matched an event already stored.
+    """When igni stops trying to deliver it: what was asked, or igni's 14-day limit."""
     duplicate: bool = False
+    """True when `event_key` matched an event already stored."""
 
 
 Sleep = Callable[[float], Awaitable[None]]

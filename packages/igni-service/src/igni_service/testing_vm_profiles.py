@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 import httpx
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from igni_service.testing_bundles import HeldExtension
 from igni_service.testing_vm_rules import FakeCaps, FakeProfile, ManifestVm, Resolved
@@ -63,8 +63,12 @@ class NoVmProfileRequest(LookupError):
 class VmProfileSubject(BaseModel):
     """Whose VM profile request: an app's, or an extension's."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     kind: Literal["app", "extension"]
+    """`app` or `extension`."""
     subject_id: str
+    """The app's id, or the extension's manifest id."""
 
     @classmethod
     def app(cls, app_id: str) -> VmProfileSubject:
@@ -85,14 +89,17 @@ class FakeVmProfiles:
         #: `FakeIgni` hands it its own, so a test can move it.
         self._clock = clock
         self.caps = FakeCaps()
-        #: Every request, by `(org_id, kind, subject_id)`.
+        """The platform's caps every request is checked against; change them to play another
+        platform.
+        """
         self.requests: dict[tuple[str, str, str], VmProfileRequestRecord] = {}
-        #: Profiles approvals made, by `(org_id, profile_id)`.
+        """Every request, by `(org_id, kind, subject_id)`."""
         self.profiles: dict[tuple[str, str], FakeProfile] = {}
-        #: The profile each app has, by `(org_id, app_id)`; none: the default.
+        """Profiles approvals made, by `(org_id, profile_id)`."""
         self.app_profiles: dict[tuple[str, str], str] = {}
-        #: How many groups and apps a profile was given, by `(org_id, profile_id)`.
+        """The profile each app has, by `(org_id, app_id)`; none: the default."""
         self.assigned: dict[tuple[str, str], Assigned] = {}
+        """How many groups and apps a profile was given, by `(org_id, profile_id)`."""
 
     # ── Playing the org admin ───────────────────────────────────────
 
@@ -165,6 +172,9 @@ class FakeVmProfiles:
     # ── The wire ────────────────────────────────────────────────────
 
     def app_put(self, org_id: str, app_id: str, name: str, body: bytes) -> httpx.Response:
+        """Answer an app's `PUT` of its VM profile request as igni does. Called by the fake's
+        router.
+        """
         try:
             resolved = Resolved.of(VmProfileRequest.model_validate_json(body or b"{}"))
         except ValidationError as exc:
@@ -181,6 +191,7 @@ class FakeVmProfiles:
         return httpx.Response(201 if changed else 200, json=record.model_dump(mode="json"))
 
     def app_get(self, org_id: str, app_id: str) -> httpx.Response:
+        """Answer an app's `GET` of its request as igni does. Called by the fake's router."""
         record = self.requests.get((org_id, "app", app_id))
         if record is None:
             return DetailError(
@@ -189,6 +200,7 @@ class FakeVmProfiles:
         return httpx.Response(200, json=record.model_dump(mode="json"))
 
     def app_profile(self, org_id: str, app_id: str) -> httpx.Response:
+        """Answer an app's `GET` of what its VM gets now as igni does. Called by the fake's router."""
         profile = self._profile(org_id, self.app_profiles.get((org_id, app_id)))
         served = AppVmProfile(
             **self.caps.serve(profile).model_dump(), volume_gib=profile.settings.volume_gib

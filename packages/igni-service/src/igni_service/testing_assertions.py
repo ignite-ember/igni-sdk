@@ -4,39 +4,49 @@ A `private_key_jwt` assertion (RFC 7523) proves a client when it is
 signed by the client's registered key, issued and subjected by the
 client, addressed to igni, alive for at most five minutes, and its
 `jti` has not been seen before. A revoked client, or one still waiting
-for approval when igni requires approval, is refused in igni's own
-words, which the SDK reads to tell the two apart.
+for approval when igni requires approval, is refused with igni's own
+words for people and, for the SDK, the registration's state in
+`client_state` (`pending` or `revoked`; no other refusal carries it).
+`names_client_state = False` plays an igni server from before that
+field, which says the state only in words.
 """
 
 from __future__ import annotations
 
 import httpx
 import jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from igni_service.clock import Clock
 from igni_service.crypto import ALGORITHM
-from igni_service.testing_clients import FakeClient, FakeClientRegistry
+from igni_service.testing_clients import ClientState, FakeClient, FakeClientRegistry
 from igni_service.testing_wire import IgniAddresses, OAuthError, TokenForm
 
-#: The longest a client assertion may live, in seconds.
 MAX_ASSERTION_LIFETIME = 300
+"""The longest a client assertion may live, in seconds."""
 
-#: igni server's own words (its `assertions.py`).
 REVOKED = "this client has been revoked"
+"""igni server's own words (its `assertions.py`)."""
 WAITING = "this client is waiting for a super admin to approve it"
 
 
 class AssertionResult(BaseModel):
     """The client an assertion proved, or why it proved none."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     client: FakeClient | None = None
-    #: igni's reason, when it gives one; most refusals give none.
     refusal: str | None = None
+    """igni's reason, when it gives one; most refusals give none."""
+    client_state: ClientState | None = None
+    """The registration's state, on a refusal for a client igni found."""
 
     def to_error(self) -> httpx.Response:
         return OAuthError(
-            error="invalid_client", error_description=self.refusal, status=401
+            error="invalid_client",
+            error_description=self.refusal,
+            client_state=self.client_state,
+            status=401,
         ).to_response()
 
 
@@ -54,10 +64,14 @@ class ClientAssertionVerifier:
         self.addresses = addresses
         self.clock = clock
         self.clients = clients
-        #: When set, a pending registration gets no service token.
         self.require_approval = require_approval
-        #: Every `jti` already used: replay memory, which no reset forgets.
+        """When set, a pending registration gets no service token."""
+        self.names_client_state = True
+        """Whether a refusal names the client's state in `client_state`, as
+        igni server is to; `False` plays one that says it only in words.
+        """
         self.jtis: set[str] = set()
+        """Every `jti` already used: replay memory, which no reset forgets."""
 
     def verify(self, form: TokenForm) -> AssertionResult:
         """The client `form`'s assertion proves, or the refusal."""
@@ -70,9 +84,9 @@ class ClientAssertionVerifier:
         if client is None:
             return AssertionResult()
         if client.is_revoked:
-            return AssertionResult(refusal=REVOKED)
+            return self._refused(REVOKED, ClientState.REVOKED)
         if self.require_approval and not client.is_approved:
-            return AssertionResult(refusal=WAITING)
+            return self._refused(WAITING, ClientState.PENDING)
         try:
             claims = jwt.decode(
                 form.client_assertion,
@@ -95,6 +109,11 @@ class ClientAssertionVerifier:
             return AssertionResult()
         self.jtis.add(claims["jti"])
         return AssertionResult(client=client)
+
+    def _refused(self, words: str, state: ClientState) -> AssertionResult:
+        return AssertionResult(
+            refusal=words, client_state=state if self.names_client_state else None
+        )
 
 
 __all__ = ["MAX_ASSERTION_LIFETIME", "AssertionResult", "ClientAssertionVerifier"]

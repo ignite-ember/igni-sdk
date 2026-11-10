@@ -21,21 +21,33 @@ from igni_service.crypto import RsaKeyPair
 class JwtEnvelope(BaseModel):
     """What every token igni signs carries, whatever it is for."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     iss: str
+    """The issuer: igni's issuer URL."""
     sub: str
+    """Whom the token is for: a user id, an app id, a space id, or igni."""
     aud: str
+    """The audience: the service's own URL."""
     token_use: str
+    """The kind of token: `user`, `app`, `space` or `igni`."""
     iat: int
+    """When it was issued, in seconds since the epoch."""
     iat_ms: int
+    """The same, in milliseconds."""
     exp: int
+    """When it expires, in seconds since the epoch."""
 
 
 class OrgClaims(BaseModel):
     """Claims for one organisation; `USE` is the `token_use` of their kind."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     USE: ClassVar[str]
 
     org: str
+    """The organisation the token is for."""
 
 
 class PersonClaims(OrgClaims):
@@ -44,12 +56,17 @@ class PersonClaims(OrgClaims):
     USE: ClassVar[str] = "user"
 
     org_name: str = ""
+    """The organisation's display name."""
     org_role: str = "member"
+    """`admin` or `member` in the organisation."""
     email: str = ""
+    """The person's email address."""
     name: str = ""
+    """The person's display name."""
     super_admin: bool = False
-    #: The client a person signed in to, on a token issued at the token endpoint.
+    """Whether the person is a super admin of the deployment."""
     azp: str | None = None
+    """The client a person signed in to, on a token issued at the token endpoint."""
 
 
 class AppClaims(OrgClaims):
@@ -58,7 +75,9 @@ class AppClaims(OrgClaims):
     USE: ClassVar[str] = "app"
 
     kind: Literal["app"] = "app"
+    """Always `app`."""
     name: str
+    """The app's display name."""
 
 
 class SpaceClaims(OrgClaims):
@@ -67,8 +86,11 @@ class SpaceClaims(OrgClaims):
     USE: ClassVar[str] = "space"
 
     kind: Literal["space"] = "space"
+    """Always `space`."""
     app: str
+    """The app the space belongs to."""
     external_id: str
+    """The app's own name for its end user."""
 
 
 class IgniClaims(OrgClaims):
@@ -84,16 +106,24 @@ class TokenOverrides(BaseModel):
     field is optional rather than defaulted.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, use_attribute_docstrings=True)
 
     aud: str | None = None
+    """Another audience: a token for another service."""
     iss: str | None = None
+    """Another issuer: a token somebody other than igni signed."""
     use: str | None = None
+    """Another `token_use`: the wrong kind of token."""
     sub: str | None = None
+    """Another subject."""
     org: str | None = None
+    """Another organisation; an empty string is a token for none."""
     kid: str | None = None
+    """Another key id in the header: a key igni does not publish."""
     key: RsaKeyPair | None = None
+    """Another key to sign with: a signature igni's keys do not verify."""
     lifetime: float | timedelta | None = None
+    """How long it lives, in seconds or as a `timedelta`; negative is already expired."""
 
     def seconds(self, default: float) -> float:
         """The lifetime in seconds, or `default` when not changed."""

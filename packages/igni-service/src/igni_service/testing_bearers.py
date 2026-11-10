@@ -16,11 +16,11 @@ from pydantic import BaseModel, ConfigDict
 class TokenHolder(BaseModel):
     """Who a bearer token was issued to: a client, and the organisation it is for."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     client_id: str = ""
-    #: Empty for a service token for no organisation, and on unauthenticated routes.
     org_id: str = ""
+    """Empty for a service token for no organisation, and on unauthenticated routes."""
 
 
 class BearerTokens:
