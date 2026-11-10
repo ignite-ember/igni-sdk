@@ -12,7 +12,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MenuIcon, type MenuIconName } from "./MenuIcon";
+import { MenuIcon, type MenuIconName } from "./MenuIcon.js";
 
 afterEach(cleanup);
 

@@ -8,10 +8,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { connect } from "./bridge";
-import { HostError } from "./hostModel";
-import { BRIDGE_VERSION } from "./protocol";
-import { ServiceError } from "./service";
+import { connect } from "./bridge.js";
+import { HostError } from "./hostModel.js";
+import { BRIDGE_VERSION } from "./protocol.js";
+import { ServiceError } from "./service.js";
 
 /** Stands in for the host app's window. */
 function fakeHost() {

@@ -12,8 +12,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CopySource } from "./CopySource";
-import { MenuIcon } from "./MenuIcon";
+import { CopySource } from "./CopySource.js";
+import { MenuIcon } from "./MenuIcon.js";
 
 afterEach(() => {
   cleanup();

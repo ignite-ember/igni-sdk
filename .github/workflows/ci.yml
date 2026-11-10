@@ -91,8 +91,20 @@ jobs:
 
       - run: npm ci
 
+      # The build the packages publish: the JavaScript Node runs and the
+      # declarations it reads. The type-check below reads the packages'
+      # types through it, so it has to exist first.
+      - name: Build
+        run: npm run build
+
       - name: Typecheck
         run: npx tsc --noEmit -p .
+
+      # The packages as a consumer outside a bundler sees them: packed the
+      # way npm publishes them, installed into a scratch consumer that
+      # resolves the way Node does.
+      - name: A consumer outside a bundler
+        run: python3 scripts/check_npm_consumers.py
 
       - name: Unit tests
         env:

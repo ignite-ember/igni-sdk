@@ -46,14 +46,35 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 
 // ── Controls ────────────────────────────────────────────────────────
 
+/**
+ * How a button reads.
+ *
+ * `default` is a plain button, `primary` is the one action on the
+ * panel, `danger` is the one that destroys something, `warn` says the
+ * action is not what it sounds like, and `quiet` is a button that
+ * should not be the first thing the eye lands on.
+ */
 export type ButtonVariant = "default" | "primary" | "danger" | "warn" | "quiet";
+
+/** `md` unless the row is dense, in which case `sm` or `xs`. */
 export type ButtonSize = "md" | "sm" | "xs";
 
+/** What a {@link Button} takes. */
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  /** How it reads. */
   variant?: ButtonVariant;
+  /** Its size. */
   size?: ButtonSize;
 }
 
+/**
+ * A button.
+ *
+ * The variant is a prop rather than a class name you spell:
+ * `btn-primery` is a typo that renders as a plain button and looks
+ * like nothing at all, which is exactly why the name is one the
+ * compiler checks.
+ */
 export function Button({
   variant = "default",
   size = "md",
@@ -74,12 +95,20 @@ export function Button({
   );
 }
 
+/** What an {@link Input} takes. */
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
 
+/** A single-line text field. */
 export function Input({ className, ...rest }: InputProps) {
   return <input {...rest} className={cx("panel-input", className)} />;
 }
 
+/**
+ * How loud a status is.
+ *
+ * `neutral` for a state nothing is wrong with, and the three that
+ * mean something.
+ */
 export type Tone = "neutral" | "success" | "warning" | "danger";
 
 /**
@@ -96,9 +125,14 @@ export type Tone = "neutral" | "success" | "warning" | "danger";
  * about the thing, it is a `Chip`.
  */
 export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
+  /** How loud it is. */
   tone?: Tone;
 }
 
+/**
+ * A tag the reader can scan past. See {@link ChipProps} for when to
+ * reach for a chip and when for a badge.
+ */
 export function Chip({ tone = "neutral", className, ...rest }: ChipProps) {
   return <span {...rest} data-tone={tone} className={cx("chip", className)} />;
 }
@@ -115,9 +149,14 @@ export function Chip({ tone = "neutral", className, ...rest }: ChipProps) {
  * the success one; an empty red badge does not.
  */
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  /** How loud it is. */
   tone?: Tone;
 }
 
+/**
+ * A state the reader is meant to notice. See {@link BadgeProps} for
+ * what the tone does and does not say.
+ */
 export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
   return (
     <span {...rest} data-tone={tone} className={cx("ui-badge", className)} />
@@ -145,6 +184,10 @@ export function List({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div {...rest} className={cx("ui-list", className)} />;
 }
 
+/**
+ * A row of controls at the top of a panel: what the panel is, and what
+ * you can do to it.
+ */
 export function Toolbar({
   className,
   ...rest
@@ -170,6 +213,13 @@ export function Item({
   );
 }
 
+/**
+ * A table.
+ *
+ * The class only; the head, the rows and the cells are yours, because
+ * a table that decides its own columns is a table you cannot use for
+ * anything the app has not already seen.
+ */
 export function Table({
   className,
   ...rest
@@ -190,6 +240,11 @@ export interface EmptyProps extends HTMLAttributes<HTMLDivElement> {
   action?: ReactNode;
 }
 
+/**
+ * What to show where there is nothing.
+ *
+ * See {@link EmptyProps} for why the `action` slot exists.
+ */
 export function Empty({ children, action, className, ...rest }: EmptyProps) {
   return (
     <div {...rest} className={cx("ui-empty", className)}>
@@ -201,13 +256,16 @@ export function Empty({ children, action, className, ...rest }: EmptyProps) {
 
 // ── Dialog ──────────────────────────────────────────────────────────
 
+/** What a {@link Dialog} takes. */
 export interface DialogProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   "title"
 > {
+  /** Its title. Also the accessible name of the dialog. */
   title: ReactNode;
   /** Shown under the title. A sentence, not a paragraph. */
   sub?: ReactNode;
+  /** The body. */
   children?: ReactNode;
   /** The buttons. Rendered in an `Actions` row at the foot. */
   actions?: ReactNode;
@@ -338,19 +396,25 @@ export function Dialog({
 
 // ── Form controls ───────────────────────────────────────────────────
 
+/** What a {@link Select} takes. */
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {}
 
+/** A drop-down. */
 export function Select({ className, ...rest }: SelectProps) {
   return <select {...rest} className={cx("ui-select", className)} />;
 }
 
+/** What a {@link Textarea} takes. */
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
+/** A multi-line text field. */
 export function Textarea({ className, ...rest }: TextareaProps) {
   return <textarea {...rest} className={cx("ui-textarea", className)} />;
 }
 
+/** What a {@link Checkbox} takes. */
 export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
+  /** The text beside the box. It is the accessible name too. */
   label: ReactNode;
 }
 
@@ -370,10 +434,19 @@ export function Checkbox({ label, className, ...rest }: CheckboxProps) {
   );
 }
 
+/** What a {@link Radio} takes. */
 export interface RadioProps extends InputHTMLAttributes<HTMLInputElement> {
+  /** The text beside the box. It is the accessible name too. */
   label: ReactNode;
 }
 
+/**
+ * A native radio, wrapped in its own label.
+ *
+ * Wrapped for the same reason a {@link Checkbox} is: an `id` an
+ * extension forgets to make unique is a label that picks somebody
+ * else's radio.
+ */
 export function Radio({ label, className, ...rest }: RadioProps) {
   return (
     <label className={cx("ui-check", className)}>
@@ -383,11 +456,14 @@ export function Radio({ label, className, ...rest }: RadioProps) {
   );
 }
 
+/** What a {@link Switch} takes. */
 export interface SwitchProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "onChange"
 > {
+  /** Whether it is on. */
   checked: boolean;
+  /** Called with the next value. It takes effect at once. */
   onChange: (next: boolean) => void;
   /**
    * Shown beside the switch, and used as its accessible name.
@@ -444,13 +520,23 @@ export function Switch({
  * `aria-describedby`, so it is announced rather than merely shown.
  */
 export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
+  /** The label. It is visible, not a placeholder. */
   label: ReactNode;
+  /** A sentence under the control, for when nothing is wrong. */
   hint?: ReactNode;
+  /** Why the control is wrong. It replaces the hint while it is set. */
   error?: ReactNode;
   /** The id of the control, so the label points at it. */
   htmlFor?: string;
 }
 
+/**
+ * A label, a control, and room for the reason it is wrong.
+ *
+ * See {@link FieldProps}. The error slot is the part that gets left
+ * out, and a form that rejects input without saying why is the one
+ * people abandon.
+ */
 export function Field({
   label,
   hint,
@@ -508,6 +594,11 @@ export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
   label: string;
 }
 
+/**
+ * Work whose duration is unknown.
+ *
+ * See {@link SpinnerProps} for why `label` is required.
+ */
 export function Spinner({ label, className, ...rest }: SpinnerProps) {
   return (
     <span
@@ -521,6 +612,7 @@ export function Spinner({ label, className, ...rest }: SpinnerProps) {
   );
 }
 
+/** What a {@link Progress} takes. */
 export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   /**
    * How far along, against `max`. Omit for indeterminate, which
@@ -534,9 +626,17 @@ export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   value?: number;
   /** Defaults to 100. */
   max?: number;
+  /** Its name, for a screen reader. */
   label: string;
 }
 
+/**
+ * A bar that fills.
+ *
+ * See {@link ProgressProps}. Without a `value` it slides, because a
+ * bar that sits still while unknown work is happening is a bar that
+ * looks broken.
+ */
 export function Progress({
   value,
   max = 100,
@@ -571,13 +671,18 @@ export function Progress({
 
 // ── Tabs ────────────────────────────────────────────────────────────
 
+/** What a {@link Tabs} takes. */
 export interface TabsProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   "onChange"
 > {
+  /** The tabs. The `id` is what {@link TabPanel}s match on. */
   tabs: { id: string; label: ReactNode }[];
+  /** Which tab is showing. */
   active: string;
+  /** Called with the id of the tab the reader chose. */
   onChange: (id: string) => void;
+  /** The strip's name, for a screen reader. */
   label: string;
   /**
    * The id prefix shared with this strip's {@link TabPanel}s.
@@ -685,6 +790,13 @@ export interface TabPanelProps extends HTMLAttributes<HTMLDivElement> {
   active: string;
 }
 
+/**
+ * The panel a tab controls.
+ *
+ * See {@link TabPanelProps}. It renders nothing at all when its tab is
+ * not the active one, so the content of a panel that is not showing
+ * is not in the page.
+ */
 export function TabPanel({
   base,
   id,
@@ -710,10 +822,12 @@ export function TabPanel({
 
 // ── Text ────────────────────────────────────────────────────────────
 
+/** A horizontal rule. */
 export function Divider({ className, ...rest }: HTMLAttributes<HTMLHRElement>) {
   return <hr {...rest} className={cx("ui-divider", className)} />;
 }
 
+/** What a {@link Heading} takes. */
 export interface HeadingProps extends HTMLAttributes<HTMLHeadingElement> {
   /** The outline level. Also picks the size, so they cannot disagree. */
   level?: 1 | 2 | 3 | 4;
@@ -726,6 +840,12 @@ const HEADING_SIZE = {
   4: "var(--text-sm)",
 } as const;
 
+/**
+ * A heading, at the level you say.
+ *
+ * The size follows the level, so the outline and the type cannot
+ * disagree — which is the whole reason there is no `Title`.
+ */
 export function Heading({
   level = 2,
   className,
@@ -745,14 +865,23 @@ export function Heading({
 /** How loud. Not {@link Tone}: this is emphasis, not status. */
 export type TextTone = "default" | "muted" | "faint";
 
+/** What a {@link Text} takes. */
 export interface TextProps extends HTMLAttributes<HTMLParagraphElement> {
+  /** How loud it is. */
   tone?: TextTone;
 }
 
+/**
+ * A paragraph.
+ *
+ * {@link TextTone} says how loud it is — emphasis, not status. A
+ * status is a {@link Badge}.
+ */
 export function Text({ tone = "default", className, ...rest }: TextProps) {
   return <p {...rest} data-tone={tone} className={cx("ui-text", className)} />;
 }
 
+/** Inline code: a name, a path, a flag. */
 export function Code({ className, ...rest }: HTMLAttributes<HTMLElement>) {
   return <code {...rest} className={cx("ui-code", className)} />;
 }

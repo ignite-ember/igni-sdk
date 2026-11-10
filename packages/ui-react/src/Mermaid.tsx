@@ -28,7 +28,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { CopySource } from "./CopySource";
+import { CopySource } from "./CopySource.js";
 
 type MermaidTheme = "default" | "dark";
 
@@ -94,6 +94,13 @@ export async function loadMermaid(): Promise<MermaidLib> {
   return lib;
 }
 
+/**
+ * A mermaid diagram.
+ *
+ * `source` is the text inside the fence. A diagram that does not
+ * parse is shown as its own source rather than as a blank box: it is
+ * usually a diagram somebody is halfway through writing.
+ */
 export function MermaidBlock({ source }: { source: string }) {
   const frame = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);

@@ -11,7 +11,8 @@
   ],
   "license": "Apache-2.0",
   "author": "Ignite Ember (https://ignite-ember.sh/)",
-  "homepage": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/extension-bridge#readme",
+  "homepage": "https://ignite-ember.sh/docs/sdk/extension-bridge",
+  "documentation": "https://ignite-ember.sh/docs/sdk/extension-bridge",
   "bugs": {
     "url": "https://github.com/ignite-ember/igni-sdk/issues"
   },
@@ -21,15 +22,28 @@
     "directory": "packages/extension-bridge"
   },
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./protocol": "./src/protocol.ts",
-    "./tokens": "./src/tokens.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "node": "./dist/index.js",
+      "default": "./src/index.ts"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "node": "./dist/protocol.js",
+      "default": "./src/protocol.ts"
+    },
+    "./tokens": {
+      "types": "./dist/tokens.d.ts",
+      "node": "./dist/tokens.js",
+      "default": "./src/tokens.ts"
+    }
   },
   "files": [
     "src",
+    "dist",
     "!src/**/*.test.ts",
     "README.md",
     "LICENSE",

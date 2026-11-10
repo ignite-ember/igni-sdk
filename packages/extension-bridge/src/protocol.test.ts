@@ -12,7 +12,7 @@ import {
   isGuestMessage,
   isHostMessage,
   methodAllowed,
-} from "./protocol";
+} from "./protocol.js";
 
 function hello(over: Record<string, unknown> = {}) {
   return {

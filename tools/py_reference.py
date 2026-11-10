@@ -13,6 +13,7 @@ table of areas the caller gives; a public name no area takes is an error.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import enum
 import importlib
@@ -20,24 +21,15 @@ import inspect
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from tools.markdown_pages import plain, signature, site_id
+from tools.reference_area import Area
 
 
 class ReferenceError_(ValueError):
     """A public name has no page, or a page names a module with no public name."""
-
-
-@dataclass(frozen=True)
-class Area:
-    """One reference page: its slug, title, and the modules (or single names) on it."""
-
-    slug: str
-    title: str
-    #: Modules whose public names are on this page (``igni_service.tokens``),
-    #: or a single name as ``module:Name`` for a name ``inspect`` cannot place.
-    sources: tuple[str, ...]
 
 
 @dataclass
@@ -214,6 +206,68 @@ class PythonReference:
             return str(obj.__module__)
         return f"{entry.exported_from}:{entry.name}"
 
+    def _attribute_doc(self, entry: Entry) -> str:
+        """A constant's docstring, read from the source.
+
+        A module-level constant is documented the way PEP 258 says: a
+        string literal right after the assignment. Python does not keep
+        that anywhere at runtime — ``SCHEMA_VERSION.__doc__`` is the
+        version, not the sentence — so it is read from the source the
+        way the convention intends a tool to read it.
+
+        The constant is looked for across the package, not only in the
+        module that re-exports it: ``igni_extension.testing`` exports
+        ``Minter``, which ``igni_extension.testing.token_endpoint``
+        defines and documents.
+
+        A constant with no such literal has no docstring, and the page
+        says so rather than inventing one.
+        """
+        for source in self._sources():
+            try:
+                tree = ast.parse(Path(source).read_text(encoding="utf-8"))
+            except (OSError, SyntaxError, UnicodeDecodeError):
+                continue
+            body = tree.body
+            for index, node in enumerate(body):
+                if not isinstance(node, ast.Assign | ast.AnnAssign):
+                    continue
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                if not any(
+                    isinstance(target, ast.Name) and target.id == entry.name for target in targets
+                ):
+                    continue
+                following = body[index + 1] if index + 1 < len(body) else None
+                if (
+                    isinstance(following, ast.Expr)
+                    and isinstance(following.value, ast.Constant)
+                    and isinstance(following.value.value, str)
+                ):
+                    return inspect.cleandoc(following.value.value)
+        return ""
+
+    def _sources(self) -> list[str]:
+        """Every source file of the package.
+
+        The files are read, not imported: a module that does work at
+        import time should not be made to do it because a document was
+        being written about it.
+        """
+        out: list[str] = []
+        seen: set[str] = set()
+        for module_name in self.modules:
+            module = importlib.import_module(module_name)
+            path = getattr(module, "__file__", None)
+            if path and path not in seen:
+                seen.add(path)
+                out.append(path)
+            for root in getattr(module, "__path__", []):
+                for source in sorted(Path(root).rglob("*.py")):
+                    if str(source) not in seen:
+                        seen.add(str(source))
+                        out.append(str(source))
+        return out
+
     def _place(self) -> dict[str, list[Entry]]:
         placed: dict[str, list[Entry]] = {area.slug: [] for area in self.areas}
         unplaced: list[str] = []
@@ -283,7 +337,7 @@ class PythonReference:
                 if inspect.isclass(obj)
                 else inspect.getdoc(obj)
                 if inspect.isfunction(obj)
-                else ""
+                else self._attribute_doc(entry)
             )
             out.append(f"| [`{entry.name}`](#{site_id(self.title(entry))}) | {summary or '—'} |")
         out.append("")
@@ -320,6 +374,11 @@ class PythonReference:
                 "```",
                 "",
             ]
+            doc = docstring_markdown(self._attribute_doc(entry))
+            if doc:
+                out += [doc, ""]
+            else:
+                missing += 1
         return out, missing
 
     def _class(self, name: str, cls: type) -> list[str]:

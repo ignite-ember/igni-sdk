@@ -9,9 +9,9 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { connect } from "./bridge";
-import { BRIDGE_VERSION } from "./protocol";
-import { RENEW_BEFORE_MS, ServiceError, ServiceLink } from "./service";
+import { connect } from "./bridge.js";
+import { BRIDGE_VERSION } from "./protocol.js";
+import { RENEW_BEFORE_MS, ServiceError, ServiceLink } from "./service.js";
 
 const SERVICE = "https://notes.example.com/api";
 

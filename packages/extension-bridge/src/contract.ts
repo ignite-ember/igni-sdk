@@ -6,16 +6,16 @@
  * so the extension is the one that can name them.
  */
 
-import type { HostError, Signal } from "./hostModel";
-import type { Host } from "./hostModel.generated";
+import type { HostError, Signal } from "./hostModel.js";
+import type { Host } from "./hostModel.generated.js";
 import type {
   ExtensionSettings,
   LaunchParams,
   LocationState,
   RpcArgs,
-} from "./protocol";
-import type { ServiceBridge } from "./service";
-import type { ThemeTokens } from "./tokens";
+} from "./protocol.js";
+import type { ServiceBridge } from "./service.js";
+import type { ThemeTokens } from "./tokens.js";
 
 /** What an extension's page is handed. */
 export interface Bridge<

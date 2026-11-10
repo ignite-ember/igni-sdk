@@ -10,7 +10,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`LocalNotification`](#localnotification) | Something to tell the person using this igni. No recipients: it is them. |
 | [`Notifications`](#notifications) | The floor's notifications. Its own always; everyone's with `notifications`. |
 | [`Property`](#property) | A value of a host object. `await prop` reads it; `set` writes it. |
-| [`SCHEMA_VERSION`](#schema-version) | — |
+| [`SCHEMA_VERSION`](#schema-version) | The version of igni's host object model this SDK was generated from. |
 | [`Signal`](#signal) | One signal of one host object. `T` is the value it carries. |
 | [`Target`](#target) | Where in the extension to go: one of its pages, and that page's params. |
 
@@ -134,6 +134,8 @@ Write it, as the person's UI would. Refused where theirs would be.
 ```python
 SCHEMA_VERSION: str = '1.13.0'
 ```
+
+The version of igni's host object model this SDK was generated from.
 
 ## Signal
 

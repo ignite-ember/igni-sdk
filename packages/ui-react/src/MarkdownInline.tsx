@@ -120,6 +120,14 @@ export function dropEchoedTitle(text: string, name: string): string {
     .trimStart();
 }
 
+/**
+ * Markdown rendered as one flowing line of text.
+ *
+ * See the note at the top of this file for what it does to blocks and
+ * why. `limit` bounds the work, not the appearance: the clamp is
+ * visual, and a document longer than `limit` is cut at a word
+ * boundary with an ellipsis.
+ */
 export function MarkdownInline({
   text,
   /** The document's name, so a title echo can be dropped. */

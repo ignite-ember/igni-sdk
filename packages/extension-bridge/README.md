@@ -1,5 +1,7 @@
 # `@ignite-ember/extension-bridge`
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/extension-bridge](https://ignite-ember.sh/docs/sdk/extension-bridge) — guides and the complete API reference, a page per topic.
+
 The guest half of the bridge between an igni extension's page and igni:
 `connect()`, RPC to the extension's tools, navigation, and the theme. The
 host imports the same `protocol`, so there is one description of the wire.
@@ -20,6 +22,75 @@ this package is that, with types.
 `connect()` resolves once igni has told the page which extension it is,
 its launch params and the theme. Subpaths: `@ignite-ember/extension-bridge/protocol`
 (the wire format) and `@ignite-ember/extension-bridge/tokens` (the design tokens).
+
+## Quick start
+
+A page is an ordinary web page that igni frames. It gets a bridge, and
+the bridge is the only thing it needs from igni.
+
+```bash
+npm install @ignite-ember/extension-bridge @ignite-ember/ui-css
+```
+
+```ts
+import { connect } from "@ignite-ember/extension-bridge";
+import "@ignite-ember/ui-css";
+
+async function main() {
+  const bridge = await connect();
+
+  // The theme is already applied: igni pushed its live values.
+  document.body.classList.add("igni-root");
+
+  // The launch parameters: what the link carried.
+  bridge.onParams((params) => {
+    document.title = String(params.title ?? "Extension");
+  });
+
+  // The extension's own backend, as the person signed in to igni.
+  const notes = await bridge.rpc("ext.example.teamnotes.search", { query: "" });
+
+  render(notes);
+}
+
+main().catch((error) => {
+  console.error(error);
+});
+```
+
+Three things to know before you write more:
+
+- **Every call is a round trip.** `bridge.rpc()` is a request to the host
+  and back. It is fast, but it is not free, and it can time out.
+- **Nothing here carries authority.** The host checks every grant. The
+  bridge is a message pipe with types on it, not a key.
+- **The page runs on its own origin.** It may not read igni's stylesheet,
+  its storage or its scripts. What it may use is pushed over the bridge.
+
+## The life of a page
+
+Between the frame being created and the first paint, four things happen.
+Knowing which is which saves an afternoon.
+
+1. **The frame loads.** Your page is served from your own origin, under
+   `default-src 'self'`. It may not fetch igni's stylesheet, scripts or
+   fonts. The refusal is deliberate: a page that could read the app's
+   origin could read the app.
+2. **igni says hello.** The host posts a `hello` message carrying a
+   nonce. `connect()` is waiting for exactly that message, from exactly
+   that parent window; a message from anywhere else is ignored.
+3. **The theme arrives.** The host computes the *live* token values and
+   pushes them, and the bridge writes them onto `:root` before it
+   resolves. Your stylesheet's fallbacks are what a reader sees outside
+   igni; inside igni the live values apply.
+4. **The params arrive.** `bridge.params` holds them, and `onParams`
+   fires when they change — a link resolved after the frame was already
+   mounted, say.
+
+If the host never says hello, `connect()` rejects after thirty seconds;
+`connect({ timeoutMs })` changes that. If the page is not framed at all —
+opened in a browser tab — it rejects at once, saying that it is not
+framed by a host.
 
 ## The host: `bridge.host`
 
@@ -82,6 +153,99 @@ service's origin over `https`/`wss` and the hosts declared in
 cookies (`credentials: "omit"`); a service on igni-service answers it
 cross-origin with nothing to configure (`igni.install(app)`).
 
+## Calling your extension's tools
+
+`bridge.rpc(method, args?, timeoutMs?)` calls a method of the
+extension's own service — the same namespace the agent calls.
+
+```ts
+const found = await bridge.rpc("ext.example.teamnotes.search", { query: "auth" });
+const one = await bridge.rpc<Note>("ext.example.teamnotes.get", { id: "n1" });
+```
+
+- **The name** is `ext.<your-extension-id>.<your-method>`. The namespace
+  is authorised against your manifest's `permissions.rpc`, and the call
+  reaches your service as an MCP tool call.
+- **The arguments** are a plain record of strings and JSON values, sent
+  as they are.
+- **The answer** is whatever the service returned, parsed as JSON. Give
+  the call its type — `rpc<Note>(...)` — and the compiler will hold you
+  to it; nothing checks it at runtime.
+- **The deadline** is thirty seconds. `timeoutMs` overrides it. The host
+  has a timeout of its own, and the shorter of the two is the one that
+  fires.
+
+A refusal is an error, not a value: the promise rejects with the host's
+own sentence, or with "the host refused the call without saying why" if
+it gave none. A method the service does not have, one the manifest does
+not permit, and one the service answered with an error all reject the
+same way.
+
+## Following the host
+
+A page watches; it does not poll. Three subscriptions, each returning an
+unsubscribe:
+
+```ts
+const offParams = bridge.onParams((params) => render(params));
+const offTheme = bridge.onTheme((theme) => setMode(theme));
+const offRun = bridge.on(bridge.host.chat.run_completed, (run) => render(run));
+
+offParams();
+```
+
+`onParams` fires only on a *change*; read `bridge.params` for the value
+you were given to start with. `onTheme` fires when the person's theme
+changes — the same change that moves the live token values. `on` follows
+one of the host's signals.
+
+`bridge.on(signal, fn, onRefused?)` takes a third argument, and it
+matters: a signal whose object is **not granted** never arrives, and
+without `onRefused` that refusal is silent — your handler simply never
+runs, and there is nothing in the console to say why. With it, the
+refusal arrives as a `HostError` you can show. Without it, it goes to
+the console, so it is never *completely* silent.
+
+The first handler of a signal subscribes to it; removing the last one
+unsubscribes.
+
+## Where the page is
+
+`bridge.setLocation(state)` says where inside your extension the person
+now is. It is not a navigation — `bridge.navigate(to)` is that — and it
+is how an extension can be linked to or restored: the frame cannot write
+the address bar, and its `localStorage` dies with the ephemeral port it
+was served from. The host folds the state into its own URL and replays
+it in the next `hello`.
+
+Keep the state small and keep it strings: it ends up in the host's URL.
+Call it when the person lands somewhere worth returning to, not on every
+keystroke.
+
+`bridge.close()` tells the host this surface is finished. `bridge.navigate(to)`
+asks the host app to navigate; it decides whether to.
+
+## The floor
+
+Everything this package exports is under igni's **compatibility floor**:
+removing a name, renaming it, or changing the meaning of one of its
+members is a breaking change under `docs/EXTENSIBILITY.md` §8.
+
+Two versions of that floor are worth knowing about:
+
+- **`BRIDGE_VERSION`** (on the `protocol` subpath) is the version of the
+  wire this package speaks. Every message carries it, and a message
+  whose version is not the one this package speaks is not read at all —
+  it is bumped only for a change the other side cannot ignore.
+- **`SCHEMA_VERSION`** (exported from the package) is the version of
+  igni's host schema the generated host model was made from. It moves
+  when igni's host model moves.
+
+The host model itself is generated from igni's own schema, so a new igni
+can carry objects this package has never heard of. That is not a
+version skew to worry about: an object the package does not know is not
+reachable from `bridge.host`, and the page simply does not use it.
+
 ## Changed since 0.1.0, on purpose
 
 - `connect<P, S>()` and `Bridge<P, S>` take the extension's own launch
@@ -108,8 +272,9 @@ cross-origin with nothing to configure (`igni.install(app)`).
 > npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
 > ```
 >
-> (`mkdir sdk-packages` first.) It ships TypeScript source (*Source, not a
-> build*, below), so the tarball is all there is.
+> (`mkdir sdk-packages` first.) It ships TypeScript source and a compiled
+> build beside it (*The source, and a build beside it*, below), so the
+> tarball is all there is.
 
 Once published, from npm:
 
@@ -121,9 +286,19 @@ Each release's tarballs are also attached to igni-sdk's GitHub release
 (`sdk-v<version>`), for a build that cannot reach npmjs. Versions are in
 igni-sdk's `docs/PUBLISHING_THE_SDKS.md`.
 
-## Source, not a build
+## The source, and a build beside it
 
-Like `@ignite-ember/ui-react`, this package ships its TypeScript source. A bundler
-that compiles TypeScript (Vite, esbuild, Rollup with a TS plugin) consumes
-it as is; one that does not compile `node_modules` (Next.js, Jest) needs
-it listed for transpilation (`transpilePackages`, `transformIgnorePatterns`).
+This package ships its TypeScript source, and a compiled build beside it.
+
+A bundler that compiles TypeScript (Vite, esbuild, Rollup with a TS
+plugin) takes the source and compiles it as it compiles the rest of
+your extension. A consumer that does not compile `node_modules` — Node
+itself, a test runner that is not told to transform it, a tool that
+reads the types — takes the build: plain JavaScript, and the
+declarations that go with it.
+
+The build is ES2022 modules, with source maps back to the TypeScript.
+`exports` points at it for `node`, and the `types` condition points at
+its declarations for everyone, so `import { connect } from
+"@ignite-ember/extension-bridge"` names the same things in a bundler
+and in Node, and `tsc` finds them under `moduleResolution: node16`.

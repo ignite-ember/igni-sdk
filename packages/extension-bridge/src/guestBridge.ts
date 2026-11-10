@@ -7,11 +7,11 @@
  * kind through one table, {@link GuestBridge.handlers}.
  */
 
-import type { HostChannel } from "./channel";
-import type { Bridge } from "./contract";
-import { Correlator } from "./correlator";
-import { HostError, type HostLink, type Signal } from "./hostModel";
-import { Host } from "./hostModel.generated";
+import type { HostChannel } from "./channel.js";
+import type { Bridge } from "./contract.js";
+import { Correlator } from "./correlator.js";
+import { HostError, type HostLink, type Signal } from "./hostModel.js";
+import { Host } from "./hostModel.generated.js";
 import type {
   ExtensionSettings,
   HelloMessage,
@@ -25,11 +25,11 @@ import type {
   RpcArgs,
   ServiceTokenReplyMessage,
   ThemeMessage,
-} from "./protocol";
-import { type IssuedToken, ServiceError, ServiceLink } from "./service";
-import { SignalSubscriptions } from "./signals";
-import { applyThemeTokens, type ThemeTokens } from "./tokens";
-import { Watchers } from "./watchers";
+} from "./protocol.js";
+import { type IssuedToken, ServiceError, ServiceLink } from "./service.js";
+import { SignalSubscriptions } from "./signals.js";
+import { applyThemeTokens, type ThemeTokens } from "./tokens.js";
+import { Watchers } from "./watchers.js";
 
 /** How long a request waits before giving up. The host has its own. */
 export const DEFAULT_TIMEOUT_MS = 30_000;

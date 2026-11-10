@@ -5,7 +5,7 @@
  */
 import { describe, expectTypeOf, it } from "vitest";
 
-import { connect, type Bridge, type HostError } from "./index";
+import { connect, type Bridge, type HostError } from "./index.js";
 import type {
   CallMessage,
   ExtensionSettings,
@@ -15,7 +15,7 @@ import type {
   LocationState,
   ParamsMessage,
   RpcArgs,
-} from "./protocol";
+} from "./protocol.js";
 
 type Params = { readonly doc: string };
 type Settings = { readonly region: "eu" | "us" };

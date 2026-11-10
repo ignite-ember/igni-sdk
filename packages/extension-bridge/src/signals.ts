@@ -6,8 +6,8 @@
  * the handler's `onRefused` when it gave one, to the console otherwise.
  */
 
-import type { HostError, Signal } from "./hostModel";
-import type { HostSignalMessage } from "./protocol";
+import type { HostError, Signal } from "./hostModel.js";
+import type { HostSignalMessage } from "./protocol.js";
 
 /** Asks the host to start or stop sending one signal. */
 export type SignalRequest = (

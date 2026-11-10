@@ -22,6 +22,7 @@ function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
+/** What an {@link AppShell} takes. */
 export interface AppShellProps extends HTMLAttributes<HTMLDivElement> {
   /** Fixed at the top. A `Toolbar`, usually. */
   header?: ReactNode;
@@ -55,6 +56,7 @@ export function AppShell({
   );
 }
 
+/** What a {@link Scroll} takes. */
 export interface ScrollProps extends HTMLAttributes<HTMLDivElement> {
   /** Scroll sideways instead. A wide table, not a long list. */
   axis?: "y" | "x";

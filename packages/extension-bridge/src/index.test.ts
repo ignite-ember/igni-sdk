@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import * as root from "./index";
+import * as root from "./index.js";
 
 describe("the package root", () => {
   it("exports exactly these names", () => {

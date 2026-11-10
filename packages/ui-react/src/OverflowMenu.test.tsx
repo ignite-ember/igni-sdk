@@ -10,7 +10,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OverflowMenu, type OverflowAction } from "./OverflowMenu";
+import { OverflowMenu, type OverflowAction } from "./OverflowMenu.js";
 
 // This project does not set ``globals: true``, so testing-library's
 // automatic afterEach cleanup is never installed and renders would

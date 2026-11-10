@@ -15,7 +15,7 @@ import {
   MarkdownInline,
   closeOpenMarks,
   dropEchoedTitle,
-} from "./MarkdownInline";
+} from "./MarkdownInline.js";
 
 afterEach(cleanup);
 

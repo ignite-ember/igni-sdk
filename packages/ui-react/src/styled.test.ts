@@ -161,8 +161,17 @@ describe.skipIf(!existsSync(THEME_CSS) && !process.env.CI)("the published fallba
    * does not look broken, and it means the thing an author tunes
    * their layout against is not the thing their users see.
    */
-  const theme = fallbacksIn(THEME_CSS).declared;
+  // The body of a skipped `describe` still runs, so the theme is read
+  // only when the file is there. Without igni-app beside the
+  // repository the comparison is skipped, not failed.
+  const theme = existsSync(THEME_CSS) ? fallbacksIn(THEME_CSS).declared : new Map<string, string>();
   const published = fallbacksIn(PUBLISHED_CSS);
+
+  it("found igni's theme to compare against", () => {
+    // Under CI igni-app is checked out. Without it the comparison
+    // would be against nothing, and every token would look wrong.
+    expect(existsSync(THEME_CSS)).toBe(true);
+  });
 
   it("declares nothing igni does not", () => {
     expect([...published.declared.keys()].filter((k) => !theme.has(k))).toEqual(

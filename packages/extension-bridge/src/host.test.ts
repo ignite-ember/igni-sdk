@@ -8,9 +8,9 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { connect } from "./bridge";
-import { HostError } from "./hostModel";
-import { BRIDGE_VERSION, type HostRequestMessage } from "./protocol";
+import { connect } from "./bridge.js";
+import { HostError } from "./hostModel.js";
+import { BRIDGE_VERSION, type HostRequestMessage } from "./protocol.js";
 
 const NONCE = "test-nonce";
 

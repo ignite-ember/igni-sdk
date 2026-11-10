@@ -16,7 +16,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`HostCall`](#hostcall) | One `get`, `set` or `call` an extension made of `FakeHost`. |
 | [`HostHarness`](#hostharness) | The igni host's MCP session with one extension, in this process. |
 | [`ManualClock`](#manualclock) | A clock that moves only when told to. |
-| [`Minter`](#minter) | — |
+| [`Minter`](#minter) | Makes the token a fake host hands out for one person — see `FakeHostTokenEndpoint(minter=...)`. |
 | [`TokenClaims`](#tokenclaims) | What the fake host's tokens say: enough for `ext.tokens.signed_in`. |
 
 ## ConcurrencyHarness
@@ -472,6 +472,9 @@ Move the clock forward `seconds`.
 ```python
 Minter: type = Callable[[TokenClaims], str]
 ```
+
+Makes the token a fake host hands out for one person — see
+`FakeHostTokenEndpoint(minter=...)`.
 
 ## TokenClaims
 

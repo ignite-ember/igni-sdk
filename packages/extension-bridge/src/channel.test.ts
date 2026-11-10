@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { HostChannel } from "./channel";
-import { BRIDGE_VERSION } from "./protocol";
+import { HostChannel } from "./channel.js";
+import { BRIDGE_VERSION } from "./protocol.js";
 
 function stubHost() {
   const posts: { message: unknown; target: unknown }[] = [];

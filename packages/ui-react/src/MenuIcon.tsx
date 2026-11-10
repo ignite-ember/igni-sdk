@@ -153,6 +153,7 @@ const PATHS: Record<MenuIconName, string> = {
     "M3.6 4.2h3.1a2 2 0 0 1 2 2v3.6a2 2 0 0 0 2 2h1.7M3.6 11.8h3.1M1.4 2.8a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8zM1.4 10.4a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8zM13.2 10.4a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z",
 };
 
+/** What a {@link MenuIcon} takes. */
 export interface MenuIconProps {
   /** One of igni's own icons. */
   name?: MenuIconName;
@@ -171,9 +172,18 @@ export interface MenuIconProps {
    * package exists to prevent.
    */
   path?: string;
+  /** Added to the element's classes, beside the one the theme gives it. */
   className?: string;
 }
 
+/**
+ * One of igni's own icons, drawn on a 16×16 grid.
+ *
+ * See the note at the top of this file for why there is one set and
+ * one grammar. A name that is not in the set draws nothing, rather
+ * than a broken box: the label says what the item does, and the icon
+ * is only how it is found.
+ */
 export function MenuIcon({ name, path, className }: MenuIconProps) {
   const d = path ?? (name ? PATHS[name] : undefined);
   // An unknown name draws nothing rather than a broken box. The

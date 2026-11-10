@@ -42,6 +42,7 @@ export class ServiceError extends Error {
 
 /** What the host hands back for one token request. */
 export interface IssuedToken {
+  /** The bearer token itself. */
   token: string;
   /** Seconds it has left. */
   expiresIn: number;
@@ -96,9 +97,18 @@ export function authMessage(token: string): string {
 
 /** `bridge.service`'s implementation; the bridge builds one per frame. */
 export class ServiceLink implements ServiceBridge {
+  /** The token this link is holding, and when it stops being valid. */
   private held: { token: string; expiresAt: number } | null = null;
+  /** The fetch in flight, so two asks share one request to the host. */
   private fetching: Promise<string> | null = null;
 
+  /**
+   * One link, for one frame.
+   *
+   * @param url — the service's URL, or `null` when there is none.
+   * @param ask — how a token is asked of the host.
+   * @param env — what the browser is asked for, when it is not this one.
+   */
   constructor(
     readonly url: string | null,
     private readonly ask: () => Promise<IssuedToken>,
@@ -109,10 +119,22 @@ export class ServiceLink implements ServiceBridge {
     } = {},
   ) {}
 
+  /**
+   * A bearer token for the service.
+   *
+   * @returns — the token, fetched if it is not held or is nearly spent.
+   */
   token(): Promise<string> {
     return this.fresh(false);
   }
 
+  /**
+   * `fetch` against the service, with the token.
+   *
+   * @param path — where to go, relative to the service's URL.
+   * @param init — what to send, as `fetch` takes it.
+   * @returns — the service's answer.
+   */
   async fetch(path: string, init: RequestInit = {}): Promise<Response> {
     const target = this.resolve(path, false);
     const send = async (token: string) => {
@@ -129,6 +151,13 @@ export class ServiceLink implements ServiceBridge {
     return send(await this.fresh(true));
   }
 
+  /**
+   * A socket to the service, with the token in the first frame.
+   *
+   * @param path — where to open it, relative to the service's URL.
+   * @param options — how the socket says who it is.
+   * @returns — the open socket.
+   */
   async websocket(
     path: string,
     options: ServiceSocketOptions = {},
@@ -158,6 +187,13 @@ export class ServiceLink implements ServiceBridge {
     });
   }
 
+  /**
+   * A token that is worth handing out: the held one if it has time
+   * left, a new one otherwise.
+   *
+   * @param force — fetch a new one even when the held one is good.
+   * @returns — the token.
+   */
   private async fresh(force: boolean): Promise<string> {
     if (this.url === null) {
       throw new ServiceError(
