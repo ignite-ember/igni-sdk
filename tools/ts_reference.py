@@ -953,8 +953,13 @@ def signature_parameters(
                     )
                 )
             continue
+        # A parameter may carry several modifiers — ``protected readonly
+        # link`` — and the name a caller writes is what is left once
+        # every one of them is gone.
         name = re.sub(
-            r"^(?:public|private|protected|readonly|override|static|declare|async)\s+", "", head
+            r"^(?:(?:public|private|protected|readonly|override|static|declare|async)\s+)+",
+            "",
+            head,
         ).strip()
         optional = name.endswith("?")
         name = name.rstrip("?").strip()

@@ -85,11 +85,20 @@ class Token:
 
 
 def _match_brace(text: str, start: int) -> int:
-    """The index of the ``}`` that closes the ``{`` at ``start``."""
+    """The index of the ``}`` that closes the ``{`` at ``start``.
+
+    A comment is skipped whole. An apostrophe in a comment is not the
+    start of a string, and a string is not a comment: a reader that
+    cannot tell them apart reads neither.
+    """
     depth = 0
     index = start
     while index < len(text):
         char = text[index]
+        if text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            index = len(text) if end < 0 else end + 2
+            continue
         if char in "'\"":
             quote = char
             index += 1
@@ -107,10 +116,19 @@ def _match_brace(text: str, start: int) -> int:
     raise CssError("a rule is never closed")
 
 
+#: A comment in a block: ``/* ... */``.
+_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
 def _declarations(body: str) -> list[tuple[str, str]]:
-    """The declarations of a block: ``property: value`` a piece."""
+    """The declarations of a block: ``property: value`` a piece.
+
+    A comment is not a declaration. The comment above a custom property
+    says what the property is for, and the reference shows that beside
+    it — but the comment must not end up glued to the property's name.
+    """
     out: list[tuple[str, str]] = []
-    for part in body.split(";"):
+    for part in _COMMENT.sub(" ", body).split(";"):
         text = part.strip()
         if not text or ":" not in text:
             continue
