@@ -82,10 +82,14 @@ function documentedNames(index: Index, slug: string): Set<string> {
  * The names an entry point exports, as the compiler sees them, and
  * whether each is marked `@internal` — a name the package declares
  * for its own use and does not publish.
+ *
+ * One program reads every entry point of a package: the standard
+ * library's type definitions are the expensive part, and loading them
+ * once for the package is seconds the test does not wait twice.
  */
-function exportedNames(directory: string, entry: string): Map<string, boolean> {
-  const file = join(ROOT, directory, entry);
-  const program = ts.createProgram([file], {
+function exportedNames(directory: string, entries: string[]): Map<string, Map<string, boolean>> {
+  const files = entries.map((entry) => join(ROOT, directory, entry));
+  const program = ts.createProgram(files, {
     target: ts.ScriptTarget.ES2022,
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"],
     module: ts.ModuleKind.ESNext,
@@ -96,18 +100,23 @@ function exportedNames(directory: string, entry: string): Map<string, boolean> {
     noEmit: true,
   });
   const checker = program.getTypeChecker();
-  const source = program.getSourceFile(file);
-  if (!source) throw new Error(`no source file for ${entry}`);
-  const moduleSymbol = checker.getSymbolAtLocation(source);
-  if (!moduleSymbol) throw new Error(`${entry} is not a module`);
-  const out = new Map<string, boolean>();
-  for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
-    const name = symbol.getName();
-    if (name === "default") continue;
-    const target =
-      symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-    const internal = target.getJsDocTags().some((tag) => tag.name === "internal");
-    out.set(name, internal);
+  const out = new Map<string, Map<string, boolean>>();
+  for (const [index, file] of files.entries()) {
+    const entry = entries[index];
+    const source = program.getSourceFile(file);
+    if (!source) throw new Error(`no source file for ${entry}`);
+    const moduleSymbol = checker.getSymbolAtLocation(source);
+    if (!moduleSymbol) throw new Error(`${entry} is not a module`);
+    const names = new Map<string, boolean>();
+    for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
+      const name = symbol.getName();
+      if (name === "default") continue;
+      const target =
+        symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+      const internal = target.getJsDocTags().some((tag) => tag.name === "internal");
+      names.set(name, internal);
+    }
+    out.set(entry, names);
   }
   return out;
 }
@@ -122,17 +131,27 @@ describe("the npm packages' reference pages", () => {
   });
 
   for (const pkg of PACKAGES) {
-    it(`${pkg.slug}: every name it exports is documented`, () => {
-      const documented = documentedNames(index, pkg.slug);
-      expect(documented.size).toBeGreaterThan(0);
-      const missing: string[] = [];
-      for (const entry of pkg.entries) {
-        for (const [name, internal] of exportedNames(pkg.directory, entry)) {
-          if (internal) continue;
-          if (!documented.has(name)) missing.push(`${entry}: ${name}`);
+    it(
+      `${pkg.slug}: every name it exports is documented`,
+      () => {
+        const documented = documentedNames(index, pkg.slug);
+        expect(documented.size).toBeGreaterThan(0);
+        const missing: string[] = [];
+        const exported = exportedNames(pkg.directory, pkg.entries);
+        for (const entry of pkg.entries) {
+          const names = exported.get(entry);
+          if (!names) throw new Error(`no exports read for ${entry}`);
+          for (const [name, internal] of names) {
+            if (internal) continue;
+            if (!documented.has(name)) missing.push(`${entry}: ${name}`);
+          }
         }
-      }
-      expect(missing).toEqual([]);
-    });
+        expect(missing).toEqual([]);
+      },
+      // Reading the standard library's types is slow on a cold
+      // machine: ten seconds on CI, under two here. The test is not
+      // slow because it is wrong, so it is given the time it needs.
+      120_000,
+    );
   }
 });
