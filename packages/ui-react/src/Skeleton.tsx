@@ -11,6 +11,14 @@ import type { CSSProperties } from "react";
  *   <Skeleton.Circle size={48} />
  */
 export const Skeleton = {
+  /**
+   * A line of placeholder text, the size of the line it stands in for.
+   *
+   * @param width — how wide the line is, in pixels or as a CSS length.
+   * @param height — how tall the line is, in pixels or as a CSS length.
+   * @param style — the element's inline style, merged over the
+   *   defaults.
+   */
   Line({
     width = "100%",
     height = 12,
@@ -27,6 +35,15 @@ export const Skeleton = {
       />
     );
   },
+  /**
+   * A block of placeholder content, the size of the content it stands in for.
+   *
+   * @param height — how tall the block is, in pixels or as a CSS
+   *   length.
+   * @param width — how wide the block is, in pixels or as a CSS length.
+   * @param style — the element's inline style, merged over the
+   *   defaults.
+   */
   Block({
     height = 64,
     width = "100%",
@@ -43,6 +60,13 @@ export const Skeleton = {
       />
     );
   },
+  /**
+   * A circle, the size of the thing it stands in for.
+   *
+   * @param size — the diameter of the circle, in pixels.
+   * @param style — the element's inline style, merged over the
+   *   defaults.
+   */
   Circle({ size = 24, style }: { size?: number; style?: CSSProperties }) {
     return (
       <span
@@ -51,6 +75,12 @@ export const Skeleton = {
       />
     );
   },
+  /**
+   * Several lines of placeholder text, the shape of the list they stand in for.
+   *
+   * @param count — how many rows of text to draw.
+   * @param style — the stack's inline style, merged over the defaults.
+   */
   Rows({ count = 4, style }: { count?: number; style?: CSSProperties }) {
     return (
       <div

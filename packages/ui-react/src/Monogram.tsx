@@ -80,6 +80,9 @@ export function hexOf(
  * See the note at the top of this file. The colour comes from the
  * name, so the same person is the same colour on every machine and
  * across restarts.
+ *
+ * @param name — the name the initials and the colour are derived from.
+ * @param size — the width and height of the square, in pixels.
  */
 export function Monogram({ name, size = 18 }: { name: string; size?: number }) {
   const hue = hueOf(name);

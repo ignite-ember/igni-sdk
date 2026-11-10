@@ -73,6 +73,11 @@ function moveFocus(root: HTMLElement | null, key: string): boolean {
  * See the note at the top of this file. Everything that made the
  * buttons usable as buttons survives the move: focus, the keyboard,
  * and the names screen readers announce.
+ *
+ * @param actions — the actions to offer; the destructive ones are set
+ *   apart from the rest.
+ * @param label — what the trigger is called, for anyone who cannot see
+ *   three dots.
  */
 export function OverflowMenu({
   actions,

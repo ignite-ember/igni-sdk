@@ -64,16 +64,37 @@ function changed(a: readonly unknown[], b: readonly unknown[]): boolean {
  * expect, and the default fallback shows the message on purpose.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
+  /**
+   * The error the subtree threw, or null while nothing has thrown.
+   */
   state: State = { error: null };
 
+  /**
+   * The state the boundary holds after a throw.
+   *
+   * @param error — the error the subtree threw.
+   */
   static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
+  /**
+   * Reports the error to whoever asked for it.
+   *
+   * @param error — the error the subtree threw.
+   * @param info — React's account of where it was thrown: the component
+   *   stack.
+   */
   componentDidCatch(error: Error, info: ErrorInfo): void {
     this.props.onError?.(error, info);
   }
 
+  /**
+   * Clears the boundary when the reset keys change.
+   *
+   * @param previous — the props from the previous render, whose
+   *   `resetKeys` are compared with the new ones.
+   */
   componentDidUpdate(previous: ErrorBoundaryProps): void {
     if (this.state.error === null) return;
     const before = previous.resetKeys ?? [];
@@ -85,6 +106,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     this.setState({ error: null });
   };
 
+  /**
+   * The children, or the error page when the subtree threw.
+   */
   render(): ReactNode {
     const { error } = this.state;
     if (error === null) return this.props.children;

@@ -49,6 +49,16 @@ export interface SortableThProps
  *
  * The button fills the cell so the whole heading is the target
  * rather than a word inside it.
+ *
+ * @param children — the heading.
+ * @param direction — how this column is currently sorted, or
+ *   `undefined` when the table is sorted by another column.
+ * @param onSort — asked to sort by this column; it gets the direction
+ *   to go to.
+ * @param numeric — right-align the column and use tabular figures.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the `th`.
  */
 export function SortableTh({
   children,
@@ -94,7 +104,13 @@ export interface StatusProps {
   children?: ReactNode;
 }
 
-/** A state, as a coloured dot and the word it stands for. */
+/**
+ * A state, as a coloured dot and the word it stands for.
+ *
+ * @param state — the four states the health contract defines.
+ * @param children — what to show beside the dot; it defaults to the
+ *   state itself.
+ */
 export function Status({ state, children }: StatusProps) {
   return (
     <span className="ui-status" data-state={state}>

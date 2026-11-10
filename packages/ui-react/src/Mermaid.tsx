@@ -100,6 +100,8 @@ export async function loadMermaid(): Promise<MermaidLib> {
  * `source` is the text inside the fence. A diagram that does not
  * parse is shown as its own source rather than as a blank box: it is
  * usually a diagram somebody is halfway through writing.
+ *
+ * @param source — the text inside the fence.
  */
 export function MermaidBlock({ source }: { source: string }) {
   const frame = useRef<HTMLDivElement>(null);

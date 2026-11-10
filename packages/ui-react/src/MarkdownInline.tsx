@@ -127,6 +127,13 @@ export function dropEchoedTitle(text: string, name: string): string {
  * why. `limit` bounds the work, not the appearance: the clamp is
  * visual, and a document longer than `limit` is cut at a word
  * boundary with an ellipsis.
+ *
+ * @param text — the markdown to render as one flowing line.
+ * @param name — the document's name, so a title echo can be dropped.
+ * @param limit — characters to keep; the clamp is visual, and this
+ *   bounds the work.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
  */
 export function MarkdownInline({
   text,

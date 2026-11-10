@@ -91,6 +91,20 @@ export interface SplitProps extends Omit<
  *
  * See the note at the top of this file: it drives a CSS variable
  * rather than React state, and it does not remember the width.
+ *
+ * @param aside — the fixed-width pane.
+ * @param children — the pane that takes what is left.
+ * @param side — which side `aside` is on; the left by default.
+ * @param defaultWidth — the starting width of `aside`, in pixels.
+ * @param min — the narrowest `aside` may be, in pixels.
+ * @param max — the widest `aside` may be, in pixels, and never more
+ *   than 60% of the window.
+ * @param label — said to a screen reader, and shown on hover.
+ * @param onResize — the width changed; called on release and on each
+ *   keypress, not on every pointer move.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Split({
   aside,

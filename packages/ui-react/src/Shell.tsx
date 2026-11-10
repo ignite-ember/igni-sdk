@@ -35,6 +35,13 @@ export interface AppShellProps extends HTMLAttributes<HTMLDivElement> {
  *
  * The body is a flex column itself, so a `Scroll` placed directly
  * inside it fills what is left over rather than the whole frame.
+ *
+ * @param header — fixed at the top; a `Toolbar`, usually.
+ * @param footer — fixed at the bottom: status, or a form's actions.
+ * @param children — the body, the one part allowed to grow.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the shell.
  */
 export function AppShell({
   header,
@@ -75,6 +82,12 @@ export interface ScrollProps extends HTMLAttributes<HTMLDivElement> {
  * `tabIndex={0}` when that is the case; doing it unconditionally
  * would put a stop in the tab order of every list that already has
  * buttons in it.
+ *
+ * @param axis — scroll sideways instead; for a wide table, not a long
+ *   list.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Scroll({ axis = "y", className, ...rest }: ScrollProps) {
   return (
