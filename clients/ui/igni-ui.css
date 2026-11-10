@@ -36,63 +36,113 @@
    `:root` at handshake; these are what applies before it does, and
    what applies if your page is opened on its own. */
 :root {
+  /* The background of the page itself. */
   --bg: #262624;
+  /* A background sunk below the page: a well, a block of code. */
   --bg-inset: #1f1f1d;
+  /* A surface that sits on the page: a card, a button, a panel. */
   --bg-surface: #30302e;
+  /* A surface above the others: a hovered row, a badge, a tooltip. */
   --bg-raised: #3a3a37;
 
+  /* The text colour of the page, and the colour every heading and label inherits. */
   --fg: #f0efea;
+  /* Text you read but that is not the point: a hint, a subheading, a chip. */
   --fg-muted: #b8b5ad;
+  /* The faintest text: a placeholder, a chevron, a disabled state. */
   --fg-faint: #a5a49e;
 
+  /* The line that draws the edge of a control: a card, a button, a field. */
   --border: #4a4a45;
+  /* A fainter line: a divider, a table rule, the edge of a tooltip. */
   --border-soft: #3d3d39;
 
+  /* The colour that means it worked: a success badge, a ready dot. */
   --success: #4cb05c;
+  /* The colour that means it needs attention: a warning button, a preparing dot. */
   --warning: #d9a644;
+  /* The strong red: the border of a destructive button, the rule on an error. */
   --danger: #ef6a5a;
+  /* The same red, lightened until it clears WCAG AA as text. */
   --danger-text: #f28376;
+  /* The blue that marks focus, and the row that is selected. */
   --accent-blue: #6aa3f7;
 
+  /* The brand colour of igni: the ticked box, the selected tab, the spinner. */
   --igni-orange: #f97316;
+  /* The red end of the brand gradient, for the brand colour on its own. */
   --igni-red: #dc2626;
+  /* The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar. */
   --igni-gradient: linear-gradient(135deg, #f97316, #dc2626);
 
+  /* The hairline step: the padding inside a badge, a code span, a tiny button. */
   --space-1: 2px;
+  /* The gap between the parts of one small thing: a badge and its icon, the items of a list. */
   --space-2: 4px;
+  /* The gap between a label and its control, and the padding of a table cell. */
   --space-3: 6px;
+  /* The gap between two things side by side: the items of a row, the controls of a toolbar. */
   --space-4: 8px;
+  /* The gap between the parts of a card, and the padding inside a control you type into. */
   --space-5: 10px;
+  /* The padding inside a card, and the space between blocks of prose. */
   --space-6: 12px;
+  /* The padding inside a button or a panel. */
   --space-7: 14px;
+  /* The padding of a panel, and the gap between a toast stack and the screen edge. */
   --space-8: 16px;
+  /* The padding inside a dialog, and the indent of a list in prose. */
   --space-10: 20px;
+  /* The space above a heading in prose. */
   --space-12: 24px;
+  /* The margin kept between a toast stack and the screen edge. */
   --space-16: 32px;
 
+  /* The blue lightened until it clears WCAG AA as text: a link in prose. */
   --accent-blue-text: #8eb9f9;
+  /* The green lightened for text: the lettering of a success badge. */
   --accent-green-text: #7cc57f;
+  /* The orange lightened for text: the lettering of a warning button. */
   --accent-orange-text: #fb9c5a;
+  /* The red lightened for text: the lettering of a failure. */
   --accent-red-text: #f09393;
+  /* The brand orange one step brighter, for a control under the pointer. */
   --igni-orange-hover: #fb923c;
+  /* The shadow a floating surface casts: a toast, an open menu. */
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45);
 
+  /* The corner on a small control: a button, a field, a block of code. */
   --radius-sm: 8px;
+  /* The default corner: a card, a panel, a badge. */
   --radius: 12px;
+  /* The largest corner: a dialog. */
   --radius-lg: 18px;
+  /* A fully rounded end: a badge, a chip, a switch, a progress bar. */
   --radius-pill: 999px;
+  /* A round shape: the knob of a switch, a spinner, a status dot. */
   --radius-circle: 50%;
 
+  /* The smallest step: an icon or a counter beside a label, never a word you must read. */
   --text-2xs: 10px;
+  /* A badge or a hint: text that is there, but not the point. */
   --text-xs: 11px;
+  /* A label, a table, a chip: content you read, at a size that still fits a column. */
   --text-sm: 12px;
+  /* The body size of the page, and the default for anything you do not size yourself. */
   --text-md: 13px;
+  /* The title of a dialog, or a third-level heading in prose. */
   --text-lg: 14px;
+  /* A second-level heading in prose. */
   --text-xl: 17px;
+  /* A first-level heading in prose. */
   --text-2xl: 20px;
+  /* A hero number: the largest size that still belongs to a page. */
   --text-3xl: 30px;
+  /* The title of the welcome screen: the largest step on the scale. */
   --text-4xl: 42px;
+  /* The sans stack the page and its controls are set in. */
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  /* The monospace stack, for code and anything that shows source. */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
