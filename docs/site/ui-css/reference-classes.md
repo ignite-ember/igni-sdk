@@ -166,10 +166,8 @@ Portalled to `document.body`, positioned with an inline transform rather than a 
 
 | Class | Selector | What it sets |
 |---|---|---|
-| `.tip-anchor` | `.tip-anchor` | `/* `display` |
-| `.tip` | `.tip` | `position`, `z-index`, `max-width`, `padding`, `font-size`, `line-height`, `color`, `background`, `border`, `border-radius`, `box-shadow`, `it must never be the
-     thing under the pointer. */
-  pointer-events` |
+| `.tip-anchor` | `.tip-anchor` | `display` |
+| `.tip` | `.tip` | `position`, `z-index`, `max-width`, `padding`, `font-size`, `line-height`, `color`, `background`, `border`, `border-radius`, `box-shadow`, `pointer-events` |
 
 ## Monogram
 
@@ -197,8 +195,7 @@ A stroked 14px glyph that inherits its colour, so it darkens and lightens with w
 
 | Class | Selector | What it sets |
 |---|---|---|
-| `.menu-icon` | `.menu-icon` | `flex`, `width`, `height`, `fill`, `stroke`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, `the icon is how it is found again. */
-  opacity` |
+| `.menu-icon` | `.menu-icon` | `flex`, `width`, `height`, `fill`, `stroke`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, `opacity` |
 
 ## OverflowMenu
 
@@ -273,10 +270,7 @@ Mermaid produces its own SVG with embedded styles tuned for a light background â
 
 | Class | Selector | What it sets |
 |---|---|---|
-| `.igni-root` | `.igni-root` | `min-height`, `/* Border-box everywhere. The alternative is that every padding
-     value on the space scale is also a width change, which makes the
-     scale a lie. */
-  box-sizing` |
+| `.igni-root` | `.igni-root` | `min-height`, `box-sizing` |
 | `.igni-root` | `.igni-root *` | `box-sizing` |
 | `.igni-root` | `.igni-root *::before` | `box-sizing` |
 | `.igni-root` | `.igni-root *::after` | `box-sizing` |
@@ -311,7 +305,7 @@ Mermaid produces its own SVG with embedded styles tuned for a light background â
 |---|---|---|
 | `.ui-table` | `.ui-table th` | `padding`, `text-align`, `vertical-align`, `border-bottom` |
 | `.ui-table` | `.ui-table td` | `padding`, `text-align`, `vertical-align`, `border-bottom` |
-| `.ui-table` | `.ui-table thead th` | `position`, `top`, `z-index`, `/* Opaque`, `color`, `font-size`, `font-weight`, `letter-spacing`, `text-transform`, `border-bottom` |
+| `.ui-table` | `.ui-table thead th` | `position`, `top`, `z-index`, `background`, `color`, `font-size`, `font-weight`, `letter-spacing`, `text-transform`, `border-bottom` |
 | `.ui-table` | `.ui-table tbody th[scope="row"]` | `font-weight`, `color`, `text-transform`, `letter-spacing`, `font-size` |
 | `.ui-table` | `.ui-table tbody tr:last-child th` | `border-bottom` |
 | `.ui-table` | `.ui-table tbody tr:last-child td` | `border-bottom` |
@@ -332,9 +326,7 @@ A toast stack, an inline banner, and the error boundary's fallback. EXTENSIBILIT
 
 | Class | Selector | What it sets |
 |---|---|---|
-| `.ui-toasts` | `.ui-toasts` | `position`, `right`, `bottom`, `z-index`, `display`, `flex-direction`, `gap`, `the toasts
-     themselves take them back. */
-  pointer-events`, `max-width` |
+| `.ui-toasts` | `.ui-toasts` | `position`, `right`, `bottom`, `z-index`, `display`, `flex-direction`, `gap`, `pointer-events`, `max-width` |
 | `.ui-toast` | `.ui-toast` | `pointer-events`, `display`, `align-items`, `gap`, `padding`, `background`, `color`, `border`, `border-left`, `border-radius`, `box-shadow`, `font-size`, `animation` |
 | `.ui-toast` | `.ui-toast[data-tone="success"]` | `border-left-color` |
 | `.ui-toast` | `.ui-toast[data-tone="warning"]` | `border-left-color` |
@@ -364,15 +356,13 @@ Two panes and a rule you can move. The width lives in a custom property the comp
 
 | Class | Selector | What it sets |
 |---|---|---|
-| `.ui-split` | `.ui-split` | `display`, `grid-template-columns`, `flex`, `/* The flexbox trap, again` |
+| `.ui-split` | `.ui-split` | `display`, `grid-template-columns`, `flex`, `min-height` |
 | `.ui-split-end` | `.ui-split-end` | `grid-template-columns` |
 | `.ui-split-aside` | `.ui-split-aside` | `min-width`, `min-height`, `display`, `flex-direction` |
 | `.ui-split-main` | `.ui-split-main` | `min-width`, `min-height`, `display`, `flex-direction` |
 | `.ui-split-main` | `.ui-split-main` | `border-left` |
 | `.ui-split-end` | `.ui-split-end .ui-split-main` | `border-left`, `border-right` |
-| `.ui-split-handle` | `.ui-split-handle` | `cursor`, `background`, `/* Wider than it looks. A 5px target is one most people miss, and
-     the negative margin buys hit area without moving the rule. */
-  margin`, `z-index`, `touch-action` |
+| `.ui-split-handle` | `.ui-split-handle` | `cursor`, `background`, `margin`, `z-index`, `touch-action` |
 | `.ui-split-handle` | `.ui-split-handle:hover` | `background`, `outline` |
 | `.ui-split-handle` | `.ui-split-handle:focus-visible` | `background`, `outline` |
 | `.ui-split-resizing` | `.ui-split-resizing` | `cursor`, `user-select` |

@@ -67,6 +67,10 @@ Always `CallerKind.APP`.
 def from_claims(claims: dict[str, Any]) -> App
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `claims` | `dict[str, Any]` | required | The verified claims of an ``app`` token, as ``TokenVerifier.claims`` read them: the app's ``sub``, its ``org`` and its ``name``. |
+
 The app a verified `app` token's claims describe.
 
 ## Caller
@@ -162,6 +166,10 @@ Their name, or their email address when the token has no name.
 def from_claims(claims: dict[str, Any]) -> Person
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `claims` | `dict[str, Any]` | required | The verified claims of a token, as ``TokenVerifier.claims`` read them: the person's ``sub``, ``org``, ``org_name``, ``org_role``, ``email``, ``name`` and ``super_admin``. |
+
 The person a verified token's claims describe (`sub`, `org`, `org_role`, ...).
 
 ## Space
@@ -195,6 +203,10 @@ Always `CallerKind.SPACE`.
 @classmethod
 def from_claims(claims: dict[str, Any]) -> Space
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `claims` | `dict[str, Any]` | required | The verified claims of a ``space`` token, as ``TokenVerifier.claims`` read them: the space's ``sub``, its ``org``, the app's ``app`` and the app's own name for it, ``external_id``. |
 
 The space a verified `space` token's claims describe.
 

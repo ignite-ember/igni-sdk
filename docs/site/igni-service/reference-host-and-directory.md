@@ -18,6 +18,11 @@ class Directory
 Directory(client: DirectoryClient, org_id: str)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `client` | `DirectoryClient` | required | The client igni's directory is asked through. |
+| `org_id` | `str` | required | The organisation this directory answers for. |
+
 igni's directory, for one organisation. What `host.directory` is.
 
 ### Directory.org_id
@@ -48,6 +53,12 @@ async def members(
 ) -> list[Member]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `query` | `str` | `''` | Text to match at the start of a member's address or name, in any case; empty matches everybody. |
+| `limit` | `int` | `100` | How many members to ask for at most; between 1 and 500. |
+| `include_former` | `bool` | `False` | Whether the members who have left are in the answer too. |
+
 Prefix search on address or name; at most 500.
 
 ### Directory.person()
@@ -56,6 +67,10 @@ Prefix search on address or name; at most 500.
 async def person(user_id: str) -> Member | None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `user_id` | `str` | required | The member's igni user id. |
+
 One person, present or former; `None` if they were never a member.
 
 ### Directory.resolve()
@@ -63,6 +78,10 @@ One person, present or former; `None` if they were never a member.
 ```python
 async def resolve(identities: list[str]) -> dict[str, Member]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `identities` | `list[str]` | required | The user ids and addresses to look up; blanks are ignored, and one that names nobody is absent from the answer. |
 
 User ids or addresses → members, keyed by casefolded id and address.
 
@@ -79,6 +98,14 @@ Host(
     vm_profiles: ServiceVmProfiles | None = None,
 )
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation this host is for; a host is for one, and none may be named. |
+| `notifier` | `Notifier` | required | The notifier that sends this organisation's notifications to igni. |
+| `directory` | `DirectoryClient` | required | The client igni's directory is asked through, for this organisation. |
+| `agents` | `AgentWire \| None` | `None` | The wire behind ``host.agent``; without it, ``host.agent`` raises ``RuntimeError``. |
+| `vm_profiles` | `ServiceVmProfiles \| None` | `None` | The client that reads this extension's VM profile request; without it, ``host.extension_vm_profile`` raises ``RuntimeError``. |
 
 The floor a service stands on, for one organisation.
 
@@ -99,6 +126,10 @@ The organisation this host is for.
 ```python
 async def notify(*notifications: Notification) -> Delivered
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `notifications` | `Notification` | required | The things that happened, and who each concerns: one with no recipients concerns nobody and is not sent. |
 
 Tell people in this organisation that something happened.
 
@@ -135,6 +166,10 @@ Raises `IgniUnavailable`.
 def agent(producer: Producer) -> Agent
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `producer` | `Producer` | required | Whose igni the agent is: the person or the app every item goes to. |
+
 `producer`'s agent: send it messages, files and events, open chats (`igni_service.agents`).
 
 ### Host.send_event()
@@ -149,6 +184,14 @@ async def send_event(
     expires_at: datetime | None = None,
 ) -> EventAccepted
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `producer` | `Producer` | required | Whose igni the event is for: the person or the app whose agent is woken. |
+| `type` | `str` | required | The extension's own word for what happened, as its handler names it: ``claim.created``. |
+| `payload` | `dict[str, object] \| None` | `None` | The event's data, as the handler reads it: at most 65536 bytes as JSON. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
 
 Wake `producer`'s agent with an event for this service's extension.
 

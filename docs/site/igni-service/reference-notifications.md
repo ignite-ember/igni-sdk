@@ -60,6 +60,10 @@ One thing that happened, and who it concerns.
 def split(size: int) -> list[Notification]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `size` | `int` | required | The most recipients one copy may name; this notification is copied once for each group of them, and nothing else in it changes. |
+
 This notification with its recipients in groups of at most `size`.
 
 ## Target

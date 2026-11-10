@@ -16,6 +16,10 @@ class PromptConditions
 PromptConditions(session: HostSession)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session` | `HostSession` | required | The session to the igni host, which the conditions are sent on (`igni_extension.session`). |
+
 The conditions this extension's prompt contributions wait on.
 
 ### PromptConditions.holding
@@ -33,6 +37,11 @@ What was last said, by condition.
 async def hold(condition: str, holds: bool = True) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `condition` | `str` | required | The condition's name, as the manifest writes it: `index-covers-head`. |
+| `holds` | `bool` | `True` | Whether the condition is met now; `True` when it is. |
+
 Say whether one condition holds. Saying the same again sends nothing.
 
 ### PromptConditions.set()
@@ -40,6 +49,10 @@ Say whether one condition holds. Saying the same again sends nothing.
 ```python
 async def set(conditions: dict[str, bool]) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `conditions` | `dict[str, bool]` | required | What each condition now holds, by the name the manifest writes it under. |
 
 Say several at once; only the ones that changed are sent.
 

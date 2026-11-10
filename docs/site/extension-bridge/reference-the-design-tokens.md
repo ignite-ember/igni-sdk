@@ -55,6 +55,10 @@ Token name → current value.
 function readThemeTokens(root: Element = document.documentElement,): ThemeTokens
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `root` | `Element` | `document.documentElement` | the element whose computed styles are read; the document's own root by default. |
+
 Read the published tokens as they are right now.
 
 Computed values, not declared ones: a token defined in a media
@@ -69,6 +73,11 @@ worth sending.
 ```typescript
 function applyThemeTokens(tokens: ThemeTokens, root: HTMLElement): void
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tokens` | `ThemeTokens` | required | what to apply: each published name and the value it takes. |
+| `root` | `HTMLElement` | required | the element they are applied to. |
 
 Apply tokens inside the extension's own document.
 

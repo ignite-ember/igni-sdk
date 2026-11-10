@@ -140,7 +140,7 @@ interface LocationMessage
 
 Guest → host: where I am now.
 
-**Not a navigation.** `navigate` asks the host to go somewhere
+*Not a navigation.** `navigate` asks the host to go somewhere
 else; this says "I am still here, and here is now this". The host
 folds it into its own URL and replays it in the next `hello`, so a
 reload or a shared link comes back to the same place inside the
@@ -360,6 +360,10 @@ host-model requests it makes, and the service token it hands back.
 function isGuestMessage(data: unknown): data is GuestMessage
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `data` | `unknown` | required | the message as it arrived, in whatever shape it is. |
+
 Is this a message from a guest, shaped the way we require?
 
 Written as a narrowing guard rather than a schema check because the
@@ -376,6 +380,10 @@ can tell malformed from unauthorised has learned something.
 function isHostMessage(data: unknown): data is HostMessage
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `data` | `unknown` | required | the message as it arrived, in whatever shape it is. |
+
 Is this a message from the host, shaped the way the guest requires?
 
 **Also** [`HostMessage`](/docs/sdk/extension-bridge/reference-the-wire#hostmessage).
@@ -385,6 +393,11 @@ Is this a message from the host, shaped the way the guest requires?
 ```typescript
 function methodAllowed(method: string, allow: readonly string[],): boolean
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `method` | `string` | required | the method the extension wants to call. |
+| `allow` | `readonly string[]` | required | the methods it was granted, as exact names or as `*`-suffixed prefixes. |
 
 May this extension call this method?
 

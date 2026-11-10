@@ -195,6 +195,13 @@ The host said no, or it went wrong there. `code` is for code; the message, for p
 |---|---|---|---|
 | `constructor` | method | `(readonly code: HostErrorCode | string, message: string,)` | The failure, as the host reported it. |
 
+### HostError.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `code` | `HostErrorCode \| string` | required | why it failed: one of the {@link HostErrorCode}s, or whatever the host said. |
+| `message` | `string` | required | a sentence for a person to read. |
+
 ## HostLink
 
 ```typescript
@@ -206,6 +213,14 @@ How requests reach the igni host.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `request` | method | `(op: "get" | "set" | "call", path: string, options: { window?: string | null; session?: string | null; params?: Record<string, unknown>; value?: unknown; },) => Promise<unknown>` | Send one request to the host. |
+
+### HostLink.request()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `op` | `"get" \| "set" \| "call"` | required | what to do: read a property, write one, or call a method. |
+| `path` | `string` | required | where in the model, as `host.chat.processing`. |
+| `options` | `{ window?: string \| null; session?: string \| null; params?: Record<string, unknown>; value?: unknown; }` | required | the window or session it is about, the arguments of a call, and the value of a write. |
 
 ## HostObject
 
@@ -219,6 +234,22 @@ One object of the host model: `host.chat`, `host.windows.ui(id)`, `host.sessions
 |---|---|---|---|
 | `constructor` | method | `(protected readonly link: HostLink, readonly path: string, protected readonly window: string | null = null, protected readonly session: string | null = null,)` | One object of the model, bound to a host. |
 | `call` | method | `(name: string, params: Record<string, unknown>,) => Promise<T>` | Call a method on the host. |
+
+### HostObject.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | how requests reach the host. |
+| `path` | `string` | required | where in the model this object sits. |
+| `window` | `string \| null` | `null` | the window it belongs to, when it belongs to one. |
+| `session` | `string \| null` | `null` | the session it belongs to, when it belongs to one. |
+
+### HostObject.call()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | the method's name, as the schema spells it. |
+| `params` | `Record<string, unknown>` | required | its arguments, by name. |
 
 ## Property
 
@@ -235,6 +266,20 @@ A value of a host object: `get()` reads it, `set()` writes it.
 | `get` | method | `() => Promise<T>` | Read it. |
 | `set` | method | `(value: T) => Promise<void>` | Write it, as the person's UI would. Refused where theirs would be. |
 
+### Property.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `owner` | `HostObject` | required | the object it belongs to. |
+| `name` | `string` | required | its name, as the schema spells it. |
+| `writable` | `boolean` | required | whether it may be written. |
+
+### Property.set()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | `T` | required | what the host should hold for it from now on. |
+
 ## Signal
 
 ```typescript
@@ -249,6 +294,12 @@ the model their topic strings (`session.switched`, …).
 |---|---|---|---|
 | `carries` | field | `T` | Only for the type parameter; never set. |
 | `constructor` | method | `(readonly name: string,)` | One signal of one host object. |
+
+### Signal.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | its wire name, as the host sends it. |
 
 ## SCHEMA_VERSION
 
@@ -2112,6 +2163,33 @@ Key–value state of the extension's own, kept by the host across restarts. An e
 | `set` | method | `(key: string, value: string) => Promise<void>` | Store one value. |
 | `delete` | method | `(key: string) => Promise<void>` | Remove one key. |
 
+### HostAppState.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostAppState.get()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `string` | required | The key to read the value of. |
+
+### HostAppState.set()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `string` | required | The key to store the value under. |
+| `value` | `string` | required | The value to store. |
+
+### HostAppState.delete()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `string` | required | The key to remove. |
+
 ## HostChatApprovals
 
 ```typescript
@@ -2133,6 +2211,28 @@ The agent asking to act, and the answers. Through `host.sessions.chat(id)` `wait
 | `answer` | method | `(requirement_id: string, action: string, choice?: string) => Promise<void>` | Answer one request, as the person's dialog does. |
 | `answer_all` | method | `(answers: ApprovalAnswer[]) => Promise<void>` | Answer every request of a pause at once. |
 
+### HostChatApprovals.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostChatApprovals.answer()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `requirement_id` | `string` | required | The waiting request to answer, by its id. |
+| `action` | `string` | required | `confirm` or `reject`. |
+| `choice` | `string` | optional | `once`, `always` or `similar`. |
+
+### HostChatApprovals.answer_all()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `answers` | `ApprovalAnswer[]` | required | The answers to give, one per waiting request. |
+
 ## HostChatViews
 
 ```typescript
@@ -2150,6 +2250,22 @@ json-render blocks in the transcript — the visualizer's and extensions'. Throu
 | `action` | field | `Signal<ViewAction>` | The person used a control in a view. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `dispatch` | method | `(view_id: string, action: string, params?: Record<string, JsonValue>) => Promise<JsonValue>` | Act on a view as if the person had. |
+
+### HostChatViews.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostChatViews.dispatch()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `view_id` | `string` | required | The view the action was used on, by its id. |
+| `action` | `string` | required | The control's action name. |
+| `params` | `Record<string, JsonValue>` | optional | The values the view attached to the action. |
 
 ## HostApp
 
@@ -2179,6 +2295,32 @@ igni itself: how it presents things, which version, whether it is connected.
 | `check_for_update` | method | `() => Promise<UpdateInfo | null>` | Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`. |
 | `open_external` | method | `(url: string) => Promise<void>` | Open an https link in the person's browser, the way igni opens every link outside it. The window asked about opens it: a page's own, else the active one. |
 
+### HostApp.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostApp.set_verbose()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `on` | `boolean` | required | Whether routing detail is shown. |
+
+### HostApp.set_output_style()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The output style to switch to, by its name. |
+
+### HostApp.open_external()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `url` | `string` | required | The link: `https://` only. |
+
 ## HostWindows
 
 ```typescript
@@ -2198,6 +2340,20 @@ Every open igni window. Address one window's UI with `host.windows.ui(id)`.
 | `focus_changed` | field | `Signal<WindowInfo>` | A window took focus or lost it; `focused` says which. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `ui` | method | `(windowId: string) => HostUi` | `host.ui` of one window, by its id. |
+
+### HostWindows.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostWindows.ui()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `windowId` | `string` | required | The window to reach, by its id. |
 
 ## HostUi
 
@@ -2246,6 +2402,83 @@ What a window shows — the model its views bind to. `host.ui` is the active win
 | `show_dialog` | method | `(spec: JsonValue) => Promise<JsonValue>` | Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. |
 | `scroll_to` | method | `(message_id: string) => Promise<Scroll>` | Scroll the transcript to a message, by its run; `bottom` for the newest. |
 
+### HostUi.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostUi.navigate()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `page` | `string` | required | A page kind: `plugins`, `extensions`, an extension's page. |
+| `params` | `Record<string, string>` | optional | The page's parameters. |
+
+### HostUi.open_panel()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | `string` | required | `notifications`, `search`, `login` or `dir-picker`. |
+| `params` | `Record<string, JsonValue>` | optional | The panel's own parameters: what the panel shows, in the panel's own shape. |
+
+### HostUi.set_sidebar()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `open` | `boolean` | required | Whether the sidebar is open. |
+| `width` | `number` | optional | In pixels, 180 to 600. |
+| `section` | `string` | optional | `links` or `sessions`. |
+
+### HostUi.open_preview()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | The file to preview, by its path in the project. |
+
+### HostUi.select()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `selection` | `SelectionState` | required | What is selected: a message, text or a file; the parts left out are cleared. |
+
+### HostUi.set_composer()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `string` | required | The draft to put in the composer. |
+| `attachments` | `string[]` | optional | Files to refer to: each becomes an `@path` the draft does not already have. |
+| `mode` | `string` | optional | `chat`, `command` or `shell`; unchanged if left out. |
+
+### HostUi.toast()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `string` | required | The toast's first line. |
+| `kind` | `string` | optional | `info` (default), `success`, `warning`, `error`. |
+| `body` | `string` | optional | A second line. |
+| `target` | `Page` | optional | Where clicking it goes. |
+
+### HostUi.dismiss_toast()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `toast_id` | `string` | required | The toast to take away, by its id. |
+
+### HostUi.show_dialog()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `spec` | `JsonValue` | required | The dialog to show: its title, body, buttons and input. |
+
+### HostUi.scroll_to()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `message_id` | `string` | required | The message to scroll to, named by the run it belongs to; `bottom` for the newest. |
+
 ## HostSessions
 
 ```typescript
@@ -2269,6 +2502,41 @@ The sessions of this project, and which one the active window shows. Reach any s
 | `create` | method | `(project_dir?: string, title?: string, focus?: boolean) => Promise<SessionAttached>` | Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. |
 | `attach` | method | `(session_id: string, project_dir?: string) => Promise<SessionAttached>` | Make sure a session is live, without showing it. |
 | `chat` | method | `(sessionId: string) => HostChat` | `host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself. |
+
+### HostSessions.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostSessions.open()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `string` | required | The session to open, by its id. |
+
+### HostSessions.create()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `project_dir` | `string` | optional | The folder the new session works in; this project when left out. |
+| `title` | `string` | optional | Its name in the session list. |
+| `focus` | `boolean` | optional | Show it in the caller's window — a page's own, else the active one. False by default. |
+
+### HostSessions.attach()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `string` | required | The session to make live, by its id. |
+| `project_dir` | `string` | optional | The folder the session works in; it must belong to that session. |
+
+### HostSessions.chat()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `sessionId` | `string` | required | The session to reach, by its id. |
 
 ## HostChat
 
@@ -2326,6 +2594,81 @@ The conversation in the current session. Signals carry the session they happened
 | `discard_interrupted` | method | `(message_id: string) => Promise<JsonValue>` | Forget an interrupted run. |
 | `upload` | method | `(filename: string, content_base64: string) => Promise<JsonValue>` | Upload an attachment for a later `post`. |
 
+### HostChat.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostChat.post()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `string` | required | The message to post, labelled as this extension's. |
+| `attachments` | `Record<string, string>` | optional | Path → content. |
+
+### HostChat.queue()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `string` | required | The message to queue for the next turn. |
+
+### HostChat.append()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `view` | `JsonValue` | required | A json-render spec: `{root, elements}`. |
+| `title` | `string` | optional | The view's title, as it is shown in the transcript. |
+
+### HostChat.replace()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `view_id` | `string` | required | The view to replace, by the id `append` returned. |
+| `view` | `JsonValue` | required | The new json-render spec: `{root, elements}`. |
+| `title` | `string` | optional | The view's new title. |
+
+### HostChat.search()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `query` | `string` | required | The text to find in the transcript. |
+| `limit` | `number` | optional | At most this many; 50 by default. |
+
+### HostChat.cancel_agent()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `run_id` | `string` | required | The sub-agent's run to stop, by its id. |
+
+### HostChat.truncate()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `run_id` | `string` | required | The run to remove, with every run after it. |
+
+### HostChat.extract_learnings()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `user_msg` | `string` | required | The turn's message, the one the person wrote. |
+| `assistant_msg` | `string` | required | The turn's answer, the one the agent gave. |
+
+### HostChat.discard_interrupted()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `message_id` | `string` | required | The interrupted run to forget, named by the message that started it. |
+
+### HostChat.upload()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `filename` | `string` | required | The file's name, made safe for the disk. |
+| `content_base64` | `string` | required | The file's bytes, base64-encoded. |
+
 ## HostPlan
 
 ```typescript
@@ -2343,6 +2686,26 @@ Plan mode: the plan the agent proposed.
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `approve` | method | `(run_id?: string) => Promise<PlanDecision>` | Approve the plan. |
 | `dismiss` | method | `(run_id?: string) => Promise<PlanDecision>` | Send the plan back. |
+
+### HostPlan.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostPlan.approve()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `run_id` | `string` | optional | The run that submitted the plan. |
+
+### HostPlan.dismiss()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `run_id` | `string` | optional | The run that submitted the plan. |
 
 ## HostTasks
 
@@ -2364,6 +2727,14 @@ The agent's todo list and its sub-agent tasks.
 | `todos_changed` | field | `Signal<Todos>` | The todo list changed. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 
+### HostTasks.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
 ## HostLoop
 
 ```typescript
@@ -2384,6 +2755,14 @@ class HostLoop extends HostObject
 | `cancel_pending` | method | `() => Promise<boolean>` | Stop the loop. |
 | `pop_pending` | method | `() => Promise<LoopAdvance | null>` | Take the next iteration. |
 
+### HostLoop.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
 ## HostCommands
 
 ```typescript
@@ -2403,6 +2782,20 @@ Slash commands and skills.
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `run` | method | `(command: string) => Promise<CommandOutcome>` | Run a slash command, as the extension. The answer comes back here. |
 
+### HostCommands.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostCommands.run()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `command` | `string` | required | With its slash: `/ctx`. |
+
 ## HostAgents
 
 ```typescript
@@ -2421,6 +2814,27 @@ Agent definitions.
 | `promote_ephemeral` | method | `(name: string, target?: string) => Promise<PromoteResult>` | Keep an agent made for one task, as `/agents promote` does. |
 | `discard_ephemeral` | method | `(name: string) => Promise<DiscardResult>` | Drop an agent made for one task. |
 
+### HostAgents.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostAgents.promote_ephemeral()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The agent to keep, by its name. |
+| `target` | `string` | optional | `project` (the default): `.igni/agents/`, committed and the team's, as `--project`; or `personal`: `.igni/agents.local/`, kept out of git and yours only, as `--personal`. |
+
+### HostAgents.discard_ephemeral()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The agent to drop, by its name. |
+
 ## HostWorkflows
 
 ```typescript
@@ -2438,6 +2852,27 @@ Workflows: scripted runs.
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `run` | method | `(name: string, input?: Record<string, JsonValue>) => Promise<WorkflowRun>` | Start a workflow. |
 | `cancel` | method | `(workflow_run_id: string) => Promise<boolean>` | Stop a workflow run. |
+
+### HostWorkflows.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostWorkflows.run()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The workflow to start, by its name. |
+| `input` | `Record<string, JsonValue>` | optional | The workflow's input, a JSON object it reads as it defines. |
+
+### HostWorkflows.cancel()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `workflow_run_id` | `string` | required | The run to stop, by its id. |
 
 ## HostScheduler
 
@@ -2458,6 +2893,26 @@ Scheduled tasks.
 | `run_now` | method | `(task_id: string) => Promise<string>` | Run a scheduled task now. |
 | `cancel` | method | `(task_id: string) => Promise<void>` | Cancel a scheduled task. |
 
+### HostScheduler.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostScheduler.run_now()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `task_id` | `string` | required | The scheduled task to run now, by its id. |
+
+### HostScheduler.cancel()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `task_id` | `string` | required | The scheduled task to cancel, by its id. |
+
 ## HostProcesses
 
 ```typescript
@@ -2476,6 +2931,33 @@ Background shells.
 | `tail` | method | `(pid: number, lines?: number) => Promise<ProcessTail>` | A shell's last lines. |
 | `stop` | method | `(pid: number) => Promise<ProcessStop>` | Stop a shell. |
 | `run` | method | `(command: string) => Promise<ShellResult>` | Run a command in the project and wait for it. |
+
+### HostProcesses.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostProcesses.tail()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `pid` | `number` | required | The shell to read the last lines of, by its process id. |
+| `lines` | `number` | optional | 200 by default. |
+
+### HostProcesses.stop()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `pid` | `number` | required | The shell to stop, by its process id. |
+
+### HostProcesses.run()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `command` | `string` | required | The command line to run in the project. |
 
 ## HostWorkspace
 
@@ -2501,6 +2983,44 @@ The project, as far as the extension's workspace grant reaches.
 | `pick_dir` | method | `() => Promise<JsonValue>` | Ask the person to pick a folder. |
 | `open` | method | `(path: string) => Promise<void>` | Open a file in the project with the application this machine opens it with — what an extension whose process is sandboxed cannot do itself. |
 
+### HostWorkspace.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostWorkspace.read()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | The file to read, by its path in the project. |
+
+### HostWorkspace.list()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `dir` | `string` | optional | The directory to list, by its path in the project; the project itself when left out. |
+
+### HostWorkspace.complete()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `prefix` | `string` | required | The path typed so far after `@`. |
+
+### HostWorkspace.search()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `query` | `string` | required | The text to search the code for. |
+
+### HostWorkspace.open()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | Relative to the project, or absolute inside it. |
+
 ## HostModels
 
 ```typescript
@@ -2517,6 +3037,14 @@ Models.
 | `current` | field | `Property<string>` | The model in use. Writable: setting it switches. |
 | `changed` | field | `Signal<ModelChange>` | The model in use changed. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+
+### HostModels.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
 
 ## HostMcp
 
@@ -2539,6 +3067,34 @@ MCP servers.
 | `disconnect` | method | `(name: string) => Promise<void>` | Disconnect a server. |
 | `ensure` | method | `() => Promise<McpInit>` | Start the servers that should be running. |
 | `set_tool_enabled` | method | `(server: string, tool: string, on: boolean) => Promise<McpToolToggle>` | Offer or withhold one tool. |
+
+### HostMcp.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostMcp.connect()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The server to connect, by its name in the MCP configuration. |
+
+### HostMcp.disconnect()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The server to disconnect, by its name in the MCP configuration. |
+
+### HostMcp.set_tool_enabled()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `server` | `string` | required | The server the tool belongs to, by its name. |
+| `tool` | `string` | required | The tool to offer or withhold, by its name. |
+| `on` | `boolean` | required | Whether the tool is offered. |
 
 ## HostPlugins
 
@@ -2566,6 +3122,73 @@ Plugins and marketplaces.
 | `remove_marketplace` | method | `(name: string) => Promise<void>` | Remove a marketplace. |
 | `refresh_marketplaces` | method | `(name?: string) => Promise<void>` | Refresh marketplaces. |
 
+### HostPlugins.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostPlugins.contents()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The installed plugin to describe, by its name. |
+
+### HostPlugins.preview()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `source` | `string` | required | The plugin's git URL, optionally followed by a subfolder. |
+| `branch` | `string` | optional | The branch, tag or commit to read; the default branch when left out. |
+| `subdir` | `string` | optional | The plugin's folder inside the repository, which wins over one in `source`. |
+
+### HostPlugins.install()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `ref` | `string` | required | The plugin to install: a git URL or `@<marketplace>/<plugin>`. |
+| `install_ref` | `string` | optional | The branch, tag or commit to check out; the marketplace's, or the default branch, when left out. |
+
+### HostPlugins.update()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The installed plugin to move, by its name. |
+| `install_ref` | `string` | optional | The branch, tag or commit to move to; the remote's default branch when left out. |
+
+### HostPlugins.remove()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The installed plugin to remove, by its name. |
+
+### HostPlugins.set_enabled()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The installed plugin to switch on or off, by its name. |
+| `on` | `boolean` | required | Whether the plugin is enabled. |
+
+### HostPlugins.add_marketplace()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `url` | `string` | required | The marketplace's git URL. |
+
+### HostPlugins.remove_marketplace()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | required | The marketplace to forget, by its name. |
+
+### HostPlugins.refresh_marketplaces()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `string` | optional | The marketplace to fetch again; every one of them when left out. |
+
 ## HostExtensions
 
 ```typescript
@@ -2582,6 +3205,20 @@ Installed extensions. Read-only, apart from this extension's own settings.
 | `state_changed` | field | `Signal<ExtensionStateChange>` | An extension's health moved. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `set_settings` | method | `(values: Record<string, JsonValue>) => Promise<SettingsChange>` | Change this extension's own settings. |
+
+### HostExtensions.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostExtensions.set_settings()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `values` | `Record<string, JsonValue>` | required | The settings to change, as key to value. |
 
 ## HostHooks
 
@@ -2601,6 +3238,14 @@ Hooks.
 | `reload` | method | `() => Promise<void>` | Reload hooks. |
 | `fire_session_start` | method | `() => Promise<void>` | Run the session-start hooks. |
 
+### HostHooks.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
 ## HostPermissions
 
 ```typescript
@@ -2619,6 +3264,29 @@ What the agent may do without asking.
 | `check` | method | `(tool_name: string, func_name: string, tool_args?: Record<string, JsonValue>) => Promise<string>` | Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`. |
 | `save_rule` | method | `(rule: string, level: string) => Promise<void>` | Save a permission rule. |
 
+### HostPermissions.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostPermissions.check()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tool_name` | `string` | required | The tool the call would use, by its name. |
+| `func_name` | `string` | required | The function of that tool the call would reach. |
+| `tool_args` | `Record<string, JsonValue>` | optional | The call's arguments, which argument rules match against. |
+
+### HostPermissions.save_rule()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `rule` | `string` | required | The rule to save: `Bash(git status)`, a tool name. |
+| `level` | `string` | required | `allow`, `ask` or `deny`. |
+
 ## HostPolicy
 
 ```typescript
@@ -2633,6 +3301,14 @@ The group policy in force.
 |---|---|---|---|
 | `pack` | field | `Property<PolicyPack>` | The group's policy pack. |
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+
+### HostPolicy.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
 
 ## HostAccount
 
@@ -2652,6 +3328,14 @@ Whether the person is signed in to igni. Never their session or a credential.
 | `sign_in` | method | `() => Promise<void>` | Start the person's own sign-in. Its result is theirs. |
 | `sign_out` | method | `() => Promise<Account>` | Sign the person out. |
 
+### HostAccount.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
 ## HostNotifications
 
 ```typescript
@@ -2670,6 +3354,27 @@ The floor's notifications. Its own always; everyone's with `notifications`.
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `notify` | method | `(notification: LocalNotification) => Promise<void>` | Tell the person at this machine something. It never leaves the machine. |
 | `mark_read` | method | `(ids?: string[], source?: string) => Promise<NotificationCounts>` | Mark notifications read: these ids, one source, or all of them. |
+
+### HostNotifications.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostNotifications.notify()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `notification` | `LocalNotification` | required | What to tell the person at this machine. |
+
+### HostNotifications.mark_read()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `ids` | `string[]` | optional | The notifications to mark read, by their ids. |
+| `source` | `string` | optional | The source whose notifications to mark read; every one of them when left out. |
 
 ## HostSelf
 
@@ -2692,6 +3397,27 @@ This extension, as the host sees it.
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `busy` | method | `(reason: string, ttl_seconds?: number) => Promise<BusyLease>` | Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). |
 | `done` | method | `(reason: string) => Promise<void>` | Let go of the lease `busy` took for `reason`. Nothing happens if there is none. |
+
+### HostSelf.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### HostSelf.busy()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `reason` | `string` | required | Why the extension is working inside igni's process. |
+| `ttl_seconds` | `number` | optional | Default and at most 600. |
+
+### HostSelf.done()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `reason` | `string` | required | The reason the lease was taken for. |
 
 ## Host
 
@@ -2733,3 +3459,25 @@ The root. `changed` reports every change anywhere in the model, for an extension
 | `constructor` | method | `(link: HostLink, window: string | null = null, session: string | null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `decide` | method | `(context: Record<string, string>, questions: DecisionQuestion[]) => Promise<Decision>` | Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. |
 | `decide_batch` | method | `(contexts: (Record<string, string>)[], questions: DecisionQuestion[]) => Promise<Decision[]>` | `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order. |
+
+### Host.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `string \| null` | `null` | The window it was reached through, or null for the one the page is in. |
+| `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
+
+### Host.decide()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `context` | `Record<string, string>` | required | Named text fields. |
+| `questions` | `DecisionQuestion[]` | required | The questions to ask, each with its own text and answer type. |
+
+### Host.decide_batch()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `contexts` | `(Record<string, string>)[]` | required | The contexts to ask about, one decision each, in order. |
+| `questions` | `DecisionQuestion[]` | required | The questions to ask of every context. |

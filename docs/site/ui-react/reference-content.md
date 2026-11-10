@@ -34,6 +34,11 @@ What a `Markdown` takes.
 function Markdown({ children, className }: MarkdownProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | `string` | required | the source; rendered as a document, not flattened. |
+| `className` | `string` | optional | added to the element's classes, beside the one the theme gives it. |
+
 Render markdown as prose.
 
 GitHub-flavoured, because that is what people write: tables,
@@ -49,6 +54,13 @@ extension's frame has a CSP precisely so that it cannot.
 ```typescript
 function MarkdownInline({ text, name = "", limit = 320, className = "", }: { text: string; name?: string; limit?: number; className?: string; })
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | — | optional | the markdown to render as one flowing line. |
+| `name` | — | `""` | the document's name, so a title echo can be dropped. |
+| `limit` | — | `320` | characters to keep; the clamp is visual, and this bounds the work. |
+| `className` | — | `""` | added to the element's classes, beside the one the theme gives it. |
 
 Markdown rendered as one flowing line of text.
 
@@ -77,6 +89,10 @@ dark has to be drawn in dark.
 function MermaidBlock({ source }: { source: string })
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `source` | — | optional | the text inside the fence. |
+
 A mermaid diagram.
 
 `source` is the text inside the fence. A diagram that does not
@@ -88,6 +104,10 @@ usually a diagram somebody is halfway through writing.
 ```typescript
 function fenceInfo(children: ReactNode): Fence | null
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | `ReactNode` | required | the `<pre>` a fenced block renders as; its `<code>` child carries the language class. |
 
 The language on a fenced block, or null.
 

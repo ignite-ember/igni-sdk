@@ -31,6 +31,10 @@ Let it happen as it is.
 def for_hook(hook_id: str) -> HookAnswer
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `hook_id` | `str` | required | The `id` of the hook message this answers. |
+
 The answer as it goes to igni for the hook `hook_id`.
 
 ## HookEvent
@@ -40,6 +44,13 @@ class HookEvent(Generic)
 HookEvent(name: str, value: type[T], *, decides: bool, modify: tuple[str, ...] = ())
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | igni's name for the event: `PreToolUse`. |
+| `value` | `type[T]` | required | The model a handler is handed for the event's value. |
+| `decides` | `bool` | required | Whether the handler's answer counts; `False` for an event it is only told. |
+| `modify` | `tuple[str, ...]` | `()` | The fields of the value a `Modify` may change. |
+
 One of igni's hook events, and the value a handler is handed.
 
 ### HookEvent.parse()
@@ -47,6 +58,10 @@ One of igni's hook events, and the value a handler is handed.
 ```python
 def parse(raw: Any) -> T
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `raw` | `Any` | required | The event's value as igni sent it, before it was read as the model. |
 
 The value igni sent, as the handler's model. Raises `ValidationError` for one it cannot
 read.
@@ -89,6 +104,10 @@ Let it happen, changed: the whole value, with only the fields it may change chan
 def for_hook(hook_id: str) -> HookAnswer
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `hook_id` | `str` | required | The `id` of the hook message this answers. |
+
 The answer as it goes to igni for the hook `hook_id`.
 
 ## Reject
@@ -110,5 +129,9 @@ Stop it. `reason` reaches the agent or the person, so write it for them.
 ```python
 def for_hook(hook_id: str) -> HookAnswer
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `hook_id` | `str` | required | The `id` of the hook message this answers. |
 
 The answer as it goes to igni for the hook `hook_id`.

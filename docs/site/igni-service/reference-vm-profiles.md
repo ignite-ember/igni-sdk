@@ -97,6 +97,15 @@ IgniApp(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as an org admin registered it on the portal: the client id the app authenticates as, and the app whose VM profile it asks for. |
+| `igni_server_url` | `str` | required | Where igni server is: the address every call the app makes is made against. |
+| `key_store` | `KeyStore` | required | Where the app keeps its signing key; the key is made on first use and kept there, and its private half never leaves the app. |
+| `http` | `httpx.AsyncClient \| None` | `None` | The ``httpx.AsyncClient`` every call to igni server goes through; one igni server makes for itself, and closes, when it is not given. |
+| `clock` | `Clock \| None` | `None` | The clock the token's age and expiry are read from, and the one the client assertion's times are taken from; a test passes a ``ManualClock``. |
+| `timeout` | `float` | `10.0` | Seconds to wait for igni server's answer before giving up; it is the timeout of the client igni server makes for itself, and a client given in ``http`` keeps the timeout it was made with. |
+
 An app's place in an igni deployment: its key, its token, its VM's profile.
 
 ### IgniApp.aclose()
@@ -141,6 +150,12 @@ async def request(
     json: object | None = None,
 ) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `method` | `str` | required | The HTTP method of the call, as it goes on the wire: ``GET``, ``PUT``, and the rest. |
+| `path` | `str` | required | The path on igni server, put after the address the app reaches it at. |
+| `json` | `object \| None` | `None` | The JSON body of the call; nothing is sent when it is not given. |
 
 One call to igni as this app; a 401 is retried once with a new token.
 

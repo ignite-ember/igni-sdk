@@ -4,62 +4,64 @@
 
 Every custom property the stylesheet defines, and the value it falls back to. The bridge overwrites these on `:root` when the extension connects, so inside igni the live values apply; the fallback is what you see on your own, and what applies before the bridge answers.
 
-| Token | Fallback | Used by |
-|---|---|---|
-| `--bg` | `#262624` | `.igni-root`, `.ui-card`, `.ui-item`, `.ui-select`, `.ui-textarea`, `.ui-progress` … |
-| `--bg-inset` | `#1f1f1d` | `.ui-select`, `.ui-textarea`, `.ui-progress`, `.ui-code`, `.panel-input`, `.dialog-pre` … |
-| `--bg-surface` | `#30302e` | `.ui-card`, `.btn`, `.chip`, `.panel`, `.dialog`, `.overflow-list` … |
-| `--bg-raised` | `#3a3a37` | `.ui-item`, `.btn`, `.btn-quiet`, `.chip`, `.ui-badge`, `.tip` … |
-| `--fg` | `#f0efea` | `.igni-root`, `.ui-item`, `.ui-empty`, `.ui-select`, `.ui-textarea`, `.ui-label` … |
-| `--fg-muted` | `#b8b5ad` | `.ui-empty`, `.ui-hint`, `.ui-tab`, `.ui-text`, `.chip`, `.panel-sub` … |
-| `--fg-faint` | `#a5a49e` | `.ui-text`, `.panel-input`, `.skeleton`, `.overflow-item-parent`, `.overflow-chevron`, `.mdi-heading` … |
-| `--border` | `#4a4a45` | `.ui-card`, `.ui-select`, `.ui-textarea`, `.ui-switch`, `.ui-spinner`, `.ui-tabs` … |
-| `--border-soft` | `#3d3d39` | `.ui-card`, `.ui-tabs`, `.ui-divider`, `.tip`, `.overflow-sep`, `.kb-icon-btn` … |
-| `--success` | `#4cb05c` | `.chip`, `.ui-badge`, `.ui-toast`, `.ui-banner`, `.ui-status` |
-| `--warning` | `#d9a644` | `.btn-warn`, `.chip`, `.ui-badge`, `.ui-toast`, `.ui-banner`, `.ui-status` |
-| `--danger` | `#ef6a5a` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.overflow-item-danger`, `.diagram-copy` … |
-| `--danger-text` | `#f28376` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.overflow-item-danger` |
-| `--accent-blue` | `#6aa3f7` | `.ui-select`, `.ui-textarea`, `.panel-input`, `.btn`, `.ui-item`, `.ui-tab` … |
-| `--igni-orange` | `#f97316` | `.ui-check`, `.ui-switch`, `.ui-spinner`, `.ui-tab` |
-| `--igni-red` | `#dc2626` | nothing here |
-| `--igni-gradient` | `linear-gradient(135deg, #f97316, #dc2626)` | `.ui-progress-fill`, `.btn-primary` |
-| `--space-1` | `2px` | `.ui-badge`, `.ui-code`, `.btn-xs`, `.dialog`, `.ui-toasts`, `.ui-toast-dismiss` … |
-| `--space-2` | `4px` | `.ui-list`, `.ui-badge`, `.ui-tabs`, `.btn-sm`, `.diagram-copy`, `.ui-th-sort` … |
-| `--space-3` | `6px` | `.ui-item`, `.ui-badge`, `.ui-field`, `.ui-tab`, `.ui-code`, `.chip` … |
-| `--space-4` | `8px` | `.ui-row`, `.ui-actions`, `.ui-toolbar`, `.ui-item`, `.ui-check`, `.btn-xs` … |
-| `--space-5` | `10px` | `.ui-card`, `.ui-select`, `.ui-textarea`, `.ui-tab`, `.btn-sm`, `.panel-input` … |
-| `--space-6` | `12px` | `.ui-card`, `.dialog-pre`, `.overflow-item`, `.active`, `.overflow-item-parent`, `.overflow-chevron` … |
-| `--space-7` | `14px` | `.ui-card`, `.btn`, `.panel`, `.mermaid-error`, `.ui-prose` |
-| `--space-8` | `16px` | `.panel`, `.mermaid-diagram`, `.ui-toasts` |
-| `--space-10` | `20px` | `.dialog`, `.ui-crash`, `.ui-prose` |
-| `--space-12` | `24px` | `.ui-prose` |
-| `--space-16` | `32px` | `.ui-toasts` |
-| `--accent-blue-text` | `#8eb9f9` | `.ui-prose` |
-| `--accent-green-text` | `#7cc57f` | `.ui-badge` |
-| `--accent-orange-text` | `#fb9c5a` | `.btn-warn`, `.ui-badge` |
-| `--accent-red-text` | `#f09393` | nothing here |
-| `--igni-orange-hover` | `#fb923c` | nothing here |
-| `--shadow-pop` | `0 12px 40px rgba(0, 0, 0, 0.45)` | `.overflow-list`, `.ui-toast` |
-| `--radius-sm` | `8px` | `.ui-item`, `.ui-select`, `.ui-textarea`, `.ui-code`, `.btn`, `.panel-input` … |
-| `--radius` | `12px` | `.ui-card`, `.ui-item`, `.ui-badge`, `.ui-select`, `.ui-textarea`, `.ui-switch` … |
-| `--radius-lg` | `18px` | `.dialog` |
-| `--radius-pill` | `999px` | `.ui-badge`, `.ui-switch`, `.ui-progress`, `.ui-progress-fill`, `.chip` |
-| `--radius-circle` | `50%` | `.ui-switch`, `.ui-spinner`, `.monogram`, `.skeleton-circle`, `.ui-status` |
-| `--text-2xs` | `10px` | nothing here |
-| `--text-xs` | `11px` | `.ui-badge`, `.ui-hint`, `.ui-error`, `.btn-xs`, `.ui-table`, `.ui-th-arrow` |
-| `--text-sm` | `12px` | `.ui-empty`, `.ui-table`, `.ui-label`, `.ui-tab`, `.ui-code`, `.btn-sm` … |
-| `--text-md` | `13px` | `.igni-root`, `.ui-select`, `.ui-textarea`, `.ui-check`, `.ui-text`, `.btn` … |
-| `--text-lg` | `14px` | `.dialog-title`, `.ui-prose` |
-| `--text-xl` | `17px` | `.ui-prose` |
-| `--text-2xl` | `20px` | `.ui-prose` |
-| `--text-3xl` | `30px` | nothing here |
-| `--text-4xl` | `42px` | nothing here |
-| `--font-ui` | `-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif` | `.igni-root` |
-| `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace` | `.ui-code`, `.dialog-pre`, `.mdi-code`, `.mermaid-error`, `.ui-crash-detail` |
+| Token | Fallback | Used by | Meaning |
+|---|---|---|---|
+| `--bg` | `#262624` | `.igni-root`, `.ui-card`, `.ui-item`, `.ui-select`, `.ui-textarea`, `.ui-progress` … | The background of the page itself. |
+| `--bg-inset` | `#1f1f1d` | `.ui-select`, `.ui-textarea`, `.ui-progress`, `.ui-code`, `.panel-input`, `.dialog-pre` … | A background sunk below the page: a well, a block of code. |
+| `--bg-surface` | `#30302e` | `.ui-card`, `.btn`, `.chip`, `.panel`, `.dialog`, `.overflow-list` … | A surface that sits on the page: a card, a button, a panel. |
+| `--bg-raised` | `#3a3a37` | `.ui-item`, `.btn`, `.btn-quiet`, `.chip`, `.ui-badge`, `.tip` … | A surface above the others: a hovered row, a badge, a tooltip. |
+| `--fg` | `#f0efea` | `.igni-root`, `.ui-item`, `.ui-empty`, `.ui-select`, `.ui-textarea`, `.ui-label` … | The text colour of the page, and the colour every heading and label inherits. |
+| `--fg-muted` | `#b8b5ad` | `.ui-empty`, `.ui-hint`, `.ui-tab`, `.ui-text`, `.chip`, `.panel-sub` … | Text you read but that is not the point: a hint, a subheading, a chip. |
+| `--fg-faint` | `#a5a49e` | `.ui-text`, `.panel-input`, `.skeleton`, `.overflow-item-parent`, `.overflow-chevron`, `.mdi-heading` … | The faintest text: a placeholder, a chevron, a disabled state. |
+| `--border` | `#4a4a45` | `.ui-card`, `.ui-select`, `.ui-textarea`, `.ui-switch`, `.ui-spinner`, `.ui-tabs` … | The line that draws the edge of a control: a card, a button, a field. |
+| `--border-soft` | `#3d3d39` | `.ui-card`, `.ui-tabs`, `.ui-divider`, `.tip`, `.overflow-sep`, `.kb-icon-btn` … | A fainter line: a divider, a table rule, the edge of a tooltip. |
+| `--success` | `#4cb05c` | `.chip`, `.ui-badge`, `.ui-toast`, `.ui-banner`, `.ui-status` | The colour that means it worked: a success badge, a ready dot. |
+| `--warning` | `#d9a644` | `.btn-warn`, `.chip`, `.ui-badge`, `.ui-toast`, `.ui-banner`, `.ui-status` | The colour that means it needs attention: a warning button, a preparing dot. |
+| `--danger` | `#ef6a5a` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.overflow-item-danger`, `.diagram-copy` … | The strong red: the border of a destructive button, the rule on an error. |
+| `--danger-text` | `#f28376` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.overflow-item-danger` | The same red, lightened until it clears WCAG AA as text. |
+| `--accent-blue` | `#6aa3f7` | `.ui-select`, `.ui-textarea`, `.panel-input`, `.btn`, `.ui-item`, `.ui-tab` … | The blue that marks focus, and the row that is selected. |
+| `--igni-orange` | `#f97316` | `.ui-check`, `.ui-switch`, `.ui-spinner`, `.ui-tab` | The brand colour of igni: the ticked box, the selected tab, the spinner. |
+| `--igni-red` | `#dc2626` | nothing here | The red end of the brand gradient, for the brand colour on its own. |
+| `--igni-gradient` | `linear-gradient(135deg, #f97316, #dc2626)` | `.ui-progress-fill`, `.btn-primary` | The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar. |
+| `--space-1` | `2px` | `.ui-badge`, `.ui-code`, `.btn-xs`, `.dialog`, `.ui-toasts`, `.ui-toast-dismiss` … | The hairline step: the padding inside a badge, a code span, a tiny button. |
+| `--space-2` | `4px` | `.ui-list`, `.ui-badge`, `.ui-tabs`, `.btn-sm`, `.diagram-copy`, `.ui-th-sort` … | The gap between the parts of one small thing: a badge and its icon, the items of a list. |
+| `--space-3` | `6px` | `.ui-item`, `.ui-badge`, `.ui-field`, `.ui-tab`, `.ui-code`, `.chip` … | The gap between a label and its control, and the padding of a table cell. |
+| `--space-4` | `8px` | `.ui-row`, `.ui-actions`, `.ui-toolbar`, `.ui-item`, `.ui-check`, `.btn-xs` … | The gap between two things side by side: the items of a row, the controls of a toolbar. |
+| `--space-5` | `10px` | `.ui-card`, `.ui-select`, `.ui-textarea`, `.ui-tab`, `.btn-sm`, `.panel-input` … | The gap between the parts of a card, and the padding inside a control you type into. |
+| `--space-6` | `12px` | `.ui-card`, `.dialog-pre`, `.overflow-item`, `.active`, `.overflow-item-parent`, `.overflow-chevron` … | The padding inside a card, and the space between blocks of prose. |
+| `--space-7` | `14px` | `.ui-card`, `.btn`, `.panel`, `.mermaid-error`, `.ui-prose` | The padding inside a button or a panel. |
+| `--space-8` | `16px` | `.panel`, `.mermaid-diagram`, `.ui-toasts` | The padding of a panel, and the gap between a toast stack and the screen edge. |
+| `--space-10` | `20px` | `.dialog`, `.ui-crash`, `.ui-prose` | The padding inside a dialog, and the indent of a list in prose. |
+| `--space-12` | `24px` | `.ui-prose` | The space above a heading in prose. |
+| `--space-16` | `32px` | `.ui-toasts` | The margin kept between a toast stack and the screen edge. |
+| `--accent-blue-text` | `#8eb9f9` | `.ui-prose` | The blue lightened until it clears WCAG AA as text: a link in prose. |
+| `--accent-green-text` | `#7cc57f` | `.ui-badge` | The green lightened for text: the lettering of a success badge. |
+| `--accent-orange-text` | `#fb9c5a` | `.btn-warn`, `.ui-badge` | The orange lightened for text: the lettering of a warning button. |
+| `--accent-red-text` | `#f09393` | nothing here | The red lightened for text: the lettering of a failure. |
+| `--igni-orange-hover` | `#fb923c` | nothing here | The brand orange one step brighter, for a control under the pointer. |
+| `--shadow-pop` | `0 12px 40px rgba(0, 0, 0, 0.45)` | `.overflow-list`, `.ui-toast` | The shadow a floating surface casts: a toast, an open menu. |
+| `--radius-sm` | `8px` | `.ui-item`, `.ui-select`, `.ui-textarea`, `.ui-code`, `.btn`, `.panel-input` … | The corner on a small control: a button, a field, a block of code. |
+| `--radius` | `12px` | `.ui-card`, `.ui-item`, `.ui-badge`, `.ui-select`, `.ui-textarea`, `.ui-switch` … | The default corner: a card, a panel, a badge. |
+| `--radius-lg` | `18px` | `.dialog` | The largest corner: a dialog. |
+| `--radius-pill` | `999px` | `.ui-badge`, `.ui-switch`, `.ui-progress`, `.ui-progress-fill`, `.chip` | A fully rounded end: a badge, a chip, a switch, a progress bar. |
+| `--radius-circle` | `50%` | `.ui-switch`, `.ui-spinner`, `.monogram`, `.skeleton-circle`, `.ui-status` | A round shape: the knob of a switch, a spinner, a status dot. |
+| `--text-2xs` | `10px` | nothing here | The smallest step: an icon or a counter beside a label, never a word you must read. |
+| `--text-xs` | `11px` | `.ui-badge`, `.ui-hint`, `.ui-error`, `.btn-xs`, `.ui-table`, `.ui-th-arrow` | A badge or a hint: text that is there, but not the point. |
+| `--text-sm` | `12px` | `.ui-empty`, `.ui-table`, `.ui-label`, `.ui-tab`, `.ui-code`, `.btn-sm` … | A label, a table, a chip: content you read, at a size that still fits a column. |
+| `--text-md` | `13px` | `.igni-root`, `.ui-select`, `.ui-textarea`, `.ui-check`, `.ui-text`, `.btn` … | The body size of the page, and the default for anything you do not size yourself. |
+| `--text-lg` | `14px` | `.dialog-title`, `.ui-prose` | The title of a dialog, or a third-level heading in prose. |
+| `--text-xl` | `17px` | `.ui-prose` | A second-level heading in prose. |
+| `--text-2xl` | `20px` | `.ui-prose` | A first-level heading in prose. |
+| `--text-3xl` | `30px` | nothing here | A hero number: the largest size that still belongs to a page. |
+| `--text-4xl` | `42px` | nothing here | The title of the welcome screen: the largest step on the scale. |
+| `--font-ui` | `-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif` | `.igni-root` | The sans stack the page and its controls are set in. |
+| `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace` | `.ui-code`, `.dialog-pre`, `.mdi-code`, `.mermaid-error`, `.ui-crash-detail` | The monospace stack, for code and anything that shows source. |
 
 ## --bg
 
 `#262624`
+
+The background of the page itself.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -67,11 +69,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#1f1f1d`
 
+A background sunk below the page: a well, a block of code.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --bg-surface
 
 `#30302e`
+
+A surface that sits on the page: a card, a button, a panel.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -79,11 +85,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#3a3a37`
 
+A surface above the others: a hovered row, a badge, a tooltip.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --fg
 
 `#f0efea`
+
+The text colour of the page, and the colour every heading and label inherits.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -91,11 +101,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#b8b5ad`
 
+Text you read but that is not the point: a hint, a subheading, a chip.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --fg-faint
 
 `#a5a49e`
+
+The faintest text: a placeholder, a chevron, a disabled state.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -103,11 +117,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#4a4a45`
 
+The line that draws the edge of a control: a card, a button, a field.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --border-soft
 
 `#3d3d39`
+
+A fainter line: a divider, a table rule, the edge of a tooltip.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -115,11 +133,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#4cb05c`
 
+The colour that means it worked: a success badge, a ready dot.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --warning
 
 `#d9a644`
+
+The colour that means it needs attention: a warning button, a preparing dot.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -127,11 +149,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#ef6a5a`
 
+The strong red: the border of a destructive button, the rule on an error.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --danger-text
 
 `#f28376`
+
+The same red, lightened until it clears WCAG AA as text.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -139,11 +165,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#6aa3f7`
 
+The blue that marks focus, and the row that is selected.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --igni-orange
 
 `#f97316`
+
+The brand colour of igni: the ticked box, the selected tab, the spinner.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -151,11 +181,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#dc2626`
 
+The red end of the brand gradient, for the brand colour on its own.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --igni-gradient
 
 `linear-gradient(135deg, #f97316, #dc2626)`
+
+The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -163,11 +197,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `2px`
 
+The hairline step: the padding inside a badge, a code span, a tiny button.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --space-2
 
 `4px`
+
+The gap between the parts of one small thing: a badge and its icon, the items of a list.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -175,11 +213,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `6px`
 
+The gap between a label and its control, and the padding of a table cell.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --space-4
 
 `8px`
+
+The gap between two things side by side: the items of a row, the controls of a toolbar.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -187,11 +229,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `10px`
 
+The gap between the parts of a card, and the padding inside a control you type into.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --space-6
 
 `12px`
+
+The padding inside a card, and the space between blocks of prose.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -199,11 +245,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `14px`
 
+The padding inside a button or a panel.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --space-8
 
 `16px`
+
+The padding of a panel, and the gap between a toast stack and the screen edge.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -211,11 +261,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `20px`
 
+The padding inside a dialog, and the indent of a list in prose.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --space-12
 
 `24px`
+
+The space above a heading in prose.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -223,11 +277,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `32px`
 
+The margin kept between a toast stack and the screen edge.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --accent-blue-text
 
 `#8eb9f9`
+
+The blue lightened until it clears WCAG AA as text: a link in prose.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -235,11 +293,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#7cc57f`
 
+The green lightened for text: the lettering of a success badge.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --accent-orange-text
 
 `#fb9c5a`
+
+The orange lightened for text: the lettering of a warning button.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -247,11 +309,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `#f09393`
 
+The red lightened for text: the lettering of a failure.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --igni-orange-hover
 
 `#fb923c`
+
+The brand orange one step brighter, for a control under the pointer.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -259,11 +325,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `0 12px 40px rgba(0, 0, 0, 0.45)`
 
+The shadow a floating surface casts: a toast, an open menu.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --radius-sm
 
 `8px`
+
+The corner on a small control: a button, a field, a block of code.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -271,11 +341,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `12px`
 
+The default corner: a card, a panel, a badge.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --radius-lg
 
 `18px`
+
+The largest corner: a dialog.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -283,11 +357,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `999px`
 
+A fully rounded end: a badge, a chip, a switch, a progress bar.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --radius-circle
 
 `50%`
+
+A round shape: the knob of a switch, a spinner, a status dot.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -295,11 +373,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `10px`
 
+The smallest step: an icon or a counter beside a label, never a word you must read.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --text-xs
 
 `11px`
+
+A badge or a hint: text that is there, but not the point.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -307,11 +389,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `12px`
 
+A label, a table, a chip: content you read, at a size that still fits a column.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --text-md
 
 `13px`
+
+The body size of the page, and the default for anything you do not size yourself.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -319,11 +405,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `14px`
 
+The title of a dialog, or a third-level heading in prose.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --text-xl
 
 `17px`
+
+A second-level heading in prose.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -331,11 +421,15 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `20px`
 
+A first-level heading in prose.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --text-3xl
 
 `30px`
+
+A hero number: the largest size that still belongs to a page.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
@@ -343,16 +437,22 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 `42px`
 
+The title of the welcome screen: the largest step on the scale.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --font-ui
 
 `-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif`
 
+The sans stack the page and its controls are set in.
+
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
 
 ## --font-mono
 
 `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace`
+
+The monospace stack, for code and anything that shows source.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.

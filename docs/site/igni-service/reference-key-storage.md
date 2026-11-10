@@ -19,6 +19,10 @@ class KeyCipher
 KeyCipher(key: str)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `str` | required | The Fernet key encryption key the private half is sealed under, as ``KeyCipher.generate`` produced it. An empty one leaves the cipher unusable: sealing raises ``KeyStoreError``. |
+
 Fernet under the service's key encryption key.
 
 ### KeyCipher.generate()
@@ -36,6 +40,10 @@ A new key encryption key, for an operator to keep.
 def seal(plaintext: str) -> str
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `plaintext` | `str` | required | The text to encrypt under the key encryption key. |
+
 `plaintext` encrypted under the key encryption key, as Fernet text.
 
 ### KeyCipher.open()
@@ -43,6 +51,10 @@ def seal(plaintext: str) -> str
 ```python
 def open(sealed: str) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `sealed` | `str` | required | The sealed text, as ``seal`` produced it. |
 
 What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed.
 
@@ -52,6 +64,11 @@ What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed.
 class KeyStore(Protocol)
 KeyStore(*args, **kwargs)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `args` | — | required | The positional arguments a concrete implementation's constructor takes; the protocol itself does not use them. |
+| `kwargs` | — | required | The keyword arguments a concrete implementation's constructor takes; the protocol itself does not use them. |
 
 Keeps one key. See the module note for the contract.
 
@@ -68,6 +85,10 @@ The kept key, or `None` before there is one.
 ```python
 async def claim(key: StoredKey) -> StoredKey
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `StoredKey` | required | The key to keep when none is kept yet: its ``kid`` thumbprint and its private half. |
 
 Keep `key` unless one is already kept, and answer with whichever is kept.
 
@@ -97,6 +118,10 @@ The key this process kept, or `None` before there is one.
 async def claim(key: StoredKey) -> StoredKey
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `StoredKey` | required | The key to keep when this process holds none: its ``kid`` thumbprint and its private half. |
+
 Keep `key` unless one is already kept; answer with whichever is.
 
 ## SqlKeyStore
@@ -105,6 +130,12 @@ Keep `key` unless one is already kept; answer with whichever is.
 class SqlKeyStore
 SqlKeyStore(engine: AsyncEngine, cipher: KeyCipher, *, create_table: bool = True)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `engine` | `AsyncEngine` | required | The database engine the key is kept through, and the one the table is created through unless ``create_table`` is off. |
+| `cipher` | `KeyCipher` | required | The cipher that seals the private half before it is stored, and unseals it when it is read back. |
+| `create_table` | `bool` | `True` | Whether the table is created on first use. Off when the service owns the table in its migrations. |
 
 Keeps the service's key sealed in one row of `igni_service_key`.
 
@@ -131,6 +162,10 @@ unless `create_table=False`.
 ```python
 async def claim(key: StoredKey) -> StoredKey
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `StoredKey` | required | The key to keep: its ``kid`` thumbprint and its private half, which is sealed under the cipher before it is stored. |
 
 Keep `key`, sealed, unless another replica kept one first; answer with the kept one.
 

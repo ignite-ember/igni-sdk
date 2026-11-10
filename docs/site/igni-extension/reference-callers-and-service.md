@@ -56,6 +56,10 @@ ref: str
 def of(raw: Any) -> Caller | None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `raw` | `Any` | required | The principal as the host sent it: the request's `_meta` entry `igni/principal`, or a hook frame's `principal` field. |
+
 A caller from the wire, or `None` when there is none or it is malformed.
 
 ### Caller.current()
@@ -111,6 +115,13 @@ ServiceClient(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `base_url` | `str` | required | The service's base URL, as igni set it: `http://service.test`. |
+| `tokens` | `HostTokens` | required | The person's tokens for the service, which every request carries. |
+| `transport` | `httpx.AsyncBaseTransport \| None` | `None` | The HTTP transport the service is reached through, so a test can answer it. |
+| `timeout` | `float` | `30.0` | Seconds to wait for the service before giving up. |
+
 `ext.service`: the extension's service, as the signed-in person.
 
 ### ServiceClient.for_()
@@ -118,6 +129,10 @@ ServiceClient(
 ```python
 def for_(caller: Caller) -> ServiceClient
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `caller` | `Caller` | required | The producer the service is reached as: the person a tool was handed. |
 
 The same service, as `caller`: what a tool acting for someone uses.
 
@@ -139,6 +154,11 @@ The same service, with no token: for what anyone may read.
 ```python
 def websocket(path: str, **options: Any) -> ServiceWebSocket
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `str` | required | The path on the service, relative to its base URL: `/v1/rooms/runbook`. |
+| `options` | `Any` | required | The options the WebSocket connection takes, as `websockets.asyncio.client.connect` spells them. |
 
 A WebSocket to `path` on the service, with the person's token.
 
@@ -177,6 +197,10 @@ checks the token; this side never decides anything with what it says.
 @classmethod
 def of(token: str) -> SignedIn
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `str` | required | The person's token for this extension's service, as the host handed it over. |
 
 Who `token` names, read from its claims without checking its signature.
 

@@ -23,6 +23,15 @@ IgniExtension(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extension_id` | `str` | required | The extension's manifest id, as its manifest writes it: `acme.example`. |
+| `instructions` | `str \| None` | `None` | The instructions the extension gives the model, as its author writes them; `None` when it has none. |
+| `environ` | `Mapping[str, str] \| None` | `None` | The environment variables igni set for the process; `os.environ` when `None`. |
+| `token_transport` | `httpx.AsyncBaseTransport \| None` | `None` | The HTTP transport the host's token endpoint is reached through, so a test can answer it. |
+| `service_transport` | `httpx.AsyncBaseTransport \| None` | `None` | The HTTP transport the extension's own service is reached through, so a test can answer it. |
+| `clock` | `Clock \| None` | `None` | The clock a token's age is measured on, so a test can move it. |
+
 One extension's process: its tools, its service, and the host.
 
 It composes them: `ext.tools`, the handlers igni's socket reads,
@@ -40,6 +49,12 @@ def tool(
     description: str | None = None,
 ) -> Callable[[AnyFunction], AnyFunction]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `hints` | `ToolHints` | required | What the tool says it is: the four igni's permission modes read (`igni_extension.hints`). |
+| `name` | `str \| None` | `None` | The name the tool is registered under; the function's own name when `None`. |
+| `description` | `str \| None` | `None` | What the model is told the tool does; the function's own docstring when `None`. |
 
 Register a tool igni can call: `@ext.tool(hints=ToolHints(...))`.
 
@@ -61,6 +76,10 @@ def on(
 ) -> Callable[[Callable[[T], Awaitable[None] | None]], Callable[[T], Awaitable[None] | None]]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `signal` | `Signal[T]` | required | The signal to handle: `ext.host.sessions.current_changed`. |
+
 Handle a host signal: `@ext.on(ext.host.<object>.<signal>)`.
 
 A reaction: igni never waits on it. A plain `def` runs in a
@@ -71,6 +90,10 @@ worker thread.
 ```python
 def hook(event: HookEvent[T]) -> Callable[[HookHandler[T]], HookHandler[T]]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event` | `HookEvent[T]` | required | The hook event to answer: `Hooks.PRE_TOOL_USE`. |
 
 Answer one of igni's hook events: `@ext.hook(Hooks.PRE_TOOL_USE)`.
 
@@ -87,6 +110,10 @@ def on_service_event(
 ) -> Callable[[ServiceEventHandler], ServiceEventHandler]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_type` | `str \| None` | `None` | The type of service event to handle: `claim.created`; every type no other handler names when `None`. |
+
 Handle the events this extension's service sends (`igni_extension.service_events`).
 
 igni posts nothing for an event: the handler acts through its host
@@ -100,6 +127,10 @@ type no other handler names.
 ```python
 def on_start(fn: F) -> F
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `fn` | `F` | required | The function to run in the background for as long as the process serves igni. |
 
 Run `fn` in the background for as long as the process serves igni.
 

@@ -32,6 +32,14 @@ What an `AppShell` takes.
 function AppShell({ header, footer, children, className, ...rest }: AppShellProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `header` | `ReactNode` | optional | fixed at the top; a `Toolbar`, usually. |
+| `footer` | `ReactNode` | optional | fixed at the bottom: status, or a form's actions. |
+| `children` | — | optional | the body, the one part allowed to grow. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the shell. |
+
 Header, body, footer — with exactly one part allowed to grow.
 
 The body is a flex column itself, so a `Scroll` placed directly
@@ -56,6 +64,12 @@ What a `Scroll` takes.
 ```typescript
 function Scroll({ axis = "y", className, ...rest }: ScrollProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `axis` | `"y" \| "x"` | `"y"` | scroll sideways instead; for a wide table, not a long list. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
 
 The part that scrolls.
 
