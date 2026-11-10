@@ -1176,6 +1176,12 @@ export class HostAppState extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1223,6 +1229,12 @@ export class HostChatApprovals extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1237,7 +1249,12 @@ export class HostChatApprovals extends HostObject {
     this.changed = new Signal("chat.approvals.changed");
   }
 
-  /** Answer one request, as the person's dialog does. */
+  /**
+   * Answer one request, as the person's dialog does.
+   *
+   * @param action — `confirm` or `reject`.
+   * @param choice — `once`, `always` or `similar`.
+   */
   answer(requirement_id: string, action: string, choice?: string): Promise<void> {
     return this.call<void>("answer", { requirement_id, action, choice });
   }
@@ -1264,6 +1281,12 @@ export class HostChatViews extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1312,6 +1335,12 @@ export class HostApp extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1346,7 +1375,11 @@ export class HostApp extends HostObject {
     return this.call<UpdateInfo | null>("check_for_update", {});
   }
 
-  /** Open an https link in the person's browser, the way igni opens every link outside it. The window asked about opens it: a page's own, else the active one. Anything but an absolute `https://` URL with a host and no credentials in it is refused (`invalid`). */
+  /**
+   * Open an https link in the person's browser, the way igni opens every link outside it. The window asked about opens it: a page's own, else the active one. Anything but an absolute `https://` URL with a host and no credentials in it is refused (`invalid`).
+   *
+   * @param url — The link: `https://` only.
+   */
   open_external(url: string): Promise<void> {
     return this.call<void>("open_external", { url });
   }
@@ -1372,6 +1405,12 @@ export class HostWindows extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1442,6 +1481,12 @@ export class HostUi extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1471,7 +1516,12 @@ export class HostUi extends HostObject {
     this.scrolled = new Signal("ui.scrolled");
   }
 
-  /** Open a page at the top of the stack, as a header link does. */
+  /**
+   * Open a page at the top of the stack, as a header link does.
+   *
+   * @param page — A page kind: `plugins`, `extensions`, an extension's page.
+   * @param params — The page's parameters.
+   */
   navigate(page: string, params?: Record<string, string>): Promise<Page[]> {
     return this.call<Page[]>("navigate", { page, params });
   }
@@ -1481,7 +1531,11 @@ export class HostUi extends HostObject {
     return this.call<Page[]>("back", {});
   }
 
-  /** Open a panel over the chat, closing the one that was open. */
+  /**
+   * Open a panel over the chat, closing the one that was open.
+   *
+   * @param kind — `notifications`, `search`, `login` or `dir-picker`.
+   */
   open_panel(kind: string, params?: Record<string, JsonValue>): Promise<Panel> {
     return this.call<Panel>("open_panel", { kind, params });
   }
@@ -1491,7 +1545,12 @@ export class HostUi extends HostObject {
     return this.call<void>("close_panel", {});
   }
 
-  /** Open or close the sidebar, and size it or bring a section into view. */
+  /**
+   * Open or close the sidebar, and size it or bring a section into view.
+   *
+   * @param width — In pixels, 180 to 600.
+   * @param section — `links` or `sessions`.
+   */
   set_sidebar(open: boolean, width?: number, section?: string): Promise<Sidebar> {
     return this.call<Sidebar>("set_sidebar", { open, width, section });
   }
@@ -1511,12 +1570,23 @@ export class HostUi extends HostObject {
     return this.call<SelectionState>("select", { selection });
   }
 
-  /** Replace the draft. */
+  /**
+   * Replace the draft.
+   *
+   * @param attachments — Files to refer to: each becomes an `@path` the draft does not already have.
+   * @param mode — `chat`, `command` or `shell`; unchanged if left out.
+   */
   set_composer(text: string, attachments?: string[], mode?: string): Promise<Composer> {
     return this.call<Composer>("set_composer", { text, attachments, mode });
   }
 
-  /** Show a transient message, labelled as this extension's. */
+  /**
+   * Show a transient message, labelled as this extension's.
+   *
+   * @param kind — `info` (default), `success`, `warning`, `error`.
+   * @param body — A second line.
+   * @param target — Where clicking it goes.
+   */
   toast(text: string, kind?: string, body?: string, target?: Page): Promise<Toast> {
     return this.call<Toast>("toast", { text, kind, body, target });
   }
@@ -1559,6 +1629,12 @@ export class HostSessions extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1579,7 +1655,12 @@ export class HostSessions extends HostObject {
     return this.call<SessionChange>("open", { session_id });
   }
 
-  /** Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it. */
+  /**
+   * Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it.
+   *
+   * @param title — Its name in the session list.
+   * @param focus — Show it in the caller's window — a page's own, else the active one. False by default.
+   */
   create(project_dir?: string, title?: string, focus?: boolean): Promise<SessionAttached> {
     return this.call<SessionAttached>("create", { project_dir, title, focus });
   }
@@ -1665,6 +1746,12 @@ export class HostChat extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1704,7 +1791,11 @@ export class HostChat extends HostObject {
     this.history_changed = new Signal("chat.history_changed");
   }
 
-  /** Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments. */
+  /**
+   * Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
+   *
+   * @param attachments — Path → content.
+   */
   post(text: string, attachments?: Record<string, string>): Promise<void> {
     return this.call<void>("post", { text, attachments });
   }
@@ -1714,7 +1805,11 @@ export class HostChat extends HostObject {
     return this.call<void>("queue", { text });
   }
 
-  /** Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id. */
+  /**
+   * Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id.
+   *
+   * @param view — A json-render spec: `{root, elements}`.
+   */
   append(view: JsonValue, title?: string): Promise<string> {
     return this.call<string>("append", { view, title });
   }
@@ -1724,7 +1819,11 @@ export class HostChat extends HostObject {
     return this.call<void>("replace", { view_id, view, title });
   }
 
-  /** Search the transcript. */
+  /**
+   * Search the transcript.
+   *
+   * @param limit — At most this many; 50 by default.
+   */
   search(query: string, limit?: number): Promise<JsonValue[]> {
     return this.call<JsonValue[]>("search", { query, limit });
   }
@@ -1779,6 +1878,12 @@ export class HostPlan extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1823,6 +1928,12 @@ export class HostTasks extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1853,6 +1964,12 @@ export class HostLoop extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1903,6 +2020,12 @@ export class HostCommands extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1916,7 +2039,11 @@ export class HostCommands extends HostObject {
     this.skill_details = new Property(this, "skill_details", false);
   }
 
-  /** Run a slash command, as the extension. The answer comes back here. */
+  /**
+   * Run a slash command, as the extension. The answer comes back here.
+   *
+   * @param command — With its slash: `/ctx`.
+   */
   run(command: string): Promise<CommandOutcome> {
     return this.call<CommandOutcome>("run", { command });
   }
@@ -1936,6 +2063,12 @@ export class HostAgents extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -1947,7 +2080,11 @@ export class HostAgents extends HostObject {
     this.changed = new Signal("agents.changed");
   }
 
-  /** Keep an agent made for one task, as `/agents promote` does. */
+  /**
+   * Keep an agent made for one task, as `/agents promote` does.
+   *
+   * @param target — `project` (the default): `.igni/agents/`, committed and the team's, as `--project`; or `personal`: `.igni/agents.local/`, kept out of git and yours only, as `--personal`.
+   */
   promote_ephemeral(name: string, target?: string): Promise<PromoteResult> {
     return this.call<PromoteResult>("promote_ephemeral", { name, target });
   }
@@ -1972,6 +2109,12 @@ export class HostWorkflows extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2008,6 +2151,12 @@ export class HostScheduler extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2049,6 +2198,12 @@ export class HostProcesses extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2060,7 +2215,11 @@ export class HostProcesses extends HostObject {
     this.changed = new Signal("processes.changed");
   }
 
-  /** A shell's last lines. */
+  /**
+   * A shell's last lines.
+   *
+   * @param lines — 200 by default.
+   */
   tail(pid: number, lines?: number): Promise<ProcessTail> {
     return this.call<ProcessTail>("tail", { pid, lines });
   }
@@ -2094,6 +2253,12 @@ export class HostWorkspace extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2132,7 +2297,11 @@ export class HostWorkspace extends HostObject {
     return this.call<JsonValue>("pick_dir", {});
   }
 
-  /** Open a file in the project with the application this machine opens it with — what an extension whose process is sandboxed cannot do itself. Only a file the workspace grant reaches (`refused` outside the project, `not_granted` outside `workspacePaths`), and only a document: `.csv`, `.gif`, `.htm`, `.html`, `.jpeg`, `.jpg`, `.md`, `.pdf`, `.png`, `.svg`, `.txt`, `.webp` (`invalid` otherwise, and for an executable file). `failed` when nothing here opened it. */
+  /**
+   * Open a file in the project with the application this machine opens it with — what an extension whose process is sandboxed cannot do itself. Only a file the workspace grant reaches (`refused` outside the project, `not_granted` outside `workspacePaths`), and only a document: `.csv`, `.gif`, `.htm`, `.html`, `.jpeg`, `.jpg`, `.md`, `.pdf`, `.png`, `.svg`, `.txt`, `.webp` (`invalid` otherwise, and for an executable file). `failed` when nothing here opened it.
+   *
+   * @param path — Relative to the project, or absolute inside it.
+   */
   open(path: string): Promise<void> {
     return this.call<void>("open", { path });
   }
@@ -2154,6 +2323,12 @@ export class HostModels extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2185,6 +2360,12 @@ export class HostMcp extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2235,6 +2416,12 @@ export class HostPlugins extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2307,6 +2494,12 @@ export class HostExtensions extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2338,6 +2531,12 @@ export class HostHooks extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2374,6 +2573,12 @@ export class HostPermissions extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2390,7 +2595,11 @@ export class HostPermissions extends HostObject {
     return this.call<string>("check", { tool_name, func_name, tool_args });
   }
 
-  /** Save a permission rule. */
+  /**
+   * Save a permission rule.
+   *
+   * @param level — `allow`, `ask` or `deny`.
+   */
   save_rule(rule: string, level: string): Promise<void> {
     return this.call<void>("save_rule", { rule, level });
   }
@@ -2408,6 +2617,12 @@ export class HostPolicy extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2433,6 +2648,12 @@ export class HostAccount extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2471,6 +2692,12 @@ export class HostNotifications extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2516,6 +2743,12 @@ export class HostSelf extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2531,7 +2764,11 @@ export class HostSelf extends HostObject {
     this.state_changed = new Signal("self.state_changed");
   }
 
-  /** Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`. */
+  /**
+   * Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`.
+   *
+   * @param ttl_seconds — Default and at most 600.
+   */
   busy(reason: string, ttl_seconds?: number): Promise<BusyLease> {
     return this.call<BusyLease>("busy", { reason, ttl_seconds });
   }
@@ -2602,6 +2839,12 @@ export class Host extends HostObject {
    *
    * A page never builds one of these: `bridge.host` is already the
    * right one, and a second would be a second conversation.
+   *
+   * @param link — The link this object talks to the host through.
+   * @param window — The window it was reached through, or null for
+   *   the one the page is in.
+   * @param session — The session it was reached through, or null for
+   *   the one on screen.
    */
   constructor(
     link: HostLink,
@@ -2636,7 +2879,11 @@ export class Host extends HostObject {
     this.changed = new Signal("changed");
   }
 
-  /** Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer. */
+  /**
+   * Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer.
+   *
+   * @param context — Named text fields.
+   */
   decide(context: Record<string, string>, questions: DecisionQuestion[]): Promise<Decision> {
     return this.call<Decision>("decide", { context, questions });
   }

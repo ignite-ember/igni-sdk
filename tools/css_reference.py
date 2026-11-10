@@ -8,7 +8,9 @@ sets), grouped by the stylesheet's own sections.
 
 The file is the source of truth and is read as it is written: the
 comments above a rule are its documentation, and are carried over as
-such. Nothing is added that the CSS does not say.
+such. The comment above a custom property says what that property is
+for, and the table of tokens says it too. Nothing is added that the
+CSS does not say.
 """
 
 from __future__ import annotations
@@ -16,6 +18,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+
+from tools.param_docs import UNDOCUMENTED, cell
 
 #: A section marker: the dashes a section's title is written between.
 _SECTION = re.compile(r"──\s*(.+?)\s*──")
@@ -64,7 +68,9 @@ class Section:
     title: str
     note: str = ""
     rules: list[Rule] = field(default_factory=list)
-    tokens: list[tuple[str, str]] = field(default_factory=list)
+    #: The custom properties it defines: their name, their value, and
+    #: what the comment above each of them says.
+    tokens: list[tuple[str, str, str]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -74,6 +80,8 @@ class Token:
     name: str
     value: str
     note: str = ""
+    #: What the comment above the property says it is for.
+    meaning: str = ""
 
 
 def _match_brace(text: str, start: int) -> int:
@@ -119,6 +127,54 @@ def _split_selector(prelude: str) -> list[str]:
         if text:
             out.append(text)
     return out
+
+
+def _token_declarations(body: str) -> list[tuple[str, str, str]]:
+    """The custom properties of a block, and what each of them is for.
+
+    A comment above a property says what that property is for; the
+    comment belongs to the property under it, not to the block.
+    """
+    out: list[tuple[str, str, str]] = []
+    pending: list[str] = []
+    text = ""
+    index = 0
+    while index < len(body):
+        if body.startswith("/*", index):
+            end = body.find("*/", index)
+            end = len(body) if end < 0 else end
+            comment = body[index + 2 : end].strip()
+            index = end + 2
+            if comment:
+                pending.append(_prose(comment, None))
+            continue
+        char = body[index]
+        if char == ";":
+            declaration = _one_declaration(text)
+            text = ""
+            index += 1
+            if declaration is None:
+                continue
+            name, value = declaration
+            out.append((name, value, " ".join(pending).strip()))
+            pending = []
+            continue
+        text += char
+        index += 1
+    declaration = _one_declaration(text)
+    if declaration is not None:
+        name, value = declaration
+        out.append((name, value, " ".join(pending).strip()))
+    return out
+
+
+def _one_declaration(text: str) -> tuple[str, str] | None:
+    """One ``property: value`` declaration, or ``None`` when there is none."""
+    text = text.strip()
+    if not text or ":" not in text:
+        return None
+    name, _, value = text.partition(":")
+    return name.strip(), value.strip()
 
 
 class Stylesheet:
@@ -208,7 +264,7 @@ class Stylesheet:
                 self.header = note
             return
         if all(name.startswith("--") for name, _ in declarations):
-            current.tokens.extend(declarations)
+            current.tokens.extend(_token_declarations(body))
             return
         for one in _split_selector(selector):
             current.rules.append(Rule(one, tuple(declarations), note))
@@ -268,11 +324,11 @@ class Stylesheet:
         out: list[Token] = []
         seen: set[str] = set()
         for section in self.sections:
-            for name, value in section.tokens:
+            for name, value, meaning in section.tokens:
                 if name in seen:
                     continue
                 seen.add(name)
-                out.append(Token(name, value, section.note))
+                out.append(Token(name, value, section.note, meaning))
         return out
 
     def classes(self) -> list[tuple[Section, Rule]]:
@@ -352,8 +408,8 @@ class CssReference:
             "connects, so inside igni the live values apply; the fallback is what "
             "you see on your own, and what applies before the bridge answers.",
             "",
-            "| Token | Fallback | Used by |",
-            "|---|---|---|",
+            "| Token | Fallback | Used by | Meaning |",
+            "|---|---|---|---|",
         ]
         for token in tokens:
             users = self.sheet.users_of(token.name)
@@ -363,10 +419,15 @@ class CssReference:
             # A token no class reads is still published — the bridge
             # writes it on `:root` — so it is worth saying so plainly
             # rather than leaving a dash.
-            out.append(f"| `{token.name}` | `{token.value}` | {shown or 'nothing here'} |")
+            out.append(
+                f"| `{token.name}` | `{token.value}` | {shown or 'nothing here'} "
+                f"| {cell(token.meaning) or UNDOCUMENTED} |"
+            )
         out.append("")
         for token in tokens:
             out += [f"## {token.name}", "", f"`{token.value}`", ""]
+            if token.meaning:
+                out += [token.meaning, ""]
             if token.note:
                 out += [token.note, ""]
         return "\n".join(out), len(tokens)

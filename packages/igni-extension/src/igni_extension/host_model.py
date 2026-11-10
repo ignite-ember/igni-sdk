@@ -1518,7 +1518,13 @@ class ShellResult(BaseModel):
 
 
 class HostAppState(HostObject):
-    """Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys."""
+    """Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "app.state"
     """Where this object is in the host model: `host.app.state`."""
@@ -1533,19 +1539,28 @@ class HostAppState(HostObject):
         """A key was set or deleted."""
 
     async def get(self, key: str) -> str | None:
-        """One value, or `None`."""
+        """One value, or `None`.
+        """
         return cast(str | None, await self._call("get", {"key": key}, str | None))
 
     async def set(self, key: str, value: str) -> None:
-        """Store one value."""
+        """Store one value.
+        """
         await self._call("set", {"key": key, "value": value}, NO_RESULT)
 
     async def delete(self, key: str) -> None:
-        """Remove one key."""
+        """Remove one key.
+        """
         await self._call("delete", {"key": key}, NO_RESULT)
 
 class HostChatApprovals(HostObject):
-    """The agent asking to act, and the answers. Through `host.sessions.chat(id)` `waiting` reads that session; an approval is answered only in the session on screen."""
+    """The agent asking to act, and the answers. Through `host.sessions.chat(id)` `waiting` reads that session; an approval is answered only in the session on screen.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "chat.approvals"
     """Where this object is in the host model: `host.chat.approvals`."""
@@ -1566,15 +1581,27 @@ class HostChatApprovals(HostObject):
         """An approval appeared or went away, whoever answered and whenever — including after a restart. For an app following approvals through the API."""
 
     async def answer(self, requirement_id: str, action: str, choice: str | None = None) -> None:
-        """Answer one request, as the person's dialog does."""
+        """Answer one request, as the person's dialog does.
+
+        Args:
+            action: `confirm` or `reject`.
+            choice: `once`, `always` or `similar`.
+        """
         await self._call("answer", {"requirement_id": requirement_id, "action": action, "choice": choice}, NO_RESULT)
 
     async def answer_all(self, answers: list[ApprovalAnswer]) -> None:
-        """Answer every request of a pause at once."""
+        """Answer every request of a pause at once.
+        """
         await self._call("answer_all", {"answers": answers}, NO_RESULT)
 
 class HostChatViews(HostObject):
-    """json-render blocks in the transcript — the visualizer's and extensions'. Through `host.sessions.chat(id)` `list` reads that session; `dispatch` acts only in the session on screen."""
+    """json-render blocks in the transcript — the visualizer's and extensions'. Through `host.sessions.chat(id)` `list` reads that session; `dispatch` acts only in the session on screen.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "chat.views"
     """Where this object is in the host model: `host.chat.views`."""
@@ -1591,11 +1618,18 @@ class HostChatViews(HostObject):
         """The person used a control in a view."""
 
     async def dispatch(self, view_id: str, action: str, params: dict[str, JsonValue] | None = None) -> JsonValue:
-        """Act on a view as if the person had."""
+        """Act on a view as if the person had.
+        """
         return cast(JsonValue, await self._call("dispatch", {"view_id": view_id, "action": action, "params": params}, JsonValue))
 
 class HostApp(HostObject):
-    """igni itself: how it presents things, which version, whether it is connected."""
+    """igni itself: how it presents things, which version, whether it is connected.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "app"
     """Where this object is in the host model: `host.app`."""
@@ -1626,23 +1660,36 @@ class HostApp(HostObject):
         """igni started or stopped doing something."""
 
     async def set_verbose(self, on: bool) -> Display:
-        """Show or hide routing detail."""
+        """Show or hide routing detail.
+        """
         return cast(Display, await self._call("set_verbose", {"on": on}, Display))
 
     async def set_output_style(self, name: str) -> Display:
-        """Switch the output style, as `/output-style <name>` does."""
+        """Switch the output style, as `/output-style <name>` does.
+        """
         return cast(Display, await self._call("set_output_style", {"name": name}, Display))
 
     async def check_for_update(self) -> UpdateInfo | None:
-        """Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`."""
+        """Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`.
+        """
         return cast(UpdateInfo | None, await self._call("check_for_update", {}, UpdateInfo | None))
 
     async def open_external(self, url: str) -> None:
-        """Open an https link in the person's browser, the way igni opens every link outside it. The window asked about opens it: a page's own, else the active one. Anything but an absolute `https://` URL with a host and no credentials in it is refused (`invalid`)."""
+        """Open an https link in the person's browser, the way igni opens every link outside it. The window asked about opens it: a page's own, else the active one. Anything but an absolute `https://` URL with a host and no credentials in it is refused (`invalid`).
+
+        Args:
+            url: The link: `https://` only.
+        """
         await self._call("open_external", {"url": url}, NO_RESULT)
 
 class HostWindows(HostObject):
-    """Every open igni window. Address one window's UI with `host.windows.ui(id)`."""
+    """Every open igni window. Address one window's UI with `host.windows.ui(id)`.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "windows"
     """Where this object is in the host model: `host.windows`."""
@@ -1667,7 +1714,13 @@ class HostWindows(HostObject):
         return HostUi(self._link, window_id)
 
 class HostUi(HostObject):
-    """What a window shows — the model its views bind to. `host.ui` is the active window, the one the person last used; `host.windows.ui(id)` any window. igni's own views write here too, by the same path, so every change below is a signal whoever made it."""
+    """What a window shows — the model its views bind to. `host.ui` is the active window, the one the person last used; `host.windows.ui(id)` any window. igni's own views write here too, by the same path, so every change below is a signal whoever made it.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "ui"
     """Where this object is in the host model: `host.ui`."""
@@ -1718,59 +1771,98 @@ class HostUi(HostObject):
         """The transcript came to rest somewhere else, or started or stopped following the newest message."""
 
     async def navigate(self, page: str, params: dict[str, str] | None = None) -> list[Page]:
-        """Open a page at the top of the stack, as a header link does."""
+        """Open a page at the top of the stack, as a header link does.
+
+        Args:
+            page: A page kind: `plugins`, `extensions`, an extension's page.
+            params: The page's parameters.
+        """
         return cast(list[Page], await self._call("navigate", {"page": page, "params": params}, list[Page]))
 
     async def back(self) -> list[Page]:
-        """Go back one level; at the root, back to the chat."""
+        """Go back one level; at the root, back to the chat.
+        """
         return cast(list[Page], await self._call("back", {}, list[Page]))
 
     async def open_panel(self, kind: str, params: dict[str, JsonValue] | None = None) -> Panel:
-        """Open a panel over the chat, closing the one that was open."""
+        """Open a panel over the chat, closing the one that was open.
+
+        Args:
+            kind: `notifications`, `search`, `login` or `dir-picker`.
+        """
         return cast(Panel, await self._call("open_panel", {"kind": kind, "params": params}, Panel))
 
     async def close_panel(self) -> None:
-        """Close the panel."""
+        """Close the panel.
+        """
         await self._call("close_panel", {}, NO_RESULT)
 
     async def set_sidebar(self, open: bool, width: int | None = None, section: str | None = None) -> Sidebar:
-        """Open or close the sidebar, and size it or bring a section into view."""
+        """Open or close the sidebar, and size it or bring a section into view.
+
+        Args:
+            width: In pixels, 180 to 600.
+            section: `links` or `sessions`.
+        """
         return cast(Sidebar, await self._call("set_sidebar", {"open": open, "width": width, "section": section}, Sidebar))
 
     async def open_preview(self, path: str) -> Preview:
-        """Preview a file of the project. (`preview` is the property.)"""
+        """Preview a file of the project. (`preview` is the property.)
+        """
         return cast(Preview, await self._call("open_preview", {"path": path}, Preview))
 
     async def close_preview(self) -> None:
-        """Close the preview."""
+        """Close the preview.
+        """
         await self._call("close_preview", {}, NO_RESULT)
 
     async def select(self, selection: SelectionState) -> SelectionState:
-        """Select a message, text or file. The parts left out are cleared."""
+        """Select a message, text or file. The parts left out are cleared.
+        """
         return cast(SelectionState, await self._call("select", {"selection": selection}, SelectionState))
 
     async def set_composer(self, text: str, attachments: list[str] | None = None, mode: str | None = None) -> Composer:
-        """Replace the draft."""
+        """Replace the draft.
+
+        Args:
+            attachments: Files to refer to: each becomes an `@path` the draft does not already have.
+            mode: `chat`, `command` or `shell`; unchanged if left out.
+        """
         return cast(Composer, await self._call("set_composer", {"text": text, "attachments": attachments, "mode": mode}, Composer))
 
     async def toast(self, text: str, kind: str | None = None, body: str | None = None, target: Page | None = None) -> Toast:
-        """Show a transient message, labelled as this extension's."""
+        """Show a transient message, labelled as this extension's.
+
+        Args:
+            kind: `info` (default), `success`, `warning`, `error`.
+            body: A second line.
+            target: Where clicking it goes.
+        """
         return cast(Toast, await self._call("toast", {"text": text, "kind": kind, "body": body, "target": target}, Toast))
 
     async def dismiss_toast(self, toast_id: str) -> None:
-        """Take one of this extension's toasts away."""
+        """Take one of this extension's toasts away.
+        """
         await self._call("dismiss_toast", {"toast_id": toast_id}, NO_RESULT)
 
     async def show_dialog(self, spec: JsonValue) -> JsonValue:
-        """Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. Answers `{button, value}`, or `None` when the dialog was dismissed, or replaced by another. (`dialog` is the property.)"""
+        """Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. Answers `{button, value}`, or `None` when the dialog was dismissed, or replaced by another. (`dialog` is the property.)
+        """
         return cast(JsonValue, await self._call("show_dialog", {"spec": spec}, JsonValue))
 
     async def scroll_to(self, message_id: str) -> Scroll:
-        """Scroll the transcript to a message, by its run; `bottom` for the newest."""
+        """Scroll the transcript to a message, by its run; `bottom` for the newest.
+        """
         return cast(Scroll, await self._call("scroll_to", {"message_id": message_id}, Scroll))
 
 class HostSessions(HostObject):
-    """The sessions of this project, and which one the active window shows. Reach any session's chat, without showing it, with `host.sessions.chat(id)`."""
+    """The sessions of this project, and which one the active window shows. Reach any session's chat, without showing it, with `host.sessions.chat(id)`.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "sessions"
     """Where this object is in the host model: `host.sessions`."""
@@ -1793,15 +1885,22 @@ class HostSessions(HostObject):
         """A session got its name."""
 
     async def open(self, session_id: str) -> SessionChange:
-        """Show a session in the active window."""
+        """Show a session in the active window.
+        """
         return cast(SessionChange, await self._call("open", {"session_id": session_id}, SessionChange))
 
     async def create(self, project_dir: str | None = None, title: str | None = None, focus: bool | None = None) -> SessionAttached:
-        """Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it."""
+        """Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it.
+
+        Args:
+            title: Its name in the session list.
+            focus: Show it in the caller's window — a page's own, else the active one. False by default.
+        """
         return cast(SessionAttached, await self._call("create", {"project_dir": project_dir, "title": title, "focus": focus}, SessionAttached))
 
     async def attach(self, session_id: str, project_dir: str | None = None) -> SessionAttached:
-        """Make sure a session is live, without showing it."""
+        """Make sure a session is live, without showing it.
+        """
         return cast(SessionAttached, await self._call("attach", {"session_id": session_id, "project_dir": project_dir}, SessionAttached))
 
     def chat(self, session_id: str) -> HostChat:
@@ -1811,7 +1910,13 @@ class HostSessions(HostObject):
         return HostChat(self._link, None, session_id)
 
 class HostChat(HostObject):
-    """The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen."""
+    """The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "chat"
     """Where this object is in the host model: `host.chat`."""
@@ -1882,55 +1987,82 @@ class HostChat(HostObject):
         """Turns were truncated or discarded."""
 
     async def post(self, text: str, attachments: dict[str, str] | None = None) -> None:
-        """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments."""
+        """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
+
+        Args:
+            attachments: Path → content.
+        """
         await self._call("post", {"text": text, "attachments": attachments}, NO_RESULT)
 
     async def queue(self, text: str) -> None:
-        """Post a message for the next turn, labelled as this extension."""
+        """Post a message for the next turn, labelled as this extension.
+        """
         await self._call("queue", {"text": text}, NO_RESULT)
 
     async def append(self, view: JsonValue, title: str | None = None) -> str:
-        """Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id."""
+        """Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id.
+
+        Args:
+            view: A json-render spec: `{root, elements}`.
+        """
         return cast(str, await self._call("append", {"view": view, "title": title}, str))
 
     async def replace(self, view_id: str, view: JsonValue, title: str | None = None) -> None:
-        """Replace a block this extension appended."""
+        """Replace a block this extension appended.
+        """
         await self._call("replace", {"view_id": view_id, "view": view, "title": title}, NO_RESULT)
 
     async def search(self, query: str, limit: int | None = None) -> list[JsonValue]:
-        """Search the transcript."""
+        """Search the transcript.
+
+        Args:
+            limit: At most this many; 50 by default.
+        """
         return cast(list[JsonValue], await self._call("search", {"query": query, "limit": limit}, list[JsonValue]))
 
     async def cancel(self) -> None:
-        """Stop the run."""
+        """Stop the run.
+        """
         await self._call("cancel", {}, NO_RESULT)
 
     async def cancel_agent(self, run_id: str) -> None:
-        """Stop one sub-agent's run."""
+        """Stop one sub-agent's run.
+        """
         await self._call("cancel_agent", {"run_id": run_id}, NO_RESULT)
 
     async def truncate(self, run_id: str) -> JsonValue:
-        """Remove a run and everything after it."""
+        """Remove a run and everything after it.
+        """
         return cast(JsonValue, await self._call("truncate", {"run_id": run_id}, JsonValue))
 
     async def compact(self) -> SessionCleared | None:
-        """Compact the conversation if it needs it, as igni does after a run."""
+        """Compact the conversation if it needs it, as igni does after a run.
+        """
         return cast(SessionCleared | None, await self._call("compact", {}, SessionCleared | None))
 
     async def extract_learnings(self, user_msg: str, assistant_msg: str) -> None:
-        """Have the agent note what a turn taught it."""
+        """Have the agent note what a turn taught it.
+        """
         await self._call("extract_learnings", {"user_msg": user_msg, "assistant_msg": assistant_msg}, NO_RESULT)
 
     async def discard_interrupted(self, message_id: str) -> JsonValue:
-        """Forget an interrupted run."""
+        """Forget an interrupted run.
+        """
         return cast(JsonValue, await self._call("discard_interrupted", {"message_id": message_id}, JsonValue))
 
     async def upload(self, filename: str, content_base64: str) -> JsonValue:
-        """Upload an attachment for a later `post`."""
+        """Upload an attachment for a later `post`.
+        """
         return cast(JsonValue, await self._call("upload", {"filename": filename, "content_base64": content_base64}, JsonValue))
 
 class HostPlan(HostObject):
-    """Plan mode: the plan the agent proposed."""
+    """Plan mode: the plan the agent proposed.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "plan"
     """Where this object is in the host model: `host.plan`."""
@@ -1945,15 +2077,23 @@ class HostPlan(HostObject):
         """A plan was submitted or decided."""
 
     async def approve(self, run_id: str | None = None) -> PlanDecision:
-        """Approve the plan."""
+        """Approve the plan.
+        """
         return cast(PlanDecision, await self._call("approve", {"run_id": run_id}, PlanDecision))
 
     async def dismiss(self, run_id: str | None = None) -> PlanDecision:
-        """Send the plan back."""
+        """Send the plan back.
+        """
         return cast(PlanDecision, await self._call("dismiss", {"run_id": run_id}, PlanDecision))
 
 class HostTasks(HostObject):
-    """The agent's todo list and its sub-agent tasks."""
+    """The agent's todo list and its sub-agent tasks.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "tasks"
     """Where this object is in the host model: `host.tasks`."""
@@ -1976,7 +2116,13 @@ class HostTasks(HostObject):
         """The todo list changed."""
 
 class HostLoop(HostObject):
-    """`/loop`: a prompt repeated until done."""
+    """`/loop`: a prompt repeated until done.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "loop"
     """Where this object is in the host model: `host.loop`."""
@@ -1991,23 +2137,33 @@ class HostLoop(HostObject):
         """It paused, resumed, advanced or stopped."""
 
     async def pause(self) -> bool:
-        """Pause after this iteration."""
+        """Pause after this iteration.
+        """
         return cast(bool, await self._call("pause", {}, bool))
 
     async def resume(self) -> str:
-        """Carry on."""
+        """Carry on.
+        """
         return cast(str, await self._call("resume", {}, str))
 
     async def cancel_pending(self) -> bool:
-        """Stop the loop."""
+        """Stop the loop.
+        """
         return cast(bool, await self._call("cancel_pending", {}, bool))
 
     async def pop_pending(self) -> LoopAdvance | None:
-        """Take the next iteration."""
+        """Take the next iteration.
+        """
         return cast(LoopAdvance | None, await self._call("pop_pending", {}, LoopAdvance | None))
 
 class HostCommands(HostObject):
-    """Slash commands and skills."""
+    """Slash commands and skills.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "commands"
     """Where this object is in the host model: `host.commands`."""
@@ -2026,11 +2182,21 @@ class HostCommands(HostObject):
         """Each skill's details."""
 
     async def run(self, command: str) -> CommandOutcome:
-        """Run a slash command, as the extension. The answer comes back here."""
+        """Run a slash command, as the extension. The answer comes back here.
+
+        Args:
+            command: With its slash: `/ctx`.
+        """
         return cast(CommandOutcome, await self._call("run", {"command": command}, CommandOutcome))
 
 class HostAgents(HostObject):
-    """Agent definitions."""
+    """Agent definitions.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "agents"
     """Where this object is in the host model: `host.agents`."""
@@ -2045,15 +2211,26 @@ class HostAgents(HostObject):
         """An agent was promoted or discarded."""
 
     async def promote_ephemeral(self, name: str, target: str | None = None) -> PromoteResult:
-        """Keep an agent made for one task, as `/agents promote` does."""
+        """Keep an agent made for one task, as `/agents promote` does.
+
+        Args:
+            target: `project` (the default): `.igni/agents/`, committed and the team's, as `--project`; or `personal`: `.igni/agents.local/`, kept out of git and yours only, as `--personal`.
+        """
         return cast(PromoteResult, await self._call("promote_ephemeral", {"name": name, "target": target}, PromoteResult))
 
     async def discard_ephemeral(self, name: str) -> DiscardResult:
-        """Drop an agent made for one task."""
+        """Drop an agent made for one task.
+        """
         return cast(DiscardResult, await self._call("discard_ephemeral", {"name": name}, DiscardResult))
 
 class HostWorkflows(HostObject):
-    """Workflows: scripted runs."""
+    """Workflows: scripted runs.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "workflows"
     """Where this object is in the host model: `host.workflows`."""
@@ -2068,15 +2245,23 @@ class HostWorkflows(HostObject):
         """A workflow run moved on."""
 
     async def run(self, name: str, input: dict[str, JsonValue] | None = None) -> WorkflowRun:
-        """Start a workflow."""
+        """Start a workflow.
+        """
         return cast(WorkflowRun, await self._call("run", {"name": name, "input": input}, WorkflowRun))
 
     async def cancel(self, workflow_run_id: str) -> bool:
-        """Stop a workflow run."""
+        """Stop a workflow run.
+        """
         return cast(bool, await self._call("cancel", {"workflow_run_id": workflow_run_id}, bool))
 
 class HostScheduler(HostObject):
-    """Scheduled tasks."""
+    """Scheduled tasks.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "scheduler"
     """Where this object is in the host model: `host.scheduler`."""
@@ -2091,19 +2276,28 @@ class HostScheduler(HostObject):
         """A task started, finished or changed."""
 
     async def start(self) -> None:
-        """Start the scheduler."""
+        """Start the scheduler.
+        """
         await self._call("start", {}, NO_RESULT)
 
     async def run_now(self, task_id: str) -> str:
-        """Run a scheduled task now."""
+        """Run a scheduled task now.
+        """
         return cast(str, await self._call("run_now", {"task_id": task_id}, str))
 
     async def cancel(self, task_id: str) -> None:
-        """Cancel a scheduled task."""
+        """Cancel a scheduled task.
+        """
         await self._call("cancel", {"task_id": task_id}, NO_RESULT)
 
 class HostProcesses(HostObject):
-    """Background shells."""
+    """Background shells.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "processes"
     """Where this object is in the host model: `host.processes`."""
@@ -2118,19 +2312,31 @@ class HostProcesses(HostObject):
         """A shell started, printed or exited."""
 
     async def tail(self, pid: int, lines: int | None = None) -> ProcessTail:
-        """A shell's last lines."""
+        """A shell's last lines.
+
+        Args:
+            lines: 200 by default.
+        """
         return cast(ProcessTail, await self._call("tail", {"pid": pid, "lines": lines}, ProcessTail))
 
     async def stop(self, pid: int) -> ProcessStop:
-        """Stop a shell."""
+        """Stop a shell.
+        """
         return cast(ProcessStop, await self._call("stop", {"pid": pid}, ProcessStop))
 
     async def run(self, command: str) -> ShellResult:
-        """Run a command in the project and wait for it."""
+        """Run a command in the project and wait for it.
+        """
         return cast(ShellResult, await self._call("run", {"command": command}, ShellResult))
 
 class HostWorkspace(HostObject):
-    """The project, as far as the extension's workspace grant reaches."""
+    """The project, as far as the extension's workspace grant reaches.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "workspace"
     """Where this object is in the host model: `host.workspace`."""
@@ -2149,31 +2355,46 @@ class HostWorkspace(HostObject):
         """Files changed, as git sees them, within the grant."""
 
     async def read(self, path: str) -> JsonValue:
-        """Read a file in the project."""
+        """Read a file in the project.
+        """
         return cast(JsonValue, await self._call("read", {"path": path}, JsonValue))
 
     async def list(self, dir: str | None = None) -> JsonValue:
-        """List a directory in the project."""
+        """List a directory in the project.
+        """
         return cast(JsonValue, await self._call("list", {"dir": dir}, JsonValue))
 
     async def complete(self, prefix: str) -> JsonValue:
-        """Complete a path, as `@` does."""
+        """Complete a path, as `@` does.
+        """
         return cast(JsonValue, await self._call("complete", {"prefix": prefix}, JsonValue))
 
     async def search(self, query: str) -> JsonValue:
-        """Search the code."""
+        """Search the code.
+        """
         return cast(JsonValue, await self._call("search", {"query": query}, JsonValue))
 
     async def pick_dir(self) -> JsonValue:
-        """Ask the person to pick a folder."""
+        """Ask the person to pick a folder.
+        """
         return cast(JsonValue, await self._call("pick_dir", {}, JsonValue))
 
     async def open(self, path: str) -> None:
-        """Open a file in the project with the application this machine opens it with — what an extension whose process is sandboxed cannot do itself. Only a file the workspace grant reaches (`refused` outside the project, `not_granted` outside `workspacePaths`), and only a document: `.csv`, `.gif`, `.htm`, `.html`, `.jpeg`, `.jpg`, `.md`, `.pdf`, `.png`, `.svg`, `.txt`, `.webp` (`invalid` otherwise, and for an executable file). `failed` when nothing here opened it."""
+        """Open a file in the project with the application this machine opens it with — what an extension whose process is sandboxed cannot do itself. Only a file the workspace grant reaches (`refused` outside the project, `not_granted` outside `workspacePaths`), and only a document: `.csv`, `.gif`, `.htm`, `.html`, `.jpeg`, `.jpg`, `.md`, `.pdf`, `.png`, `.svg`, `.txt`, `.webp` (`invalid` otherwise, and for an executable file). `failed` when nothing here opened it.
+
+        Args:
+            path: Relative to the project, or absolute inside it.
+        """
         await self._call("open", {"path": path}, NO_RESULT)
 
 class HostModels(HostObject):
-    """Models."""
+    """Models.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "models"
     """Where this object is in the host model: `host.models`."""
@@ -2190,7 +2411,13 @@ class HostModels(HostObject):
         """The model in use changed."""
 
 class HostMcp(HostObject):
-    """MCP servers."""
+    """MCP servers.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "mcp"
     """Where this object is in the host model: `host.mcp`."""
@@ -2209,23 +2436,33 @@ class HostMcp(HostObject):
         """A server connected, disconnected or changed tools."""
 
     async def connect(self, name: str) -> None:
-        """Connect a server."""
+        """Connect a server.
+        """
         await self._call("connect", {"name": name}, NO_RESULT)
 
     async def disconnect(self, name: str) -> None:
-        """Disconnect a server."""
+        """Disconnect a server.
+        """
         await self._call("disconnect", {"name": name}, NO_RESULT)
 
     async def ensure(self) -> McpInit:
-        """Start the servers that should be running."""
+        """Start the servers that should be running.
+        """
         return cast(McpInit, await self._call("ensure", {}, McpInit))
 
     async def set_tool_enabled(self, server: str, tool: str, on: bool) -> McpToolToggle:
-        """Offer or withhold one tool."""
+        """Offer or withhold one tool.
+        """
         return cast(McpToolToggle, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, McpToolToggle))
 
 class HostPlugins(HostObject):
-    """Plugins and marketplaces."""
+    """Plugins and marketplaces.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "plugins"
     """Where this object is in the host model: `host.plugins`."""
@@ -2242,43 +2479,58 @@ class HostPlugins(HostObject):
         """A plugin or marketplace changed."""
 
     async def contents(self, name: str) -> PluginContents:
-        """What a plugin carries."""
+        """What a plugin carries.
+        """
         return cast(PluginContents, await self._call("contents", {"name": name}, PluginContents))
 
     async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> PluginContents:
-        """What a plugin would install."""
+        """What a plugin would install.
+        """
         return cast(PluginContents, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, PluginContents))
 
     async def install(self, ref: str, install_ref: str | None = None) -> None:
-        """Install a plugin."""
+        """Install a plugin.
+        """
         await self._call("install", {"ref": ref, "install_ref": install_ref}, NO_RESULT)
 
     async def update(self, name: str, install_ref: str | None = None) -> None:
-        """Update a plugin."""
+        """Update a plugin.
+        """
         await self._call("update", {"name": name, "install_ref": install_ref}, NO_RESULT)
 
     async def remove(self, name: str) -> None:
-        """Remove a plugin."""
+        """Remove a plugin.
+        """
         await self._call("remove", {"name": name}, NO_RESULT)
 
     async def set_enabled(self, name: str, on: bool) -> None:
-        """Enable or disable a plugin."""
+        """Enable or disable a plugin.
+        """
         await self._call("set_enabled", {"name": name, "on": on}, NO_RESULT)
 
     async def add_marketplace(self, url: str) -> None:
-        """Add a marketplace."""
+        """Add a marketplace.
+        """
         await self._call("add_marketplace", {"url": url}, NO_RESULT)
 
     async def remove_marketplace(self, name: str) -> None:
-        """Remove a marketplace."""
+        """Remove a marketplace.
+        """
         await self._call("remove_marketplace", {"name": name}, NO_RESULT)
 
     async def refresh_marketplaces(self, name: str | None = None) -> None:
-        """Refresh marketplaces."""
+        """Refresh marketplaces.
+        """
         await self._call("refresh_marketplaces", {"name": name}, NO_RESULT)
 
 class HostExtensions(HostObject):
-    """Installed extensions. Read-only, apart from this extension's own settings."""
+    """Installed extensions. Read-only, apart from this extension's own settings.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "extensions"
     """Where this object is in the host model: `host.extensions`."""
@@ -2293,11 +2545,18 @@ class HostExtensions(HostObject):
         """An extension's health moved."""
 
     async def set_settings(self, values: dict[str, JsonValue]) -> SettingsChange:
-        """Change this extension's own settings."""
+        """Change this extension's own settings.
+        """
         return cast(SettingsChange, await self._call("set_settings", {"values": values}, SettingsChange))
 
 class HostHooks(HostObject):
-    """Hooks."""
+    """Hooks.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "hooks"
     """Where this object is in the host model: `host.hooks`."""
@@ -2312,15 +2571,23 @@ class HostHooks(HostObject):
         """Hooks were reloaded."""
 
     async def reload(self) -> None:
-        """Reload hooks."""
+        """Reload hooks.
+        """
         await self._call("reload", {}, NO_RESULT)
 
     async def fire_session_start(self) -> None:
-        """Run the session-start hooks."""
+        """Run the session-start hooks.
+        """
         await self._call("fire_session_start", {}, NO_RESULT)
 
 class HostPermissions(HostObject):
-    """What the agent may do without asking."""
+    """What the agent may do without asking.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "permissions"
     """Where this object is in the host model: `host.permissions`."""
@@ -2335,15 +2602,26 @@ class HostPermissions(HostObject):
         """The mode changed."""
 
     async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> str:
-        """Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`."""
+        """Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`.
+        """
         return cast(str, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, str))
 
     async def save_rule(self, rule: str, level: str) -> None:
-        """Save a permission rule."""
+        """Save a permission rule.
+
+        Args:
+            level: `allow`, `ask` or `deny`.
+        """
         await self._call("save_rule", {"rule": rule, "level": level}, NO_RESULT)
 
 class HostPolicy(HostObject):
-    """The group policy in force."""
+    """The group policy in force.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "policy"
     """Where this object is in the host model: `host.policy`."""
@@ -2356,7 +2634,13 @@ class HostPolicy(HostObject):
         """The group's policy pack."""
 
 class HostAccount(HostObject):
-    """Whether the person is signed in to igni. Never their session or a credential."""
+    """Whether the person is signed in to igni. Never their session or a credential.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "account"
     """Where this object is in the host model: `host.account`."""
@@ -2371,15 +2655,23 @@ class HostAccount(HostObject):
         """Someone signed in or out."""
 
     async def sign_in(self) -> None:
-        """Start the person's own sign-in. Its result is theirs."""
+        """Start the person's own sign-in. Its result is theirs.
+        """
         await self._call("sign_in", {}, NO_RESULT)
 
     async def sign_out(self) -> Account:
-        """Sign the person out."""
+        """Sign the person out.
+        """
         return cast(Account, await self._call("sign_out", {}, Account))
 
 class HostNotifications(HostObject):
-    """The floor's notifications. Its own always; everyone's with `notifications`."""
+    """The floor's notifications. Its own always; everyone's with `notifications`.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "notifications"
     """Where this object is in the host model: `host.notifications`."""
@@ -2396,15 +2688,23 @@ class HostNotifications(HostObject):
         """The counts moved."""
 
     async def notify(self, notification: LocalNotification) -> None:
-        """Tell the person at this machine something. It never leaves the machine."""
+        """Tell the person at this machine something. It never leaves the machine.
+        """
         await self._call("notify", {"notification": notification}, NO_RESULT)
 
     async def mark_read(self, ids: list[str] | None = None, source: str | None = None) -> NotificationCounts:
-        """Mark notifications read: these ids, one source, or all of them."""
+        """Mark notifications read: these ids, one source, or all of them.
+        """
         return cast(NotificationCounts, await self._call("mark_read", {"ids": ids, "source": source}, NotificationCounts))
 
 class HostSelf(HostObject):
-    """This extension, as the host sees it."""
+    """This extension, as the host sees it.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = "self"
     """Where this object is in the host model: `host.self`."""
@@ -2427,15 +2727,26 @@ class HostSelf(HostObject):
         """Its health moved."""
 
     async def busy(self, reason: str, ttl_seconds: float | None = None) -> BusyLease:
-        """Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`."""
+        """Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`.
+
+        Args:
+            ttl_seconds: Default and at most 600.
+        """
         return cast(BusyLease, await self._call("busy", {"reason": reason, "ttl_seconds": ttl_seconds}, BusyLease))
 
     async def done(self, reason: str) -> None:
-        """Let go of the lease `busy` took for `reason`. Nothing happens if there is none."""
+        """Let go of the lease `busy` took for `reason`. Nothing happens if there is none.
+        """
         await self._call("done", {"reason": reason}, NO_RESULT)
 
 class Host(HostObject):
-    """The root. `changed` reports every change anywhere in the model, for an extension that wants to see all of it; each delivery needs the grant of the member that changed."""
+    """The root. `changed` reports every change anywhere in the model, for an extension that wants to see all of it; each delivery needs the grant of the member that changed.
+
+    Args:
+        link: The link this object talks to the host through.
+        window: The window it was reached through, or None for the one the extension is in.
+        session: The session it was reached through, or None for the one on screen.
+    """
 
     PATH = ""
     """Where this object is in the host model: the root, `host`."""
@@ -2496,11 +2807,16 @@ class Host(HostObject):
         """Anything changed. Carries the member's path and its new value."""
 
     async def decide(self, context: dict[str, str], questions: list[DecisionQuestion]) -> Decision:
-        """Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer."""
+        """Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer.
+
+        Args:
+            context: Named text fields.
+        """
         return cast(Decision, await self._call("decide", {"context": context, "questions": questions}, Decision))
 
     async def decide_batch(self, contexts: list[dict[str, str]], questions: list[DecisionQuestion]) -> list[Decision]:
-        """`decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order."""
+        """`decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order.
+        """
         return cast(list[Decision], await self._call("decide_batch", {"contexts": contexts, "questions": questions}, list[Decision]))
 
 __all__ = [

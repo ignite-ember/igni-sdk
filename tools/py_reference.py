@@ -7,6 +7,13 @@ a class, its fields and its own public methods and properties. Nothing is
 added that the code does not say; a name with no docstring is shown with its
 signature alone.
 
+Under every signature is the table of its parameters: what each one is
+called, what type it is, what it defaults to, and what it means. The
+meaning is read from the docstring's own ``Args:`` section
+(``tools/param_docs.py``); a parameter no docstring documents is said to be
+undocumented, because a reference that guesses what a parameter is would be
+wrong rather than useful.
+
 Which page a name is on is decided by the module that defines it, through a
 table of areas the caller gives; a public name no area takes is an error.
 """
@@ -25,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.markdown_pages import plain, signature, site_id
+from tools.param_docs import UNDOCUMENTED, code, python_args, strip_python_args, table
 from tools.reference_area import Area
 
 
@@ -158,6 +166,44 @@ def _own_members(cls: type) -> list[tuple[str, Any]]:
         if member or inspect.isfunction(value):
             out.append((name, value))
     return out
+
+
+def parameters_of(obj: Any, *, skip_self: bool = False) -> list[inspect.Parameter]:
+    """The parameters a callable takes, as ``inspect`` reports them."""
+    try:
+        sig = inspect.signature(obj)
+    except (TypeError, ValueError):
+        return []
+    params = list(sig.parameters.values())
+    if skip_self and params and params[0].name in ("self", "cls"):
+        return params[1:]
+    return params
+
+
+def parameter_table(params: list[inspect.Parameter], meanings: dict[str, str]) -> list[str]:
+    """The table of a callable's parameters, as the reference pages show it.
+
+    The meaning of each parameter is what the docstring's ``Args:`` section
+    says of it. A parameter the docstring does not document is said to be
+    undocumented: the generator does not guess.
+    """
+    rows: list[tuple[str, str, str, str]] = []
+    for param in params:
+        annotation = annotation_text(param.annotation)
+        default = (
+            "required"
+            if param.default is inspect.Parameter.empty
+            else code(stable_repr(param.default))
+        )
+        rows.append(
+            (
+                param.name,
+                code(annotation) if annotation else "—",
+                default,
+                meanings.get(param.name) or UNDOCUMENTED,
+            )
+        )
+    return table(rows)
 
 
 def functools_cached() -> type:
@@ -364,9 +410,11 @@ class PythonReference:
             prefix = "async def" if inspect.iscoroutinefunction(obj) else "def"
             arrow = f" -> {returns}" if returns else ""
             out += ["```python", signature(f"{prefix} {entry.name}", params, arrow), "```", ""]
-            doc = docstring_markdown(inspect.getdoc(obj))
+            text = inspect.getdoc(obj) or ""
+            out += parameter_table(parameters_of(obj), python_args(text))
+            doc = docstring_markdown(strip_python_args(text))
             out += [doc, ""] if doc else []
-            missing += 0 if doc else 1
+            missing += 0 if text else 1
         else:
             out += [
                 "```python",
@@ -385,12 +433,20 @@ class PythonReference:
         bases = [b for b in cls.__bases__ if b is not object]
         base_text = ", ".join(b.__name__ for b in bases)
         out: list[str] = []
+        doc_text = _own_doc(cls)
         if issubclass(cls, enum.Enum | BaseException):
             out += ["```python", f"class {name}({base_text})", "```", ""]
         else:
             params, _ = signature_text(cls)
             head = f"class {name}({base_text})" if base_text else f"class {name}"
             out += ["```python", head, signature(name, params), "```", ""]
+            if not self._fields(cls):
+                # A class whose fields are not a table of their own: what
+                # its constructor takes is what the caller needs to know.
+                out += parameter_table(
+                    parameters_of(vars(cls).get("__init__"), skip_self=True),
+                    python_args(doc_text),
+                )
         documented_bases = [b for b in bases if self.link(b.__name__)]
         if documented_bases:
             out.append(
@@ -399,7 +455,7 @@ class PythonReference:
                 + "."
             )
             out.append("")
-        doc = docstring_markdown(_own_doc(cls))
+        doc = docstring_markdown(strip_python_args(doc_text))
         if doc:
             out += [doc, ""]
         if issubclass(cls, enum.Enum):
@@ -459,6 +515,7 @@ class PythonReference:
             code = f"{name}: {returns}" if returns else name
             label = "property"
             doc_source = getter
+            taken = parameters_of(getter, skip_self=True)
         else:
             func = member.__func__ if isinstance(member, staticmethod | classmethod) else member
             params, returns = signature_text(func, skip_self=not isinstance(member, staticmethod))
@@ -474,14 +531,17 @@ class PythonReference:
                 else ""
             )
             doc_source = func
+            taken = parameters_of(func, skip_self=not isinstance(member, staticmethod))
         out = [heading, "", "```python"]
         if label:
             out.append(f"@{label}")
         out += [code, "```", ""]
-        doc = docstring_markdown(inspect.getdoc(doc_source))
+        text = inspect.getdoc(doc_source) or ""
+        out += parameter_table(taken, python_args(text))
+        doc = docstring_markdown(strip_python_args(text))
         if doc:
             out += [doc, ""]
-        return out, bool(doc)
+        return out, bool(text)
 
 
 def _own_doc(cls: type) -> str:

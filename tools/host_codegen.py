@@ -166,6 +166,26 @@ class PythonGenerator:
             return []
         return [f'{indent}"""{text}"""']
 
+    def _doc_with_args(self, text: str, args: list[tuple[str, str]], indent: str) -> list[str]:
+        """A docstring: what it does, and what each of its parameters is.
+
+        The parameters are the ones the schema describes. One it does
+        not describe is left out rather than given a meaning the
+        contract does not have.
+        """
+        text = text.replace('"""', "'''").strip()
+        out: list[str] = []
+        if text:
+            out.append(f'{indent}"""{text}')
+        if args:
+            if text:
+                out.append("")
+            out.append(f"{indent}Args:")
+            for name, meaning in args:
+                out.append(f"{indent}    {name}: {meaning}")
+        out.append(f'{indent}"""')
+        return out
+
     def generate(self) -> str:
         self.naming.check()
         lines: list[str] = [
@@ -242,7 +262,21 @@ class PythonGenerator:
     def _object(self, spec: ObjectSpec) -> list[str]:
         name = self.naming.class_name(spec.path)
         out = ["", f"class {name}(HostObject):"]
-        out += self._doc(spec.doc, "    ")
+        out += self._doc_with_args(
+            spec.doc,
+            [
+                ("link", "The link this object talks to the host through."),
+                (
+                    "window",
+                    "The window it was reached through, or None for the one the extension is in.",
+                ),
+                (
+                    "session",
+                    "The session it was reached through, or None for the one on screen.",
+                ),
+            ],
+            "    ",
+        )
         out += [
             "",
             f'    PATH = "{spec.path}"',
@@ -320,7 +354,11 @@ class PythonGenerator:
         signature = f"    async def {m.name}({', '.join(params)}) -> {result}:"
         call_args = "{" + ", ".join(body_args) + "}"
         out = ["", signature]
-        out += self._doc(m.doc, "        ")
+        out += self._doc_with_args(
+            m.doc,
+            [(p.name, p.doc.strip()) for p in m.params if (p.doc or "").strip()],
+            "        ",
+        )
         if m.result == "None":
             out.append(f'        await self._call("{m.name}", {call_args}, NO_RESULT)')
         else:
@@ -369,6 +407,28 @@ class TypeScriptGenerator:
         if not text:
             return []
         return [f"{indent}/** {text} */"]
+
+    def _method_doc(self, m: MethodSpec, indent: str) -> list[str]:
+        """A method's JSDoc: what it does, and what each of its parameters is.
+
+        The schema describes a parameter or does not: a parameter it
+        describes is documented here, and one it does not is left
+        undocumented rather than given a meaning the contract does not
+        have.
+        """
+        text = m.doc.replace("*/", "*\\/").strip()
+        params = [p for p in m.params if (p.doc or "").strip()]
+        if not params:
+            return self._doc(m.doc, indent)
+        lines = [f"{indent}/**"]
+        if text:
+            for line in text.split("\n"):
+                lines.append(f"{indent} * {line}".rstrip())
+        lines.append(f"{indent} *")
+        for p in params:
+            lines.append(f"{indent} * @param {p.name} — {p.doc.strip()}")
+        lines.append(f"{indent} */")
+        return lines
 
     def generate(self) -> str:
         self.naming.check()
@@ -428,6 +488,12 @@ class TypeScriptGenerator:
             "   *",
             "   * A page never builds one of these: `bridge.host` is already the",
             "   * right one, and a second would be a second conversation.",
+            "   *",
+            "   * @param link — The link this object talks to the host through.",
+            "   * @param window — The window it was reached through, or null for",
+            "   *   the one the page is in.",
+            "   * @param session — The session it was reached through, or null for",
+            "   *   the one on screen.",
             "   */",
             "  constructor(",
             "    link: HostLink,",
@@ -491,7 +557,7 @@ class TypeScriptGenerator:
         result = "void" if m.result == "None" else self.type(m.result)
         args = "{ " + ", ".join(names) + " }" if names else "{}"
         out = [""]
-        out += self._doc(m.doc, "  ")
+        out += self._method_doc(m, "  ")
         out.append(f"  {m.name}({', '.join(params)}): Promise<{result}> {{")
         out.append(f'    return this.call<{result}>("{m.name}", {args});')
         out.append("  }")
