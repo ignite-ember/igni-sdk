@@ -26,9 +26,11 @@ from igni_service.assets import (
     BundleAssets,
     BundleLayout,
 )
-from igni_service.bundle import PLATFORMS, BundleArchive, BundleBuilder
+from igni_service.bundle.archive import BundleArchive
+from igni_service.bundle.builder import BundleBuilder
+from igni_service.bundle.platforms import PLATFORMS
 from igni_service.registration import ASSET_SIGNATURE_HEADER, ExtensionBundle
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SettingsOverrides
 from igni_service.urls import IgniPaths
 
 from .test_bundle import index as index  # noqa: F401 — the fixture
@@ -294,20 +296,20 @@ class TestShipping:
         self, fake: FakeIgni, tmp_path: Path
     ) -> None:
         bundle = bundle_with_assets(tmp_path)
-        igni = fake.service(fake.settings(extension_bundle_path=str(bundle)))
+        igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))))
 
         await run_lifespan(igni)
 
         client_id = await igni.registration.client_id()
-        puts = [s for s in fake.seen if s.method == "PUT"]
+        puts = [s for s in fake.traffic.seen if s.method == "PUT"]
         assert [s.path.rsplit("/", 1)[-1] for s in puts][-1] == "extension"
         assets = [s for s in puts if "/extension/assets/" in s.path]
         assert len(assets) == 4
         assert all(s.headers[ASSET_SIGNATURE_HEADER.lower()] for s in assets)
-        assert {sha for (owner, sha) in fake.assets if owner == client_id} == {
+        assert {key.sha256 for key in fake.extensions.assets if key.client_id == client_id} == {
             hashlib.sha256(body).hexdigest() for body in [*JRE.values(), MODEL]
         }
-        assert fake.extensions[client_id].version == "1.0.0"
+        assert fake.extensions.extensions[client_id].version == "1.0.0"
 
     async def test_an_asset_igni_holds_is_not_sent_again(
         self, fake: FakeIgni, tmp_path: Path
@@ -315,18 +317,22 @@ class TestShipping:
         bundle = bundle_with_assets(tmp_path)
         store = MemoryKeyStore()
         await run_lifespan(
-            fake.service(fake.settings(extension_bundle_path=str(bundle)), key_store=store)
+            fake.service(
+                fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))), key_store=store
+            )
         )
-        client_id = next(iter(fake.clients))
-        del fake.extensions[client_id]
+        client_id = next(iter(fake.clients.clients))
+        del fake.extensions.extensions[client_id]
 
         await run_lifespan(
-            fake.service(fake.settings(extension_bundle_path=str(bundle)), key_store=store)
+            fake.service(
+                fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))), key_store=store
+            )
         )
 
-        asset_puts = [s for s in fake.seen if s.method == "PUT" and "/assets/" in s.path]
+        asset_puts = [s for s in fake.traffic.seen if s.method == "PUT" and "/assets/" in s.path]
         assert len(asset_puts) == 4
-        assert fake.extensions[client_id].version == "1.0.0"
+        assert fake.extensions.extensions[client_id].version == "1.0.0"
         assert IgniPaths.extension(client_id)
 
     async def test_a_damaged_asset_is_not_uploaded(self, fake: FakeIgni, tmp_path: Path) -> None:
@@ -340,4 +346,4 @@ class TestShipping:
         with pytest.raises(BundleError, match="build the bundle again"):
             await igni.registration.ship(shipped)
 
-        assert fake.extensions == {}
+        assert fake.extensions.extensions == {}

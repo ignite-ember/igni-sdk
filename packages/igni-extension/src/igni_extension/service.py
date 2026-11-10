@@ -28,6 +28,9 @@ import httpx
 from websockets.asyncio.client import ClientConnection, connect
 
 from igni_extension.caller import Caller
+from igni_extension.clock import Clock
+from igni_extension.environment import ServiceEndpoint
+from igni_extension.errors import NotConfigured
 from igni_extension.tokens import HostTokenAuth, HostTokens
 
 
@@ -36,6 +39,7 @@ class ServiceWebSocket:
 
     def __init__(self, url: str, tokens: HostTokens, options: dict[str, Any]) -> None:
         self.url = url
+        """The socket's address on the service: `ws://` or `wss://`."""
         self._tokens = tokens
         self._options = options
         self._socket: ClientConnection | None = None
@@ -123,6 +127,7 @@ class ServiceClient(httpx.AsyncClient):
         return ServiceWebSocket(f"{base}/{path.lstrip('/')}", self._tokens, options)
 
     async def aclose(self) -> None:
+        """Close this client, and the clients `for_(caller)` made."""
         for client in self._for.values():
             await client.aclose()
         self._for.clear()
@@ -132,4 +137,43 @@ class ServiceClient(httpx.AsyncClient):
         await super().aclose()
 
 
-__all__ = ["ServiceClient", "ServiceWebSocket"]
+class ServiceAccess:
+    """The extension's `ServiceClient`, opened on first use and closed with the extension."""
+
+    def __init__(
+        self,
+        extension_id: str,
+        endpoint: ServiceEndpoint,
+        *,
+        token_transport: httpx.AsyncBaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        clock: Clock | None = None,
+    ) -> None:
+        self._extension_id = extension_id
+        self._endpoint = endpoint
+        self.tokens = HostTokens(endpoint, transport=token_transport, clock=clock)
+        """The person's tokens for the service, which the client attaches."""
+        self._transport = transport
+        self._client: ServiceClient | None = None
+
+    @property
+    def client(self) -> ServiceClient:
+        """`NotConfigured` when the process was not started with its service's URL."""
+        if self._client is None:
+            if not self._endpoint.configured:
+                raise NotConfigured(
+                    f"{self._extension_id} was not started with its service's URL "
+                    "(IGNI_SERVICE_URL)"
+                )
+            self._client = ServiceClient(
+                base_url=self._endpoint.url, tokens=self.tokens, transport=self._transport
+            )
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+
+__all__ = ["ServiceAccess", "ServiceClient", "ServiceWebSocket"]

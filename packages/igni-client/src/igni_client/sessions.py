@@ -3,30 +3,35 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from igni_client.api import IgniSessions, SessionApi
+from igni_client.approvals import ApprovalRequested, Approver, Policy
+from igni_client.calls import Caller
 from igni_client.connection import Connection
-from igni_client.errors import RpcError
-from igni_client.events import (
-    Event,
-    InfoMessage,
-    RpcResponse,
-    SessionListEntry,
-    SessionListResult,
-    StatusUpdate,
-)
-from igni_client.runs import ApprovalRequested, Policy, Reply, Run, collect
+from igni_client.models import QueueMessage, RunPaused, SessionListEntry, UserMessage
+from igni_client.replies import Reply
+from igni_client.runs import Run, answer_elsewhere
+from igni_client.wire import Event
 
 
-class Session:
-    """One of igni's sessions, attached to this client."""
+class Session(SessionApi):
+    """One of igni's sessions, attached to this client.
+
+    `send()`, `ask()` and `queue()` prompt it; every method igni answers for
+    one session is here too, grouped as igni groups them — `session.plan`,
+    `session.history`, `session.mcp` and the rest (`igni_client.api.SessionApi`).
+    """
 
     def __init__(self, conn: Connection, session_id: str, project_dir: str = "") -> None:
+        super().__init__(Caller(conn, session_id))
         self._conn = conn
-        self.id = session_id
+        #: The folder this session works in, as igni bound it.
         self.project_dir = project_dir
+
+    @property
+    def id(self) -> str:
+        """The session's id."""
+        return self._caller.session_id
 
     def send(
         self, text: str, *, files: dict[str, str] | None = None, force: bool = False
@@ -38,15 +43,14 @@ class Session:
         session before starting. A run that pauses for approval yields an
         `ApprovalRequested`; answer it in the loop and the loop continues.
         """
-        frame = {
-            "type": "user_message",
-            "id": self._conn.new_id("run"),
-            "session_id": self.id,
-            "text": text,
-            "file_contents": dict(files or {}),
-            "client_id": self._conn.client_id,
-            "force": force,
-        }
+        frame = UserMessage(
+            id=self._conn.router.new_id("run"),
+            session_id=self.id,
+            text=text,
+            file_contents=dict(files or {}),
+            client_id=self._conn.client_id,
+            force=force,
+        )
         return Run(self._conn, self.id).stream(frame)
 
     async def ask(
@@ -59,56 +63,46 @@ class Session:
         returns a `bool` or a `Decision`, and may be async. Without it, a
         pause raises `ApprovalRequired`. A failed run raises `RunFailed`.
         """
-        return await collect(self.send(text, files=files), approve)
+        return await Reply.collect(self.send(text, files=files), Approver(approve))
 
     async def queue(self, text: str) -> None:
         """Add a prompt for after the run that is going; it starts nothing now."""
         await self._conn.send(
-            {
-                "type": "queue_message",
-                "session_id": self.id,
-                "text": text,
-                "client_id": self._conn.client_id,
-            }
+            QueueMessage(session_id=self.id, text=text, client_id=self._conn.client_id)
         )
 
-    async def cancel(self) -> None:
-        """Stop the run that is going. Its stream ends with "Run cancelled by user."."""
-        await self._conn.send({"type": "cancel", "session_id": self.id})
+    async def events(self) -> AsyncIterator[Event | ApprovalRequested]:
+        """Every message igni sends about this session from now on, from every client's runs.
 
-    async def history(self) -> list[dict[str, Any]]:
-        """The session's messages so far, as igni stores them."""
-        result = await self.rpc("get_chat_history", session_id=self.id)
-        return list(result) if isinstance(result, list) else []
-
-    async def status(self) -> StatusUpdate:
-        """The model, the context used and the permission mode of this session."""
-        reply = await self._conn.rpc("get_status", session_id=self.id)
-        if isinstance(reply, StatusUpdate):
-            return reply
-        raise RpcError("get_status", f"igni answered with {reply.type}")
-
-    async def use_model(self, name: str) -> str:
-        """Switch this session to the model `name` (a key of `Models.list()`). Returns igni's notice."""
-        reply = await self._conn.rpc("switch_model", {"model_name": name}, session_id=self.id)
-        if isinstance(reply, InfoMessage):
-            return reply.text
-        if isinstance(reply, RpcResponse):
-            return str(reply.result or "")
-        return ""
-
-    async def rpc(self, method: str, **args: Any) -> Any:
-        """Call any of igni's methods in this session. See `IgniClient.rpc`."""
-        return _result(await self._conn.rpc(method, args, session_id=self.id))
+        igni broadcasts, so this sees the runs a person starts in igni's
+        window as much as this client's own. A run that pauses for approval
+        is offered as an `ApprovalRequested` — among them the approvals igni
+        shows again when a session is attached — and answering it resumes
+        the run, whose events follow here. Use `send()` to follow a run of
+        your own.
+        """
+        queue = self._conn.router.listen()
+        try:
+            while True:
+                event = await queue.get()
+                if event.session_id != self.id:
+                    continue
+                if isinstance(event, RunPaused):
+                    yield ApprovalRequested(event, answer_elsewhere(self._conn, self.id))
+                    continue
+                yield event
+        finally:
+            self._conn.router.unlisten(queue)
 
     def __repr__(self) -> str:
         return f"Session({self.id!r})"
 
 
-class Sessions:
-    """Create, open and list sessions."""
+class Sessions(IgniSessions):
+    """Create, open and list sessions; `attach()` is igni's own call underneath."""
 
     def __init__(self, conn: Connection) -> None:
+        super().__init__(Caller(conn))
         self._conn = conn
         self._attached: dict[str, Session] = {}
 
@@ -117,35 +111,29 @@ class Sessions:
         return await self._attach(None, project_dir)
 
     async def open(self, session_id: str, project_dir: str | None = None) -> Session:
-        """An existing session. Approvals it was waiting for are offered again."""
+        """An existing session. Approvals it was waiting for are shown again (`Session.events()`)."""
         return await self._attach(session_id, project_dir)
 
     async def default(self) -> Session:
         """The session igni opened at start."""
-        reply = await self._conn.rpc("get_session_id")
-        session_id = str(_result(reply) or "")
+        session_id = await SessionApi(Caller(self._conn)).current_id()
         return await self._attach(session_id or None, None)
 
     async def list(self) -> list[SessionListEntry]:
-        """Every session igni keeps, newest first."""
-        reply = await self._conn.rpc("list_sessions")
-        if isinstance(reply, SessionListResult):
-            return reply.sessions
-        result = _result(reply)
-        return [SessionListEntry.model_validate(s) for s in result or []]
+        """Every session kept in igni's own project, newest first.
+
+        For another project's, call `list_sessions()` on a session of it.
+        """
+        listed = await SessionApi(Caller(self._conn)).list_sessions()
+        return listed.sessions
 
     async def _attach(self, session_id: str | None, project_dir: str | None) -> Session:
-        args: dict[str, Any] = {}
-        if session_id:
-            args["session_id"] = session_id
-        if project_dir:
-            args["project_dir"] = project_dir
-        result = _result(await self._conn.rpc("attach_session", args))
-        attached = result if isinstance(result, dict) else {}
-        sid = str(attached.get("session_id") or session_id or "")
-        session = self._attached.get(sid) or Session(self._conn, sid)
-        session.project_dir = str(attached.get("project_dir") or project_dir or "")
-        self._attached[sid] = session
+        attached = await self.attach(session_id=session_id or "", project_dir=project_dir or "")
+        session = self._attached.get(attached.session_id) or Session(
+            self._conn, attached.session_id
+        )
+        session.project_dir = attached.project_dir
+        self._attached[attached.session_id] = session
         return session
 
     async def reattach(self) -> None:
@@ -154,32 +142,4 @@ class Sessions:
             await self._attach(session.id, session.project_dir or None)
 
 
-class ModelCatalogue(BaseModel):
-    """The models igni can use, by the name a session switches to."""
-
-    model_config = ConfigDict(extra="allow")
-
-    default: str = ""
-    max_context_window: int = 0
-    models: dict[str, dict[str, Any]] = Field(default_factory=dict)
-
-
-class Models:
-    """The models this igni serves."""
-
-    def __init__(self, conn: Connection) -> None:
-        self._conn = conn
-
-    async def list(self) -> ModelCatalogue:
-        result = _result(await self._conn.rpc("get_model_registry"))
-        body = result if isinstance(result, dict) else {}
-        return ModelCatalogue(
-            default=str(body.get("default") or ""),
-            max_context_window=int(body.get("max_context_window") or 0),
-            models=dict(body.get("registry") or {}),
-        )
-
-
-def _result(reply: Event) -> Any:
-    """An `RpcResponse`'s result, or the typed message a method answered with instead."""
-    return reply.result if isinstance(reply, RpcResponse) else reply
+__all__ = ["Session", "Sessions"]

@@ -22,15 +22,17 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import itertools
 import json
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from pydantic import BaseModel
 from websockets.asyncio.client import ClientConnection
 from websockets.exceptions import WebSocketException
 
+from igni_client.api import NOT_FOR_CLIENTS
+from igni_client.backoff import Backoff
 from igni_client.errors import (
     AuthError,
     IgniClientError,
@@ -39,10 +41,23 @@ from igni_client.errors import (
     RunInterrupted,
     Unavailable,
 )
-from igni_client.events import Event, RpcResponse, Welcome, parse_event
+from igni_client.events import parse_event
+from igni_client.lifecycle import Lifecycle, Link
+from igni_client.models import RpcRequest, RpcResponse, Welcome
+from igni_client.routing import Router
 from igni_client.targets import Target
+from igni_client.wire import Event, to_wire
+
+#: Re-exported: igni-core's protocol test reads it from here.
+__all__ = ["REFUSED_METHODS", "Connection"]
 
 logger = logging.getLogger(__name__)
+
+#: igni's methods a client never sends: an extension page's and the platform's.
+REFUSED_METHODS: frozenset[str] = frozenset(NOT_FOR_CLIENTS)
+
+#: `Connection.ask`'s timeout when none is given: `Connection.RPC_TIMEOUT`.
+DEFAULT_TIMEOUT = -1.0
 
 #: What an igni in a VM answers before Fleet has bound it to its producer.
 UNBOUND = "igni is not bound to a producer yet; retry shortly"
@@ -50,22 +65,11 @@ UNBOUND = "igni is not bound to a producer yet; retry shortly"
 #: Close codes the gateway sends.
 BUSY, NOT_A_PRODUCER, FAILED = 1013, 1008, 1011
 
-#: Methods a client never sends: they stop igni, or belong to Fleet's own control connection.
-REFUSED_METHODS = frozenset({"shutdown", "vm_sign_in", "deliver_service_events"})
-
-
-class Interruption:
-    """Put on a stream's queue when its run can no longer be followed."""
-
-    def __init__(self, error: IgniClientError) -> None:
-        self.error = error
-
-
 Resync = Callable[[], Awaitable[None]]
 
 
 class Connection:
-    """igni's socket, kept open."""
+    """igni's socket, kept open. `router` hands out what comes back."""
 
     #: How long the first `welcome` may take — a VM may be resuming behind it.
     WELCOME_TIMEOUT = 45.0
@@ -75,29 +79,12 @@ class Connection:
     UNBOUND_RETRY_SECONDS = 1.0
     UNBOUND_RETRIES = 30
 
-    def __init__(
-        self,
-        target: Target,
-        *,
-        reconnect_attempts: int = 5,
-        backoff: float = 0.5,
-        backoff_max: float = 8.0,
-    ) -> None:
+    def __init__(self, target: Target, backoff: Backoff, router: Router) -> None:
         self.target = target
         self.client_id = ""
-        self._reconnect_attempts = reconnect_attempts
-        self._backoff = backoff
-        self._backoff_max = backoff_max
-        self._socket: ClientConnection | None = None
-        self._reader: asyncio.Task[None] | None = None
-        self._welcomed: asyncio.Future[Welcome] | None = None
-        self._ready = asyncio.Event()
-        self._failure: IgniClientError | None = None
-        self._closing = False
-        self._ids = itertools.count(1)
-        self._waiting: dict[str, asyncio.Future[Event]] = {}
-        self._streams: dict[str, asyncio.Queue[Event | Interruption]] = {}
-        self._listeners: list[asyncio.Queue[Event]] = []
+        self.backoff = backoff
+        self.router = router
+        self._lifecycle = Lifecycle()
         self._resync: list[Resync] = []
         self._tasks: set[asyncio.Task[Any]] = set()
 
@@ -110,30 +97,27 @@ class Connection:
         is tried again, backing off. A refused credential or a producer that
         is not active is not.
         """
-        delay = self._backoff
-        for attempt in range(self._reconnect_attempts + 1):
+        delays = self.backoff.delays()
+        while True:
             try:
                 await self._open_once()
                 return
             except (AuthError, NotAllowed):
                 raise
             except Unavailable:
-                if not self.target.reconnects or attempt == self._reconnect_attempts:
+                delay = next(delays, None)
+                if not self.target.reconnects or delay is None:
                     raise
                 await asyncio.sleep(delay)
-                delay = min(delay * 2, self._backoff_max)
 
     async def close(self) -> None:
-        self._closing = True
-        self._ready.clear()
-        socket, self._socket = self._socket, None
-        if socket is not None:
-            with contextlib.suppress(Exception):
-                await socket.close()
-        if self._reader is not None:
-            self._reader.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await self._reader
+        link = self._lifecycle.close()
+        if link is not None:
+            await self._hang_up(link.socket)
+            if link.reader is not None:
+                link.reader.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await link.reader
         for task in list(self._tasks):
             task.cancel()
         self._fail_all(Unavailable("the client was closed"))
@@ -144,144 +128,119 @@ class Connection:
         self._resync.append(callback)
 
     async def _open_once(self) -> None:
-        socket = await self.target.open()
-        loop = asyncio.get_running_loop()
-        self._welcomed = loop.create_future()
-        self._socket = socket
-        self._reader = asyncio.create_task(self._read(socket))
+        link = Link(await self.target.open())
+        self._lifecycle.opening(link)
+        link.reader = asyncio.create_task(self._read(link))
         try:
-            welcome = await asyncio.wait_for(asyncio.shield(self._welcomed), self.WELCOME_TIMEOUT)
+            welcome = await asyncio.wait_for(asyncio.shield(link.welcomed), self.WELCOME_TIMEOUT)
         except TimeoutError as exc:
-            with contextlib.suppress(Exception):
-                await socket.close()
+            await self._hang_up(link.socket)
             raise Unavailable(f"{self.target.describe()} did not say welcome") from exc
         except IgniClientError:
-            with contextlib.suppress(Exception):
-                await socket.close()
+            await self._hang_up(link.socket)
             raise
         self.client_id = welcome.client_id
-        self._failure = None
-        self._ready.set()
+        self._lifecycle.opened()
+
+    async def _hang_up(self, socket: ClientConnection) -> None:
+        try:
+            await socket.close()
+        except (OSError, WebSocketException) as exc:
+            logger.info("igni-client: closing the socket to %s: %s", self.target.describe(), exc)
 
     # ── Sending ──
 
-    def new_id(self, prefix: str) -> str:
-        return f"{prefix}-{next(self._ids)}"
-
-    async def send(self, frame: dict[str, Any]) -> None:
+    async def send(self, frame: BaseModel) -> None:
         """Send one message, waiting for the socket if it is being opened again."""
-        if frame.get("type") == "rpc_request" and frame.get("method") in REFUSED_METHODS:
-            raise ValueError(f"{frame.get('method')} is not a client's to send")
-        socket = await self._connected()
+        socket = await self._lifecycle.socket(self.WELCOME_TIMEOUT, self.target.describe())
         try:
-            await socket.send(json.dumps(frame))
+            await socket.send(to_wire(frame))
         except (OSError, WebSocketException) as exc:
             raise Unavailable(f"{self.target.describe()} went away: {exc}") from exc
 
-    async def _connected(self) -> ClientConnection:
-        if self._failure is not None and not self._ready.is_set():
-            raise self._failure
-        try:
-            await asyncio.wait_for(self._ready.wait(), self.WELCOME_TIMEOUT)
-        except TimeoutError as exc:
-            raise self._failure or Unavailable(
-                f"{self.target.describe()} is not connected"
-            ) from exc
-        if self._socket is None:
-            raise self._failure or Unavailable(f"{self.target.describe()} is not connected")
-        return self._socket
-
-    async def rpc(
-        self, method: str, args: dict[str, Any] | None = None, *, session_id: str = ""
+    async def ask(
+        self,
+        method: str,
+        args: dict[str, Any] | None = None,
+        *,
+        session_id: str = "",
+        timeout: float | None = DEFAULT_TIMEOUT,
+        request_id: str = "",
+        reply: str = "rpc_response",
     ) -> Event:
-        """Call `method` and return igni's answer.
+        """Call `method` with `args` and return igni's answer as it came.
 
-        The answer is usually an `RpcResponse` (whose error raises
-        `RpcError` here), but some methods answer with a message of their
-        own — `list_sessions` with a `SessionListResult` — and that message
-        is returned as it is.
+        The answer is usually an `RpcResponse` (whose error raises the
+        `RpcError` it is here), but some methods answer with a message of
+        their own — `get_status` with a `StatusUpdate` — and that message is
+        returned as it is. `timeout` is how long to wait for it — `None`
+        for as long as it takes, `RPC_TIMEOUT` when left out. `request_id`
+        is the id to send the call as; one is made when it is left out.
+        `reply` is what the answer looks like: `rpc_response` or `message`.
         """
+        if method in REFUSED_METHODS:
+            raise ValueError(f"{method} is not a client's to send")
+        wait = self.RPC_TIMEOUT if timeout == DEFAULT_TIMEOUT else timeout
         for _ in range(self.UNBOUND_RETRIES):
-            reply = await self._call(method, args or {}, session_id)
-            if isinstance(reply, RpcResponse) and reply.error:
-                if reply.error == UNBOUND:
+            sent_as = request_id or self.router.new_id("rpc")
+            envelope = {"session_id": session_id} if session_id else {}
+            request = RpcRequest.model_validate(
+                {"id": sent_as, "method": method, "args": args or {}, **envelope}
+            )
+            reply_frame = await self._exchange(request, sent_as, method, wait, reply)
+            if isinstance(reply_frame, RpcResponse) and reply_frame.error:
+                if reply_frame.error == UNBOUND:
                     await asyncio.sleep(self.UNBOUND_RETRY_SECONDS)
                     continue
-                raise RpcError(method, reply.error)
-            return reply
+                raise RpcError.of(method, reply_frame.error)
+            return reply_frame
         raise Unavailable(f"{self.target.describe()} was not bound to its producer in time")
 
-    async def _call(self, method: str, args: dict[str, Any], session_id: str) -> Event:
-        request_id = self.new_id("rpc")
-        future: asyncio.Future[Event] = asyncio.get_running_loop().create_future()
-        self._waiting[request_id] = future
+    async def exchange(self, frame: BaseModel, request_id: str, what: str) -> Event:
+        """Send `frame` and return the first message igni answers it with, by `request_id`."""
+        return await self._exchange(frame, request_id, what, self.RPC_TIMEOUT, "message")
+
+    async def _exchange(
+        self,
+        frame: BaseModel,
+        request_id: str,
+        what: str,
+        timeout: float | None,
+        reply: str = "rpc_response",
+    ) -> Event:
+        answer = self.router.expect(request_id, reply)
         try:
-            frame: dict[str, Any] = {
-                "type": "rpc_request",
-                "id": request_id,
-                "method": method,
-                "args": args,
-            }
-            if session_id:
-                frame["session_id"] = session_id
             await self.send(frame)
-            return await asyncio.wait_for(future, self.RPC_TIMEOUT)
+            return await asyncio.wait_for(answer, timeout)
         except TimeoutError as exc:
-            raise Unavailable(f"{method} got no answer from {self.target.describe()}") from exc
+            raise Unavailable(f"{what} got no answer from {self.target.describe()}") from exc
         finally:
-            self._waiting.pop(request_id, None)
-
-    # ── Streams and listeners ──
-
-    def open_stream(
-        self, request_id: str, queue: asyncio.Queue[Event | Interruption] | None = None
-    ) -> asyncio.Queue[Event | Interruption]:
-        """Collect every message answering `request_id`. Open it before sending the request.
-
-        Pass `queue` to collect several requests' messages in one place — a
-        run and the approvals answered in it.
-        """
-        if queue is None:
-            queue = asyncio.Queue()
-        self._streams[request_id] = queue
-        return queue
-
-    def close_stream(self, request_id: str) -> None:
-        self._streams.pop(request_id, None)
-
-    def listen(self) -> asyncio.Queue[Event]:
-        """A queue of every message igni sends, from now on."""
-        queue: asyncio.Queue[Event] = asyncio.Queue()
-        self._listeners.append(queue)
-        return queue
-
-    def unlisten(self, queue: asyncio.Queue[Event]) -> None:
-        with contextlib.suppress(ValueError):
-            self._listeners.remove(queue)
+            self.router.forget(request_id)
 
     # ── Reading ──
 
-    async def _read(self, socket: ClientConnection) -> None:
+    async def _read(self, link: Link) -> None:
+        where = self.target.describe()
         try:
-            async for raw in socket:
+            async for raw in link.socket:
                 try:
                     decoded = json.loads(raw)
                 except ValueError:
+                    logger.warning("igni-client: %s sent a message that is not JSON", where)
                     continue
-                if isinstance(decoded, dict):
-                    self._route(parse_event(decoded))
-        except WebSocketException:
-            pass
+                if not isinstance(decoded, dict):
+                    logger.warning("igni-client: %s sent a message that is not an object", where)
+                    continue
+                self._route(parse_event(decoded))
+        except WebSocketException as exc:
+            logger.info("igni-client: reading from %s stopped: %s", where, exc)
         finally:
-            if self._socket is socket and not self._closing:
-                self._socket = None
-                self._ready.clear()
-                welcomed = self._welcomed
-                if welcomed is not None and not welcomed.done():
+            if self._lifecycle.lost(link):
+                if not link.welcomed.done():
                     # Closed before igni said welcome: whoever is opening it decides.
-                    welcomed.set_exception(self._close_error(socket))
+                    link.welcomed.set_exception(self._close_error(link.socket))
                 else:
-                    self._spawn(self._closed(socket))
+                    self._spawn(self._closed(link.socket))
 
     def _close_error(self, socket: ClientConnection) -> IgniClientError:
         code, reason = socket.close_code, socket.close_reason or ""
@@ -293,58 +252,42 @@ class Connection:
         return Unavailable(f"{where} closed the connection ({code}): {reason}")
 
     def _route(self, event: Event) -> None:
-        if isinstance(event, Welcome):
-            welcomed = self._welcomed
-            if welcomed is not None and not welcomed.done():
-                welcomed.set_result(event)
-            else:
-                # igni moved behind the gateway: a new igni, the same socket.
-                self.client_id = event.client_id
-                self._interrupt(
-                    RunInterrupted("igni moved while this was going; it may have finished")
-                )
-                self._spawn(self._run_resync())
+        if not isinstance(event, Welcome):
+            self.router.deliver(event)
             return
-        for queue in self._listeners:
-            queue.put_nowait(event)
-        if not event.id:
+        welcomed = self._lifecycle.pending_welcome()
+        if welcomed is not None:
+            welcomed.set_result(event)
             return
-        waiter = self._waiting.get(event.id)
-        if waiter is not None and event.type != "rpc_request":
-            if not waiter.done():
-                waiter.set_result(event)
-            return
-        stream = self._streams.get(event.id)
-        if stream is not None:
-            stream.put_nowait(event)
+        # igni moved behind the gateway: a new igni, the same socket.
+        self.client_id = event.client_id
+        self.router.interrupt(
+            RunInterrupted("igni moved while this was going; it may have finished")
+        )
+        self._spawn(self._run_resync())
 
     async def _closed(self, socket: ClientConnection) -> None:
         code = socket.close_code
         where = self.target.describe()
         if code == NOT_A_PRODUCER or not self.target.reconnects:
-            self._failure = self._close_error(socket)
-            self._fail_all(self._failure)
+            self._fail(self._close_error(socket))
             return
-        self._interrupt(
+        self.router.interrupt(
             RunInterrupted(f"the connection to {where} dropped ({code}); it may have finished")
         )
-        delay = self._backoff
-        for attempt in range(1, self._reconnect_attempts + 1):
+        for attempt, delay in enumerate(self.backoff.delays(), start=1):
             await asyncio.sleep(delay)
-            delay = min(delay * 2, self._backoff_max)
             try:
                 await self._open_once()
             except (AuthError, NotAllowed) as exc:
-                self._failure = exc
-                self._fail_all(exc)
+                self._fail(exc)
                 return
             except IgniClientError as exc:
                 logger.info("igni-client: reconnecting to %s (%d): %s", where, attempt, exc)
                 continue
             await self._run_resync()
             return
-        self._failure = Unavailable(f"{where} could not be reached again after it closed ({code})")
-        self._fail_all(self._failure)
+        self._fail(Unavailable(f"{where} could not be reached again after it closed ({code})"))
 
     async def _run_resync(self) -> None:
         for callback in list(self._resync):
@@ -353,18 +296,15 @@ class Connection:
             except IgniClientError as exc:
                 logger.warning("igni-client: re-attaching after a move failed: %s", exc)
 
-    def _interrupt(self, error: IgniClientError) -> None:
-        """End every call and run in flight: they cannot be followed any more."""
-        for waiter in list(self._waiting.values()):
-            if not waiter.done():
-                waiter.set_exception(error)
-        for queue in list(self._streams.values()):
-            queue.put_nowait(Interruption(error))
+    def _fail(self, error: IgniClientError) -> None:
+        """It will not open again: say so to everything waiting, and to everything sent from now on."""
+        self._lifecycle.failed(error)
+        self._fail_all(error)
 
     def _fail_all(self, error: IgniClientError) -> None:
-        self._interrupt(error)
-        welcomed = self._welcomed
-        if welcomed is not None and not welcomed.done():
+        self.router.interrupt(error)
+        welcomed = self._lifecycle.pending_welcome()
+        if welcomed is not None:
             welcomed.set_exception(error)
 
     def _spawn(self, coro: Awaitable[None]) -> None:

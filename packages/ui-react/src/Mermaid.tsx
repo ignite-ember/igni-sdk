@@ -1,5 +1,5 @@
 /**
- * Mermaid diagrams, and the helper that spots a fenced block.
+ * Mermaid diagrams.
  *
  * ```mermaid``` becomes a diagram, in a document exactly as it
  * already does in chat.
@@ -9,7 +9,8 @@
  * diffs a line at a time, chunks for search, survives the editor's
  * round trip untouched, and reads as its own source in any other
  * markdown tool. The alternative — embedding HTML, or a bespoke
- * node type — would cost every one of those.
+ * node type — would cost every one of those. ``fenceInfo`` is the
+ * helper that spots one.
  *
  * Shared by the chat and the document view rather than copied.
  * There was one mermaid renderer living inside ``ChatItems`` and a
@@ -25,15 +26,28 @@
  * into the app for the ``json-render`` renderer, so it could not be
  * published without publishing that too. It is app code now.
  */
-import type { ReactNode } from "react";
-import { isValidElement, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type MermaidLib = {
-  initialize: (opts: Record<string, unknown>) => void;
+import { CopySource } from "./CopySource";
+
+type MermaidTheme = "default" | "dark";
+
+interface MermaidConfig {
+  startOnLoad: boolean;
+  securityLevel: "strict";
+  theme: MermaidTheme;
+  themeVariables: { fontFamily: string; background: string };
+}
+
+interface MermaidLib {
+  initialize: (config: MermaidConfig) => void;
   render: (id: string, src: string) => Promise<{ svg: string }>;
-};
+}
 
-let mermaidPromise: Promise<MermaidLib> | null = null;
+// Mermaid draws into a scratch element by id, and the id becomes the
+// SVG's own and scopes the <style> it injects. One counter for the
+// page, so no two renders anywhere on it share one — not across
+// blocks, not across React roots, not across an edit in flight.
 let mermaidId = 0;
 
 /**
@@ -43,7 +57,7 @@ let mermaidId = 0;
  * counterpart. Both run in colour — ``neutral``, which reads like
  * the safe choice, is what made every diagram grey.
  */
-function mermaidTheme(): "default" | "dark" {
+function mermaidTheme(): MermaidTheme {
   if (typeof document === "undefined") return "default";
   const explicit = document.documentElement.dataset.theme;
   if (explicit === "dark") return "dark";
@@ -56,24 +70,28 @@ function mermaidTheme(): "default" | "dark" {
   return "default";
 }
 
-/** Mermaid is about 700KB, so it arrives only if a document has one. */
-export function loadMermaid(): Promise<MermaidLib> {
-  if (!mermaidPromise) {
-    mermaidPromise = import("mermaid").then((m) => {
-      const lib = m.default as unknown as MermaidLib;
-      lib.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: mermaidTheme(),
-        themeVariables: {
-          fontFamily: "var(--font-ui)",
-          background: "transparent",
-        },
-      });
-      return lib;
-    });
-  }
-  return mermaidPromise;
+/**
+ * Mermaid, configured for the theme in force right now.
+ *
+ * Mermaid is about 700KB, so it arrives only if a document has one;
+ * the bundler caches the module, so asking again costs nothing.
+ * Configured on every call rather than once, because the theme is
+ * read when it is configured — a diagram drawn after a switch to
+ * dark has to be drawn in dark.
+ */
+export async function loadMermaid(): Promise<MermaidLib> {
+  // Inline on purpose: `mermaid` is an optional peer dependency.
+  const lib = (await import("mermaid")).default as unknown as MermaidLib;
+  lib.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: mermaidTheme(),
+    themeVariables: {
+      fontFamily: "var(--font-ui)",
+      background: "transparent",
+    },
+  });
+  return lib;
 }
 
 export function MermaidBlock({ source }: { source: string }) {
@@ -114,55 +132,4 @@ export function MermaidBlock({ source }: { source: string }) {
       <div ref={frame} />
     </div>
   );
-}
-
-/**
- * Copies the fenced source, not the rendered SVG.
- *
- * What somebody wants from a diagram is the text that made it —
- * to paste into another document, or to fix. Nobody wants the
- * markup a renderer produced.
- */
-function CopySource({ source }: { source: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      className="diagram-copy"
-      title={copied ? "Copied" : "Copy source"}
-      aria-label={copied ? "Copied" : "Copy source"}
-      onClick={() => {
-        void (async () => {
-          try {
-            await navigator.clipboard.writeText(source);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1300);
-          } catch {
-            /* clipboard blocked — nothing worth saying about it */
-          }
-        })();
-      }}
-    >
-      {copied ? "✓" : "⧉"}
-    </button>
-  );
-}
-
-/**
- * The language on a fenced block, or null.
- *
- * ReactMarkdown hands a ``<pre>`` a single ``<code>`` child carrying
- * ``className="language-mermaid"``; this reads that without
- * assuming any particular child shape survives a plugin.
- */
-export function fenceInfo(
-  children: ReactNode,
-): { lang: string; source: string } | null {
-  const only = Array.isArray(children) ? children[0] : children;
-  if (!isValidElement(only)) return null;
-  const props = only.props as { className?: string; children?: ReactNode };
-  const match = /\blanguage-([\w-]+)\b/.exec(props.className ?? "");
-  if (!match) return null;
-  const source = typeof props.children === "string" ? props.children : "";
-  return { lang: match[1].toLowerCase(), source: source.replace(/\n$/, "") };
 }

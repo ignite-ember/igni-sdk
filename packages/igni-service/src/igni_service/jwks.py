@@ -34,10 +34,10 @@ _MAX_AGE = re.compile(r"max-age=(\d+)")
 class IgniKeys:
     """igni's key set: fetched, kept for `max-age`, refetched for a new `kid`."""
 
-    #: Used when igni sends no `max-age`. igni's own, so the two agree.
     DEFAULT_MAX_AGE = 300.0
-    #: The least time between two refetches caused by an unknown `kid`.
+    """Used when igni sends no `max-age`. igni's own, so the two agree."""
     REFETCH_EVERY = 30.0
+    """The least time between two refetches caused by an unknown `kid`."""
 
     def __init__(self, igni: IgniServer, *, clock: Clock | None = None) -> None:
         self._igni = igni

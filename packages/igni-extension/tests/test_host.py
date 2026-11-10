@@ -8,6 +8,8 @@ are about what the SDK does with it.
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 from collections.abc import AsyncIterator
 
 import pytest
@@ -21,7 +23,8 @@ from igni_extension.host_model import (
     SessionChange,
     Status,
 )
-from igni_extension.testing import FakeHost, HostHarness
+from igni_extension.testing import FakeHost, HostCall, HostHarness
+from igni_extension.wire import Reply, Request, SubscribeOutcome
 
 
 @pytest.fixture
@@ -78,6 +81,20 @@ async def test_methods_send_their_parameters_and_read_their_result(host: FakeHos
     assert (post.path, post.params) == ("chat.post", {"text": "Two issues in auth.py."})
     assert append.params == {"view": {"root": "c", "elements": {}}}
     assert view == "view-1"
+    await ext.aclose()
+
+
+async def test_a_recorded_call_equals_the_one_a_test_writes_down(host: FakeHost) -> None:
+    """`HostCall` as 0.1.0 had it: what was asked, not the number it travelled under."""
+    ext = IgniExtension("acme.example", environ=host.environment())
+
+    await ext.host.chat.post("Two issues in auth.py.")
+    await ext.host.sessions.current.set("s-2")
+
+    assert host.calls == [
+        HostCall(op="call", path="chat.post", params={"text": "Two issues in auth.py."}),
+        HostCall(op="set", path="sessions.current", value="s-2"),
+    ]
     await ext.aclose()
 
 
@@ -175,6 +192,51 @@ async def test_the_hello_says_what_the_extension_holds(host: FakeHost) -> None:
     ext = IgniExtension("acme.example", environ=host.environment())
     await ext.connect()
     assert ext.connection.granted == ["chat.read", "chat.post", "sessions"]
+    await ext.aclose()
+
+
+class RefusingHost(FakeHost):
+    """A host whose subscribe answers that some signals will never arrive."""
+
+    def _subscribe(self, request: Request) -> Reply:
+        self.subscribed.update(request.signals)
+        outcome = SubscribeOutcome(not_granted=["chat.run_completed"], unknown=["chat.later"])
+        return Reply(op="reply", id=request.id, ok=True, result=outcome.model_dump())
+
+
+async def test_a_signal_that_will_never_arrive_is_said_at_connect(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async with RefusingHost() as host:
+        ext = IgniExtension("acme.example", environ=host.environment())
+
+        @ext.on(ext.host.chat.run_completed)
+        async def reviewed(run: Run) -> None: ...
+
+        with caplog.at_level(logging.WARNING, logger="igni_extension.channel"):
+            await ext.connect()
+        await ext.aclose()
+
+    said = [record.getMessage() for record in caplog.records]
+    assert "igni: chat.run_completed will never arrive — its object is not in permissions.host" in (
+        said
+    )
+    assert "igni: this igni has no signal chat.later" in said
+
+
+async def test_a_message_from_the_host_the_sdk_does_not_read_is_skipped(
+    host: FakeHost, caplog: pytest.LogCaptureFixture
+) -> None:
+    ext = IgniExtension("acme.example", environ=host.environment())
+    await ext.connect()
+
+    with caplog.at_level(logging.WARNING, logger="igni_extension.channel"):
+        for socket in list(host._sockets):
+            await socket.send(json.dumps({"op": "from_a_newer_igni"}))
+            await socket.send("not json")
+        assert await ext.host.chat.processing is False
+
+    assert sum("does not read" in r.getMessage() for r in caplog.records) == 2
     await ext.aclose()
 
 
@@ -293,10 +355,10 @@ async def test_busy_takes_renews_and_lets_go_of_a_lease() -> None:
     }
     async with FakeHost(answers={"self.busy": lease}) as fake:
         ext = IgniExtension("acme.example", environ=fake.environment())
-        taken = await ext.busy("indexing", 120)
+        taken = await ext.busy.take("indexing", 120)
         assert taken.reason == "indexing" and taken.expires_at
-        await ext.done("indexing")
-        async with ext.busy_while("syncing", ttl=0.05):
+        await ext.busy.release("indexing")
+        async with ext.busy.during("syncing", ttl=0.05):
             await asyncio.sleep(0.06)
         paths = [(c.path, c.params.get("reason")) for c in fake.calls]
         assert paths[:2] == [("self.busy", "indexing"), ("self.done", "indexing")]
@@ -306,11 +368,44 @@ async def test_busy_takes_renews_and_lets_go_of_a_lease() -> None:
         await ext.aclose()
 
 
+async def test_busy_keeps_its_0_1_0_spelling() -> None:
+    lease = {
+        "id": "busy-1",
+        "kind": "extension",
+        "holder": "acme.example",
+        "reason": "indexing",
+        "since": "2026-10-26T12:00:00Z",
+        "expires_at": "2026-10-26T12:02:00Z",
+    }
+    async with FakeHost(answers={"self.busy": lease}) as fake:
+        ext = IgniExtension("acme.example", environ=fake.environment())
+        taken = await ext.busy("indexing", 120)
+        assert taken.reason == "indexing"
+        await ext.done("indexing")
+        async with ext.busy_while("syncing", ttl=60):
+            pass
+        paths = [(c.path, c.params.get("reason")) for c in fake.calls]
+        assert paths == [
+            ("self.busy", "indexing"),
+            ("self.done", "indexing"),
+            ("self.busy", "syncing"),
+            ("self.done", "syncing"),
+        ]
+        await ext.aclose()
+
+
 async def test_promote_takes_the_target_the_slash_command_does() -> None:
     """`/agents promote --project | --personal`: the same choice, and none means project."""
     fake = FakeHost(
         granted=("agents",),
-        answers={"agents.promote_ephemeral": {"ok": True, "name": "helper", "dest": "x"}},
+        answers={
+            "agents.promote_ephemeral": {
+                "ok": True,
+                "name": "helper",
+                "dest": "x",
+                "reason": "",
+            }
+        },
     )
     async with fake:
         ext = IgniExtension("acme.example", environ=fake.environment())

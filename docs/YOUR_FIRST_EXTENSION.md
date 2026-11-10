@@ -57,28 +57,17 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
   it has made its account, yours is no longer the first.
 - **`uv`** and Python 3.12.
 
-### Until the SDKs are on PyPI: build them from this checkout
+### One environment for the walk-through
 
-`igni-extension` and `igni-service` are not on PyPI yet. From your igni
-checkout, build their wheels once, into a directory every install below
-points at:
-
-```bash
-uv build --wheel --out-dir ~/igni-wheels packages/igni-extension
-uv build --wheel --out-dir ~/igni-wheels packages/igni-service
-```
-
-Then one environment for the walk-through, in `~/ticket-lookup` — every
+Make it in `~/ticket-lookup`. Every
 command from here on runs there, in it:
 
 ```bash
 cd ~/ticket-lookup
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install --find-links ~/igni-wheels igni-extension igni-service uvicorn aiosqlite pytest anyio
+uv pip install igni-extension igni-service uvicorn aiosqlite pytest anyio
 ```
-
-Once they are published, drop `--find-links` and the build step.
 
 ## 1. Write the extension
 
@@ -321,13 +310,6 @@ Check it:
 igni ext doctor extension
 ```
 
-Until the SDK is on PyPI, `doctor` builds the extension from source with
-pip, so point it at your wheels:
-
-```bash
-PIP_FIND_LINKS=~/igni-wheels igni ext doctor extension
-```
-
 `doctor` validates the manifest, starts the extension, asks it for its
 tools over MCP (with a timeout), and says what is wrong, with the fix. The
 end of what it prints:
@@ -368,7 +350,7 @@ the extension's wheel and every dependency's, for each platform igni runs
 on — a machine installs from it with no index.
 
 ```bash
-igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ~/igni-wheels
+igni-service-bundle --extension extension --out extension-bundle.tar.gz
 ```
 
 ## 3. Run the service
@@ -603,7 +585,8 @@ sys.path.insert(0, str(HERE.parent / "extension" / "src"))
 
 from igni_extension import Caller, CallerKind  # noqa: E402
 from igni_extension.testing import ConcurrencyHarness, ConcurrentCall, HostHarness  # noqa: E402
-from igni_service.testing import FakeIgni  # noqa: E402
+from igni_service import Member  # noqa: E402
+from igni_service.testing import FakeIgni, IgniAddresses  # noqa: E402
 
 pytestmark = pytest.mark.anyio
 
@@ -640,17 +623,17 @@ async def test_many_callers_at_once() -> None:
 async def test_the_service_takes_a_person_and_answers_export_and_erasure() -> None:
     from service import create_app
 
-    fake = FakeIgni(service_url="http://tickets.test")
-    fake.add_member("org-1", "u-ada", email="ada@acme.test", name="Ada")
+    fake = FakeIgni(addresses=IgniAddresses(service_url="http://tickets.test"))
+    fake.directory.add_member("org-1", Member(user_id="u-ada", email="ada@acme.test", name="Ada"))
     app = create_app(fake.service())
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://tickets.test") as http:
-        person = {"Authorization": f"Bearer {fake.person_token('u-ada', org_id='org-1')}"}
+        person = {"Authorization": f"Bearer {fake.signer.person_token('u-ada', org_id='org-1')}"}
         r = await http.get("/v1/tickets/T-1001", headers=person)
         assert r.status_code == 200, r.text
         assert r.json()["looked_up_by"] == "ada@acme.test"
 
-        igni = {"Authorization": f"Bearer {fake.igni_token('org-1')}"}
+        igni = {"Authorization": f"Bearer {fake.signer.igni_token('org-1')}"}
         r = await http.get("/v1/igni/subjects/u-ada/export", headers=igni)
         assert r.status_code == 200, r.text
         assert "T-1001" in r.text

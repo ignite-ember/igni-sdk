@@ -26,6 +26,24 @@ diagram in it never downloads the 700KB, and an extension that never
 renders one does not need the dependency at all. Install it only if
 you use `MermaidBlock`.
 
+## Changed since 0.1.0, on purpose
+
+- `loadMermaid()` configures mermaid on every call, with the theme in
+  force at that moment, so a diagram drawn after a light/dark switch is
+  drawn in the new theme. Each call returns a new promise, a failed load
+  is tried again on the next call rather than kept, and an
+  `initialize(...)` of your own is overwritten by the next
+  `MermaidBlock` render. The returned `initialize` takes igni's fixed
+  config (`startOnLoad`, `securityLevel: "strict"`, `theme`,
+  `themeVariables`) rather than any record.
+- A diagram's copy button draws the `copy` and `check` icons instead of
+  the `⧉` and `✓` glyphs, so it has no text. It carries `data-state`
+  (`idle`, `copied` or `failed`). A blocked or missing clipboard is no
+  longer silent: the button goes to `failed`, says "Copy failed — the
+  clipboard is blocked" in its title and label, and resets after 1.3s,
+  as "Copied" does.
+- `MenuIconName` has two more names, `copy` and `check`.
+
 ## The stylesheet is not optional
 
 `@ignite-ember/ui-css` must be bundled into your extension, not linked from

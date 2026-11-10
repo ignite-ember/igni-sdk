@@ -51,7 +51,9 @@ class NotificationRefused(IgniError):
     def __init__(self, status: int, detail: str) -> None:
         super().__init__(f"igni refused the notifications: {status} {detail}")
         self.status = status
+        """The HTTP status igni answered with (a 4xx other than 429)."""
         self.detail = detail
+        """igni's own words: why it refused them."""
 
 
 class EventRefused(IgniError):
@@ -60,7 +62,11 @@ class EventRefused(IgniError):
     def __init__(self, status: int, detail: str) -> None:
         super().__init__(f"igni refused the event: {status} {detail}")
         self.status = status
+        """The HTTP status igni answered with: 403 for a grant the extension lacks, 404 for an
+        unknown item, ...
+        """
         self.detail = detail
+        """igni's own words: why it refused it."""
 
 
 class VmProfileRefused(IgniError):
@@ -69,7 +75,9 @@ class VmProfileRefused(IgniError):
     def __init__(self, status: int, detail: str) -> None:
         super().__init__(f"igni refused the VM profile request: {status} {detail}")
         self.status = status
+        """The HTTP status igni answered with."""
         self.detail = detail
+        """igni's own words: over which cap, which field, whose app."""
 
 
 class KeyStoreError(IgniError):

@@ -33,26 +33,33 @@ class IgniPaths:
     """The paths igni serves, spelled once."""
 
     DISCOVERY = "/.well-known/openid-configuration"
+    """igni's OpenID Connect discovery document."""
     JWKS = "/.well-known/jwks.json"
+    """igni's public keys, which people's tokens are checked against."""
     CLIENTS = "/v1/clients"
+    """Client registration (RFC 7591), and each client's extension under it."""
     TOKEN = "/v1/oauth/token"  # noqa: S105 — an endpoint path, not a secret
+    """The token endpoint: service tokens, and sign-in to the service's pages."""
     REVOKE = "/v1/oauth/revoke"
+    """The revocation endpoint (RFC 7009): a sign-out ends the sign-in there."""
     DIRECTORY = "/v1/directory"
+    """The directory: an organisation and its members."""
     NOTIFICATIONS = "/v1/service-notifications"
-    #: Waking a producer's agent with an event (service-identity §15).
+    """Where a service sends notifications."""
     SERVICE_EVENTS = "/v1/service-events"
-    #: Any item for a producer's agent: an event, a message, a chat, an action.
+    """Waking a producer's agent with an event (service-identity §15)."""
     SERVICE_ITEMS = "/v1/service-items"
-    #: A file an item then names.
+    """Any item for a producer's agent: an event, a message, a chat, an action."""
     SERVICE_ATTACHMENTS = "/v1/service-attachments"
-    #: What igni has revoked in an organisation (service-identity §21).
+    """A file an item then names."""
     REVOCATIONS = "/v1/revocations"
-    #: Every organisation this service serves (service-identity §21).
+    """What igni has revoked in an organisation (service-identity §21)."""
     SERVED = "/v1/organisations/served"
-    #: A service's extension's VM profile request in one organisation (service-identity §12).
+    """Every organisation this service serves (service-identity §21)."""
     SERVICE_VM_PROFILE = "/v1/service-vm-profile"
-    #: An app, acting as itself (service-identity §11.1, §17).
+    """A service's extension's VM profile request in one organisation (service-identity §12)."""
     APPS = "/v1/apps"
+    """An app, acting as itself (service-identity §11.1, §17)."""
 
     @classmethod
     def app_vm_profile_request(cls, app_id: str) -> str:
@@ -71,13 +78,15 @@ class IgniPaths:
 
     @classmethod
     def extension(cls, client_id: str) -> str:
+        """Where igni holds `client_id`'s extension bundle."""
         return f"{cls.CLIENTS}/{client_id}/extension"
 
     @classmethod
     def extension_asset(cls, client_id: str, sha256: str) -> str:
+        """Where igni holds one asset of `client_id`'s extension, by its SHA-256."""
         return f"{cls.CLIENTS}/{client_id}/extension/assets/{sha256}"
 
-    #: Where igni calls a service about one person (erasure, export).
     SUBJECTS = "/v1/igni/subjects"
-    #: Where igni tells a service that an organisation was deleted.
+    """Where igni calls a service about one person (erasure, export)."""
     ORGANISATIONS = "/v1/igni/organisations"
+    """Where igni tells a service that an organisation was deleted."""

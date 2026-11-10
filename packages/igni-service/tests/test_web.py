@@ -12,9 +12,10 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from igni_service import IgniService, KeyCipher, Person, SqlWebSessionStore, WebSession
+from igni_service import IgniService, KeyCipher, Member, Person, SqlWebSessionStore, WebSession
+from igni_service.grants import RefreshTokenGrant
 from igni_service.tables import IgniTables
-from igni_service.testing import FakeIgni, ManualClock
+from igni_service.testing import FakeIgni, ManualClock, SettingsOverrides
 from igni_service.token_endpoint import GrantRefused, TokenEndpoint
 from igni_service.urls import IgniPaths
 from igni_service.web import Pkce, ReturnTo
@@ -28,8 +29,10 @@ PAGE = {"Accept": "text/html,application/xhtml+xml"}
 
 @pytest.fixture
 def igni(fake: FakeIgni) -> IgniService:
-    fake.add_member(ORG, "u-root", email="root@acme.test", name="Root", super_admin=True)
-    return fake.service(fake.settings(public_base_url=SERVICE))
+    fake.directory.add_member(
+        ORG, Member(user_id="u-root", email="root@acme.test", name="Root", super_admin=True)
+    )
+    return fake.service(fake.settings(SettingsOverrides(public_base_url=SERVICE)))
 
 
 @pytest.fixture
@@ -68,7 +71,7 @@ async def sign_in(
 ) -> httpx.Response:
     login = await browser.get("/auth/login", params={"return_to": return_to})
     assert login.status_code == 303
-    back = fake.authorize(login.headers["location"], user_id=user_id, org_id=ORG)
+    back = fake.oauth.sign_ins.authorize(login.headers["location"], user_id=user_id, org_id=ORG)
     return await browser.get(back)
 
 
@@ -79,7 +82,10 @@ async def test_login_sends_the_browser_to_igni_with_pkce_and_a_state(
 
     location = urlsplit(login.headers["location"])
     query = {k: v[0] for k, v in parse_qs(location.query).items()}
-    assert f"{location.scheme}://{location.netloc}{location.path}" == fake.authorization_endpoint
+    assert (
+        f"{location.scheme}://{location.netloc}{location.path}"
+        == fake.addresses.authorization_endpoint
+    )
     assert query["response_type"] == "code"
     assert query["client_id"] == await igni.registration.client_id()
     assert query["redirect_uri"] == f"{SERVICE}/auth/callback"
@@ -114,7 +120,7 @@ async def test_the_registration_names_the_callback_without_being_told(
 ) -> None:
     await igni.registration.register()
 
-    [body] = [seen.json_body() for seen in fake.requests_to(IgniPaths.CLIENTS)]
+    [body] = [seen.json_body() for seen in fake.traffic.requests_to(IgniPaths.CLIENTS)]
     assert body["redirect_uris"] == [f"{SERVICE}/auth/callback"]
 
 
@@ -138,7 +144,7 @@ async def test_a_callback_this_browser_did_not_start_is_refused(
     browser: httpx.AsyncClient, fake: FakeIgni, web_app: FastAPI
 ) -> None:
     login = await browser.get("/auth/login")
-    back = fake.authorize(login.headers["location"], user_id="u-max", org_id=ORG)
+    back = fake.oauth.sign_ins.authorize(login.headers["location"], user_id="u-max", org_id=ORG)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=web_app), base_url=SERVICE
@@ -151,7 +157,7 @@ async def test_a_callback_this_browser_did_not_start_is_refused(
 
 async def test_a_code_and_a_state_work_once(browser: httpx.AsyncClient, fake: FakeIgni) -> None:
     login = await browser.get("/auth/login")
-    back = fake.authorize(login.headers["location"], user_id="u-max", org_id=ORG)
+    back = fake.oauth.sign_ins.authorize(login.headers["location"], user_id="u-max", org_id=ORG)
     state = parse_qs(urlsplit(back).query)["state"][0]
 
     assert (await browser.get(back)).status_code == 303
@@ -187,7 +193,7 @@ async def test_a_page_for_anybody_knows_who_is_signed_in_and_sends_nobody_away(
     assert (await browser.get("/public", headers=PAGE)).json() == {"reader": "u-max"}
 
     # A session igni cannot renew is nobody here, not a failed page.
-    fake.failing[IgniPaths.TOKEN] = 503
+    fake.traffic.fail(IgniPaths.TOKEN, 503)
     clock.advance(700)
     away = await browser.get("/public", headers=PAGE)
     assert (away.status_code, away.json()) == (200, {"reader": ""})
@@ -202,28 +208,28 @@ async def test_the_session_is_renewed_before_the_token_runs_out(
     page = await browser.get("/settings")
 
     assert page.status_code == 200
-    assert fake.grants == ["authorization_code", "refresh_token"]
+    assert fake.oauth.grants == ["authorization_code", "refresh_token"]
     assert (await browser.get("/settings")).status_code == 200
-    assert fake.grants == ["authorization_code", "refresh_token"]
+    assert fake.oauth.grants == ["authorization_code", "refresh_token"]
 
 
 async def test_igni_refusing_the_renewal_signs_the_person_out(
     browser: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
     await sign_in(browser, fake)
-    fake.deactivate(ORG, "u-max")
+    fake.directory.organisations[ORG].deactivate("u-max")
     clock.advance(600)
 
     assert (await browser.get("/settings")).status_code == 401
     assert (await browser.get("/settings")).status_code == 401
-    assert fake.grants == ["authorization_code", "refresh_token"]
+    assert fake.oauth.grants == ["authorization_code", "refresh_token"]
 
 
 async def test_a_session_outlives_igni_being_briefly_away(
     browser: httpx.AsyncClient, fake: FakeIgni, clock: ManualClock
 ) -> None:
     await sign_in(browser, fake)
-    fake.failing[IgniPaths.TOKEN] = 503
+    fake.traffic.fail(IgniPaths.TOKEN, 503)
     clock.advance(600 - 30)
 
     assert (await browser.get("/settings")).status_code == 200
@@ -285,12 +291,12 @@ async def test_logout_ends_the_sign_in_at_igni_too(
     out = await browser.post("/auth/logout")
 
     assert out.status_code == 303
-    assert fake.revoked == [refresh]
-    [revocation] = fake.requests_to(IgniPaths.REVOKE)
-    assert revocation.form()["token_type_hint"] == "refresh_token"
+    assert fake.oauth.revoked == [refresh]
+    [revocation] = fake.traffic.requests_to(IgniPaths.REVOKE)
+    assert revocation.form().token_type_hint == "refresh_token"
     endpoint = TokenEndpoint(igni.server, igni.registration, igni.key)
     with pytest.raises(GrantRefused):
-        await endpoint.grant({"grant_type": "refresh_token", "refresh_token": refresh})
+        await endpoint.grant(RefreshTokenGrant(refresh_token=refresh))
 
 
 async def test_logout_revokes_the_token_the_session_holds_after_a_renewal(
@@ -305,7 +311,7 @@ async def test_logout_revokes_the_token_the_session_holds_after_a_renewal(
     await browser.post("/auth/logout")
 
     assert renewed != first
-    assert fake.revoked == [renewed]
+    assert fake.oauth.revoked == [renewed]
 
 
 async def test_logout_works_when_igni_cannot_hear_it(
@@ -313,12 +319,12 @@ async def test_logout_works_when_igni_cannot_hear_it(
 ) -> None:
     await sign_in(browser, fake)
     session_id = browser.cookies["igni_session"]
-    fake.failing[IgniPaths.REVOKE] = 503
+    fake.traffic.fail(IgniPaths.REVOKE, 503)
 
     out = await browser.post("/auth/logout")
 
     assert out.status_code == 303
-    assert fake.revoked == []
+    assert fake.oauth.revoked == []
     assert "could not revoke" in caplog.text
     browser.cookies.set("igni_session", session_id, domain="service.test")
     assert (await browser.get("/settings")).status_code == 401
@@ -330,11 +336,13 @@ async def test_logout_without_a_session_asks_igni_nothing(
     out = await browser.post("/auth/logout")
 
     assert out.status_code == 303
-    assert fake.requests_to(IgniPaths.REVOKE) == []
+    assert fake.traffic.requests_to(IgniPaths.REVOKE) == []
 
 
 async def test_plain_http_in_development_drops_secure(fake: FakeIgni) -> None:
-    igni = fake.service(fake.settings(public_base_url="http://service.localhost:8100"))
+    igni = fake.service(
+        fake.settings(SettingsOverrides(public_base_url="http://service.localhost:8100"))
+    )
     app = FastAPI()
     app.include_router(igni.web.router)
 

@@ -32,15 +32,14 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type HTMLAttributes,
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 
-function cx(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter(Boolean).join(" ");
-}
+import { cx } from "./cx";
 
 /** Keyboard step, and the larger one with Shift held. */
 const STEP = 12;
@@ -55,7 +54,10 @@ const BIG_STEP = 48;
  */
 const MOST_OF_WINDOW = 0.6;
 
-export interface SplitProps extends Omit<HTMLAttributes<HTMLDivElement>, "onResize"> {
+export interface SplitProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "onResize"
+> {
   /** The fixed-width pane. */
   aside: ReactNode;
   /** The pane that takes what is left. */
@@ -97,6 +99,9 @@ export function Split({
   // over one custom property.
   const variable = `--ui-split-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const root = useRef<HTMLDivElement | null>(null);
+  // The aside itself, not "the first child": with `side="end"` the
+  // first child is the main pane.
+  const asidePane = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   // Mirrored into state only so `aria-valuenow` is right. The layout
   // itself never reads this.
@@ -107,7 +112,8 @@ export function Split({
       const ceiling = Math.min(
         max,
         Math.round(
-          (typeof window === "undefined" ? max : window.innerWidth) * MOST_OF_WINDOW,
+          (typeof window === "undefined" ? max : window.innerWidth) *
+            MOST_OF_WINDOW,
         ),
       );
       // `min` wins over the ceiling on a very narrow window: a pane
@@ -129,7 +135,7 @@ export function Split({
   );
 
   const currentWidth = () =>
-    root.current?.firstElementChild?.getBoundingClientRect().width ?? defaultWidth;
+    asidePane.current?.getBoundingClientRect().width ?? defaultWidth;
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -174,6 +180,7 @@ export function Split({
 
   const handle = (
     <div
+      key="handle"
       className="ui-split-handle"
       role="separator"
       aria-orientation="vertical"
@@ -194,33 +201,30 @@ export function Split({
     />
   );
 
+  const asideElement = (
+    <div key="aside" ref={asidePane} className="ui-split-aside">
+      {aside}
+    </div>
+  );
+  const mainElement = (
+    <div key="main" className="ui-split-main">
+      {children}
+    </div>
+  );
+  // Keyed, so flipping `side` reorders the panes instead of remounting them.
   const panes =
     side === "start"
-      ? [
-          <div key="aside" className="ui-split-aside">
-            {aside}
-          </div>,
-          handle,
-          <div key="main" className="ui-split-main">
-            {children}
-          </div>,
-        ]
-      : [
-          <div key="main" className="ui-split-main">
-            {children}
-          </div>,
-          handle,
-          <div key="aside" className="ui-split-aside">
-            {aside}
-          </div>,
-        ];
+      ? [asideElement, handle, mainElement]
+      : [mainElement, handle, asideElement];
 
   return (
     <div
       {...rest}
       ref={root}
       className={cx("ui-split", side === "end" && "ui-split-end", className)}
-      style={{ [variable]: `${defaultWidth}px`, ...rest.style } as React.CSSProperties}
+      style={
+        { [variable]: `${defaultWidth}px`, ...rest.style } as CSSProperties
+      }
       data-split-var={variable}
     >
       {panes}

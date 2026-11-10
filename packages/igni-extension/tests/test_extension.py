@@ -15,6 +15,7 @@ from igni_extension import (
     ToolHintsMissing,
     WorkspaceMode,
 )
+from igni_extension.host_model import SessionChange
 from igni_extension.testing import HostHarness
 
 READS = ToolHints(read_only=True, destructive=False, idempotent=True, open_world=False)
@@ -66,7 +67,7 @@ async def test_a_tool_that_leaves_a_hint_unstated_stops_the_extension_serving() 
     ext.mcp.add_tool(unstated, name="unstated")
 
     with pytest.raises(ToolHintsMissing) as raised:
-        await ext.check_tools()
+        await ext.tools.check()
     assert raised.value.tools == ["unstated"]
 
 
@@ -95,6 +96,56 @@ async def test_a_signal_runs_its_handlers_with_the_value_it_carries() -> None:
     await ext.signals.emit(changed, "s-2")
 
     assert seen == ["first s-2", "last s-2"]
+
+
+async def test_a_signal_from_the_wire_is_parsed_and_one_nobody_reads_is_skipped(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ext = IgniExtension("acme.example", environ={})
+    switched: list[SessionChange] = []
+
+    @ext.on(ext.host.sessions.current_changed)
+    async def follow(change: SessionChange) -> None:
+        switched.append(change)
+
+    assert ext.signals.wires() == ["session.switched"]
+    assert ext.signals.handlers(ext.host.sessions.current_changed) == [follow]
+    assert ext.signals.handlers(ext.host.chat.run_completed) == []
+
+    await ext.signals.deliver("session.switched", {"session_id": "s-3", "window": "w-1"})
+    await ext.signals.deliver("chat.run_completed", {"anything": True})
+    await ext.signals.deliver("session.switched", {"no": "session id"})
+
+    assert [(c.session_id, c.window) for c in switched] == [("s-3", "w-1")]
+    assert "does not read" in caplog.text
+
+
+@pytest.mark.parametrize("name", ["signals", "connection", "process"])
+def test_the_parts_an_author_may_reach_are_documented_and_fixed(name: str) -> None:
+    ext = IgniExtension("acme.example", environ={})
+    documented = getattr(IgniExtension, name).__doc__ or ""
+    assert "Example::" in documented
+    with pytest.raises(AttributeError):
+        setattr(ext, name, None)
+
+
+async def test_serving_a_session_neither_connects_nor_starts_the_background_work() -> None:
+    ext = IgniExtension("acme.example", environ={})
+    started: list[str] = []
+
+    @ext.on_start
+    async def work() -> None:
+        started.append("work")
+
+    @ext.tool(hints=READS)
+    def ping() -> str:
+        return "pong"
+
+    async with HostHarness(ext) as host:
+        assert (await host.call("ping")).content[0].text == "pong"  # type: ignore[union-attr]
+
+    assert started == []
+    assert not ext.connection.configured and not ext.connection.connected
 
 
 def test_the_environment_igni_grants_is_read_typed(tmp_path: Path) -> None:

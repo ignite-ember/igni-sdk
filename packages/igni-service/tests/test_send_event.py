@@ -20,7 +20,7 @@ async def test_an_event_names_its_producer_and_goes_on_the_wire_as_igni_reads_it
     )
 
     assert accepted.event_id and not accepted.duplicate
-    [seen] = fake.requests_to(IgniPaths.SERVICE_EVENTS)
+    [seen] = fake.traffic.requests_to(IgniPaths.SERVICE_EVENTS)
     assert seen.headers["authorization"].startswith("Bearer service-")
     assert seen.json_body() == {
         "producer": {"kind": "person", "id": "u-max"},
@@ -28,7 +28,7 @@ async def test_an_event_names_its_producer_and_goes_on_the_wire_as_igni_reads_it
         "payload": {"id": "CL-20431"},
         "event_key": "claim:CL-20431",
     }
-    [stored] = fake.events
+    [stored] = fake.agents.items
     assert stored.org_id == ORG and stored.producer == Producer.person("u-max")
 
 
@@ -38,13 +38,13 @@ async def test_the_same_event_key_is_stored_once(igni: IgniService, fake: FakeIg
     again = await host.send_event(Producer.person("u-max"), "claim.created", event_key="k1")
 
     assert again.duplicate and again.event_id == first.event_id
-    assert len(fake.events) == 1
+    assert len(fake.agents.items) == 1
 
 
 async def test_an_app_can_be_the_producer(igni: IgniService, fake: FakeIgni) -> None:
     await igni.host(ORG).send_event(Producer.app("claims-bot"), "claim.created")
 
-    assert fake.events[0].producer.kind == "app"
+    assert fake.agents.items[0].producer.kind == "app"
 
 
 async def test_a_producer_outside_the_organisation_is_refused(
@@ -54,18 +54,18 @@ async def test_a_producer_outside_the_organisation_is_refused(
         await igni.host(ORG).send_event(Producer.person("u-eve"), "claim.created")
 
     assert refused.value.status == 404
-    assert fake.events == []
+    assert fake.agents.items == []
 
 
 async def test_igni_failing_is_retried_then_reported(igni: IgniService, fake: FakeIgni) -> None:
     from igni_service import IgniUnavailable
 
-    fake.failing[IgniPaths.SERVICE_EVENTS] = 503
+    fake.traffic.fail(IgniPaths.SERVICE_EVENTS, 503)
     igni.events._sleep = _no_sleep
     with pytest.raises(IgniUnavailable):
         await igni.host(ORG).send_event(Producer.person("u-max"), "claim.created")
 
-    assert len(fake.requests_to(IgniPaths.SERVICE_EVENTS)) == 3
+    assert len(fake.traffic.requests_to(IgniPaths.SERVICE_EVENTS)) == 3
 
 
 def test_a_mistake_is_caught_before_it_is_sent() -> None:

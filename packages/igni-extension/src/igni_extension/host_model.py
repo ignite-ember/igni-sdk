@@ -1,4 +1,4 @@
-"""GENERATED from the igni host schema 1.11.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
+"""GENERATED from the igni host schema 1.13.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 
 `ext.host` as an extension's process sees it. Read
 `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
@@ -22,14 +22,15 @@ from igni_extension.members import (
 )
 from igni_extension.notifications import LocalNotification, Target
 
-SCHEMA_VERSION = "1.11.0"
+SCHEMA_VERSION = "1.13.0"
+"""The version of igni's host object model this SDK was generated from."""
 
 NotificationTarget = Target
 
 class Change(BaseModel):
     """One change anywhere in the model, as `host.changed` reports it."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     path: str
     """The member that changed, `object.member`."""
@@ -42,7 +43,7 @@ class Change(BaseModel):
 class Display(BaseModel):
     """How igni presents the conversation."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     verbose: bool
     """Whether routing detail is shown."""
@@ -59,7 +60,7 @@ class Display(BaseModel):
 class Connection(BaseModel):
     """Whether igni can reach a model and its server."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     cloud_connected: bool
     model_configured: bool
@@ -69,7 +70,7 @@ class Connection(BaseModel):
 class UpdateInfo(BaseModel):
     """A newer igni than the one running."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     current_version: str
     latest_version: str
@@ -79,7 +80,7 @@ class UpdateInfo(BaseModel):
 class StateChange(BaseModel):
     """One key of an extension's own state."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     key: str
     value: str | None = None
@@ -89,7 +90,7 @@ class StateChange(BaseModel):
 class WindowInfo(BaseModel):
     """One igni window: a desktop window or a browser tab."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     """Stable across reloads of the same window."""
@@ -106,7 +107,7 @@ class WindowInfo(BaseModel):
 class Page(BaseModel):
     """One level of a window's page stack."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     """`plugins`, `extensions`, an extension's page kind, …"""
@@ -117,7 +118,7 @@ class Page(BaseModel):
 class Route(BaseModel):
     """Where a window is: its page stack, empty for the chat."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     pages: list[Page]
@@ -126,7 +127,7 @@ class Route(BaseModel):
 class Panel(BaseModel):
     """The panel open over a window's chat: `notifications`, `search` (find in the conversation), `login` or `dir-picker`. One at a time."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     params: dict[str, JsonValue] = Field(default_factory=dict)
@@ -135,7 +136,7 @@ class Panel(BaseModel):
 class PanelChange(BaseModel):
     """A window's panel opened or closed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     panel: Panel | None = None
@@ -144,7 +145,7 @@ class PanelChange(BaseModel):
 class Sidebar(BaseModel):
     """A window's sidebar."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     open: bool
     width: int | None = None
@@ -156,7 +157,7 @@ class Sidebar(BaseModel):
 class SidebarChange(BaseModel):
     """A window's sidebar changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     sidebar: Sidebar
@@ -165,7 +166,7 @@ class SidebarChange(BaseModel):
 class Preview(BaseModel):
     """The file previewed in a window."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     path: str
 
@@ -173,7 +174,7 @@ class Preview(BaseModel):
 class PreviewChange(BaseModel):
     """A window's preview changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     preview: Preview | None = None
@@ -182,7 +183,7 @@ class PreviewChange(BaseModel):
 class SelectionState(BaseModel):
     """What is selected in a window. Each part is independent; `None` for nothing."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     message_id: str | None = None
     """The highlighted message, by the run it belongs to (`run_id` in `chat.messages` and the run signals)."""
@@ -195,7 +196,7 @@ class SelectionState(BaseModel):
 class SelectionChange(BaseModel):
     """A window's selection changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     selection: SelectionState
@@ -204,7 +205,7 @@ class SelectionChange(BaseModel):
 class Composer(BaseModel):
     """A window's composer."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     text: str
     """The draft, without the mode's `/` or `$`."""
@@ -217,7 +218,7 @@ class Composer(BaseModel):
 class ComposerChange(BaseModel):
     """A window's draft changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     composer: Composer
@@ -226,8 +227,10 @@ class ComposerChange(BaseModel):
 class Toast(BaseModel):
     """A transient message on screen."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
+    type: str
+    """Always `toast`: what this is."""
     id: str
     text: str
     """Its first line."""
@@ -244,7 +247,7 @@ class Toast(BaseModel):
 class ToastChange(BaseModel):
     """A toast appeared or went away."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     toast: Toast
@@ -253,8 +256,10 @@ class ToastChange(BaseModel):
 class Dialog(BaseModel):
     """A dialog on screen: igni's own (`spec.kind` is `update`) or an extension's (`show_dialog`). One at a time; a new one replaces the last, which closes unanswered."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
+    type: str
+    """Always `dialog`: what this is."""
     id: str
     spec: JsonValue
     source: str | None = None
@@ -264,7 +269,7 @@ class Dialog(BaseModel):
 class DialogChange(BaseModel):
     """A dialog opened or closed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     window: str
     dialog: Dialog
@@ -275,7 +280,7 @@ class DialogChange(BaseModel):
 class Scroll(BaseModel):
     """Where a window's transcript is scrolled to."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     message_id: str | None = None
     """The message at the top of the view, by its run; `None` for none."""
@@ -288,7 +293,7 @@ class Scroll(BaseModel):
 class SessionInfo(BaseModel):
     """One session, as the session list shows it."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     name: str
@@ -302,7 +307,7 @@ class SessionInfo(BaseModel):
 class SessionChange(BaseModel):
     """A window moved to another session."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     window: str | None = None
@@ -311,7 +316,7 @@ class SessionChange(BaseModel):
 class SessionList(BaseModel):
     """The session list, as it was just read."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     sessions: list[SessionInfo]
 
@@ -319,7 +324,7 @@ class SessionList(BaseModel):
 class SessionCleared(BaseModel):
     """`/clear`: a session carries on under a new id."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     new_session_id: str
@@ -329,7 +334,7 @@ class SessionCleared(BaseModel):
 class SessionNamed(BaseModel):
     """A session was given its name."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     name: str
@@ -338,7 +343,7 @@ class SessionNamed(BaseModel):
 class SessionAttached(BaseModel):
     """A session bound, and the folder it works in."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     project_dir: str
@@ -347,7 +352,7 @@ class SessionAttached(BaseModel):
 class ChatMessage(BaseModel):
     """A message posted in a chat."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     text: str
@@ -362,7 +367,7 @@ class ChatMessage(BaseModel):
 class HistoryChange(BaseModel):
     """Turns were removed from a session's history."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     what: str
@@ -374,7 +379,7 @@ class HistoryChange(BaseModel):
 class ContentDelta(BaseModel):
     """A piece of the agent's answer as it streams."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     text: str
@@ -384,7 +389,7 @@ class ContentDelta(BaseModel):
 class RunRef(BaseModel):
     """Which run."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -395,7 +400,7 @@ class RunRef(BaseModel):
 class RunStart(BaseModel):
     """A run started."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -407,7 +412,7 @@ class RunStart(BaseModel):
 class Run(BaseModel):
     """A finished run."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -424,7 +429,7 @@ class Run(BaseModel):
 class RunFailure(BaseModel):
     """A run stopped with an error."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     error: str
@@ -433,7 +438,7 @@ class RunFailure(BaseModel):
 class Approval(BaseModel):
     """The agent asking to act."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     requirement_id: str
     session_id: str
@@ -448,7 +453,7 @@ class Approval(BaseModel):
 class RunPause(BaseModel):
     """A run waiting on approvals."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -458,7 +463,7 @@ class RunPause(BaseModel):
 class ApprovalResolved(BaseModel):
     """An approval was answered, by anyone."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     requirement_id: str
@@ -467,7 +472,7 @@ class ApprovalResolved(BaseModel):
 class ApprovalChange(BaseModel):
     """An approval began or stopped waiting on a person — however it ended: answered in a window or through the API, after a restart, or dropped with its run."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     requirement_id: str
@@ -483,7 +488,7 @@ class ApprovalChange(BaseModel):
 class SessionActivity(BaseModel):
     """One session's share of `Activity`."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     state: str
@@ -494,7 +499,7 @@ class SessionActivity(BaseModel):
 class Activity(BaseModel):
     """Whether igni is doing anything. A run waiting only on a person — on an approval, its own or a sub-agent's — is `waiting`, not `running`: nothing happens until the decision, so the process may be suspended and the decision wakes it."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     state: str
     """`idle`, `waiting` or `running`."""
@@ -511,7 +516,7 @@ class Activity(BaseModel):
 class BusyLease(BaseModel):
     """One thing igni is busy with. A lease with `expires_at` stops counting then, whether or not it was let go."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     kind: str
@@ -528,7 +533,7 @@ class BusyLease(BaseModel):
 class ApprovalDetails(BaseModel):
     """The reason for an approval, arriving after it."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     requirement_id: str
@@ -538,7 +543,7 @@ class ApprovalDetails(BaseModel):
 class ApprovalAnswer(BaseModel):
     """One answer to one approval."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     requirement_id: str
     action: str
@@ -550,7 +555,7 @@ class ApprovalAnswer(BaseModel):
 class ToolCall(BaseModel):
     """The agent started calling a tool."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -563,7 +568,7 @@ class ToolCall(BaseModel):
 class ToolResult(BaseModel):
     """A tool call finished."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -576,7 +581,7 @@ class ToolResult(BaseModel):
 class ToolFailure(BaseModel):
     """A tool call failed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -587,7 +592,7 @@ class ToolFailure(BaseModel):
 class ModelUsage(BaseModel):
     """One model call's tokens."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     run_id: str
@@ -599,7 +604,7 @@ class ModelUsage(BaseModel):
 class Typing(BaseModel):
     """Someone's draft in a session, live."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     text: str
@@ -609,7 +614,7 @@ class Typing(BaseModel):
 class Status(BaseModel):
     """A session's status line."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     model: str
@@ -624,7 +629,7 @@ class Status(BaseModel):
 class Notice(BaseModel):
     """An info or error line in a session."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     text: str
@@ -633,7 +638,7 @@ class Notice(BaseModel):
 class ContextUsage(BaseModel):
     """How full the context is, and with what."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     tokens: int
     max: int
@@ -643,7 +648,7 @@ class ContextUsage(BaseModel):
 class FileEdited(BaseModel):
     """The agent wrote a file."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     path: str
@@ -653,7 +658,7 @@ class FileEdited(BaseModel):
 class AgentEvent(BaseModel):
     """Progress of a sub-agent or a team, as the transcript shows it."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     kind: str
@@ -663,7 +668,7 @@ class AgentEvent(BaseModel):
 class Retry(BaseModel):
     """A network call being retried, and whether it recovered."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     kind: str
@@ -674,7 +679,7 @@ class Retry(BaseModel):
 class View(BaseModel):
     """A json-render block in the transcript."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     view_id: str
     session_id: str
@@ -688,7 +693,7 @@ class View(BaseModel):
 class ViewAction(BaseModel):
     """The person used a control inside a view."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     action: str
@@ -698,11 +703,12 @@ class ViewAction(BaseModel):
 class Plan(BaseModel):
     """The plan the agent proposed in plan mode."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     latest: str
     history: list[str]
-    tasks: list[JsonValue]
+    tasks: list[TodoItem]
+    """The todo list the plan carries."""
     state: str
     """`pending`, or empty when there is none."""
 
@@ -710,7 +716,7 @@ class Plan(BaseModel):
 class PlanChange(BaseModel):
     """A plan was submitted or decided."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     kind: str
@@ -721,7 +727,7 @@ class PlanChange(BaseModel):
 class TaskEvent(BaseModel):
     """A sub-agent task created or updated."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     task_id: str
@@ -733,7 +739,7 @@ class TaskEvent(BaseModel):
 class TaskIteration(BaseModel):
     """A task loop's iteration count."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     iteration: int
@@ -743,7 +749,7 @@ class TaskIteration(BaseModel):
 class TaskSnapshot(BaseModel):
     """Every task, as it now stands."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
     tasks: list[JsonValue]
@@ -752,16 +758,16 @@ class TaskSnapshot(BaseModel):
 class Todos(BaseModel):
     """The agent's todo list."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
-    todos: list[JsonValue]
+    todos: list[TodoItem]
 
 
 class LoopStatus(BaseModel):
     """`/loop`, as it stands."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     active: bool
     paused: bool
@@ -769,12 +775,14 @@ class LoopStatus(BaseModel):
     iteration_index: int
     iterations_remaining: int
     cap_explicit: bool
+    announced_total: int | None
+    """How many iterations were announced, when it is known."""
 
 
 class CommandOutcome(BaseModel):
     """What a slash command answered."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     content: str
@@ -784,7 +792,7 @@ class CommandOutcome(BaseModel):
 class CollectionChange(BaseModel):
     """Something in a collection changed; read it again."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     what: str
     """What happened: `connected`, `installed`, `event`, …"""
@@ -797,7 +805,7 @@ class CollectionChange(BaseModel):
 class WorkflowRun(BaseModel):
     """A workflow started."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     workflow_run_id: str
     name: str
@@ -806,7 +814,7 @@ class WorkflowRun(BaseModel):
 class SchedulerEvent(BaseModel):
     """A scheduled task started, finished or changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     task_id: str
@@ -817,7 +825,7 @@ class SchedulerEvent(BaseModel):
 class ProcessEvent(BaseModel):
     """A background shell started, printed, or exited."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     """`started`, `line`, `exited` or `done`."""
@@ -827,7 +835,7 @@ class ProcessEvent(BaseModel):
 class Head(BaseModel):
     """The project's git HEAD."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     commit_sha: str
     branch: str
@@ -836,7 +844,7 @@ class Head(BaseModel):
 class FilesChanged(BaseModel):
     """Files git sees as changed, within the extension's workspace grant."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     paths: list[str]
     truncated: bool
@@ -846,7 +854,7 @@ class FilesChanged(BaseModel):
 class ModelChange(BaseModel):
     """The model in use changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     current: str
 
@@ -854,7 +862,7 @@ class ModelChange(BaseModel):
 class ExtensionInfo(BaseModel):
     """An installed extension."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     name: str
@@ -876,7 +884,7 @@ class ExtensionInfo(BaseModel):
 class Withheld(BaseModel):
     """One thing an extension declared and does not get, and why."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     claim: str
     """`prompt:main`, `prompt:main#workflow`, `prompt:agent:explorer+notes`, `command:/review`, `anchor:NAME`."""
@@ -886,7 +894,7 @@ class Withheld(BaseModel):
 class ExtensionStateChange(BaseModel):
     """An extension's health moved."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     extension_id: str
     state: str
@@ -896,16 +904,17 @@ class ExtensionStateChange(BaseModel):
 class PermissionModeChange(BaseModel):
     """The session's permission mode changed."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     mode: str
-    previous: str
+    previous: str | None = None
+    """The mode before this one; `None` when the push named none."""
 
 
 class Account(BaseModel):
     """Who is signed in to igni, without any credential."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     signed_in: bool
     email: str
@@ -916,7 +925,7 @@ class Account(BaseModel):
 class NotificationEntry(BaseModel):
     """One notification, from igni server or from an extension on this machine."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     origin: str
@@ -936,7 +945,7 @@ class NotificationEntry(BaseModel):
 class NotificationCounts(BaseModel):
     """Unread notifications, in all and per extension."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     unread: int
     by_source: dict[str, int]
@@ -945,7 +954,7 @@ class NotificationCounts(BaseModel):
 class SettingsChange(BaseModel):
     """An extension's settings, as now configured."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     values: dict[str, JsonValue]
 
@@ -953,7 +962,7 @@ class SettingsChange(BaseModel):
 class DecisionQuestion(BaseModel):
     """One typed question about a context. It quotes the context's fields by name in backticks, as in: Is `diff` only a refactor?"""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     id: str
     """Its name in the answers: a lowercase name."""
@@ -970,7 +979,7 @@ class DecisionQuestion(BaseModel):
 class DecisionAnswer(BaseModel):
     """One question's answer, with the probabilities it came from."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     kind: str
     answer: str
@@ -986,7 +995,7 @@ class DecisionAnswer(BaseModel):
 class Decision(BaseModel):
     """Every question's answer about one context."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     answers: dict[str, DecisionAnswer]
     """By question id."""
@@ -994,10 +1003,525 @@ class Decision(BaseModel):
     """The Laya checkpoint that answered: `english` or `multilingual`."""
 
 
+class ModelRegistry(BaseModel):
+    """Every model igni knows: the default, the ceiling, and the rows."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    default: str
+    """The model used unless another is chosen."""
+    max_context_window: int
+    """The largest context window any model has."""
+    registry: dict[str, ModelEntry]
+    """The rows, by model id."""
+
+
+class ModelEntry(BaseModel):
+    """One model in the registry — and never its credential: only whether it has a key."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    model_id: str
+    provider: str
+    url: str | None
+    """The endpoint, when the provider names one."""
+    has_api_key: bool
+    """Whether the entry says where its key comes from. Never the key, never the environment variable, never the command."""
+    temperature: float | None
+    max_tokens: int | None
+    timeout: int
+    """Seconds before a request to it is given up on."""
+    vision: bool
+    """Whether it reads images."""
+    context_window: int | None
+    thinking: dict[str, JsonValue] | None
+    """How it is asked to think."""
+    effort: str | None
+    prompt_caching: bool
+    source: str
+    """Where the entry came from: `cloud` or the local configuration."""
+
+
+class McpServer(BaseModel):
+    """One MCP server: its name, and whether it is connected."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    connected: bool
+
+
+class McpServerDetails(BaseModel):
+    """One MCP server and what it carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    connected: bool
+    transport: str
+    tool_names: list[str]
+    """The tools it offers."""
+    tool_descriptions: dict[str, str]
+    """What each tool says it does."""
+    tools_disabled: list[str]
+    """The tools withheld from the agent."""
+    resources: list[McpResource]
+    """The resources it offers."""
+    prompts: list[McpPrompt]
+    """The prompts it offers."""
+    error: str
+    """Why it is not working, when it is not."""
+    policy_blocked: bool
+    """Whether the group's policy forbade it."""
+
+
+class McpResource(BaseModel):
+    """One resource an MCP server offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    uri: str
+    name: str
+    description: str
+    mime_type: str
+
+
+class McpPrompt(BaseModel):
+    """One prompt an MCP server offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    arguments: list[str]
+    """The arguments it takes."""
+
+
+class McpInit(BaseModel):
+    """What starting the MCP servers did."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    connected: list[str]
+    """The servers that are now connected."""
+    failed: dict[str, str]
+    """The servers that did not, and why."""
+    rebuilt: bool
+    """Whether the clients were rebuilt."""
+    skipped_reason: str | None
+    """Why nothing was started, when nothing was: `already_initialized`, `no_configured_servers` or `no_clients_connected`."""
+
+
+class McpToolToggle(BaseModel):
+    """One tool of one server, offered or withheld."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    server: str
+    tool: str
+    enabled: bool
+
+
+class PluginInfo(BaseModel):
+    """One installed plugin."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    version: str
+    description: str
+    source_root: str
+    """Where it was installed from."""
+    path: str
+    """Where it lives on this machine."""
+    enabled: bool
+    has_skills: bool
+    has_agents: bool
+    has_hooks: bool
+    has_mcp: bool
+    has_tools: bool
+    has_lsp: bool
+    has_monitors: bool
+    managed: bool
+    """Whether igni keeps it up to date itself."""
+    pin: str
+    """The version it is pinned to, when it is."""
+
+
+class Marketplace(BaseModel):
+    """One marketplace of plugins."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    url: str
+    last_fetched: str
+    """When it was last read."""
+    plugins: list[MarketplacePlugin]
+    """The plugins it offers."""
+
+
+class MarketplacePlugin(BaseModel):
+    """One plugin a marketplace offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    source: str
+    description: str
+    version: str
+    branch: str
+
+
+class PluginContents(BaseModel):
+    """What a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    root_path: str
+    """Where it lives on this machine."""
+    skills: list[PluginSkill]
+    agents: list[PluginAgent]
+    hooks: list[PluginHook]
+    mcp_servers: list[PluginMcpServer]
+    tools: list[PluginTool]
+    readme: str
+    error: str
+    """Why it could not be read, when it could not."""
+    preview_source: PluginPreviewSource | None
+    """Where it would come from."""
+
+
+class PluginSkill(BaseModel):
+    """One skill a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+
+
+class PluginAgent(BaseModel):
+    """One agent a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+
+
+class PluginHook(BaseModel):
+    """One hook a plugin carries: the event, and how many it registers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    event: str
+    count: int
+
+
+class PluginMcpServer(BaseModel):
+    """One MCP server a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    transport: str
+    command: str
+
+
+class PluginTool(BaseModel):
+    """One tool a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+
+
+class PluginPreviewSource(BaseModel):
+    """Where a plugin would come from."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    url: str
+    subdir: str
+
+
+class HookEntry(BaseModel):
+    """One hook igni has."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    event: str
+    type: str
+    """How it runs: `command`, `url` or another."""
+    command: str
+    url: str
+    matcher: str
+    """What it matches, when it matches something."""
+    timeout_ms: int
+    background: bool
+    header_names: list[str]
+    """The names of the headers an `http` hook sends. Never their values, which may be credentials."""
+
+
+class PolicyPack(BaseModel):
+    """The group's policy pack."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    group_id: str | None
+    group_name: str | None
+    fetched_at: str | None
+    entry_count: int
+    """How many rules it holds."""
+    default_model: str | None
+    """The model it points every group at."""
+
+
+class PlanDecision(BaseModel):
+    """What was decided about a plan."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    run_id: str
+    """The run the plan belonged to."""
+    decision: str
+    """`approved` or `dismissed`."""
+    mode_status: str
+    """What the plan mode says now."""
+    ok: bool
+    error: str | None
+    """Why it went wrong, when it did."""
+
+
+class TodoItem(BaseModel):
+    """One item of the agent's todo list."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    content: str
+    """What is to be done, as an imperative."""
+    status: str
+    """`pending`, `in_progress` or `completed`."""
+    activeForm: str
+    """What is shown while it is in progress — the gerund, e.g. `Running tests`."""
+
+
+class LoopAdvance(BaseModel):
+    """One iteration of a loop, taken."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    kind: str
+    """`completed`, `safety_paused` or `step`."""
+    completed: bool
+    total_iterations: int
+    safety_cap_paused: bool
+    prompt: str
+    display_prompt: str
+    iteration: int
+    remaining: int
+    cap_explicit: bool
+    """Whether the cap was asked for."""
+    auto_extended: bool
+    """Whether the cap was extended by itself."""
+
+
+class SlashCommand(BaseModel):
+    """One slash command."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    source: str
+    """`builtin`, `markdown`, `skill` or `extension`."""
+    name: str
+    """With its slash: `/ctx`."""
+    description: str
+    argument_hint: str
+    """What it takes, as a hint."""
+    owner: str | None = None
+    """The extension that answers it, when an extension does."""
+
+
+class SkillDefinition(BaseModel):
+    """One skill, as the agent is given it."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    prompt: str
+    """Its body: what the agent is told to do."""
+
+
+class SkillDetails(BaseModel):
+    """One skill, as the person sees it."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    version: str
+    category: str
+    argument_hint: str
+    context: str
+    agent: str
+    user_invocable: bool
+    """Whether the person may invoke it as `/name`."""
+    body: str
+    source_dir: str
+    """Where it lives on this machine."""
+
+
+class AgentInfo(BaseModel):
+    """One agent."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    tools: list[str]
+    """The tools it may use."""
+    model: str
+    color: str
+    can_orchestrate: bool
+    """Whether it may run other agents."""
+    mcp_servers: list[str]
+    """The MCP servers it is given."""
+    tags: list[str]
+    system_prompt: str
+    source_path: str
+    """Where it lives on this machine."""
+    is_ephemeral: bool
+    """Whether it was made for one task only."""
+    unknown_tools: list[str]
+    """The tools it names that do not exist."""
+
+
+class PromoteResult(BaseModel):
+    """What became of an agent made for one task."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    ok: bool
+    name: str
+    dest: str
+    """Where it was kept, when it was."""
+    reason: str
+    """Why it was not, when it was not."""
+
+
+class DiscardResult(BaseModel):
+    """What became of an agent made for one task, dropped."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    ok: bool
+    name: str
+    reason: str
+    """Why it was not, when it was not."""
+
+
+class Workflow(BaseModel):
+    """One workflow."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    whenToUse: str
+    """When the agent should reach for it."""
+    phases: list[WorkflowPhase]
+    """The phases it runs through."""
+    path: str
+    """Where it lives on this machine."""
+
+
+class WorkflowPhase(BaseModel):
+    """One phase of a workflow."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    title: str
+    detail: str
+
+
+class ScheduledTask(BaseModel):
+    """One scheduled task."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    id: str
+    description: str
+    """What the agent is asked to do."""
+    scheduled_at: str
+    """ISO 8601, when it is next due."""
+    created_at: str
+    """ISO 8601, when it was made."""
+    status: str
+    """`pending`, `running`, `completed`, `failed` or `cancelled`."""
+    result: str
+    """What it left behind, when it has run."""
+    error: str
+    """Why it failed, when it did."""
+    recurrence: str
+    """How it repeats, when it does."""
+
+
+class ProcessRow(BaseModel):
+    """One background shell."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    cmd: str
+    elapsed_seconds: float
+    is_running: bool
+    exit_code: int | None
+    """How it ended, when it has."""
+
+
+class ProcessTail(BaseModel):
+    """A background shell's last lines."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    output: str
+    is_running: bool
+    exit_code: int | None
+    """How it ended, when it has."""
+
+
+class ProcessStop(BaseModel):
+    """What stopping a background shell did."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    killed: bool
+    message: str
+
+
+class ShellResult(BaseModel):
+    """What a command in the project printed."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    output: str
+    exit_code: int
+    pid: int | None
+    """The process's id, once it started; `null` when it could not."""
+    backgrounded: bool
+    """`true` when the command is still running, in the background."""
+
+
 class HostAppState(HostObject):
     """Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys."""
 
     PATH = "app.state"
+    """Where this object is in the host model: `host.app.state`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1024,6 +1548,7 @@ class HostChatApprovals(HostObject):
     """The agent asking to act, and the answers. Through `host.sessions.chat(id)` `waiting` reads that session; an approval is answered only in the session on screen."""
 
     PATH = "chat.approvals"
+    """Where this object is in the host model: `host.chat.approvals`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1052,6 +1577,7 @@ class HostChatViews(HostObject):
     """json-render blocks in the transcript — the visualizer's and extensions'. Through `host.sessions.chat(id)` `list` reads that session; `dispatch` acts only in the session on screen."""
 
     PATH = "chat.views"
+    """Where this object is in the host model: `host.chat.views`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1072,12 +1598,14 @@ class HostApp(HostObject):
     """igni itself: how it presents things, which version, whether it is connected."""
 
     PATH = "app"
+    """Where this object is in the host model: `host.app`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
         self.state = HostAppState(link, window, session)
+        """`host.app.state`. Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys."""
         self.display: Property[Display] = Property(self, "display", Display, writable=False)
         """Theme, verbosity, output style."""
         self.version: Property[str] = Property(self, "version", str, writable=False)
@@ -1106,7 +1634,7 @@ class HostApp(HostObject):
         return cast(Display, await self._call("set_output_style", {"name": name}, Display))
 
     async def check_for_update(self) -> UpdateInfo | None:
-        """Ask whether a newer igni exists."""
+        """Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`."""
         return cast(UpdateInfo | None, await self._call("check_for_update", {}, UpdateInfo | None))
 
     async def open_external(self, url: str) -> None:
@@ -1117,6 +1645,7 @@ class HostWindows(HostObject):
     """Every open igni window. Address one window's UI with `host.windows.ui(id)`."""
 
     PATH = "windows"
+    """Where this object is in the host model: `host.windows`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1141,6 +1670,7 @@ class HostUi(HostObject):
     """What a window shows — the model its views bind to. `host.ui` is the active window, the one the person last used; `host.windows.ui(id)` any window. igni's own views write here too, by the same path, so every change below is a signal whoever made it."""
 
     PATH = "ui"
+    """Where this object is in the host model: `host.ui`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1243,6 +1773,7 @@ class HostSessions(HostObject):
     """The sessions of this project, and which one the active window shows. Reach any session's chat, without showing it, with `host.sessions.chat(id)`."""
 
     PATH = "sessions"
+    """Where this object is in the host model: `host.sessions`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1283,13 +1814,16 @@ class HostChat(HostObject):
     """The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen."""
 
     PATH = "chat"
+    """Where this object is in the host model: `host.chat`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
         self.approvals = HostChatApprovals(link, window, session)
+        """`host.chat.approvals`. The agent asking to act, and the answers. Through `host.sessions.chat(id)` `waiting` reads that session; an approval is answered only in the session on screen."""
         self.views = HostChatViews(link, window, session)
+        """`host.chat.views`. json-render blocks in the transcript — the visualizer's and extensions'. Through `host.sessions.chat(id)` `list` reads that session; `dispatch` acts only in the session on screen."""
         self.session_id: Property[str] = Property(self, "session_id", str, writable=False)
         """The current session."""
         self.messages: Property[list[JsonValue]] = Property(self, "messages", list[JsonValue], writable=False)
@@ -1399,6 +1933,7 @@ class HostPlan(HostObject):
     """Plan mode: the plan the agent proposed."""
 
     PATH = "plan"
+    """Where this object is in the host model: `host.plan`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1409,24 +1944,25 @@ class HostPlan(HostObject):
         self.changed: Signal[PlanChange] = Signal("plan.changed", PlanChange)
         """A plan was submitted or decided."""
 
-    async def approve(self, run_id: str | None = None) -> JsonValue:
+    async def approve(self, run_id: str | None = None) -> PlanDecision:
         """Approve the plan."""
-        return cast(JsonValue, await self._call("approve", {"run_id": run_id}, JsonValue))
+        return cast(PlanDecision, await self._call("approve", {"run_id": run_id}, PlanDecision))
 
-    async def dismiss(self, run_id: str | None = None) -> JsonValue:
+    async def dismiss(self, run_id: str | None = None) -> PlanDecision:
         """Send the plan back."""
-        return cast(JsonValue, await self._call("dismiss", {"run_id": run_id}, JsonValue))
+        return cast(PlanDecision, await self._call("dismiss", {"run_id": run_id}, PlanDecision))
 
 class HostTasks(HostObject):
     """The agent's todo list and its sub-agent tasks."""
 
     PATH = "tasks"
+    """Where this object is in the host model: `host.tasks`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.todos: Property[list[JsonValue]] = Property(self, "todos", list[JsonValue], writable=False)
+        self.todos: Property[list[TodoItem]] = Property(self, "todos", list[TodoItem], writable=False)
         """The todo list."""
         self.created: Signal[TaskEvent] = Signal("tasks.created", TaskEvent)
         """A task was created."""
@@ -1443,6 +1979,7 @@ class HostLoop(HostObject):
     """`/loop`: a prompt repeated until done."""
 
     PATH = "loop"
+    """Where this object is in the host model: `host.loop`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1465,26 +2002,27 @@ class HostLoop(HostObject):
         """Stop the loop."""
         return cast(bool, await self._call("cancel_pending", {}, bool))
 
-    async def pop_pending(self) -> JsonValue:
+    async def pop_pending(self) -> LoopAdvance | None:
         """Take the next iteration."""
-        return cast(JsonValue, await self._call("pop_pending", {}, JsonValue))
+        return cast(LoopAdvance | None, await self._call("pop_pending", {}, LoopAdvance | None))
 
 class HostCommands(HostObject):
     """Slash commands and skills."""
 
     PATH = "commands"
+    """Where this object is in the host model: `host.commands`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[SlashCommand]] = Property(self, "list", list[SlashCommand], writable=False)
         """Every slash command."""
         self.skills: Property[list[str]] = Property(self, "skills", list[str], writable=False)
         """Skill names."""
-        self.skill_definitions: Property[list[JsonValue]] = Property(self, "skill_definitions", list[JsonValue], writable=False)
+        self.skill_definitions: Property[list[SkillDefinition]] = Property(self, "skill_definitions", list[SkillDefinition], writable=False)
         """Each skill's description and prompt."""
-        self.skill_details: Property[list[JsonValue]] = Property(self, "skill_details", list[JsonValue], writable=False)
+        self.skill_details: Property[list[SkillDetails]] = Property(self, "skill_details", list[SkillDetails], writable=False)
         """Each skill's details."""
 
     async def run(self, command: str) -> CommandOutcome:
@@ -1495,34 +2033,36 @@ class HostAgents(HostObject):
     """Agent definitions."""
 
     PATH = "agents"
+    """Where this object is in the host model: `host.agents`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[AgentInfo]] = Property(self, "details", list[AgentInfo], writable=False)
         """Every agent."""
         self.changed: Signal[CollectionChange] = Signal("agents.changed", CollectionChange)
         """An agent was promoted or discarded."""
 
-    async def promote_ephemeral(self, name: str, target: str | None = None) -> JsonValue:
+    async def promote_ephemeral(self, name: str, target: str | None = None) -> PromoteResult:
         """Keep an agent made for one task, as `/agents promote` does."""
-        return cast(JsonValue, await self._call("promote_ephemeral", {"name": name, "target": target}, JsonValue))
+        return cast(PromoteResult, await self._call("promote_ephemeral", {"name": name, "target": target}, PromoteResult))
 
-    async def discard_ephemeral(self, name: str) -> JsonValue:
+    async def discard_ephemeral(self, name: str) -> DiscardResult:
         """Drop an agent made for one task."""
-        return cast(JsonValue, await self._call("discard_ephemeral", {"name": name}, JsonValue))
+        return cast(DiscardResult, await self._call("discard_ephemeral", {"name": name}, DiscardResult))
 
 class HostWorkflows(HostObject):
     """Workflows: scripted runs."""
 
     PATH = "workflows"
+    """Where this object is in the host model: `host.workflows`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[Workflow]] = Property(self, "list", list[Workflow], writable=False)
         """Every workflow."""
         self.changed: Signal[CollectionChange] = Signal("workflows.changed", CollectionChange)
         """A workflow run moved on."""
@@ -1539,12 +2079,13 @@ class HostScheduler(HostObject):
     """Scheduled tasks."""
 
     PATH = "scheduler"
+    """Where this object is in the host model: `host.scheduler`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.tasks: Property[list[JsonValue]] = Property(self, "tasks", list[JsonValue], writable=False)
+        self.tasks: Property[list[ScheduledTask]] = Property(self, "tasks", list[ScheduledTask], writable=False)
         """Every scheduled task."""
         self.event: Signal[SchedulerEvent] = Signal("scheduler.event", SchedulerEvent)
         """A task started, finished or changed."""
@@ -1565,32 +2106,34 @@ class HostProcesses(HostObject):
     """Background shells."""
 
     PATH = "processes"
+    """Where this object is in the host model: `host.processes`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[ProcessRow]] = Property(self, "list", list[ProcessRow], writable=False)
         """Every background shell."""
         self.changed: Signal[ProcessEvent] = Signal("processes.changed", ProcessEvent)
         """A shell started, printed or exited."""
 
-    async def tail(self, pid: int, lines: int | None = None) -> JsonValue:
+    async def tail(self, pid: int, lines: int | None = None) -> ProcessTail:
         """A shell's last lines."""
-        return cast(JsonValue, await self._call("tail", {"pid": pid, "lines": lines}, JsonValue))
+        return cast(ProcessTail, await self._call("tail", {"pid": pid, "lines": lines}, ProcessTail))
 
-    async def stop(self, pid: int) -> JsonValue:
+    async def stop(self, pid: int) -> ProcessStop:
         """Stop a shell."""
-        return cast(JsonValue, await self._call("stop", {"pid": pid}, JsonValue))
+        return cast(ProcessStop, await self._call("stop", {"pid": pid}, ProcessStop))
 
-    async def run(self, command: str) -> JsonValue:
+    async def run(self, command: str) -> ShellResult:
         """Run a command in the project and wait for it."""
-        return cast(JsonValue, await self._call("run", {"command": command}, JsonValue))
+        return cast(ShellResult, await self._call("run", {"command": command}, ShellResult))
 
 class HostWorkspace(HostObject):
     """The project, as far as the extension's workspace grant reaches."""
 
     PATH = "workspace"
+    """Where this object is in the host model: `host.workspace`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1633,12 +2176,13 @@ class HostModels(HostObject):
     """Models."""
 
     PATH = "models"
+    """Where this object is in the host model: `host.models`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.registry: Property[JsonValue] = Property(self, "registry", JsonValue, writable=False)
+        self.registry: Property[ModelRegistry] = Property(self, "registry", ModelRegistry, writable=False)
         """Every model igni knows."""
         self.current: Property[str] = Property(self, "current", str, writable=True)
         """The model in use. Writable: setting it switches."""
@@ -1649,16 +2193,17 @@ class HostMcp(HostObject):
     """MCP servers."""
 
     PATH = "mcp"
+    """Where this object is in the host model: `host.mcp`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.servers: Property[list[JsonValue]] = Property(self, "servers", list[JsonValue], writable=False)
+        self.servers: Property[list[McpServer]] = Property(self, "servers", list[McpServer], writable=False)
         """Every server."""
-        self.status: Property[list[JsonValue]] = Property(self, "status", list[JsonValue], writable=False)
+        self.status: Property[list[McpServer]] = Property(self, "status", list[McpServer], writable=False)
         """Each server's status."""
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[McpServerDetails]] = Property(self, "details", list[McpServerDetails], writable=False)
         """Each server's tools and details."""
         self.changed: Signal[CollectionChange] = Signal("mcp.changed", CollectionChange)
         """A server connected, disconnected or changed tools."""
@@ -1671,37 +2216,38 @@ class HostMcp(HostObject):
         """Disconnect a server."""
         await self._call("disconnect", {"name": name}, NO_RESULT)
 
-    async def ensure(self) -> JsonValue:
+    async def ensure(self) -> McpInit:
         """Start the servers that should be running."""
-        return cast(JsonValue, await self._call("ensure", {}, JsonValue))
+        return cast(McpInit, await self._call("ensure", {}, McpInit))
 
-    async def set_tool_enabled(self, server: str, tool: str, on: bool) -> JsonValue:
+    async def set_tool_enabled(self, server: str, tool: str, on: bool) -> McpToolToggle:
         """Offer or withhold one tool."""
-        return cast(JsonValue, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, JsonValue))
+        return cast(McpToolToggle, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, McpToolToggle))
 
 class HostPlugins(HostObject):
     """Plugins and marketplaces."""
 
     PATH = "plugins"
+    """Where this object is in the host model: `host.plugins`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.installed: Property[list[JsonValue]] = Property(self, "installed", list[JsonValue], writable=False)
+        self.installed: Property[list[PluginInfo]] = Property(self, "installed", list[PluginInfo], writable=False)
         """Every installed plugin."""
-        self.marketplaces: Property[list[JsonValue]] = Property(self, "marketplaces", list[JsonValue], writable=False)
+        self.marketplaces: Property[list[Marketplace]] = Property(self, "marketplaces", list[Marketplace], writable=False)
         """Every marketplace."""
         self.changed: Signal[CollectionChange] = Signal("plugins.changed", CollectionChange)
         """A plugin or marketplace changed."""
 
-    async def contents(self, name: str) -> JsonValue:
+    async def contents(self, name: str) -> PluginContents:
         """What a plugin carries."""
-        return cast(JsonValue, await self._call("contents", {"name": name}, JsonValue))
+        return cast(PluginContents, await self._call("contents", {"name": name}, PluginContents))
 
-    async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> JsonValue:
+    async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> PluginContents:
         """What a plugin would install."""
-        return cast(JsonValue, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, JsonValue))
+        return cast(PluginContents, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, PluginContents))
 
     async def install(self, ref: str, install_ref: str | None = None) -> None:
         """Install a plugin."""
@@ -1735,6 +2281,7 @@ class HostExtensions(HostObject):
     """Installed extensions. Read-only, apart from this extension's own settings."""
 
     PATH = "extensions"
+    """Where this object is in the host model: `host.extensions`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1753,12 +2300,13 @@ class HostHooks(HostObject):
     """Hooks."""
 
     PATH = "hooks"
+    """Where this object is in the host model: `host.hooks`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[HookEntry]] = Property(self, "details", list[HookEntry], writable=False)
         """Every hook."""
         self.changed: Signal[CollectionChange] = Signal("hooks.changed", CollectionChange)
         """Hooks were reloaded."""
@@ -1775,6 +2323,7 @@ class HostPermissions(HostObject):
     """What the agent may do without asking."""
 
     PATH = "permissions"
+    """Where this object is in the host model: `host.permissions`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1785,9 +2334,9 @@ class HostPermissions(HostObject):
         self.mode_changed: Signal[PermissionModeChange] = Signal("permissions.mode_changed", PermissionModeChange)
         """The mode changed."""
 
-    async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> JsonValue:
-        """Would this tool call be allowed, asked or denied?"""
-        return cast(JsonValue, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, JsonValue))
+    async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> str:
+        """Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`."""
+        return cast(str, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, str))
 
     async def save_rule(self, rule: str, level: str) -> None:
         """Save a permission rule."""
@@ -1797,18 +2346,20 @@ class HostPolicy(HostObject):
     """The group policy in force."""
 
     PATH = "policy"
+    """Where this object is in the host model: `host.policy`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.pack: Property[JsonValue] = Property(self, "pack", JsonValue, writable=False)
+        self.pack: Property[PolicyPack] = Property(self, "pack", PolicyPack, writable=False)
         """The group's policy pack."""
 
 class HostAccount(HostObject):
     """Whether the person is signed in to igni. Never their session or a credential."""
 
     PATH = "account"
+    """Where this object is in the host model: `host.account`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1831,6 +2382,7 @@ class HostNotifications(HostObject):
     """The floor's notifications. Its own always; everyone's with `notifications`."""
 
     PATH = "notifications"
+    """Where this object is in the host model: `host.notifications`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1855,6 +2407,7 @@ class HostSelf(HostObject):
     """This extension, as the host sees it."""
 
     PATH = "self"
+    """Where this object is in the host model: `host.self`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
@@ -1885,35 +2438,60 @@ class Host(HostObject):
     """The root. `changed` reports every change anywhere in the model, for an extension that wants to see all of it; each delivery needs the grant of the member that changed."""
 
     PATH = ""
+    """Where this object is in the host model: the root, `host`."""
 
     def __init__(
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
         self.app = HostApp(link, window, session)
+        """`host.app`. igni itself: how it presents things, which version, whether it is connected."""
         self.windows = HostWindows(link, window, session)
+        """`host.windows`. Every open igni window. Address one window's UI with `host.windows.ui(id)`."""
         self.ui = HostUi(link, window, session)
+        """`host.ui`. What a window shows — the model its views bind to. `host.ui` is the active window, the one the person last used; `host.windows.ui(id)` any window. igni's own views write here too, by the same path, so every change below is a signal whoever made it."""
         self.sessions = HostSessions(link, window, session)
+        """`host.sessions`. The sessions of this project, and which one the active window shows. Reach any session's chat, without showing it, with `host.sessions.chat(id)`."""
         self.chat = HostChat(link, window, session)
+        """`host.chat`. The conversation in the current session. Signals carry the session they happened in, and arrive for every live session. `host.sessions.chat(id)` is the same object for any session of this project, without showing it: its properties read that session, and `post`, `queue`, `append` and `replace` write there (with `sessions.post` as well). A message posted there starts a run, or waits for the run already going there — never answering an approval. Its other methods act only on the session on screen."""
         self.plan = HostPlan(link, window, session)
+        """`host.plan`. Plan mode: the plan the agent proposed."""
         self.tasks = HostTasks(link, window, session)
+        """`host.tasks`. The agent's todo list and its sub-agent tasks."""
         self.loop = HostLoop(link, window, session)
+        """`host.loop`. `/loop`: a prompt repeated until done."""
         self.commands = HostCommands(link, window, session)
+        """`host.commands`. Slash commands and skills."""
         self.agents = HostAgents(link, window, session)
+        """`host.agents`. Agent definitions."""
         self.workflows = HostWorkflows(link, window, session)
+        """`host.workflows`. Workflows: scripted runs."""
         self.scheduler = HostScheduler(link, window, session)
+        """`host.scheduler`. Scheduled tasks."""
         self.processes = HostProcesses(link, window, session)
+        """`host.processes`. Background shells."""
         self.workspace = HostWorkspace(link, window, session)
+        """`host.workspace`. The project, as far as the extension's workspace grant reaches."""
         self.models = HostModels(link, window, session)
+        """`host.models`. Models."""
         self.mcp = HostMcp(link, window, session)
+        """`host.mcp`. MCP servers."""
         self.plugins = HostPlugins(link, window, session)
+        """`host.plugins`. Plugins and marketplaces."""
         self.extensions = HostExtensions(link, window, session)
+        """`host.extensions`. Installed extensions. Read-only, apart from this extension's own settings."""
         self.hooks = HostHooks(link, window, session)
+        """`host.hooks`. Hooks."""
         self.permissions = HostPermissions(link, window, session)
+        """`host.permissions`. What the agent may do without asking."""
         self.policy = HostPolicy(link, window, session)
+        """`host.policy`. The group policy in force."""
         self.account = HostAccount(link, window, session)
+        """`host.account`. Whether the person is signed in to igni. Never their session or a credential."""
         self.notifications = HostNotifications(link, window, session)
+        """`host.notifications`. The floor's notifications. Its own always; everyone's with `notifications`."""
         self.self = HostSelf(link, window, session)
+        """`host.self`. This extension, as the host sees it."""
         self.changed: Signal[Change] = Signal("changed", Change)
         """Anything changed. Carries the member's path and its new value."""
 
@@ -1929,6 +2507,7 @@ __all__ = [
     "Account",
     "Activity",
     "AgentEvent",
+    "AgentInfo",
     "Approval",
     "ApprovalAnswer",
     "ApprovalChange",
@@ -1949,6 +2528,7 @@ __all__ = [
     "DecisionQuestion",
     "Dialog",
     "DialogChange",
+    "DiscardResult",
     "Display",
     "ExtensionInfo",
     "ExtensionStateChange",
@@ -1956,6 +2536,7 @@ __all__ = [
     "FilesChanged",
     "Head",
     "HistoryChange",
+    "HookEntry",
     "Host",
     "HostAccount",
     "HostAgents",
@@ -1985,8 +2566,19 @@ __all__ = [
     "HostWorkflows",
     "HostWorkspace",
     "LocalNotification",
+    "LoopAdvance",
     "LoopStatus",
+    "Marketplace",
+    "MarketplacePlugin",
+    "McpInit",
+    "McpPrompt",
+    "McpResource",
+    "McpServer",
+    "McpServerDetails",
+    "McpToolToggle",
     "ModelChange",
+    "ModelEntry",
+    "ModelRegistry",
     "ModelUsage",
     "Notice",
     "NotificationCounts",
@@ -1998,9 +2590,23 @@ __all__ = [
     "PermissionModeChange",
     "Plan",
     "PlanChange",
+    "PlanDecision",
+    "PluginAgent",
+    "PluginContents",
+    "PluginHook",
+    "PluginInfo",
+    "PluginMcpServer",
+    "PluginPreviewSource",
+    "PluginSkill",
+    "PluginTool",
+    "PolicyPack",
     "Preview",
     "PreviewChange",
     "ProcessEvent",
+    "ProcessRow",
+    "ProcessStop",
+    "ProcessTail",
+    "PromoteResult",
     "Retry",
     "Route",
     "Run",
@@ -2009,6 +2615,7 @@ __all__ = [
     "RunRef",
     "RunStart",
     "SCHEMA_VERSION",
+    "ScheduledTask",
     "SchedulerEvent",
     "Scroll",
     "SelectionChange",
@@ -2021,8 +2628,12 @@ __all__ = [
     "SessionList",
     "SessionNamed",
     "SettingsChange",
+    "ShellResult",
     "Sidebar",
     "SidebarChange",
+    "SkillDefinition",
+    "SkillDetails",
+    "SlashCommand",
     "StateChange",
     "Status",
     "TaskEvent",
@@ -2030,6 +2641,7 @@ __all__ = [
     "TaskSnapshot",
     "Toast",
     "ToastChange",
+    "TodoItem",
     "Todos",
     "ToolCall",
     "ToolFailure",
@@ -2040,5 +2652,7 @@ __all__ = [
     "ViewAction",
     "WindowInfo",
     "Withheld",
+    "Workflow",
+    "WorkflowPhase",
     "WorkflowRun",
 ]

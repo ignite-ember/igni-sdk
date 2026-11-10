@@ -82,6 +82,20 @@ service's origin over `https`/`wss` and the hosts declared in
 cookies (`credentials: "omit"`); a service on igni-service answers it
 cross-origin with nothing to configure (`igni.install(app)`).
 
+## Changed since 0.1.0, on purpose
+
+- `connect<P, S>()` and `Bridge<P, S>` take the extension's own launch
+  params and settings as type arguments. Without them, `params` and
+  `settings` are readonly records (`LaunchParams`, `ExtensionSettings`),
+  so writing into one no longer compiles; `rpc`'s args (`RpcArgs`) and
+  `setLocation`'s state (`LocationState`) are readonly too. The four
+  types are new on the `protocol` subpath, and the wire messages use them.
+- `bridge.on(signal, fn, onRefused?)`: a refused or unanswered
+  subscription goes to `onRefused` (a `HostError`), or to the console
+  (`igni bridge: subscribing to <signal> failed: …`) when there is none.
+  In 0.1.0 it was dropped without a word. A refused unsubscribe is said
+  on the console only (`igni bridge: unsubscribing from <signal> failed: …`).
+
 ## Installing
 
 > **Until it is on npm: install it from a checkout.** The package is not

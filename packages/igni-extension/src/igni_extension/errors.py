@@ -34,13 +34,21 @@ class HostErrorCode(StrEnum):
     """Why the igni host refused or failed a request. Each is the string it was."""
 
     NOT_GRANTED = "not_granted"
+    """The manifest's `permissions.host` does not grant the object."""
     NOT_FOUND = "not_found"
+    """No such member, or nothing at that id."""
     INVALID = "invalid"
+    """The request was malformed: a wrong type, a value out of range."""
     READ_ONLY = "read_only"
+    """The property cannot be set."""
     STAGE_2 = "stage_2"
+    """Defined in the model, not yet available in this igni."""
     REFUSED = "refused"
+    """The person could not have done it either."""
     UNAVAILABLE = "unavailable"
+    """What answers it (igni's decision model) could not be started."""
     FAILED = "failed"
+    """It was tried and failed."""
 
 
 class HostError(IgniExtensionError):
@@ -62,4 +70,8 @@ class HostError(IgniExtensionError):
         super().__init__(message)
         known = {member.value: member for member in HostErrorCode}
         self.code: str = known.get(code, code)
+        """Why, for code to branch on: a `HostErrorCode`, or the plain string for a code this SDK
+        does not know.
+        """
         self.message = message
+        """The host's sentence for the extension's author."""

@@ -27,6 +27,8 @@ from igni_extension.errors import HostError, HostUnavailable, NotConfigured, Not
 class IssuedToken(BaseModel):
     """What the host's token endpoint answers."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     access_token: str
     expires_in: float = 600
     service_url: str = ""
@@ -39,15 +41,23 @@ class SignedIn(BaseModel):
     checks the token; this side never decides anything with what it says.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     user_id: str = ""
+    """The person's igni user id."""
     org_id: str = ""
+    """The organisation the token is for."""
     email: str = ""
+    """Their email address, when the token carries it."""
     name: str = ""
+    """Their name, when the token carries it."""
 
     @classmethod
     def of(cls, token: str) -> SignedIn:
+        """Who `token` names, read from its claims without checking its signature.
+
+        Every field is empty for a token that is not a JWT.
+        """
         try:
             payload = token.split(".")[1]
             claims: dict[str, Any] = json.loads(
@@ -66,8 +76,8 @@ class SignedIn(BaseModel):
 class HostTokens:
     """Tokens for this extension's service, from the host that started it."""
 
-    #: How long before expiry a kept token is replaced, in seconds.
     RENEW_BEFORE = 30.0
+    """How long before expiry a kept token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -93,6 +103,7 @@ class HostTokens:
 
     @property
     def configured(self) -> bool:
+        """Whether igni gave this process the host's token endpoint for its service."""
         return bool(self._endpoint.token_url and self._endpoint.token_secret)
 
     @property

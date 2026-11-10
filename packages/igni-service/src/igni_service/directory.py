@@ -28,48 +28,61 @@ from igni_service.urls import IgniPaths
 class Member(BaseModel):
     """One member of an organisation, present or former, as the directory describes them."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     user_id: str
+    """The member's igni user id: what a `Person.user_id` is."""
     email: str = ""
+    """Their email address."""
     name: str = ""
-    #: `admin` or `member`.
+    """Their display name; may be empty."""
     role: str = "member"
-    #: `active`, or `deactivated` for somebody who has left.
+    """`admin` or `member`."""
     status: str = "active"
+    """`active`, or `deactivated` for somebody who has left."""
     super_admin: bool = False
+    """Whether they are a super admin of the igni deployment."""
 
     @property
     def is_active(self) -> bool:
+        """Whether they are still a member (`status == "active"`)."""
         return self.status == "active"
 
     @property
     def display_name(self) -> str:
+        """Their name, or their email address when they have no name."""
         return self.name or self.email
 
 
 class Members(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     people: list[Member] = Field(default_factory=list)
 
 
 class Organisation(BaseModel):
     """The organisation a token names."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     org_id: str
+    """The organisation's id: what `Person.org_id` is."""
     name: str = ""
+    """Its display name."""
     slug: str = ""
-    #: Derive per-organisation databases and index names from this.
+    """Its short name, unique in the deployment."""
     tenant_number: int = 0
+    """Derive per-organisation databases and index names from this."""
     domains: list[str] = Field(default_factory=list)
+    """The email domains it owns."""
 
 
 class ResolveRequest(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     identities: list[str]
 
 
 class CachedMember(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
     stamped: float
     member: Member
 
@@ -77,10 +90,10 @@ class CachedMember(BaseModel):
 class DirectoryClient:
     """igni's directory for every organisation, with the `resolve` cache."""
 
-    #: How long a resolved member is reused, in seconds.
     TTL = 30.0
-    #: The most igni answers in one call.
+    """How long a resolved member is reused, in seconds."""
     MAX_PEOPLE = 500
+    """The most igni answers in one call."""
 
     def __init__(self, tokens: ServiceTokens, *, clock: Clock | None = None) -> None:
         self._tokens = tokens
@@ -194,6 +207,7 @@ class Directory:
 
     @property
     def org_id(self) -> str:
+        """The organisation this directory answers for."""
         return self._org_id
 
     async def organisation(self) -> Organisation:

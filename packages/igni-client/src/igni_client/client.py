@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
 
+from igni_client.api import IgniApi
+from igni_client.backoff import Backoff
+from igni_client.calls import Caller
 from igni_client.commands import Commands, Me
 from igni_client.connection import Connection
-from igni_client.events import Event
-from igni_client.sessions import Models, Sessions, _result
+from igni_client.routing import Router
+from igni_client.sessions import Sessions
 from igni_client.targets import Target, require_fleet
+from igni_client.wire import Event
 
 
-class IgniClient:
+class IgniClient(IgniApi):
     """A connection to one igni — a producer's in Fleet, or one on this machine.
 
         async with IgniClient(Fleet("https://gw.acme.internal", auth=Person.from_cli())) as igni:
@@ -22,13 +25,21 @@ class IgniClient:
     It stays connected for as long as it is open. When Fleet moves the VM
     to another node, the client re-attaches its sessions on its own; a run
     that was going when it moved ends with `RunInterrupted`.
+
+    Every method igni answers for igni as a whole is here, grouped as igni
+    groups them — `igni.processes`, `igni.notifications`, `igni.auth` and
+    the rest (`igni_client.api.IgniApi`); a session's are on its `Session`.
     """
 
-    def __init__(self, target: Target, *, reconnect_attempts: int = 5) -> None:
+    sessions: Sessions
+    """igni's sessions: create, open, list — and `attach`, igni's own call."""
+
+    def __init__(self, target: Target, *, backoff: Backoff | None = None) -> None:
+        """`backoff` paces opening the socket again after Fleet said busy or it dropped."""
         self.target = target
-        self._conn = Connection(target, reconnect_attempts=reconnect_attempts)
+        self._conn = Connection(target, backoff or Backoff(), Router())
+        super().__init__(Caller(self._conn))
         self.sessions = Sessions(self._conn)
-        self.models = Models(self._conn)
         self._commands: Commands | None = None
         self._conn.on_resync(self.sessions.reattach)
 
@@ -62,26 +73,20 @@ class IgniClient:
         """Who the gateway says this client is: the producer, organisation and group."""
         return await self.commands.me()
 
-    async def rpc(self, method: str, **args: Any) -> Any:
-        """Call any of igni's methods by name, as igni's own app does.
-
-        Returns the call's result, or — for the methods that answer with a
-        message of their own, such as `list_sessions` — that message.
-        Raises `RpcError` when igni answers with an error. Methods that act
-        on one session take `session_id`, or use `Session.rpc`.
-        """
-        return _result(await self._conn.rpc(method, args))
-
     async def events(self) -> AsyncIterator[Event]:
         """Every message igni sends from now on, from every session and every client attached.
 
         igni broadcasts: a person's open window sees this client's runs, and
-        this sees theirs. Use it to watch an igni, not to follow your own run
-        — `Session.send()` does that.
+        this sees theirs. Use it to watch an igni — every push notification
+        among them — not to follow your own run (`Session.send()`) or call
+        (a `Call`'s `async with`).
         """
-        queue = self._conn.listen()
+        queue = self._conn.router.listen()
         try:
             while True:
                 yield await queue.get()
         finally:
-            self._conn.unlisten(queue)
+            self._conn.router.unlisten(queue)
+
+
+__all__ = ["IgniClient"]

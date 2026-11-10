@@ -44,6 +44,8 @@ function framedPage() {
         nonce: NONCE,
         extensionId: "acme.reviewer",
         params: {},
+        settings: {},
+        serviceUrl: null,
         theme: "dark",
         tokens: {},
       });
@@ -53,7 +55,10 @@ function framedPage() {
 }
 
 afterEach(() => {
-  Object.defineProperty(window, "parent", { value: window, configurable: true });
+  Object.defineProperty(window, "parent", {
+    value: window,
+    configurable: true,
+  });
 });
 
 describe("bridge.host", () => {
@@ -93,7 +98,9 @@ describe("bridge.host", () => {
   it("asks igni's decision model at the root, and an unloadable model is unavailable", async () => {
     const page = framedPage();
     const bridge = await page.connected();
-    const questions = [{ id: "urgent", kind: "noul", question: "Is `text` urgent?" }];
+    const questions = [
+      { id: "urgent", kind: "noul", question: "Is `text` urgent?" },
+    ];
 
     const deciding = bridge.host.decide({ text: "It is down" }, questions);
     const [request] = page.posted;
@@ -119,7 +126,10 @@ describe("bridge.host", () => {
     const again = bridge.host.decide({ text: "x" }, questions);
     page.reply(page.posted[1].id, {
       ok: false,
-      error: { code: "unavailable", message: "igni's decision model could not be loaded" },
+      error: {
+        code: "unavailable",
+        message: "igni's decision model could not be loaded",
+      },
     });
     await expect(again).rejects.toMatchObject({ code: "unavailable" });
   });
@@ -144,7 +154,9 @@ describe("bridge.host", () => {
     const page = framedPage();
     const bridge = await page.connected();
 
-    const posting = bridge.host.sessions.chat("s-2").post("The index is ready.");
+    const posting = bridge.host.sessions
+      .chat("s-2")
+      .post("The index is ready.");
     const [request] = page.posted;
     expect(request).toMatchObject({
       op: "call",
@@ -176,7 +188,10 @@ describe("bridge.host", () => {
       // …the dialog is still waiting, and gets its answer.
       const [dialog] = page.posted;
       expect(dialog).toMatchObject({ op: "call", path: "ui.show_dialog" });
-      page.reply(dialog.id, { ok: true, result: { button: "ok", value: null } });
+      page.reply(dialog.id, {
+        ok: true,
+        result: { button: "ok", value: null },
+      });
       await expect(asking).resolves.toEqual({ button: "ok", value: null });
     } finally {
       vi.useRealTimers();
@@ -190,12 +205,30 @@ describe("bridge.host", () => {
     const reading = bridge.host.mcp.servers.get();
     page.reply(page.posted[0].id, {
       ok: false,
-      error: { code: "not_granted", message: "'acme.reviewer' is not granted 'mcp'" },
+      error: {
+        code: "not_granted",
+        message: "'acme.reviewer' is not granted 'mcp'",
+      },
     });
 
     const error = await reading.catch((e: unknown) => e);
     expect(error).toBeInstanceOf(HostError);
     expect((error as HostError).code).toBe("not_granted");
+  });
+
+  it("says the host gave no reason when it refuses without one", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+
+    const reading = bridge.host.mcp.servers.get();
+    page.reply(page.posted[0].id, { ok: false });
+
+    const error = await reading.catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HostError);
+    expect(error).toMatchObject({
+      code: "failed",
+      message: "the host refused without saying why",
+    });
   });
 
   it("refuses to write a property that is not writable without asking", async () => {
@@ -244,5 +277,163 @@ describe("bridge.on", () => {
     expect(page.posted.map((p) => p.op)).toEqual(["subscribe"]);
     offAgain();
     expect(page.posted.map((p) => p.op)).toEqual(["subscribe", "unsubscribe"]);
+  });
+
+  it("reports a refused subscription rather than swallowing it", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const refused: HostError[] = [];
+
+    bridge.on(
+      bridge.host.chat.run_completed,
+      () => {},
+      (error) => refused.push(error),
+    );
+    const [subscribe] = page.posted;
+    page.reply(subscribe.id, {
+      ok: false,
+      error: { code: "not_granted", message: "chat is not granted" },
+    });
+
+    await vi.waitFor(() => expect(refused).toHaveLength(1));
+    expect(refused[0]).toBeInstanceOf(HostError);
+    expect(refused[0].code).toBe("not_granted");
+  });
+  it("says a refused subscription on the console when nobody asked to hear it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+
+      bridge.on(bridge.host.chat.run_completed, () => {});
+      page.reply(page.posted[0].id, {
+        ok: false,
+        error: { code: "not_granted", message: "chat is not granted" },
+      });
+
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
+      expect(String(warn.mock.calls[0][0])).toContain(
+        "subscribing to chat.run_completed failed: chat is not granted",
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("says a refused unsubscribe on the console", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const off = bridge.on(bridge.host.chat.run_completed, () => {});
+      page.reply(page.posted[0].id, { ok: true, result: null });
+
+      off();
+      const [, unsubscribe] = page.posted;
+      page.reply(unsubscribe.id, {
+        ok: false,
+        error: { code: "failed", message: "the window closed" },
+      });
+
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledTimes(1));
+      expect(String(warn.mock.calls[0][0])).toContain(
+        "unsubscribing from chat.run_completed failed: the window closed",
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("tells only the first handler's onRefused, since only it subscribed", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const first: HostError[] = [];
+      const second: HostError[] = [];
+      const signal = bridge.host.chat.run_completed;
+
+      bridge.on(signal, () => {}, (error) => first.push(error));
+      bridge.on(signal, () => {}, (error) => second.push(error));
+      expect(page.posted).toHaveLength(1);
+      page.reply(page.posted[0].id, {
+        ok: false,
+        error: { code: "not_granted", message: "chat is not granted" },
+      });
+
+      await vi.waitFor(() => expect(first).toHaveLength(1));
+      expect(second).toEqual([]);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("reports a subscribe the host never answers as a failure", async () => {
+    vi.useFakeTimers();
+    try {
+      const page = framedPage();
+      const bridge = await page.connected();
+      const refused: HostError[] = [];
+
+      bridge.on(bridge.host.chat.run_completed, () => {}, (error) =>
+        refused.push(error),
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(refused).toHaveLength(1);
+      expect(refused[0]).toBeInstanceOf(HostError);
+      expect(refused[0].code).toBe("failed");
+      expect(refused[0].message).toBe(
+        "igni bridge: host.subscribe timed out after 30000ms",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("subscribes again after the last handler went", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const seen: string[] = [];
+    const signal = bridge.host.chat.run_completed;
+
+    bridge.on(signal, () => seen.push("before"))();
+    bridge.on(signal, () => seen.push("after"));
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+
+    expect(page.posted.map((p) => p.op)).toEqual([
+      "subscribe",
+      "unsubscribe",
+      "subscribe",
+    ]);
+    expect(seen).toEqual(["after"]);
+  });
+
+  it("stops once however many times its unsubscribe is called", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const off = bridge.on(bridge.host.chat.run_completed, () => {});
+
+    off();
+    off();
+
+    expect(page.posted.map((p) => p.op)).toEqual(["subscribe", "unsubscribe"]);
+  });
+
+  it("hands a signal to every handler of it, and to none after the last goes", async () => {
+    const page = framedPage();
+    const bridge = await page.connected();
+    const seen: string[] = [];
+    const signal = bridge.host.chat.run_completed;
+    const offFirst = bridge.on(signal, () => seen.push("first"));
+    const offSecond = bridge.on(signal, () => seen.push("second"));
+
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+    offFirst();
+    offSecond();
+    page.send({ kind: "signal", signal: "chat.run_completed", value: {} });
+
+    expect(seen).toEqual(["first", "second"]);
   });
 });

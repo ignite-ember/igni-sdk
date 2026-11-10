@@ -1,7 +1,7 @@
 """`FakeIgni`'s side of the agent channel: items, files and statuses (service-identity §15).
 
 What `FakeIgni.agents` keeps, so a service's tests can assert exactly what
-reached igni: every item (`items`, also `FakeIgni.events`), every
+reached igni: every item (`items`), every
 uploaded file (`uploads`), and each item's state, which a test moves with
 `settle` to play the producer's igni taking it. igni's rules are kept:
 the producer must be in the organisation, an `event_key` is stored once
@@ -17,62 +17,97 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from igni_service.agent_wire import ChatAction, ItemKind, ItemState, ServiceItemRequest
 from igni_service.events import Producer, ServiceEventRequest
 
-#: Every grant a service's extension may declare in `permissions.service`.
 ALL_GRANTS: frozenset[str] = frozenset({"messages", "attachments", "chats"})
+"""Every grant a service's extension may declare in `permissions.service`."""
 
 
 class SentEvent(BaseModel):
     """One item a service sent for a producer, as igni stored it."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     event_id: str
+    """The id igni gave it."""
     org_id: str
+    """The organisation the service token named."""
     client_id: str
+    """The service that sent it."""
     producer: Producer
+    """Whose igni it is for."""
     kind: ItemKind = "event"
+    """`event`, `message`, `chat` or `action`."""
     type: str
+    """An event's type; for the other kinds, the kind."""
     payload: dict[str, object] = Field(default_factory=dict)
+    """An event's payload."""
     thread: str | None = None
+    """The chat thread it belongs to, if any."""
     text: str | None = None
+    """A message's text."""
     title: str | None = None
+    """A chat's title, or an action's new one."""
     start_run: bool = True
+    """Whether a message starts a run (`Chat.queue` sends `False`)."""
     action: ChatAction | None = None
+    """What an `action` item does to the chat."""
     attachments: list[str] = Field(default_factory=list)
+    """The ids of the files it names."""
     event_key: str | None = None
+    """The key it was sent with, if any."""
     state: ItemState = "pending"
+    """Where it stands; `fake.agents.settle` moves it."""
     created_at: datetime
+    """When the fake stored it."""
 
 
 class Upload(BaseModel):
     """One file a service uploaded."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     attachment_id: str
+    """The id igni gave the file."""
     client_id: str
+    """The service that uploaded it."""
     filename: str
+    """Its name."""
     content_type: str
+    """Its media type."""
     data: bytes
-    #: The item that names it, once one does.
+    """Its bytes."""
     event_id: str | None = None
+    """The item that names it, once one does."""
 
 
 class FakeAgents:
+    """igni's side of `host.agent(producer)`: the items, files and statuses a service sends.
+
+    `fake.agents.items` is every item stored, `uploads` every file, and
+    `settle(event_id, state)` plays the producer's igni taking one. Set
+    `grants` to play an extension that declares less.
+    """
+
     def __init__(
         self, *, is_member: Callable[[str, str], bool], clock: Callable[[], float]
     ) -> None:
         self._is_member = is_member
         self._clock = clock
         self.items: list[SentEvent] = []
+        """Every item stored, in the order it arrived."""
         self.uploads: dict[str, Upload] = {}
-        #: What the service's extension declares in `permissions.service`.
+        """Every file uploaded, by its attachment id."""
         self.grants: set[str] = set(ALL_GRANTS)
-        #: The largest file accepted: igni's composer limit.
+        """What the service's extension declares in `permissions.service`."""
         self.max_bytes = 5 * 1024 * 1024
+        """The largest file accepted: igni's composer limit."""
 
     def reset(self) -> None:
+        """Forget the items and files, and grant everything again."""
         self.items.clear()
         self.uploads.clear()
         self.grants = set(ALL_GRANTS)
@@ -86,6 +121,7 @@ class FakeAgents:
     # ── Routes ──────────────────────────────────────────────────────
 
     def event(self, body: bytes, client_id: str, org_id: str) -> httpx.Response:
+        """Answer `POST /v1/service-events` as igni does. Called by the fake's router."""
         try:
             event = ServiceEventRequest.model_validate_json(body)
         except ValidationError as exc:
@@ -106,6 +142,7 @@ class FakeAgents:
         )
 
     def item(self, body: bytes, client_id: str, org_id: str) -> httpx.Response:
+        """Answer `POST /v1/service-items` as igni does. Called by the fake's router."""
         try:
             item = ServiceItemRequest.model_validate_json(body)
         except ValidationError as exc:
@@ -134,6 +171,7 @@ class FakeAgents:
     def upload(
         self, *, client_id: str, filename: str, content_type: str, data: bytes
     ) -> httpx.Response:
+        """Answer `POST /v1/service-attachments` as igni does. Called by the fake's router."""
         if "attachments" not in self.grants:
             return self._refused("service.attachments")
         if not filename or "/" in filename or "\\" in filename:
@@ -163,6 +201,7 @@ class FakeAgents:
         )
 
     def status(self, event_id: str, client_id: str) -> httpx.Response:
+        """Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router."""
         for item in self.items:
             if item.event_id == event_id and item.client_id == client_id:
                 return httpx.Response(

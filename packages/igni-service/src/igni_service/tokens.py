@@ -44,21 +44,25 @@ class TokenUse:
 
     USER = "user"
     IGNI = "igni"
-    #: An app acting as itself, exchanged for this service (igni's service-identity §9.2).
     APP = "app"
-    #: One end user of an app, a producer of its own (§17), exchanged for this service.
+    """An app acting as itself, exchanged for this service (igni's service-identity §9.2)."""
     SPACE = "space"
+    """One end user of an app, a producer of its own (§17), exchanged for this service."""
 
 
 class CallerKind(StrEnum):
     """Who a request may come from: a person, an app, or an app's space."""
 
     PERSON = "person"
+    """A person, with the token igni issued them for this service (`Person`)."""
     APP = "app"
+    """An app acting as itself (`App`)."""
     SPACE = "space"
+    """One end user of an app, a producer of its own (`Space`)."""
 
     @property
     def token_use(self) -> str:
+        """The `token_use` claim a token of this kind carries: `user`, `app` or `space`."""
         return TokenUse.USER if self is CallerKind.PERSON else self.value
 
 
@@ -81,36 +85,48 @@ class TokenRefused(IgniError):
     def __init__(self, reason: str = "the token is not one this service accepts") -> None:
         super().__init__(reason)
         self.reason = reason
+        """Why, in words safe to show whoever holds the token."""
 
 
 class Person(BaseModel):
     """A person, as their token describes them, in the one organisation it names."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     user_id: str
+    """The person's igni user id (the token's `sub`)."""
     org_id: str
+    """The organisation the token is for; every call it makes is in this one."""
     org_name: str = ""
-    #: `admin` or `member` in `org_id`.
+    """The organisation's display name, when the token carries it."""
     org_role: str = "member"
+    """`admin` or `member` in `org_id`."""
     email: str = ""
+    """The person's email address, when the token carries it."""
     name: str = ""
+    """The person's display name, when the token carries it."""
     super_admin: bool = False
+    """Whether the person is a super admin of the igni deployment. It does not
+    make them an admin of `org_id`."""
 
     @property
     def kind(self) -> CallerKind:
+        """Always `CallerKind.PERSON`: what a `match` on a `Caller` reads."""
         return CallerKind.PERSON
 
     @property
     def is_org_admin(self) -> bool:
+        """Whether the person is an admin of `org_id` (`org_role == "admin"`)."""
         return self.org_role == "admin"
 
     @property
     def display_name(self) -> str:
+        """Their name, or their email address when the token has no name."""
         return self.name or self.email
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> Person:
+        """The person a verified token's claims describe (`sub`, `org`, `org_role`, ...)."""
         return cls(
             user_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -125,18 +141,23 @@ class Person(BaseModel):
 class App(BaseModel):
     """An app acting as itself: igni's `app` token for this service."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     app_id: str
+    """The app's id, as an org admin registered it (the token's `sub`)."""
     org_id: str
+    """The organisation the app belongs to."""
     name: str = ""
+    """The app's display name, when the token carries it."""
 
     @property
     def kind(self) -> CallerKind:
+        """Always `CallerKind.APP`."""
         return CallerKind.APP
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> App:
+        """The app a verified `app` token's claims describe."""
         return cls(
             app_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -147,21 +168,25 @@ class App(BaseModel):
 class Space(BaseModel):
     """One end user of an app, a producer of its own: igni's `space` token for this service."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     space_id: str
+    """The space's id at igni (the token's `sub`)."""
     org_id: str
-    #: The app the space belongs to.
+    """The organisation the space's app belongs to."""
     app_id: str
-    #: The app's own name for its end user.
+    """The app the space belongs to."""
     external_id: str = ""
+    """The app's own name for its end user."""
 
     @property
     def kind(self) -> CallerKind:
+        """Always `CallerKind.SPACE`."""
         return CallerKind.SPACE
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> Space:
+        """The space a verified `space` token's claims describe."""
         return cls(
             space_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -170,26 +195,27 @@ class Space(BaseModel):
         )
 
 
-#: Whoever a request comes from, typed: a person, an app or an app's space.
 Caller = Person | App | Space
+"""Whoever a request comes from, typed: a person, an app or an app's space."""
 
-#: What a service accepts unless it says otherwise: people only.
 PEOPLE_ONLY: frozenset[CallerKind] = frozenset({CallerKind.PERSON})
+"""What a service accepts unless it says otherwise: people only."""
 
 
 class IgniCall(BaseModel):
     """igni itself calling this service, for one organisation."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     org_id: str
+    """The organisation igni is calling about."""
 
 
 class TokenVerifier:
     """Checks tokens igni signed for this service."""
 
-    #: How far in the future an `iat` may be, for clocks that disagree.
     LEEWAY = 60.0
+    """How far in the future an `iat` may be, for clocks that disagree."""
 
     def __init__(
         self,
@@ -202,8 +228,8 @@ class TokenVerifier:
         self._igni = igni
         self._keys = keys
         self._clock = clock or Clock()
-        #: What igni has revoked since a token was issued (`igni_service.revocations`).
         self.revocations = revocations
+        """What igni has revoked since a token was issued (`igni_service.revocations`)."""
 
     async def claims(self, token: str, *, use: str | Collection[str]) -> dict[str, Any]:
         """The verified claims of a `use` token (or one of several) for this service.

@@ -7,6 +7,9 @@ igni-core publishes them; this repository builds against its copies:
 
 * ``contracts/host-schema.json`` — the host object model both SDKs'
   ``host`` objects are generated from (``make host-sdks`` after this);
+* ``contracts/rpc-contract.json`` — every RPC method and message on igni's
+  socket, which igni-client's typed models and methods are generated from
+  (``make client-api`` after this);
 * ``contracts/extension-manifest.schema.json`` and
   ``contracts/theme.schema.json`` — what an extension's manifest and theme
   are checked against.
@@ -28,6 +31,7 @@ CORE = Path(os.environ.get("IGNI_CORE_DIR") or ROOT.parent / "igni-core").resolv
 #: Each copy here, and where igni-core keeps the original.
 COPIES: dict[str, str] = {
     "contracts/host-schema.json": "docs/host-schema.json",
+    "contracts/rpc-contract.json": "docs/rpc-contract.json",
     "contracts/extension-manifest.schema.json": "docs/extension-manifest.schema.json",
     "contracts/theme.schema.json": "docs/theme.schema.json",
 }

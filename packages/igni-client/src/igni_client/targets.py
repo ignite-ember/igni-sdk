@@ -18,7 +18,8 @@ from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import InvalidHandshake, InvalidStatus
 from websockets.typing import Subprotocol
 
-from igni_client.auth import TokenSource
+from igni_client.access import Standing
+from igni_client.auth.tokens import TokenSource
 from igni_client.errors import AuthError, NotAllowed, NotSupported, Unavailable
 
 #: The subprotocol igni speaks, locally and through the gateway.
@@ -45,6 +46,11 @@ class Target(Protocol):
     async def aclose(self) -> None: ...
 
     def describe(self) -> str: ...
+
+    @property
+    def standing(self) -> Standing:
+        """What igni lets this connection do, where it is known (`igni_client.access`)."""
+        ...
 
 
 def _refusal(exc: InvalidStatus, where: str) -> Exception:
@@ -95,14 +101,36 @@ class Local:
         self._url = url
         self._token = token
         self._approver_token = approver_token or os.environ.get(APPROVER_TOKEN_ENV) or None
+        self._standing: Standing = "unknown"
 
     @property
     def approves(self) -> bool:
         """Whether this connects with an approver token."""
         return self._approver_token is not None
 
+    @property
+    def standing(self) -> Standing:
+        """What igni stands this connection as (`igni_client.access`).
+
+        An approver with an approver token; with the lockfile's token a
+        program; with no token at all igni's window (igni takes none only
+        when started without a launch secret). A `token` given by hand may
+        be the window's launch secret or the lockfile's, so igni decides.
+        Before the lockfile is read, not known.
+        """
+        if self._approver_token is not None:
+            return "approver"
+        return self._standing
+
+    def _stand(self, token: str | None, *, given: bool) -> None:
+        if token is None:
+            self._standing = "window"
+        else:
+            self._standing = "unknown" if given else "program"
+
     def _resolve(self) -> tuple[str, str | None]:
         if self._url is not None:
+            self._stand(self._token, given=True)
             return self._url, self._approver_token or self._token
         lock = self.project_dir / ".igni" / "backend.lock"
         try:
@@ -115,7 +143,9 @@ class Local:
             ) from exc
         except (OSError, ValueError, KeyError, TypeError) as exc:
             raise Unavailable(f"{lock} is not an igni lockfile") from exc
-        token = self._approver_token or payload.get("ws_token") or self._token
+        lockfile_token = payload.get("ws_token") or None
+        self._stand(lockfile_token or self._token, given=lockfile_token is None)
+        token = self._approver_token or lockfile_token or self._token
         return f"ws://127.0.0.1:{port}", token
 
     async def open(self) -> ClientConnection:
@@ -218,6 +248,11 @@ class Fleet:
 
     def describe(self) -> str:
         return f"igni in Fleet via {self.base}"
+
+    @property
+    def standing(self) -> Standing:
+        """igni's window: igni on a Fleet VM takes no token and stands every connection so."""
+        return "window"
 
 
 def require_fleet(target: Target, what: str) -> Fleet:

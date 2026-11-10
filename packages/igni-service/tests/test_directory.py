@@ -37,7 +37,10 @@ async def test_the_limit_is_kept_within_what_igni_answers(
     await igni.host(ORG).directory.members(limit=10_000)
     await igni.host(ORG).directory.members(limit=0)
 
-    limits = [seen.query["limit"][0] for seen in fake.requests_to(f"{IgniPaths.DIRECTORY}/members")]
+    limits = [
+        seen.query["limit"][0]
+        for seen in fake.traffic.requests_to(f"{IgniPaths.DIRECTORY}/members")
+    ]
     assert limits == ["500", "1"]
 
 
@@ -72,11 +75,11 @@ async def test_resolved_people_are_kept_thirty_seconds(
 
     await directory.resolve(["u-max"])
     await directory.resolve(["max@acme.test", "u-max"])
-    assert len(fake.requests_to(path)) == 1
+    assert len(fake.traffic.requests_to(path)) == 1
 
     clock.advance(31)
     await directory.resolve(["u-max"])
-    assert len(fake.requests_to(path)) == 2
+    assert len(fake.traffic.requests_to(path)) == 2
 
 
 async def test_two_organisations_never_share_answers(igni: IgniService) -> None:

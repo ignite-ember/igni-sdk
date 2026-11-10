@@ -5,6 +5,7 @@
  * too and an extension rarely needs them directly.
  */
 export * from "./bridge";
+export * from "./contract";
 export * from "./hostModel";
 export * from "./hostModel.generated";
 export * from "./service";

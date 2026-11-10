@@ -36,10 +36,14 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 
 class CallerKind(StrEnum):
+    """Who a call is for: a person, an app, or one end user of an app (a space)."""
+
     PERSON = "person"
+    """A person signed in to igni."""
     APP = "app"
-    #: One end user of an app, a producer of its own.
+    """An app acting as itself."""
     SPACE = "space"
+    """One end user of an app, a producer of its own."""
 
 
 class NoCaller(LookupError):
@@ -49,26 +53,27 @@ class NoCaller(LookupError):
 class Caller(BaseModel):
     """The producer one call is for."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
-    #: Where the host puts it: the MCP request's `_meta` key, and the hook frame's field.
     META_KEY: ClassVar[str] = "igni/principal"
-    #: How a token request names whom the token is for.
+    """Where the host puts it: the MCP request's `_meta` key, and the hook frame's field."""
     TOKEN_HEADER: ClassVar[str] = "X-Igni-Principal"  # noqa: S105 — a header's name, not a secret
+    """How a token request names whom the token is for."""
 
     kind: CallerKind
-    #: The person's or the app's id on igni server.
+    """`person`, `app` or `space`."""
     id: str
-    #: Their organisation.
+    """The person's or the app's id on igni server."""
     org: str | None = None
-    #: The one group a person belongs to in `org`; an app has none.
+    """Their organisation."""
     group: str | None = None
-    #: The igni session the call comes from, when there is one.
+    """The one group a person belongs to in `org`; an app has none."""
     session: str | None = None
-    #: A space's app (its id); `None` for a person or an app.
+    """The igni session the call comes from, when there is one."""
     app: str | None = None
-    #: The app's own name for a space's end user.
+    """A space's app (its id); `None` for a person or an app."""
     external_id: str | None = None
+    """The app's own name for a space's end user."""
 
     @property
     def ref(self) -> str:

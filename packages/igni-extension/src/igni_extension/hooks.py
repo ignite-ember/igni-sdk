@@ -38,11 +38,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic_core import to_jsonable_python
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from igni_extension.caller import Caller, CallerScope
 from igni_extension.threads import OffTheLoop
+from igni_extension.wire import HookAnswer, Outcome
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 class HookValue(BaseModel):
     """What a deciding event hands the handler. The values are the real ones, never clipped."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str = ""
 
@@ -61,16 +61,18 @@ class HookValue(BaseModel):
 class PreToolUse(HookValue):
     """A tool the agent is about to run, before igni's own checks."""
 
-    #: igni's name for it: `read_file` for one of igni's own, and
-    #: `mcp_ext:<id>_<tool>` for an extension's — the name permission rules
-    #: and settings-file hooks match (`ToolNames.registered`).
     tool_name: str
-    #: The manifest's name for an extension's tool (`acme.tickets.lookup_ticket`,
-    #: `ToolNames.manifest`); empty for igni's own tools, and from an igni
-    #: that predates it.
+    """igni's name for it: `read_file` for one of igni's own, and
+    `mcp_ext:<id>_<tool>` for an extension's — the name permission rules
+    and settings-file hooks match (`ToolNames.registered`).
+    """
     tool_manifest_name: str = ""
-    #: Its arguments. A change is what igni's checks, and the tool, then see.
+    """The manifest's name for an extension's tool (`acme.tickets.lookup_ticket`,
+    `ToolNames.manifest`); empty for igni's own tools, and from an igni
+    that predates it.
+    """
     tool_args: dict[str, Any] = Field(default_factory=dict)
+    """Its arguments. A change is what igni's checks, and the tool, then see."""
 
 
 class PostToolUse(HookValue):
@@ -80,43 +82,45 @@ class PostToolUse(HookValue):
     which is told and decides nothing.
     """
 
-    #: As in `PreToolUse`.
     tool_name: str
+    """As in `PreToolUse`."""
     tool_manifest_name: str = ""
     tool_args: dict[str, Any] = Field(default_factory=dict)
-    #: What it returned, as text. A change is what the model reads; a
-    #: reject withholds it.
     result: str
+    """What it returned, as text. A change is what the model reads; a
+    reject withholds it.
+    """
 
 
 class UserPromptSubmit(HookValue):
     """A message about to start a run."""
 
-    #: What the agent will be sent. A change is what it is sent.
     message: str
+    """What the agent will be sent. A change is what it is sent."""
 
 
 class Stop(HookValue):
     """The agent wants to end its turn."""
 
-    #: Its answer, when the place it stops has one; empty otherwise.
     response: str = ""
+    """Its answer, when the place it stops has one; empty otherwise."""
 
 
 class PlanSubmit(HookValue):
     """A plan the agent is about to put to the person (`exit_plan_mode`)."""
 
-    #: The plan, in markdown. A change is what the person sees.
     plan: str
-    tasks: list[Any] = Field(default_factory=list)
-    #: Plans rejected since the agent entered plan mode: 0 for the first.
+    """The plan, in markdown. A change is what the person sees."""
+    tasks: list[JsonValue] = Field(default_factory=list)
+    """The tasks the agent proposed with it, as the agent wrote them."""
     attempt: int = 0
+    """Plans rejected since the agent entered plan mode: 0 for the first."""
 
 
 class Told(BaseModel):
     """An event that decides nothing, as igni's settings hooks receive it (`docs/HOOKS.md`)."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str = ""
 
@@ -128,13 +132,18 @@ class HookEvent[T: BaseModel]:
         self, name: str, value: type[T], *, decides: bool, modify: tuple[str, ...] = ()
     ) -> None:
         self.name = name
+        """igni's name for the event: `PreToolUse`."""
         self.value = value
-        #: Whether the handler's answer counts; `False` for an event it is only told.
+        """The model a handler is handed."""
         self.decides = decides
-        #: The fields of the value a `Modify` may change.
+        """Whether the handler's answer counts; `False` for an event it is only told."""
         self.modify = modify
+        """The fields of the value a `Modify` may change."""
 
     def parse(self, raw: Any) -> T:
+        """The value igni sent, as the handler's model. Raises `ValidationError` for one it cannot
+        read.
+        """
         return self.value.model_validate(raw)
 
     def __repr__(self) -> str:
@@ -145,30 +154,52 @@ class Hooks:
     """Every hook event an extension can answer: `@ext.hook(Hooks.PRE_TOOL_USE)`."""
 
     PRE_TOOL_USE = HookEvent("PreToolUse", PreToolUse, decides=True, modify=("tool_args",))
+    """A tool the agent is about to run. Decides; a `Modify` may change `tool_args`."""
     POST_TOOL_USE = HookEvent("PostToolUse", PostToolUse, decides=True, modify=("result",))
+    """A tool that ran, before the model reads its result. Decides; a `Modify` may change
+    `result`."""
     USER_PROMPT_SUBMIT = HookEvent(
         "UserPromptSubmit", UserPromptSubmit, decides=True, modify=("message",)
     )
+    """A message about to start a run. Decides; a `Modify` may change `message`."""
     STOP = HookEvent("Stop", Stop, decides=True)
+    """The agent wants to end its turn. Decides: on a `Reject` the agent revises its answer
+    with the reason."""
     PLAN_SUBMIT = HookEvent("PlanSubmit", PlanSubmit, decides=True, modify=("plan",))
+    """A plan about to be put to the person. Decides; a `Modify` may change `plan`."""
 
     POST_TOOL_USE_FAILURE = HookEvent("PostToolUseFailure", Told, decides=False)
+    """A tool failed. Told only."""
     SESSION_START = HookEvent("SessionStart", Told, decides=False)
+    """A session started. Told only."""
     SESSION_END = HookEvent("SessionEnd", Told, decides=False)
+    """A session ended. Told only."""
     SUBAGENT_START = HookEvent("SubagentStart", Told, decides=False)
+    """A subagent started. Told only."""
     SUBAGENT_STOP = HookEvent("SubagentStop", Told, decides=False)
+    """A subagent stopped. Told only."""
     NOTIFICATION = HookEvent("Notification", Told, decides=False)
+    """igni notified the person. Told only."""
     PRE_COMPACT = HookEvent("PreCompact", Told, decides=False)
+    """The conversation is about to be compacted. Told only."""
     POST_COMPACT = HookEvent("PostCompact", Told, decides=False)
+    """The conversation was compacted. Told only."""
     INSTRUCTIONS_LOADED = HookEvent("InstructionsLoaded", Told, decides=False)
+    """The project's instructions were loaded. Told only."""
     TASK_CREATED = HookEvent("TaskCreated", Told, decides=False)
+    """A task was created. Told only."""
     TASK_COMPLETED = HookEvent("TaskCompleted", Told, decides=False)
+    """A task was completed. Told only."""
     STOP_FAILURE = HookEvent("StopFailure", Told, decides=False)
+    """A turn ended in failure. Told only."""
     PERMISSION_REQUEST = HookEvent("PermissionRequest", Told, decides=False)
+    """The person is asked to permit something. Told only."""
     PERMISSION_DENIED = HookEvent("PermissionDenied", Told, decides=False)
+    """Something was not permitted. Told only."""
 
     @classmethod
     def all(cls) -> list[HookEvent[Any]]:
+        """Every hook event, deciding and told."""
         return [value for value in vars(cls).values() if isinstance(value, HookEvent)]
 
 
@@ -178,27 +209,50 @@ class Hooks:
 class Allow(BaseModel):
     """Let it happen as it is."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     outcome: Literal["allow"] = "allow"
+    """Always `allow`."""
+
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        """The answer as it goes to igni for the hook `hook_id`."""
+        return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
 
 
 class Reject(BaseModel):
     """Stop it. `reason` reaches the agent or the person, so write it for them."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     outcome: Literal["reject"] = "reject"
+    """Always `reject`."""
     reason: str
+    """Why, for the agent or the person it reaches."""
 
     def __init__(self, reason: str, **data: Any) -> None:
         super().__init__(reason=reason, **data)
+
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        """The answer as it goes to igni for the hook `hook_id`."""
+        return HookAnswer(hook=hook_id, outcome=Outcome.REJECT, reason=self.reason)
 
 
 class Modify(BaseModel):
     """Let it happen, changed: the whole value, with only the fields it may change changed."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     outcome: Literal["modify"] = "modify"
+    """Always `modify`."""
     value: Any
+    """The whole value, changed; only the event's `modify` fields may differ."""
 
     def __init__(self, value: Any, **data: Any) -> None:
         super().__init__(value=value, **data)
+
+    def for_hook(self, hook_id: str) -> HookAnswer:
+        """The answer as it goes to igni for the hook `hook_id`."""
+        return HookAnswer(hook=hook_id, outcome=Outcome.MODIFY, value=self.value)
 
 
 type Answer = Allow | Reject | Modify
@@ -237,20 +291,20 @@ class HookHandlers:
                 return await OffTheLoop.call(handler, value)
             return await OffTheLoop.call(handler, value, **{wanted: caller})
 
-    async def tell(self, name: str, raw: Any, principal: Any = None) -> None:
+    async def tell(self, name: str, raw: Any, caller: Caller | None = None) -> None:
         """An event that decides nothing: the handler hears it, and nothing is sent back."""
         found = self._handlers.get(name)
         if found is None:
             return
         event, handler = found
         try:
-            await self._call(handler, event.parse(raw), Caller.of(principal))
+            await self._call(handler, event.parse(raw), caller)
         except Exception:
             logger.exception("igni: the handler of %s failed", name)
 
     async def answer(
-        self, hook_id: str, name: str, raw: Any, principal: Any = None
-    ) -> dict[str, Any]:
+        self, hook_id: str, name: str, raw: Any, caller: Caller | None = None
+    ) -> HookAnswer:
         """The `answer` request's parameters for one deciding event."""
         found = self._handlers.get(name)
         if found is None:
@@ -259,21 +313,16 @@ class HookHandlers:
                 "Add a handler, or take it out of permissions.hooks",
                 name,
             )
-            return {"hook": hook_id, "outcome": "allow"}
+            return HookAnswer(hook=hook_id, outcome=Outcome.ALLOW)
         event, handler = found
         try:
-            answer = await self._call(handler, event.parse(raw), Caller.of(principal))
+            answer: Answer | None = await self._call(handler, event.parse(raw), caller)
         except Exception as exc:
             logger.exception("igni: the handler of %s failed", name)
-            return {"hook": hook_id, "outcome": "failed", "reason": str(exc)}
+            return HookAnswer(hook=hook_id, outcome=Outcome.FAILED, reason=str(exc))
         if answer is None:
             answer = Allow()
-        body: dict[str, Any] = {"hook": hook_id, "outcome": answer.outcome}
-        if isinstance(answer, Reject):
-            body["reason"] = answer.reason
-        elif isinstance(answer, Modify):
-            body["value"] = to_jsonable_python(answer.value)
-        return body
+        return answer.for_hook(hook_id)
 
 
 __all__ = [

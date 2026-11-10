@@ -36,9 +36,11 @@ class Host:
         self._agents = agents
         self._vm_profiles = vm_profiles
         self.directory = Directory(directory, org_id)
+        """The organisation's directory: its members, and the organisation itself."""
 
     @property
     def org_id(self) -> str:
+        """The organisation this host is for."""
         return self._org_id
 
     async def notify(self, *notifications: Notification) -> Delivered:

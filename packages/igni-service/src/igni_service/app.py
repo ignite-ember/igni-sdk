@@ -9,7 +9,7 @@ then obtains tokens as itself: `client_credentials` with `private_key_jwt`,
 `docs/service-identity.md` §11.1). Its VM in igni's cloud is its own.
 
     app = IgniApp("3f0c…", igni_server_url="https://igni.bank.internal", key_store=store)
-    print(await app.public_jwks())       # once: what the org admin pastes
+    print((await app.public_jwks()).model_dump_json())  # once: what the org admin pastes
     record = await app.vm_profile.request(VmProfileRequest(packages=VmPackages(apt=["chromium"])))
     record.state                         # "pending" until an org admin approves it
     await app.vm_profile.status()        # later: "approved" / "rejected" + reason
@@ -24,28 +24,20 @@ portal.
 from __future__ import annotations
 
 import asyncio
-import warnings
-from collections.abc import Awaitable
 from types import TracebackType
-from typing import Any
 
 import httpx
-from pydantic import BaseModel, ValidationError
 
+from igni_service.app_vm_profiles import AppVmProfiles
 from igni_service.clock import Clock
+from igni_service.crypto import JwkSet
 from igni_service.errors import ConfigurationError, IgniUnavailable
+from igni_service.grants import ClientCredentialsGrant
 from igni_service.keystore import KeyStore
 from igni_service.server import IgniServer
 from igni_service.service_tokens import HeldToken
 from igni_service.signing import SigningKey
 from igni_service.token_endpoint import GrantRefused, TokenEndpoint
-from igni_service.urls import IgniPaths
-from igni_service.vm_profiles import (
-    AppVmProfile,
-    VmProfileRequest,
-    VmProfileRequestRecord,
-    refusal,
-)
 
 
 class AppId:
@@ -61,8 +53,8 @@ class AppId:
 class IgniApp:
     """An app's place in an igni deployment: its key, its token, its VM's profile."""
 
-    #: How long before expiry the token is replaced, in seconds.
     RENEW_BEFORE = 60.0
+    """How long before expiry the token is replaced, in seconds."""
 
     def __init__(
         self,
@@ -79,11 +71,15 @@ class IgniApp:
         if not igni_server_url.strip():
             raise ConfigurationError("igni: IGNI_SERVER_URL must be set")
         self.app_id = app_id
+        """The app's id, as an org admin registered it."""
         self.clock = clock or Clock()
-        #: Its VM profile: `.request(wanted)`, `.status()`, `.effective()`.
-        self.vm_profile = AppVmProfiles(self)
+        """The clock the token's age is read from; tests pass a `ManualClock`."""
+        self.vm_profile = AppVmProfiles(app_id, self)
+        """Its VM profile: `.request(wanted)`, `.status()`, `.effective()`."""
         self.server = IgniServer(base_url=igni_server_url, timeout=timeout, http=http)
+        """igni server as the app reaches it."""
         self.key = SigningKey(key_store, clock=self.clock)
+        """The app's signing key; `await app.public_jwk()` is what an org admin registers."""
         self._endpoint = TokenEndpoint(self.server, AppId(app_id), self.key)
         self._held: HeldToken | None = None
         self._lock = asyncio.Lock()
@@ -100,13 +96,14 @@ class IgniApp:
         await self.aclose()
 
     async def aclose(self) -> None:
+        """Close the HTTP client this object opened."""
         await self.server.aclose()
 
     # ── The key an org admin registers ──────────────────────────────
 
-    async def public_jwks(self) -> dict[str, Any]:
-        """`{"keys": [public JWK]}` — what the org admin pastes on the portal's Apps page."""
-        return {"keys": [(await self.key.pair()).public_jwk().as_dict()]}
+    async def public_jwks(self) -> JwkSet:
+        """The public key as a JWK set — what the org admin pastes on the portal's Apps page."""
+        return JwkSet(keys=[(await self.key.pair()).public_jwk()])
 
     async def thumbprint(self) -> str:
         """The key's RFC 7638 thumbprint, which the portal shows beside the app."""
@@ -124,7 +121,7 @@ class IgniApp:
             if held is not None:
                 return held
             try:
-                issued = await self._endpoint.grant({"grant_type": "client_credentials"})
+                issued = await self._endpoint.grant(ClientCredentialsGrant())
             except GrantRefused as exc:
                 # `invalid_client` until an org admin registers this key, and
                 # after they delete the app or rotate its key.
@@ -141,7 +138,9 @@ class IgniApp:
             return held.token
         return None
 
-    async def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+    async def request(
+        self, method: str, path: str, *, json: object | None = None
+    ) -> httpx.Response:
         """One call to igni as this app; a 401 is retried once with a new token."""
         for attempt in (1, 2):
             token = await self.token()
@@ -150,7 +149,7 @@ class IgniApp:
                     method,
                     self.server.url(path),
                     headers={"Authorization": f"Bearer {token}"},
-                    **kwargs,
+                    json=json,
                 )
             except httpx.HTTPError as exc:
                 raise IgniUnavailable(f"could not reach igni server: {type(exc).__name__}") from exc
@@ -160,88 +159,3 @@ class IgniApp:
             if attempt == 2:
                 break
         raise IgniUnavailable("igni server refused this app's token")
-
-    # ── What its VM needs ───────────────────────────────────────────
-    #
-    # `app.vm_profile.request(...)`, `.status()` and `.effective()`
-    # (`AppVmProfiles`). The three methods below are the names this had
-    # before: `vm_profile()` answered the profile in effect while the
-    # service's `host.vm_profile()` answered a request's status, which
-    # nobody could keep straight.
-
-    async def request_vm_profile(self, wanted: VmProfileRequest) -> VmProfileRequestRecord:
-        """Deprecated: `app.vm_profile.request(wanted)`."""
-        _renamed("app.request_vm_profile(...)", "app.vm_profile.request(...)")
-        return await self.vm_profile.request(wanted)
-
-    async def vm_profile_request(self) -> VmProfileRequestRecord | None:
-        """Deprecated: `app.vm_profile.status()`."""
-        _renamed("app.vm_profile_request()", "app.vm_profile.status()")
-        return await self.vm_profile.status()
-
-    @staticmethod
-    def _parse[M: BaseModel](response: httpx.Response, model: type[M]) -> M:
-        try:
-            return model.model_validate(response.json())
-        except (ValidationError, ValueError) as exc:
-            raise IgniUnavailable("igni answered with something else") from exc
-
-    @staticmethod
-    def _failed(response: httpx.Response) -> Exception:
-        if 400 <= response.status_code < 500 and response.status_code != 429:
-            return refusal(response)
-        return IgniUnavailable(f"igni answered {response.status_code}")
-
-
-def _renamed(old: str, new: str) -> None:
-    warnings.warn(f"{old} is deprecated; call {new}", DeprecationWarning, stacklevel=3)
-
-
-class AppVmProfiles:
-    """An app's VM profile: what it asks for, what became of that, what the VM gets.
-
-    `app.vm_profile`. Calling it, `await app.vm_profile()`, is the name this
-    had before for `effective()`, and still answers that.
-    """
-
-    def __init__(self, app: IgniApp) -> None:
-        self._app = app
-
-    async def request(self, wanted: VmProfileRequest) -> VmProfileRequestRecord:
-        """Ask for what this app's VM needs. It runs nothing until an org admin approves.
-
-        The same request again changes nothing and keeps its state; a
-        changed one is `pending` again, and the VM keeps the profile it has
-        until the admin approves the new one. Raises `VmProfileRefused`
-        (over the platform's caps, malformed) or `IgniUnavailable`.
-        """
-        app = self._app
-        response = await app.request(
-            "PUT", IgniPaths.app_vm_profile_request(app.app_id), json=wanted.body()
-        )
-        if response.status_code in (200, 201):
-            return app._parse(response, VmProfileRequestRecord)
-        raise app._failed(response)
-
-    async def status(self) -> VmProfileRequestRecord | None:
-        """This app's request and what became of it (`state`, `reason`); `None` if it never asked."""
-        app = self._app
-        response = await app.request("GET", IgniPaths.app_vm_profile_request(app.app_id))
-        if response.status_code == 404:
-            return None
-        if response.status_code == 200:
-            return app._parse(response, VmProfileRequestRecord)
-        raise app._failed(response)
-
-    async def effective(self) -> AppVmProfile:
-        """The profile this app's VM gets now — approved, or the organisation's default."""
-        app = self._app
-        response = await app.request("GET", IgniPaths.app_vm_profile(app.app_id))
-        if response.status_code == 200:
-            return app._parse(response, AppVmProfile)
-        raise app._failed(response)
-
-    def __call__(self) -> Awaitable[AppVmProfile]:
-        """Deprecated: `app.vm_profile.effective()`."""
-        _renamed("app.vm_profile()", "app.vm_profile.effective()")
-        return self.effective()

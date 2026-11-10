@@ -19,8 +19,8 @@ LOGGER = "igni_service"
 class ServiceLogs:
     """Gives `igni_service`'s lines a handler when nothing else would show them."""
 
-    #: uvicorn's shape: `INFO:     igni: uploaded extension …`.
     FORMAT = "%(levelname)-9s %(message)s"
+    """uvicorn's shape: `INFO:     igni: uploaded extension …`."""
 
     @classmethod
     def make_visible(cls) -> bool:

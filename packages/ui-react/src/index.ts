@@ -147,6 +147,7 @@ export { Split, type SplitProps } from "./Split";
 export { MenuIcon, type MenuIconName, type MenuIconProps } from "./MenuIcon";
 export { Monogram } from "./Monogram";
 export { OverflowMenu, type OverflowAction } from "./OverflowMenu";
-export { MermaidBlock, fenceInfo, loadMermaid } from "./Mermaid";
+export { fenceInfo } from "./fenceInfo";
+export { MermaidBlock, loadMermaid } from "./Mermaid";
 export { Skeleton } from "./Skeleton";
 export { Tooltip, type TooltipProps } from "./Tooltip";

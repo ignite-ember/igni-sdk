@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 class SigningKey:
     """The deployment's key, read from its store or made on first start."""
 
-    #: How long a client assertion lives. igni accepts at most 300 s, and
-    #: one is minted per token request, so it need only outlive the request.
     ASSERTION_LIFETIME = 60
+    """How long a client assertion lives. igni accepts at most 300 s, and
+    one is minted per token request, so it need only outlive the request.
+    """
 
     def __init__(self, store: KeyStore, *, clock: Clock | None = None) -> None:
         self._store = store

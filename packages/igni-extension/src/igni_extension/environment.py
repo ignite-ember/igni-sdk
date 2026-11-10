@@ -38,36 +38,46 @@ from igni_extension.errors import NotConfigured
 
 
 class WorkspaceMode(StrEnum):
+    """How much of the project a process was granted: `IGNI_WORKSPACE_MODE`."""
+
     NONE = "none"
+    """No project at all."""
     READ = "read"
+    """Read the project."""
     WRITE = "write"
+    """Read and write the project."""
 
 
 class Workspace(BaseModel):
     """The project this process may read (or write), when it was granted one."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     root: Path | None = None
+    """The project's directory: `IGNI_WORKSPACE`; `None` when none was granted."""
     mode: WorkspaceMode = WorkspaceMode.NONE
-    #: Globs within the project the grant is limited to; empty means all of it.
+    """`none`, `read` or `write`: `IGNI_WORKSPACE_MODE`."""
     paths: tuple[str, ...] = ()
+    """Globs within the project the grant is limited to; empty means all of it."""
 
     @property
     def granted(self) -> bool:
+        """Whether the process may read the project at all."""
         return self.root is not None and self.mode is not WorkspaceMode.NONE
 
     @property
     def writable(self) -> bool:
+        """Whether it may also write it."""
         return self.granted and self.mode is WorkspaceMode.WRITE
 
 
 class Secrets(BaseModel):
     """Every declared secret the deployment supplied, by the manifest's name."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     by_env_name: dict[str, str] = Field(default_factory=dict)
+    """Each secret's value, by the name igni gave its variable (`LEDGER_TOKEN`)."""
 
     @staticmethod
     def env_name(name: str) -> str:
@@ -75,43 +85,53 @@ class Secrets(BaseModel):
         return "".join(ch if ch.isalnum() else "_" for ch in name).upper()
 
     def get(self, name: str) -> str | None:
+        """The secret the manifest names `name` (`ledger-token`), or `None` when the deployment
+        supplied none.
+        """
         return self.by_env_name.get(self.env_name(name))
 
 
 class ServiceEndpoint(BaseModel):
     """The extension's own service, and the host's token endpoint for it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     url: str = ""
+    """The service's base URL: `IGNI_SERVICE_URL`."""
     token_url: str = ""
+    """Where the host hands out tokens for it: `IGNI_SERVICE_TOKEN_URL`."""
     token_secret: str = ""
+    """What proves this process to that endpoint: `IGNI_SERVICE_TOKEN_SECRET`."""
 
     @property
     def configured(self) -> bool:
+        """Whether igni named a service for this extension."""
         return bool(self.url)
 
 
 class HostEndpoint(BaseModel):
     """Where the igni host's object model is: `IGNI_HOST_URL`, `IGNI_HOST_SECRET`."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     url: str = ""
+    """The host's WebSocket address: `IGNI_HOST_URL`."""
     secret: str = ""
+    """What proves this process to it: `IGNI_HOST_SECRET`."""
 
     @property
     def configured(self) -> bool:
+        """Whether igni gave this process the host's address (both variables are set)."""
         return bool(self.url and self.secret)
 
 
 class Assets(BaseModel):
     """What the extension ships for this platform: `ext.assets.path("neo4j")`."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
-    #: `IGNI_EXTENSION_ASSETS`; None outside igni, or with nothing declared.
     root: Path | None = None
+    """`IGNI_EXTENSION_ASSETS`; None outside igni, or with nothing declared."""
 
     def path(self, name: str) -> Path:
         """`<assets>/<name>/`: the unpacked archive, or the directory its one file is in.
@@ -140,21 +160,26 @@ class Assets(BaseModel):
 class ExtensionEnvironment(BaseModel):
     """What igni granted this process, read from its environment."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     SECRET: ClassVar[str] = "IGNI_SECRET_"  # noqa: S105 — an environment variable prefix, not a secret
 
     workspace: Workspace = Field(default_factory=Workspace)
-    #: This extension's own directory on this machine; None outside igni.
+    """The project this process may read or write, if any."""
     data_dir: Path | None = None
-    #: What it ships for this platform, laid out by igni.
+    """This extension's own directory on this machine; None outside igni."""
     assets: Assets = Field(default_factory=Assets)
+    """What it ships for this platform, laid out by igni."""
     secrets: Secrets = Field(default_factory=Secrets)
+    """The secrets the manifest declares, as the deployment supplied them."""
     service: ServiceEndpoint = Field(default_factory=ServiceEndpoint)
+    """The extension's own service, and the host's token endpoint for it."""
     host: HostEndpoint = Field(default_factory=HostEndpoint)
+    """Where the igni host's object model is."""
 
     @classmethod
     def read(cls, environ: Mapping[str, str] | None = None) -> ExtensionEnvironment:
+        """What igni granted, read from `environ` (`os.environ` when `None`)."""
         env = dict(os.environ if environ is None else environ)
         secrets = Secrets(
             by_env_name={

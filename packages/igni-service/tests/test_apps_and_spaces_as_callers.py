@@ -15,7 +15,7 @@ import pytest
 from fastapi import Depends, FastAPI
 
 from igni_service import App, Caller, CallerKind, IgniService, Person, Space
-from igni_service.testing import FakeIgni
+from igni_service.testing import FakeIgni, SpaceClaims, TokenOverrides
 from igni_service.tokens import TokenRefused
 
 from .conftest import ORG, bearer
@@ -52,13 +52,15 @@ async def test_an_app_and_a_space_arrive_typed(
     everybody: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
     app = await everybody.get(
-        "/who", headers=bearer(fake.app_token("reporter", org_id=ORG, name="Reporter"))
+        "/who", headers=bearer(fake.signer.app_token("reporter", org_id=ORG, name="Reporter"))
     )
     assert app.json() == {"kind": "app", "app_id": "reporter", "org_id": ORG, "name": "Reporter"}
     space = await everybody.get(
         "/who",
         headers=bearer(
-            fake.space_token("sp-1", org_id=ORG, app_id="reporter", external_id="cust-9")
+            fake.signer.space_token(
+                "sp-1", SpaceClaims(org=ORG, app="reporter", external_id="cust-9")
+            )
         ),
     )
     assert space.json() == {
@@ -68,40 +70,52 @@ async def test_an_app_and_a_space_arrive_typed(
         "app_id": "reporter",
         "external_id": "cust-9",
     }
-    person = await everybody.get("/who", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    person = await everybody.get(
+        "/who", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG))
+    )
     assert person.json()["kind"] == "person" and person.json()["user_id"] == "u-ada"
 
 
 async def test_by_default_a_service_takes_people_only(
     people_only: httpx.AsyncClient, fake: FakeIgni
 ) -> None:
-    app = await people_only.get("/who", headers=bearer(fake.app_token("reporter", org_id=ORG)))
+    app = await people_only.get(
+        "/who", headers=bearer(fake.signer.app_token("reporter", org_id=ORG))
+    )
     space = await people_only.get(
         "/who",
-        headers=bearer(fake.space_token("sp-1", org_id=ORG, app_id="r", external_id="c")),
+        headers=bearer(
+            fake.signer.space_token("sp-1", SpaceClaims(org=ORG, app="r", external_id="c"))
+        ),
     )
-    person = await people_only.get("/who", headers=bearer(fake.person_token("u-ada", org_id=ORG)))
+    person = await people_only.get(
+        "/who", headers=bearer(fake.signer.person_token("u-ada", org_id=ORG))
+    )
     assert (app.status_code, space.status_code, person.status_code) == (401, 401, 200)
 
 
 async def test_an_app_cannot_pass_for_a_person(fake: FakeIgni) -> None:
     service = fake.service(accepted_callers=EVERYBODY)
     with pytest.raises(TokenRefused):
-        await service.person_of(fake.app_token("reporter", org_id=ORG))
+        await service.person_of(fake.signer.app_token("reporter", org_id=ORG))
     with pytest.raises(TokenRefused):
         await service.verifier.caller(
-            fake.app_token("reporter", org_id=ORG), accept={CallerKind.SPACE}
+            fake.signer.app_token("reporter", org_id=ORG), accept={CallerKind.SPACE}
         )
 
 
 @pytest.mark.parametrize(
     "token",
     [
-        lambda f: f.app_token("reporter", org_id=ORG, aud="http://another-service.test"),
-        lambda f: f.app_token("reporter", org_id=""),
-        lambda f: f.space_token("sp-1", org_id=ORG, app_id="", external_id="c"),
-        lambda f: f.space_token(
-            "sp-1", org_id=ORG, app_id="r", external_id="c", aud=FakeIgni.ISSUER
+        lambda f: f.signer.app_token(
+            "reporter", org_id=ORG, overrides=TokenOverrides(aud="http://another-service.test")
+        ),
+        lambda f: f.signer.app_token("reporter", org_id=""),
+        lambda f: f.signer.space_token("sp-1", SpaceClaims(org=ORG, app="", external_id="c")),
+        lambda f: f.signer.space_token(
+            "sp-1",
+            SpaceClaims(org=ORG, app="r", external_id="c"),
+            TokenOverrides(aud=FakeIgni.ISSUER),
         ),
     ],
     ids=["other-service", "no-org", "space-without-app", "igni-audience"],
