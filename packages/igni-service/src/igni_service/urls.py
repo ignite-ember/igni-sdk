@@ -18,7 +18,12 @@ class ServiceUrl:
 
     @staticmethod
     def normalise(url: str) -> str:
-        """`scheme://host[:port][/path]`. Raises `ValueError` for anything else."""
+        """`scheme://host[:port][/path]`. Raises `ValueError` for anything else.
+
+        Args:
+            url: The service's own URL, as it was given: lower-case scheme
+                and host, no trailing slash, and no query or fragment.
+        """
         parts = urlsplit((url or "").strip())
         if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
             raise ValueError(f"{url!r} is not an absolute http(s) URL")
@@ -63,27 +68,54 @@ class IgniPaths:
 
     @classmethod
     def app_vm_profile_request(cls, app_id: str) -> str:
-        """An app's own request for what its VM needs."""
+        """An app's own request for what its VM needs.
+
+        Args:
+            app_id: The app's id, as an org admin registered it: whose
+                request for a VM profile this is.
+        """
         return f"{cls.APPS}/{app_id}/vm-profile-request"
 
     @classmethod
     def app_vm_profile(cls, app_id: str) -> str:
-        """The profile an app's VM gets now."""
+        """The profile an app's VM gets now.
+
+        Args:
+            app_id: The app's id, as an org admin registered it: whose VM's
+                profile this is.
+        """
         return f"{cls.APPS}/{app_id}/vm-profile"
 
     @classmethod
     def service_event(cls, event_id: str) -> str:
-        """What became of one item this service sent."""
+        """What became of one item this service sent.
+
+        Args:
+            event_id: The id of the item to report on, as igni gave it when
+                it accepted it.
+        """
         return f"{cls.SERVICE_EVENTS}/{event_id}"
 
     @classmethod
     def extension(cls, client_id: str) -> str:
-        """Where igni holds `client_id`'s extension bundle."""
+        """Where igni holds `client_id`'s extension bundle.
+
+        Args:
+            client_id: The client id this service registered with, as igni
+                gave it: whose extension this is.
+        """
         return f"{cls.CLIENTS}/{client_id}/extension"
 
     @classmethod
     def extension_asset(cls, client_id: str, sha256: str) -> str:
-        """Where igni holds one asset of `client_id`'s extension, by its SHA-256."""
+        """Where igni holds one asset of `client_id`'s extension, by its SHA-256.
+
+        Args:
+            client_id: The client id this service registered with, as igni
+                gave it: whose extension the asset belongs to.
+            sha256: The asset's SHA-256 digest: which asset of the bundle
+                this is.
+        """
         return f"{cls.CLIENTS}/{client_id}/extension/assets/{sha256}"
 
     SUBJECTS = "/v1/igni/subjects"

@@ -40,7 +40,12 @@ class SettingsOverrides(BaseModel):
     """`IGNI_SERVER_TIMEOUT`: each call to igni, in seconds."""
 
     def settings_for(self, addresses: IgniAddresses) -> IgniSettings:
-        """Settings that reach the fake at `addresses`, with what this sets."""
+        """Settings that reach the fake at `addresses`, with what this sets.
+
+        Args:
+            addresses: The fake's addresses: where the service reaches the
+                fake, and the URL the service's own tokens are for.
+        """
         defaults = SettingsOverrides(
             igni_server_url=addresses.base_url,
             public_base_url=addresses.service_url,

@@ -97,7 +97,13 @@ class Notification(BaseModel):
         return cleaned
 
     def split(self, size: int) -> list[Notification]:
-        """This notification with its recipients in groups of at most `size`."""
+        """This notification with its recipients in groups of at most `size`.
+
+        Args:
+            size: The most recipients one copy may name; this notification is
+                copied once for each group of them, and nothing else in it
+                changes.
+        """
         return [
             self.model_copy(update={"recipients": self.recipients[start : start + size]})
             for start in range(0, len(self.recipients), size)
@@ -129,7 +135,17 @@ Sleep = Callable[[float], Awaitable[None]]
 
 
 class Notifier:
-    """Sends notifications to igni for one organisation at a time."""
+    """Sends notifications to igni for one organisation at a time.
+
+    Args:
+        tokens: This service's own tokens for igni, kept one per organisation.
+        attempts: How many times a call igni did not take is tried, at least
+            once.
+        backoff: Seconds to wait before the second try; the wait doubles
+            after every one of them.
+        sleep: How the wait between tries is done: ``asyncio.sleep`` by
+            default, or one that does not really wait.
+    """
 
     MAX_BATCH = 100
     MAX_RECIPIENTS = 1000
@@ -151,7 +167,13 @@ class Notifier:
         self._sleep = sleep
 
     def batches(self, notifications: Iterable[Notification]) -> list[NotificationBatch]:
-        """What will be sent, call by call."""
+        """What will be sent, call by call.
+
+        Args:
+            notifications: The notifications to send; one that names nobody is
+                left out, and the rest are split into as many calls as igni
+                takes.
+        """
         expanded = [
             part
             for notification in notifications
@@ -167,6 +189,12 @@ class Notifier:
         """Send every notification. Raises `IgniUnavailable` or `NotificationRefused`.
 
         A notification with no recipients concerns nobody and is not sent.
+
+        Args:
+            org_id: The organisation the notifications are for; igni answers
+                for that one only.
+            notifications: The notifications to send, each naming who it
+                concerns.
         """
         delivered = 0
         for batch in self.batches(notifications):

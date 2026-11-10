@@ -60,6 +60,12 @@ class Pkce:
 
     @staticmethod
     def challenge(verifier: str) -> str:
+        """The S256 challenge for `verifier`: what the sign-in sends igni.
+
+        Args:
+            verifier: The PKCE code verifier the sign-in keeps; its SHA-256
+                digest, in base64url, is the challenge sent with it.
+        """
         digest = hashlib.sha256(verifier.encode()).digest()
         return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
 
@@ -69,6 +75,12 @@ class ReturnTo:
 
     @staticmethod
     def safe(value: str | None) -> str:
+        """Where to send the browser afterwards: a path on this service, nothing else.
+
+        Args:
+            value: The path asked for; anything that is not a path on this
+                service becomes ``/``.
+        """
         candidate = (value or "").strip()
         parts = urlsplit(candidate)
         if (
@@ -84,7 +96,22 @@ class ReturnTo:
 
 
 class WebSignIn:
-    """Sign-in to the service's own pages, and the dependencies that require it."""
+    """Sign-in to the service's own pages, and the dependencies that require it.
+
+    Args:
+        igni: igni server as this service reaches it: where a person's
+            browser is sent to sign in, and whose issuer and keys every
+            token it accepts comes from.
+        registration: This service's registration with igni; its client id
+            is asked of it, registering first when there is none.
+        key: This deployment's signing key: it signs the client assertion
+            with which this service asks igni for tokens.
+        verifier: Checks the access token igni issued: that it is a user
+            token, and that it is for this service and this client.
+        store: Where the sessions and the sign-ins in flight are kept.
+        clock: The clock the sign-in's expiry and the access token's
+            renewal are read from; the system's own clock when not given.
+    """
 
     PREFIX = "/auth"
     """Where the sign-in routes are mounted: `/auth/login`, `/auth/callback`, `/auth/logout`."""
@@ -120,7 +147,12 @@ class WebSignIn:
 
     @classmethod
     def redirect_uri_for(cls, own_url: str) -> str:
-        """The callback address igni sends a person back to, for a service at `own_url`."""
+        """The callback address igni sends a person back to, for a service at `own_url`.
+
+        Args:
+            own_url: The service's own URL, as igni knows it: the base the
+                callback path is put on.
+        """
         return f"{own_url}{cls.PREFIX}/callback"
 
     @property
@@ -165,7 +197,12 @@ class WebSignIn:
         return self._router
 
     async def login(self, return_to: str = "/") -> Response:
-        """Send the browser to igni to sign in, and come back to `return_to`."""
+        """Send the browser to igni to sign in, and come back to `return_to`.
+
+        Args:
+            return_to: Where to bring the person once they are signed in: a
+                path on this service, or ``/`` when the value is not one.
+        """
         try:
             client_id = await self._registration.client_id()
             endpoint = await self._igni.authorization_endpoint()
@@ -205,7 +242,18 @@ class WebSignIn:
     async def callback(
         self, request: Request, code: str = "", state: str = "", error: str = ""
     ) -> Response:
-        """igni sending the browser back: exchange the code, open a session."""
+        """igni sending the browser back: exchange the code, open a session.
+
+        Args:
+            request: The request igni sent the browser back on: its
+                ``igni_login`` cookie says which sign-in in flight this is.
+            code: The authorization code igni issued, exchanged at igni for
+                the person's access and refresh tokens.
+            state: The OAuth ``state`` igni echoed back, matched against the
+                cookie and the sign-in in flight.
+            error: The error igni reported instead of a code, when it refused
+                to sign the person in.
+        """
         if error:
             return self._failed(f"igni did not sign you in ({error}).")
         expected = request.cookies.get(self.LOGIN_COOKIE, "")
@@ -251,6 +299,12 @@ class WebSignIn:
         whatever igni says; then its refresh token is revoked, so nothing
         that ever held it can renew. The person stays signed in to igni's
         own portal — that is igni's session, not this service's.
+
+        Args:
+            request: The request that ends the sign-in: its ``igni_session``
+                cookie names the session to end.
+            return_to: Where to send the browser afterwards: a path on this
+                service, or ``/`` when the value is not one.
         """
         session_id = request.cookies.get(self.COOKIE)
         session = await self._store.get(session_id) if session_id else None
@@ -269,6 +323,11 @@ class WebSignIn:
 
         A page (a request that accepts HTML) is sent to sign in and brought
         back; anything else is answered 401.
+
+        Args:
+            request: The request to sign in for: its ``igni_session`` cookie
+                names the session, and its ``Accept`` header says whether the
+                caller is a page to redirect or a client to refuse.
         """
         person = await self._current(request)
         if person is None:
@@ -282,6 +341,10 @@ class WebSignIn:
         Never sends anybody to sign in; a session that cannot be renewed
         because igni is away counts as nobody, rather than failing a page
         that did not need one.
+
+        Args:
+            request: The request to read the session of: its ``igni_session``
+                cookie names the session.
         """
         try:
             return await self._current(request)
@@ -289,7 +352,12 @@ class WebSignIn:
             return None
 
     async def super_admin(self, request: Request) -> Person:
-        """FastAPI dependency: a signed-in super admin; 403 for anybody else."""
+        """FastAPI dependency: a signed-in super admin; 403 for anybody else.
+
+        Args:
+            request: The request to check the role for: its ``igni_session``
+                cookie names the session the person is read from.
+        """
         person = await self.person(request)
         if not person.super_admin:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admins only")
@@ -300,6 +368,10 @@ class WebSignIn:
 
         `org_role == "admin"` in that one organisation, as igni said when it
         last renewed the token; 403 for anybody else, a super admin included.
+
+        Args:
+            request: The request to check the role for: its ``igni_session``
+                cookie names the session the person is read from.
         """
         person = await self.person(request)
         if not person.is_org_admin:

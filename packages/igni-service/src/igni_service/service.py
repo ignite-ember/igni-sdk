@@ -86,7 +86,24 @@ _REFUSAL = "Not authenticated"
 
 
 class IgniService:
-    """A service's place in an igni deployment."""
+    """A service's place in an igni deployment.
+
+    Args:
+        settings: The service's settings: where igni server is, what this
+            service is called, its own public URL and the rest.
+        key_store: Where the service keeps its signing key.
+        web_store: Where the service keeps the sign-in sessions of its own
+            pages; in this process, in memory, when it is not given.
+        http: The `httpx.AsyncClient` every call to igni server goes
+            through; one of the service's own, which it closes, when it is
+            not given.
+        clock: The clock every token's age and expiry is read from; a test
+            passes a `ManualClock`.
+        retry_min: Seconds before the first retry of the registration with
+            igni server, when it fails.
+        accepted_callers: The kinds of caller `caller` lets in: people
+            only, unless the service says more.
+    """
 
     def __init__(
         self,
@@ -203,6 +220,18 @@ class IgniService:
         Pass `key_store` to keep the key somewhere else — a `SqlKeyStore` on
         the service's own engine, usually — and then construct `IgniService`
         directly to pass a `web_store` too.
+
+        Args:
+            settings: The service's settings: where igni server is, what
+                this service is called, its own public URL and the rest.
+            key_store: Where the service keeps its signing key; when it is
+                not given, the key and the sessions are kept in
+                `IGNI_KEY_DATABASE_URL` instead.
+            http: The `httpx.AsyncClient` every call to igni server goes
+                through; one of the service's own, which it closes, when it
+                is not given.
+            clock: The clock every token's age and expiry is read from; a
+                test passes a `ManualClock`.
         """
         web_store: WebSessionStore | None = None
         engine: AsyncEngine | None = None
@@ -230,6 +259,10 @@ class IgniService:
         service's own lifespan (`async with igni.lifespan(app): ...`).
         From the start every token is checked against the revocation list,
         which fails closed if it cannot be kept fresh.
+
+        Args:
+            app: The app the lifespan runs for, as FastAPI passes it in;
+                igni does not use it.
         """
         ServiceLogs.make_visible()
         stop = asyncio.Event()
@@ -262,6 +295,9 @@ class IgniService:
         takes its caller's bearer token (`BearerCors`: `person`,
         `optional_person`, `org_admin`, `caller`, `token`, `optional_token`)
         — any origin, the token and nothing else, never cookies.
+
+        Args:
+            app: The FastAPI app igni's routes and middleware are put on.
         """
         app.include_router(self.router)
         app.include_router(self.web.router)
@@ -281,11 +317,24 @@ class IgniService:
         return self._router
 
     def on_erase(self, handler: EraseHandler) -> EraseHandler:
-        """Register what erases one person's data in one organisation."""
+        """Register what erases one person's data in one organisation.
+
+        Args:
+            handler: What to call when igni asks the service to erase or
+                redact one person's data in one organisation; it is given a
+                `Subject`, and must be idempotent, as igni repeats it until
+                every service confirms.
+        """
         return self._handlers.on_erase(handler)
 
     def on_export(self, handler: ExportHandler) -> ExportHandler:
-        """Register what lists one person's data in one organisation."""
+        """Register what lists one person's data in one organisation.
+
+        Args:
+            handler: What to call when igni asks what the service holds
+                about one person in one organisation; it is given a
+                `Subject` and answers with the sections of rows.
+        """
         return self._handlers.on_export(handler)
 
     def on_organisation_deleted(
@@ -295,6 +344,11 @@ class IgniService:
 
         Receives the organisation's id. Must be idempotent: igni repeats it
         until the service confirms.
+
+        Args:
+            handler: What to call when igni says an organisation was
+                deleted; it is given the organisation's id, and must be
+                idempotent.
         """
         return self._organisations.on_deleted(handler)
 
@@ -306,6 +360,11 @@ class IgniService:
         401 for a missing or refused token; 503 when igni's keys cannot be
         had to check it — nothing is wrong with the token, and signing in
         again would not help.
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
         """
         token = self._bare(credentials)
         try:
@@ -324,6 +383,11 @@ class IgniService:
 
         A bearer route like `person`'s: the extension's page may call it
         (`BearerCors`).
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
         """
         token = self._bare(credentials)
         try:
@@ -334,7 +398,12 @@ class IgniService:
             raise self._cannot_check(exc) from exc
 
     async def caller_of(self, token: str) -> Caller:
-        """`caller` for a bare token, outside an HTTP request (see `person_of`)."""
+        """`caller` for a bare token, outside an HTTP request (see `person_of`).
+
+        Args:
+            token: The caller's bearer token, on its own: a leading
+                `Bearer ` is stripped when there is one.
+        """
         return await self.verifier.caller(token, accept=self.accepted_callers)
 
     async def optional_person(
@@ -346,6 +415,11 @@ class IgniService:
         (a public link that also shows the reader's own comments). A token
         that *was* sent and is refused is still a 401: a broken session
         should be noticed, not quietly treated as anonymous.
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
         """
         if credentials is None:
             return None
@@ -361,13 +435,25 @@ class IgniService:
         an unusable token into an anonymous reader instead of a 401, say.
         It is a person's token route all the same: the extension's page may
         call it (`BearerCors`).
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
         """
         return self._bare(credentials)
 
     async def optional_token(
         self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
     ) -> str | None:
-        """FastAPI dependency: the bearer token, not yet checked, or `None`."""
+        """FastAPI dependency: the bearer token, not yet checked, or `None`.
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token; a scheme other than
+                `Bearer` counts as no token.
+        """
         if credentials is None or credentials.scheme.lower() != "bearer":
             return None
         return credentials.credentials
@@ -379,6 +465,10 @@ class IgniService:
         but no `Authorization` header. Raises `TokenRefused` or
         `IgniUnavailable` rather than an HTTP error, so the caller answers in
         its own protocol.
+
+        Args:
+            token: The person's bearer token, on its own: a leading
+                `Bearer ` is stripped when there is one.
         """
         return await self.verifier.person(token)
 
@@ -389,6 +479,11 @@ class IgniService:
         their token is for (`org_role == "admin"`); 403 for anybody else.
 
         Being a super admin does not make somebody an organisation's admin.
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
         """
         person = await self.person(credentials)
         if not person.is_org_admin:
@@ -400,7 +495,13 @@ class IgniService:
     async def igni_call(
         self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
     ) -> IgniCall:
-        """FastAPI dependency: igni itself, for the organisation its token names."""
+        """FastAPI dependency: igni itself, for the organisation its token names.
+
+        Args:
+            credentials: The request's bearer credentials: the
+                `Authorization` header's scheme and token, or `None` when
+                the request sent no bearer token.
+        """
         token = self._bare(credentials)
         try:
             return await self.verifier.igni_call(token)
@@ -412,7 +513,12 @@ class IgniService:
     # ── Talking to igni ─────────────────────────────────────────────
 
     def host(self, org_id: str) -> Host:
-        """igni for one organisation: `notify`, `agent(producer)`, `send_event`, `vm_profile`, and its `directory`."""
+        """igni for one organisation: `notify`, `agent(producer)`, `send_event`, `vm_profile`, and its `directory`.
+
+        Args:
+            org_id: The organisation's id in igni, the one every call this
+                host makes is for.
+        """
         return Host(
             org_id,
             notifier=self.notifier,
@@ -434,7 +540,13 @@ class IgniService:
 
     @staticmethod
     def challenge(refused: TokenRefused | None = None) -> str:
-        """The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise."""
+        """The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise.
+
+        Args:
+            refused: The refusal to say in the challenge, in words safe to
+                show whoever holds the token; `None` when no token was sent,
+                and the challenge is bare.
+        """
         if refused is None:
             return "Bearer"
         said = " ".join(refused.reason.replace('"', "'").replace("\\", "/").split())

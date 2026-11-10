@@ -126,7 +126,12 @@ class TokenOverrides(BaseModel):
     """How long it lives, in seconds or as a `timedelta`; negative is already expired."""
 
     def seconds(self, default: float) -> float:
-        """The lifetime in seconds, or `default` when not changed."""
+        """The lifetime in seconds, or `default` when not changed.
+
+        Args:
+            default: The lifetime to answer with when the test changed none:
+                how long the token lives otherwise.
+        """
         if self.lifetime is None:
             return default
         if isinstance(self.lifetime, timedelta):

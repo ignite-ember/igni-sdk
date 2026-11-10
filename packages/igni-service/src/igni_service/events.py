@@ -52,12 +52,21 @@ class Producer(BaseModel):
 
     @classmethod
     def person(cls, user_id: str) -> Producer:
-        """The igni of the person `user_id`."""
+        """The igni of the person `user_id`.
+
+        Args:
+            user_id: The person's igni user id: whose igni the event is for.
+        """
         return cls(kind="person", id=user_id)
 
     @classmethod
     def app(cls, app_id: str) -> Producer:
-        """The igni of the app `app_id`, in its Fleet VM."""
+        """The igni of the app `app_id`, in its Fleet VM.
+
+        Args:
+            app_id: The app's id, as an org admin registered it: whose Fleet VM
+                the event is for.
+        """
         return cls(kind="app", id=app_id)
 
 
@@ -99,7 +108,17 @@ Sleep = Callable[[float], Awaitable[None]]
 
 
 class EventSender:
-    """Sends events to igni for one organisation at a time."""
+    """Sends events to igni for one organisation at a time.
+
+    Args:
+        tokens: This service's own tokens for igni, kept one per organisation.
+        attempts: How many times a call igni did not take is tried, at least
+            once.
+        backoff: Seconds to wait before the second try; the wait doubles
+            after every one of them.
+        sleep: How the wait between tries is done: ``asyncio.sleep`` by
+            default, or one that does not really wait.
+    """
 
     ATTEMPTS = 3
     BACKOFF = 0.5
@@ -118,11 +137,27 @@ class EventSender:
         self._sleep = sleep
 
     async def send(self, org_id: str, event: ServiceEventRequest) -> EventAccepted:
-        """Send one event. Raises `IgniUnavailable` or `EventRefused`."""
+        """Send one event. Raises `IgniUnavailable` or `EventRefused`.
+
+        Args:
+            org_id: The organisation the event is for; igni answers for that
+                one only.
+            event: The event to send: the producer it is for, the extension's
+                own word for what happened, and the payload with it.
+        """
         return await self.post(org_id, IgniPaths.SERVICE_EVENTS, event, what=event.type)
 
     async def post(self, org_id: str, path: str, item: BaseModel, *, what: str) -> EventAccepted:
-        """Send one item to `path`. Raises `IgniUnavailable` or `EventRefused`."""
+        """Send one item to `path`. Raises `IgniUnavailable` or `EventRefused`.
+
+        Args:
+            org_id: The organisation the item is for; igni answers for that
+                one only.
+            path: The igni path the item is posted to.
+            item: The item to send, as it goes on the wire.
+            what: The word for the item in the log line when igni did not
+                take it.
+        """
         body = item.model_dump(mode="json", exclude_none=True)
         if body.get("attachments") == []:
             body.pop("attachments")

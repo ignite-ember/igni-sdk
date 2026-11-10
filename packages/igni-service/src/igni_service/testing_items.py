@@ -90,6 +90,13 @@ class FakeAgents:
     `fake.agents.items` is every item stored, `uploads` every file, and
     `settle(event_id, state)` plays the producer's igni taking one. Set
     `grants` to play an extension that declares less.
+
+    Args:
+        is_member: Whether a person belongs to an organisation, as the
+            directory answers it: called with the organisation's id and
+            the person's id.
+        clock: The time now, in seconds since the epoch, as the fake's
+            clock answers it.
     """
 
     def __init__(
@@ -113,7 +120,15 @@ class FakeAgents:
         self.grants = set(ALL_GRANTS)
 
     def settle(self, event_id: str, state: ItemState) -> None:
-        """Play the producer's igni: the item is now `state`."""
+        """Play the producer's igni: the item is now `state`.
+
+        Args:
+            event_id: The id of the item to move, as igni gave it when it
+                accepted it.
+            state: Where the item stands afterwards: `pending`,
+                `delivered`, `not_handled`, `expired`, `dropped` or
+                `failed`.
+        """
         for index, item in enumerate(self.items):
             if item.event_id == event_id:
                 self.items[index] = item.model_copy(update={"state": state})
@@ -121,7 +136,13 @@ class FakeAgents:
     # ── Routes ──────────────────────────────────────────────────────
 
     def event(self, body: bytes, client_id: str, org_id: str) -> httpx.Response:
-        """Answer `POST /v1/service-events` as igni does. Called by the fake's router."""
+        """Answer `POST /v1/service-events` as igni does. Called by the fake's router.
+
+        Args:
+            body: The request's body: the JSON of a service event.
+            client_id: The service that sent it.
+            org_id: The organisation the service's token named.
+        """
         try:
             event = ServiceEventRequest.model_validate_json(body)
         except ValidationError as exc:
@@ -142,7 +163,13 @@ class FakeAgents:
         )
 
     def item(self, body: bytes, client_id: str, org_id: str) -> httpx.Response:
-        """Answer `POST /v1/service-items` as igni does. Called by the fake's router."""
+        """Answer `POST /v1/service-items` as igni does. Called by the fake's router.
+
+        Args:
+            body: The request's body: the JSON of a service item.
+            client_id: The service that sent it.
+            org_id: The organisation the service's token named.
+        """
         try:
             item = ServiceItemRequest.model_validate_json(body)
         except ValidationError as exc:
@@ -171,7 +198,17 @@ class FakeAgents:
     def upload(
         self, *, client_id: str, filename: str, content_type: str, data: bytes
     ) -> httpx.Response:
-        """Answer `POST /v1/service-attachments` as igni does. Called by the fake's router."""
+        """Answer `POST /v1/service-attachments` as igni does. Called by the fake's router.
+
+        Args:
+            client_id: The service uploading the file.
+            filename: The name the file is kept under: a file name, not a
+                path.
+            content_type: The media type of the bytes, as the request's
+                `Content-Type` header gave it: the part before any `;`,
+                and `application/octet-stream` when there is none.
+            data: The bytes of the file.
+        """
         if "attachments" not in self.grants:
             return self._refused("service.attachments")
         if not filename or "/" in filename or "\\" in filename:
@@ -201,7 +238,14 @@ class FakeAgents:
         )
 
     def status(self, event_id: str, client_id: str) -> httpx.Response:
-        """Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router."""
+        """Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router.
+
+        Args:
+            event_id: The id of the item to report on, as igni gave it
+                when it accepted the item.
+            client_id: The service asking: only its own items are
+                answered.
+        """
         for item in self.items:
             if item.event_id == event_id and item.client_id == client_id:
                 return httpx.Response(
