@@ -10,124 +10,120 @@ Read them from `session.send()` (a run), `session.events()` and `igni.events()` 
 
 ### ModelCompleted
 
-Model finished — token counts available.
+One model call within a run has finished; its token counts are known.
 
 Wire type `model_completed`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `input_tokens` | `int` | `0` |  |
-| `output_tokens` | `int` | `0` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['model_completed']` | `'model_completed'` | always `'model_completed'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `input_tokens` | `int` | `0` | Tokens sent to the model in this call. |
+| `output_tokens` | `int` | `0` | Tokens the model produced in this call. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['model_completed']` | `'model_completed'` | always `'model_completed'`. Always `model_completed`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### ReasoningStarted
 
-Model entered reasoning/thinking phase.
+The model has started reasoning ("thinking") before it replies.
 
 Wire type `reasoning_started`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['reasoning_started']` | `'reasoning_started'` | always `'reasoning_started'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['reasoning_started']` | `'reasoning_started'` | always `'reasoning_started'`. Always `reasoning_started`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### RunCompleted
 
-An agent/team run has finished.
+An agent or team run has finished.
 
 Wire type `run_completed`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `duration` | `float` | `0.0` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `input_tokens` | `int` | `0` |  |
-| `output_tokens` | `int` | `0` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `reasoning_tokens` | `int` | `0` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['run_completed']` | `'run_completed'` | always `'run_completed'`. |
+| `duration` | `float` | `0.0` | How long the run took, in seconds. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `input_tokens` | `int` | `0` | Tokens sent to the model over the whole run. |
+| `output_tokens` | `int` | `0` | Tokens the model produced over the whole run, reasoning included. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `reasoning_tokens` | `int` | `0` | The part of `output_tokens` spent on the model's reasoning. The visible reply is `output_tokens - reasoning_tokens`. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['run_completed']` | `'run_completed'` | always `'run_completed'`. Always `run_completed`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### RunPaused
 
-Run paused for HITL — wraps hitl_request with run context.
+The run is paused until the person approves or rejects one or more tool calls.
+
+Answer every request with `hitl_response_batch` (or each one with
+`hitl_response`) to let the run continue.
 
 Wire type `run_paused`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `requirements` | `list[`[`Requirement`](/docs/sdk/igni-client/events-reference#requirement)`]` | required |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['run_paused']` | `'run_paused'` | always `'run_paused'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `requirements` | `list[`[`Requirement`](/docs/sdk/igni-client/events-reference#requirement)`]` | `[]` | The tool calls waiting for an answer. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['run_paused']` | `'run_paused'` | always `'run_paused'`. Always `run_paused`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### RunStarted
 
-An agent/team run has begun.
+An agent or team run has begun.
 
 Wire type `run_started`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_name` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `model` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['run_started']` | `'run_started'` | always `'run_started'`. |
+| `agent_name` | `str` | `''` | The name of the agent (or team) doing the run. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `model` | `str` | `''` | The id of the model the run uses. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['run_started']` | `'run_started'` | always `'run_started'`. Always `run_started`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### StreamingDone
 
-Emitted by the BE when the model's content stream has finished
-but the run's post-stream tail (compression, memory, persistence,
-metrics) is still draining inside Agno. The FE uses this to
-optimistically unblock user input — the agent is *logically* done
-from the user's POV even though the backend stream stays open for
-several more seconds. Without this event, `_processing` stays
-True for the entire Agno tail and the queue panel hangs around
-long after the response is visible.
+The model's reply is complete, though the run is still wrapping up.
 
-The BE still serialises subsequent `run_message` calls behind an
-internal lock so the next run can't start until the previous tail
-finishes — but that wait is invisible to the user, who sees the
-normal "Thinking" UI as soon as they submit.
+igni may spend a few more seconds saving and summarising before
+`run_completed`. A client can let the person type and send their
+next message as soon as this arrives: igni starts the next run once
+the current one has fully finished.
 
 Wire type `streaming_done`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['streaming_done']` | `'streaming_done'` | always `'streaming_done'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['streaming_done']` | `'streaming_done'` | always `'streaming_done'`. Always `streaming_done`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
@@ -139,18 +135,18 @@ Wire type `tool_completed`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `diff_rows` | `list[tuple[str, str]] \| None` | `None` |  |
-| `event_seq` | `int` | `0` |  |
-| `full_result` | `str` | `''` |  |
-| `has_markup` | `bool` | `False` |  |
-| `id` | `str` | `''` |  |
-| `is_error` | `bool` | `False` |  |
-| `is_rejected` | `bool` | `False` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `summary` | `str` | `''` |  |
-| `type` | `Literal['tool_completed']` | `'tool_completed'` | always `'tool_completed'`. |
+| `diff_rows` | `list[tuple[str, str]] \| None` | `None` | For a tool that changed a file: the diff to show, as `[text, style]` pairs, one per line. Null when the tool produced no diff. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `full_result` | `str` | `''` | The tool's full output. |
+| `has_markup` | `bool` | `False` | True when `full_result` contains rich-text markup rather than plain text. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `is_error` | `bool` | `False` | True when the tool failed: it raised, or returned text starting with `Error:`. |
+| `is_rejected` | `bool` | `False` | True when the call never ran: the person rejected it when asked for approval, or nobody could be asked. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `summary` | `str` | `''` | A short, one-line summary of the result. |
+| `type` | `Literal['tool_completed']` | `'tool_completed'` | always `'tool_completed'`. Always `tool_completed`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
@@ -162,13 +158,13 @@ Wire type `tool_error`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `error` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['tool_error']` | `'tool_error'` | always `'tool_error'`. |
+| `error` | `str` | `''` | What went wrong, as a human-readable message. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['tool_error']` | `'tool_error'` | always `'tool_error'`. Always `tool_error`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
@@ -180,15 +176,15 @@ Wire type `tool_started`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `args_summary` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `friendly_name` | `str` | `''` |  |
-| `id` | `str` | `''` |  |
-| `parent_run_id` | `str` | `''` |  |
-| `run_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `tool_name` | `str` | `''` |  |
-| `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. |
+| `args_summary` | `str` | `''` | A short, human-readable summary of the call's arguments. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `friendly_name` | `str` | `''` | A human-readable name for the tool, for display; empty when there is none. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `parent_run_id` | `str` | `''` | The id of the run that started this one, for a sub-agent's run; empty for a top-level run. |
+| `run_id` | `str` | `''` | The id of the run this event belongs to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `tool_name` | `str` | `''` | The tool's name, as the model called it. |
+| `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. Always `tool_started`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
@@ -196,443 +192,410 @@ Wire type `tool_started`.
 
 ### CommandResult
 
-Result of a slash command.
-
-Canonical wire model. The single Python subclass
-`igni_core.backend.command_result.CommandResult` inherits
-from this class, adds the semantic + generic classmethod factories
-(`markdown` / `info` / `error` / `fork` / `for_action`),
-and hangs the behaviour methods (`is_error` / `is_action` /
-`render_line`) on it — the backend class IS the wire model, so
-`server.handle_command` returns it directly instead of rebuilding
-a twin. See that module for the layering rationale (protocol is
-the leaf layer; backend depends on protocol, never vice versa).
-
-Fields are enum-typed (`CommandResultKind` / `CommandAction`)
-rather than free strings — Pydantic still serialises them to their
-string values on the wire, so FE parsers that key off literals
-like `"markdown"` / `"quit"` are unaffected. Producers gain
-autocompletion and typo-checking; a raw `kind="markdon"` now
-fails Pydantic validation instead of silently rendering as
-generic-info on the FE.
-
-`display_content` is the optional chat-render override for the
-`run_prompt` action: the loop slash command sets it to the
-unwrapped prompt while `content` carries the wrapped form
-(with the `<loop-iteration>` meta tag) for the agent. When
-empty, the FE displays `content` directly — the normal case
-for skill prompts and any other `run_prompt` action.
+The result of a slash command: text to show, an action for the client to take, or both.
 
 Wire type `command_result`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `action` | [`CommandAction`](/docs/sdk/igni-client/models-reference#commandaction) | `''` |  |
-| `content` | `str` | `''` |  |
-| `display_content` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `kind` | [`CommandResultKind`](/docs/sdk/igni-client/models-reference#commandresultkind) | `'info'` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['command_result']` | `'command_result'` | always `'command_result'`. |
+| `action` | [`CommandAction`](/docs/sdk/igni-client/models-reference#commandaction) | `''` | What the client should do in response; empty for nothing but showing `content`. |
+| `content` | `str` | `''` | The text to show. For some actions it carries the action's value instead: the new session id for `fork`, the prompt to send for `run_prompt`. |
+| `display_content` | `str` | `''` | For `run_prompt`: the text to show in the chat in place of `content`, when the prompt sent to the agent differs from what the person should see. Empty to show `content`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `kind` | [`CommandResultKind`](/docs/sdk/igni-client/models-reference#commandresultkind) | `'info'` | How to show `content`. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['command_result']` | `'command_result'` | always `'command_result'`. Always `command_result`: what kind of message this is. |
 
 ### ContentDelta
 
-Streamed text chunk from the model.
+A chunk of the model's reply, streamed as it is written.
+
+Append each chunk's `text` to what came before to build the reply.
 
 Wire type `content_delta`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `is_thinking` | `bool` | `False` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['content_delta']` | `'content_delta'` | always `'content_delta'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `is_thinking` | `bool` | `False` | True when the text is the model's reasoning rather than its visible reply. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The next piece of text, to append to the earlier ones. |
+| `type` | `Literal['content_delta']` | `'content_delta'` | always `'content_delta'`. Always `content_delta`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### ErrorMessage
 
-Error message.
+An error message to show the person.
 
 Wire type `error`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['error']` | `'error'` | always `'error'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | What went wrong. |
+| `type` | `Literal['error']` | `'error'` | always `'error'`. Always `error`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### InfoMessage
 
-Informational message.
+A short informational message to show the person.
 
 Wire type `info`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['info']` | `'info'` | always `'info'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The message. |
+| `type` | `Literal['info']` | `'info'` | always `'info'`. Always `info`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.cancel()`](/docs/sdk/igni-client/sessions#session-cancel).
 
 ### PushNotification
 
-BE→FE push for callbacks (scheduler, progress, login status,
-permission-mode changes, background processes, file edits, …).
+A push — the channel, and the payload that channel carries.
 
-The `channel` field discriminates which producer emitted the
-push; the FE routes on `channel` to render / dispatch. See
-`PushChannel` for the catalogue of known channels — the
-producer set is open, so treat anything unlisted as a channel
-this module simply hasn't catalogued yet, not as invalid.
+Something happened that a client may want to show, sent without
+being asked. Scheduled tasks, login status, permission-mode
+changes, background processes, file edits and more each have a
+`channel`; the shape of `payload` depends on it. Ignore a
+channel you do not know.
 
-Producers should prefer the `push_*` factory helpers over
-hand-building the class — they take a typed payload model and
-dump it at the seam, matching every existing callsite's shape
-while keeping the boilerplate to one line.
+The `channel` field says which kind of event this is; a client
+routes on it to render or dispatch. See `PushChannel` for
+the catalogue of known channels — the producer set is open, so
+treat anything unlisted as a channel this module simply hasn't
+catalogued yet, not as invalid.
+
+`channel` stays a raw `str` on the wire (not a strict
+`PushChannel` enum field) so a producer emitting a channel
+the catalogue does not name yet survives verbatim — a strict enum
+with `_missing_` → `UNKNOWN` would rewrite the value to
+`"unknown"` and lose the routing information a client keys on.
+
+Producers should build their pushes with the `push_*` factories
+below rather than by hand: each takes that channel's payload
+model, so the channel and the payload cannot drift apart.
 
 Wire type `push_notification`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `channel` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `payload` | `dict[str, JsonValue]` | required |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['push_notification']` | `'push_notification'` | always `'push_notification'`. |
+| `channel` | `str` | `''` | What kind of push this is; it decides the shape of `payload`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `payload` | `dict[str, JsonValue]` | `{}` | The push's data, shaped by `channel`. |
+| `run_id` | `str` | `''` | The run whose work sent this push, when igni chose that run's id; empty otherwise. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['push_notification']` | `'push_notification'` | always `'push_notification'`. Always `push_notification`: what kind of message this is. |
 
 ### Requirement
 
-Permission dialog needed — BE pauses until FE responds.
+A tool call that needs the person's approval before it runs.
+
+The run waits until a client answers with `hitl_response` (or
+`hitl_response_batch`), quoting `requirement_id`.
 
 Wire type `hitl_request`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `list[str]` | required |  |
-| `details` | `str` | `''` |  |
-| `details_pending` | `bool` | `False` |  |
-| `event_seq` | `int` | `0` |  |
-| `friendly_name` | `str` | `''` |  |
-| `id` | `str` | `''` |  |
-| `requirement_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `tool_args` | `dict[str, JsonValue]` | required |  |
-| `tool_name` | `str` | `''` |  |
-| `type` | `Literal['hitl_request']` | `'hitl_request'` | always `'hitl_request'`. |
+| `agent_path` | `list[str]` | `[]` | The chain of agents that made the call, outermost first. Empty (or one entry) for the main agent; for example `["architect", "reviewer"]` when a reviewer started by an architect asked. |
+| `details` | `str` | `''` | Why approval is being asked, for the person; empty when there is no reason given. |
+| `details_pending` | `bool` | `False` | True when `details` is still being written; it arrives later in a `requirement_details` message. Show a placeholder until then. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `friendly_name` | `str` | `''` | A human-readable name for the tool, for display; empty when there is none. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `requirement_id` | `str` | `''` | The request's id; quote it in the answer. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `tool_args` | `dict[str, JsonValue]` | `{}` | The arguments the tool would be called with. |
+| `tool_name` | `str` | `''` | The tool's name, as the model called it. |
+| `type` | `Literal['hitl_request']` | `'hitl_request'` | always `'hitl_request'`. Always `hitl_request`: what kind of message this is. |
 
 ### RequirementDetails
 
-The reason for an open HITL requirement, sent after its dialog.
+The reason for an open approval request, sent after the request itself.
 
-The Bypass safety check raises its dialog with `details_pending`
-and no text, then sends this once the model has described the call
-(or with the plain reason when it could not). Views swap the
-spinner for `details` in place.
+A request sent with `details_pending` set gets its `details`
+later in this message; show it in place of the placeholder.
 
 Wire type `requirement_details`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `details` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `requirement_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['requirement_details']` | `'requirement_details'` | always `'requirement_details'`. |
+| `details` | `str` | `''` | Why approval is being asked, for the person. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `requirement_id` | `str` | `''` | The id of the approval request. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['requirement_details']` | `'requirement_details'` | always `'requirement_details'`. Always `requirement_details`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### RequirementResolved
 
-Broadcast when a HITL requirement is decided by any view, so
-the other views dismiss their (now stale) permission dialogs.
+An approval request was answered, in any client; close its dialog if you show one.
 
 Wire type `requirement_resolved`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `requirement_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['requirement_resolved']` | `'requirement_resolved'` | always `'requirement_resolved'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `requirement_id` | `str` | `''` | The id of the approval request that was answered. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['requirement_resolved']` | `'requirement_resolved'` | always `'requirement_resolved'`. Always `requirement_resolved`: what kind of message this is. |
 
 ### RpcResponse
 
-Response to an RPCRequest.
+The answer to an `rpc_request`, with the request's `id`.
 
-Carries either `result` (success) or `error` (failure) —
-never both, but the invariant is by convention. Use the
-:classmethod:`ok` / :classmethod:`fail` factories to construct
-responses safely; they enforce the shape at the callsite.
+It carries either `result` (the call succeeded) or `error` and
+`code` (it failed), never both. The two factories build the two
+shapes; a frame that carries both is refused on the way in.
 
 Wire type `rpc_response`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `error` | `str \| None` | `None` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
+| `code` | [`RpcErrorCode`](/docs/sdk/igni-client/models-reference#rpcerrorcode)` \| None` | `None` | Why the call failed, for a client to branch on; null on success. |
+| `error` | `str \| None` | `None` | What went wrong, as a sentence for a person; null on success. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
 | `result` | `JsonValue` | `None` | Any JSON value. |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['rpc_response']` | `'rpc_response'` | always `'rpc_response'`. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['rpc_response']` | `'rpc_response'` | always `'rpc_response'`. Always `rpc_response`: what kind of message this is. |
 
 ### RunError
 
-Run-level error.
+The run failed and has stopped.
 
 Wire type `run_error`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `error` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['run_error']` | `'run_error'` | always `'run_error'`. |
+| `error` | `str` | `''` | What went wrong, as a human-readable message. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['run_error']` | `'run_error'` | always `'run_error'`. Always `run_error`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### SchedulerEvent
 
-Notification about a scheduled task.
-
-`event_type` stays a raw `str` on the wire; producers
-SHOULD use `SchedulerEventType` members (`STARTED` /
-`COMPLETED` / `FAILED` / `ERROR`). Kept as `str` for
-forward-compat with any un-enumerated event kind Agno / a
-future scheduler emits.
+A scheduled task started or finished.
 
 Wire type `scheduler_event`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `description` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `event_type` | `str` | `''` |  |
-| `id` | `str` | `''` |  |
-| `result` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `task_id` | `str` | `''` |  |
-| `type` | `Literal['scheduler_event']` | `'scheduler_event'` | always `'scheduler_event'`. |
+| `description` | `str` | `''` | What the task does, as it was scheduled. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `event_type` | `str` | `''` | What happened: `started`, `completed`, or `failed` (sometimes sent as `error`). Other values may appear; treat them as unknown. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `result` | `str` | `''` | The task's output when it finished, or the error when it failed; empty when it started. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `task_id` | `str` | `''` | The scheduled task's id. |
+| `type` | `Literal['scheduler_event']` | `'scheduler_event'` | always `'scheduler_event'`. Always `scheduler_event`: what kind of message this is. |
 
 ### SessionCleared
 
-Session was compacted or cleared.
+The session's conversation was cleared or compacted (replaced by a summary) to free context.
 
 Wire type `session_cleared`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `new_session_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `summary` | `str` | `''` |  |
-| `type` | `Literal['session_cleared']` | `'session_cleared'` | always `'session_cleared'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `new_session_id` | `str` | `''` | The session's id from now on; it may be the same as before. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `summary` | `str` | `''` | The summary that now stands in for the earlier conversation; empty when there is none. |
+| `type` | `Literal['session_cleared']` | `'session_cleared'` | always `'session_cleared'`. Always `session_cleared`: what kind of message this is. |
 
 ### SessionListResult
 
-Response to session_list request.
+The answer to `session_list`: the saved sessions.
 
 Wire type `session_list_result`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `sessions` | `list[`[`SessionListEntry`](/docs/sdk/igni-client/models-reference#sessionlistentry)`]` | required |  |
-| `type` | `Literal['session_list_result']` | `'session_list_result'` | always `'session_list_result'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `sessions` | `list[`[`SessionListEntry`](/docs/sdk/igni-client/models-reference#sessionlistentry)`]` | `[]` | The saved sessions. |
+| `type` | `Literal['session_list_result']` | `'session_list_result'` | always `'session_list_result'`. Always `session_list_result`: what kind of message this is. |
 
 ### StatusUpdate
 
-Status bar data pushed from BE.
+The session's current state, for a status bar: token use, model, account and permission mode.
 
 Wire type `status_update`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `cloud_connected` | `bool` | `False` |  |
-| `cloud_email` | `str` | `''` |  |
-| `cloud_name` | `str` | `''` |  |
-| `cloud_org` | `str` | `''` |  |
-| `context_tokens` | `int` | `0` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `input_tokens` | `int` | `0` |  |
-| `max_context` | `int` | `0` |  |
-| `model` | `str` | `''` |  |
-| `model_configured` | `bool` | `True` |  |
-| `output_tokens` | `int` | `0` |  |
-| `permission_mode` | `str` | `'default'` |  |
-| `session_id` | `str` | `''` |  |
-| `theme` | `dict[str, JsonValue] \| None` | `None` |  |
-| `type` | `Literal['status_update']` | `'status_update'` | always `'status_update'`. |
+| `cloud_connected` | `bool` | `False` | True when signed in to igni cloud. |
+| `cloud_email` | `str` | `''` | The signed-in account's email address; empty when not signed in. |
+| `cloud_name` | `str` | `''` | The signed-in account's display name. Empty until igni has fetched it; show `cloud_email` meanwhile. |
+| `cloud_org` | `str` | `''` | The igni cloud organisation signed in to; empty when not signed in. |
+| `context_tokens` | `int` | `0` | Tokens the conversation currently takes up in the model's context. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `input_tokens` | `int` | `0` | Tokens sent to the model so far in this session. |
+| `max_context` | `int` | `0` | The model's context window, in tokens; 0 when unknown. |
+| `model` | `str` | `''` | The id of the model in use. |
+| `model_configured` | `bool` | `True` | False when no model is set up, so a run could not reach one. |
+| `output_tokens` | `int` | `0` | Tokens the model has produced so far in this session. |
+| `permission_mode` | `str` | `'default'` | The active permission mode: `default`, `plan`, `acceptEdits`, `bypassPermissions` or `dontAsk`. Other values may appear; treat them as unknown. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `theme` | `dict[str, JsonValue] \| None` | `None` | Brand colour overrides from the signed-in account's group, keyed by theme token. Null for igni's own palette. |
+| `type` | `Literal['status_update']` | `'status_update'` | always `'status_update'`. Always `status_update`: what kind of message this is. |
 
 ### StreamEnd
 
-Marks end of a streaming response (run_message, resolve_hitl).
+Marks the end of a streamed answer, such as a run's events.
 
 Wire type `stream_end`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['stream_end']` | `'stream_end'` | always `'stream_end'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['stream_end']` | `'stream_end'` | always `'stream_end'`. Always `stream_end`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.cancel()`](/docs/sdk/igni-client/sessions#session-cancel).
 
 ### TaskCreated
 
-Orchestration task created.
-
-`status` is a raw `str` on the wire; producers SHOULD use
-`OrchestrationTaskStatus` members (which coerce to their
-string values via `StrEnum`). Kept as `str` rather than a
-strict enum so an Agno-emitted status we haven't yet enumerated
-survives verbatim through Pydantic instead of being rewritten
-to `"unknown"` by the enum's `_missing_` fallback.
+A team run has created a task for one of its members.
 
 Wire type `task_created`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `assignee` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `status` | `str` | `'pending'` |  |
-| `task_id` | `str` | `''` |  |
-| `title` | `str` | `''` |  |
-| `type` | `Literal['task_created']` | `'task_created'` | always `'task_created'`. |
+| `assignee` | `str` | `''` | The name of the member doing it; empty when unassigned. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `status` | `str` | `'pending'` | The task's status: `pending`, `running`, `completed`, `failed` or `cancelled`. Other values may appear; treat them as unknown. |
+| `task_id` | `str` | `''` | The task's id. |
+| `title` | `str` | `''` | What the task is, in a few words. |
+| `type` | `Literal['task_created']` | `'task_created'` | always `'task_created'`. Always `task_created`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### TaskIteration
 
-Task iteration progress.
+A team run has started another round of work on its tasks.
 
 Wire type `task_iteration`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `iteration` | `int` | `0` |  |
-| `max_iterations` | `int` | `0` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['task_iteration']` | `'task_iteration'` | always `'task_iteration'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `iteration` | `int` | `0` | The number of the round now under way. |
+| `max_iterations` | `int` | `0` | The most rounds the run will take. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['task_iteration']` | `'task_iteration'` | always `'task_iteration'`. Always `task_iteration`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### TaskStateUpdated
 
-Batch task state update.
+Every task of a team run, as they stand now.
 
 Wire type `task_state_updated`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `tasks` | `list[`[`TaskSnapshot`](/docs/sdk/igni-client/models-reference#tasksnapshot)`]` | required |  |
-| `type` | `Literal['task_state_updated']` | `'task_state_updated'` | always `'task_state_updated'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `tasks` | `list[`[`TaskSnapshot`](/docs/sdk/igni-client/models-reference#tasksnapshot)`]` | `[]` | All the run's tasks; replaces any earlier list. |
+| `type` | `Literal['task_state_updated']` | `'task_state_updated'` | always `'task_state_updated'`. Always `task_state_updated`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### TaskUpdated
 
-Orchestration task status changed.
-
-See `TaskCreated` — `status` is a raw `str` for
-forward-compat with un-enumerated Agno statuses.
+A team run's task changed status or assignee.
 
 Wire type `task_updated`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `assignee` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `status` | `str` | `''` |  |
-| `task_id` | `str` | `''` |  |
-| `type` | `Literal['task_updated']` | `'task_updated'` | always `'task_updated'`. |
+| `assignee` | `str` | `''` | The name of the member doing it; empty when unassigned. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `status` | `str` | `''` | The task's new status: `pending`, `running`, `completed`, `failed` or `cancelled`. Other values may appear; treat them as unknown. |
+| `task_id` | `str` | `''` | The task's id, as in `task_created`. |
+| `type` | `Literal['task_updated']` | `'task_updated'` | always `'task_updated'`. Always `task_updated`: what kind of message this is. |
 
 **Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
 ### Typing
 
-Live draft of a client's composer, broadcast to every view.
+What the person is typing in one client, shared with every other client of the session.
 
-Carries the FULL draft text (not per-character deltas) so views
-can't drift on a dropped frame; senders throttle. Empty `text`
-clears the remote draft (sent on submit/clear).
+Each message carries the whole draft, not a change to it. Send it at
+a modest rate while the person types.
 
 Wire type `typing`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['typing']` | `'typing'` | always `'typing'`. |
+| `client_id` | `str` | `''` | The id of the client the person is typing in. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The whole draft so far; empty when it was sent or cleared. |
+| `type` | `Literal['typing']` | `'typing'` | always `'typing'`. Always `typing`: what kind of message this is. |
 
 ### UserMessageReceived
 
-Broadcast echo of an accepted user/queue message.
+A chat message igni accepted, sent to every client of the session so all show it.
 
-The sending view already painted the bubble locally; other views
-paint it from this event (and the sender skips it by client_id).
+The client that sent it can recognise it by `client_id` and skip it.
 
 Wire type `user_message_received`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `extension_id` | `str` | `''` |  |
-| `id` | `str` | `''` |  |
-| `queued` | `bool` | `False` |  |
-| `service_client_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['user_message_received']` | `'user_message_received'` | always `'user_message_received'`. |
+| `client_id` | `str` | `''` | The id of the client that sent it; empty when no client did. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `extension_id` | `str` | `''` | Set when an extension posted the message (`host.chat.post`): show it as that extension's, not the person's. Empty otherwise. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `queued` | `bool` | `False` | True when it was sent during a run and is queued for the agent. |
+| `service_client_id` | `str` | `''` | Set when the extension's service sent the message: that service's client id. `extension_id` is set too. Empty otherwise. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The message. |
+| `type` | `Literal['user_message_received']` | `'user_message_received'` | always `'user_message_received'`. Always `user_message_received`: what kind of message this is. |
 
 ### Welcome
 
-First message the BE sends a newly attached client.
-
-`client_id` lets a view recognise its own broadcasts (e.g. skip
-rendering an echo of a message it already painted locally).
+The first message igni sends a newly attached client.
 
 Wire type `welcome`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['welcome']` | `'welcome'` | always `'welcome'`. |
+| `client_id` | `str` | `''` | The id igni gave this client. Send it with your messages; messages igni echoes to every client carry it, so you can skip your own. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['welcome']` | `'welcome'` | always `'welcome'`. Always `welcome`: what kind of message this is. |
 
 ## Push notifications
 
@@ -644,14 +607,14 @@ A background process finished, as the agent is told.
 
 Channel `background_process_done`; `payload` is [`BackgroundProcessDonePayload`](/docs/sdk/igni-client/models-reference#backgroundprocessdonepayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str` | required |
-| `duration_seconds` | `float` | required |
-| `exit_code` | `int \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str` | required | The command that ran. |
+| `duration_seconds` | `float` | required | How long it ran, in seconds. |
+| `exit_code` | `int \| None` | required | Its exit code; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
+**Streamed by** [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
 
 ### FileEditedPush
 
@@ -659,11 +622,9 @@ An edit tool wrote a file.
 
 Channel `file_edited`; `payload` is [`FileEditedPayload`](/docs/sdk/igni-client/models-reference#fileeditedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `path` | `str` | required |
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `path` | `str` | required | The file that was written. |
 
 ### HostSignalPush
 
@@ -673,36 +634,32 @@ Channel `host_signal`; `payload` is [`HostSignal`](/docs/sdk/igni-client/models-
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `extension_id` | `str` | required |  |
-| `signal` | `str` | required |  |
-| `value` | `JsonValue` | `None` | Any JSON value. |
+| `extension_id` | `str` | required | The id of the extension whose pages it is for. |
+| `signal` | `str` | required | The signal's name, e.g. `chat.run_completed` or `session.switched`. |
+| `value` | `JsonValue` | `None` | The signal's value; its shape depends on `signal`. |
 
 ### HttpRetryAttemptPush
 
 A web fetch is about to be retried.
 
-Channel `http_retry_attempt`; `payload` is [`HttpRetryAttemptPayload`](/docs/sdk/igni-client/models-reference#httpretryattemptpayload).
+Channel `http_retry_attempt`; `payload` is [`HttpRetryAttemptEventPayload`](/docs/sdk/igni-client/models-reference#httpretryattempteventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `attempt` | `int` | required |
-| `delay_seconds` | `float` | required |
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `attempt` | `int` | required | Number of the attempt about to be made, counting the first request as 1 (so the first retry is 2). |
+| `delay_seconds` | `float` | required | Seconds igni waits before making this attempt. |
 
 ### HttpRetrySucceededPush
 
 A web fetch succeeded after retrying.
 
-Channel `http_retry_succeeded`; `payload` is [`HttpRetrySucceededPayload`](/docs/sdk/igni-client/models-reference#httpretrysucceededpayload).
+Channel `http_retry_succeeded`; `payload` is [`HttpRetrySucceededEventPayload`](/docs/sdk/igni-client/models-reference#httpretrysucceededeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `attempt_count` | `int` | required |
-| `delay_seconds` | `float` | required |
-| `url` | `str` | required |
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `attempt_count` | `int` | required | Total number of requests made, including the first. |
+| `delay_seconds` | `float` | required | Total seconds spent waiting between attempts. |
+| `url` | `str` | required | URL that was fetched. |
 
 ### LoginResultPush
 
@@ -710,10 +667,11 @@ How a sign-in started by `login` ended.
 
 Channel `login_result`; `payload` is [`LoginResultPayload`](/docs/sdk/igni-client/models-reference#loginresultpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `result` | `str` | required |
-| `success` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `flow_id` | `str` | `''` | The sign-in it ends: the `flow_id` that `login` returned. |
+| `result` | `str` | required | On success, the signed-in email address; on failure, why it failed. May be empty. |
+| `success` | `bool` | required | Whether the user is now signed in. |
 
 **Streamed by** [`igni.auth.login()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-login).
 
@@ -723,9 +681,10 @@ What a sign-in started by `login` is doing now.
 
 Channel `login_status`; `payload` is [`LoginStatusPayload`](/docs/sdk/igni-client/models-reference#loginstatuspayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `text` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `flow_id` | `str` | `''` | The sign-in it is about: the `flow_id` that `login` returned. |
+| `text` | `str` | required | The current status, for a person. |
 
 **Streamed by** [`igni.auth.login()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-login).
 
@@ -735,9 +694,10 @@ The person's unread notification counts moved.
 
 Channel `notifications_changed`; `payload` is [`NotificationsChanged`](/docs/sdk/igni-client/models-reference#notificationschanged).
 
-| Field | Type | Default |
-|---|---|---|
-| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cause` | `Literal['server', 'listed', 'marked_read', 'extension', 'signed_out']` | `'server'` | What changed them. `server`: igni server's list was fetched again on its own (after signing in, or when the server said something changed). `listed`: a `notifications_list` call fetched it. `marked_read`: a `notifications_mark_read` call. `extension`: an extension on this machine posted a notice. `signed_out`: the person signed out. |
+| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | `{'by_source': {}, 'unread': 0}` | The unread counts now. |
 
 **Streamed by** [`session.auth.sign_out()`](/docs/sdk/igni-client/sign-in-and-server#session-auth-sign-out), [`igni.auth.login()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-login), [`igni.notifications.list()`](/docs/sdk/igni-client/notifications#igni-notifications-list), [`igni.notifications.mark_read()`](/docs/sdk/igni-client/notifications#igni-notifications-mark-read).
 
@@ -747,49 +707,47 @@ An extension asked a window to open a link in the browser.
 
 Channel `open_external`; `payload` is [`ExternalOpen`](/docs/sdk/igni-client/models-reference#externalopen).
 
-| Field | Type | Default |
-|---|---|---|
-| `source` | `str` | required |
-| `url` | `str` | required |
-| `window` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `source` | `str` | required | The id of the extension that asked. |
+| `url` | `str` | required | The link to open. |
+| `window` | `str` | required | The id of the window that should open it; other windows ignore it. |
 
 ### OrchestrateEventPush
 
 A sub-agent's progress (a tool call, its start, pause, end or error, a task) or a view the agent or an extension drew, told apart by `type`.
 
-Channel `orchestrate_event`; `payload` is `OrchestrateEvent`.
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+Channel `orchestrate_event`; `payload` is [`OrchestrateEventPayload`](/docs/sdk/igni-client/models-reference#orchestrateeventpayload).
 
 ### OutputStyleChangedPush
 
 The session's output style changed.
 
-Channel `output_style_changed`; `payload` is [`OutputStyleChangedPayload`](/docs/sdk/igni-client/models-reference#outputstylechangedpayload).
+Channel `output_style_changed`; `payload` is [`OutputStyleChangedEventPayload`](/docs/sdk/igni-client/models-reference#outputstylechangedeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `previous` | `str` | required |
-| `style` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `previous` | `str` | required | Name of the output style in effect before the change. |
+| `style` | `str` | required | Name of the output style now in effect. |
 
 ### PermissionModeChangedPush
 
 The session's permission mode changed: the switch itself (`mode` and `previous`), or the plan tool's note that the agent entered plan mode (`mode`, `source`, `reason`).
 
-Channel `permission_mode_changed`; `payload` is `PermissionModeChange`.
+Channel `permission_mode_changed`; `payload` is [`PermissionModeChangedPayload`](/docs/sdk/igni-client/models-reference#permissionmodechangedpayload).
 
-**Streamed by** [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve), [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+**Streamed by** [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve).
 
 ### PlanDecidedPush
 
 A submitted plan was approved or dismissed.
 
-Channel `plan_decided`; `payload` is [`PlanDecidedPayload`](/docs/sdk/igni-client/models-reference#plandecidedpayload).
+Channel `plan_decided`; `payload` is [`PlanDecidedEventPayload`](/docs/sdk/igni-client/models-reference#plandecidedeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required |
-| `run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required | The decision recorded: `approved` or `dismissed`. |
+| `run_id` | `str` | required | Run in which the agent submitted the plan. |
 
 **Streamed by** [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve), [`session.plan.dismiss()`](/docs/sdk/igni-client/plans#session-plan-dismiss).
 
@@ -797,15 +755,13 @@ Channel `plan_decided`; `payload` is [`PlanDecidedPayload`](/docs/sdk/igni-clien
 
 The agent submitted a plan for the person to decide on.
 
-Channel `plan_submitted`; `payload` is [`PlanSubmittedPayload`](/docs/sdk/igni-client/models-reference#plansubmittedpayload).
+Channel `plan_submitted`; `payload` is [`PlanSubmittedEventPayload`](/docs/sdk/igni-client/models-reference#plansubmittedeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `plan` | `str` | required |
-| `run_id` | `str \| None` | `None` |
-| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required |
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `plan` | `str` | required | The plan text, in Markdown. |
+| `run_id` | `str \| None` | `None` | Run in which the plan was submitted; pass it back when approving or dismissing the plan. Omitted when not known. |
+| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | `[]` | Checklist of the plan's steps, all starting as `pending`. Empty when the plan has no task list. |
 
 ### ProcessExitedPush
 
@@ -813,14 +769,14 @@ A background process exited.
 
 Channel `process_exited`; `payload` is [`ProcessExitedPayload`](/docs/sdk/igni-client/models-reference#processexitedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str \| None` | required |
-| `duration_seconds` | `float \| None` | required |
-| `exit_code` | `int \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str \| None` | required | The command it ran; `null` when unknown. |
+| `duration_seconds` | `float \| None` | required | How long it ran, in seconds; `null` when unknown. |
+| `exit_code` | `int \| None` | required | Its exit code; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
+**Streamed by** [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
 
 ### ProcessLinePush
 
@@ -828,12 +784,12 @@ A background process printed a line.
 
 Channel `process_line`; `payload` is [`ProcessLinePayload`](/docs/sdk/igni-client/models-reference#processlinepayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `line` | `str \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `line` | `str \| None` | required | The line, from stdout or stderr, without its line ending; `null` when there is none. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
+**Streamed by** [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
 
 ### ProcessStartedPush
 
@@ -841,13 +797,13 @@ A background process started.
 
 Channel `process_started`; `payload` is [`ProcessStartedPayload`](/docs/sdk/igni-client/models-reference#processstartedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str \| None` | required |
-| `pid` | `int \| None` | required |
-| `started_at` | `float \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str \| None` | required | The command it runs; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id, which its later `process_*` pushes carry; `null` when unknown. |
+| `started_at` | `float \| None` | required | When it started, in seconds since the Unix epoch; `null` when unknown. |
 
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+**Streamed by** [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell).
 
 ### SchedulerCompletedPush
 
@@ -855,11 +811,11 @@ A scheduled task finished: its result, or why it failed.
 
 Channel `scheduler_completed`; `payload` is [`SchedulerCompletedPayload`](/docs/sdk/igni-client/models-reference#schedulercompletedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `result` | `str` | required |
-| `task_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | required | What the task does, as it was scheduled. |
+| `result` | `str` | required | The task's outcome, as text. |
+| `task_id` | `str` | required | The scheduled task's id. |
 
 **Streamed by** [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
 
@@ -869,10 +825,10 @@ A scheduled task started running.
 
 Channel `scheduler_started`; `payload` is [`SchedulerStartedPayload`](/docs/sdk/igni-client/models-reference#schedulerstartedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `task_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | required | What the task does, as it was scheduled. |
+| `task_id` | `str` | required | The scheduled task's id. |
 
 **Streamed by** [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
 
@@ -882,33 +838,31 @@ A session was given a name.
 
 Channel `session_named`; `payload` is [`SessionNamedPayload`](/docs/sdk/igni-client/models-reference#sessionnamedpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `session_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | Its new display name. |
+| `session_id` | `str` | required | The session that was named. |
 
 ### TodosUpdatedPush
 
 The agent's to-do list, whole, after it changed.
 
-Channel `todos_updated`; `payload` is [`TodosUpdatedPayload`](/docs/sdk/igni-client/models-reference#todosupdatedpayload).
+Channel `todos_updated`; `payload` is [`TodosUpdatedEventPayload`](/docs/sdk/igni-client/models-reference#todosupdatedeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required |
-
-**Streamed by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach), [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute), [`session.scheduler.start()`](/docs/sdk/igni-client/scheduler#session-scheduler-start).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required | The full checklist, in order. Replaces any list received before; empty when the agent cleared it. |
 
 ### VisualizationActionDispatchedPush
 
 The person used a control in a view.
 
-Channel `visualization_action_dispatched`; `payload` is [`VisualizationActionDispatchedPayload`](/docs/sdk/igni-client/models-reference#visualizationactiondispatchedpayload).
+Channel `visualization_action_dispatched`; `payload` is [`VisualizationActionDispatchedEventPayload`](/docs/sdk/igni-client/models-reference#visualizationactiondispatchedeventpayload).
 
-| Field | Type | Default |
-|---|---|---|
-| `action` | `str` | required |
-| `params` | `dict[str, JsonValue]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `action` | `str` | required | Name of the action the user triggered in the visualization. |
+| `params` | `dict[str, JsonValue]` | required | Parameters the visualization attached to the action. |
 
 **Streamed by** [`session.visualization_action()`](/docs/sdk/igni-client/sessions#session-visualization-action).
 
@@ -918,10 +872,10 @@ A cloud VM's own credential changed state.
 
 Channel `vm_credential`; `payload` is [`VmCredentialState`](/docs/sdk/igni-client/models-reference#vmcredentialstate).
 
-| Field | Type | Default |
-|---|---|---|
-| `message` | `str` | `''` |
-| `state` | `Literal['ready', 'needs_sign_in', 'needs_reissue', 'unreachable']` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `message` | `str` | `''` | What went wrong; empty when nothing did. |
+| `state` | `Literal['ready', 'needs_sign_in', 'needs_reissue', 'unreachable']` | required | `ready`: the VM holds a credential and a token from it. `needs_sign_in`: the person must sign in through the gateway again. `needs_reissue`: an app VM's credential is gone and an organisation admin must re-issue it. `unreachable`: igni server could not be reached; the last token holds until it expires. |
 
 ### WindowModelChangedPush
 
@@ -931,14 +885,14 @@ Channel `window_model_changed`; `payload` is [`WindowChange`](/docs/sdk/igni-cli
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `answer` | `JsonValue` | `None` | Any JSON value. |
-| `event` | `str` | `''` |  |
-| `field` | `str` | required |  |
-| `item` | `dict[str, JsonValue] \| None` | `None` |  |
-| `rev` | `int` | required |  |
-| `token` | `str` | `''` |  |
-| `value` | `JsonValue` | `None` | Any JSON value. |
-| `window` | `str` | required |  |
+| `answer` | `JsonValue \| None` | `None` | The answer given to the dialog, as JSON; null when it was dismissed. |
+| `event` | `str` | `''` | What happened, for the fields that hold a list or a dialog: `toast_shown`, `toast_dismissed`, `dialog_opened` or `dialog_closed`; empty otherwise. |
+| `field` | `str` | required | Which of the window's fields changed. |
+| `item` | `WindowItem \| None` | `None` | The toast or the dialog the event is about. |
+| `rev` | `int` | required | The window's revision after the change. |
+| `token` | `str` | `''` | The writer's own name for the write, echoed so the window that wrote it knows its own write; empty for an extension's. |
+| `value` | `JsonValue \| None` | `None` | The field's new value, as JSON. |
+| `window` | `str` | required | The window whose model changed. |
 
 **Streamed by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
@@ -948,14 +902,14 @@ One step of a running workflow, keyed by its run id.
 
 Channel `workflow_event`; `payload` is [`WorkflowEventRecord`](/docs/sdk/igni-client/models-reference#workfloweventrecord).
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `payload` | `dict[str, JsonValue]` | required |
-| `seq` | `int` | required |
-| `ts` | `int` | required |
-| `type` | `str` | required |
-| `workflow_run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | Name of the workflow. |
+| `payload` | `dict[str, JsonValue]` | required | Event details; keys depend on `type`. For the final event added by igni: `status` (`completed`, `failed` or `cancelled`), `exit_code` and `synthetic`. |
+| `seq` | `int` | required | Order of the event within its run, from `0`. `-1` for the final event igni adds itself when the workflow process exits without reporting an end. |
+| `ts` | `int` | required | When the event happened, in Unix epoch milliseconds. |
+| `type` | `str` | required | Event kind, e.g. `workflow_meta`, `phase_*`, `agent_*`, `parallel_*`, `pipeline_*`, `log`, and the final `workflow_completed` or `workflow_failed`. |
+| `workflow_run_id` | `str` | required | Id of the workflow run the event belongs to. |
 
 **Streamed by** [`session.workflows.cancel()`](/docs/sdk/igni-client/workflows#session-workflows-cancel), [`session.workflows.run()`](/docs/sdk/igni-client/workflows#session-workflows-run).
 
@@ -965,16 +919,16 @@ A folder's trust status: windows showing the trust dialog for it close it, or op
 
 Channel `workspace_trust_required`; `payload` is [`WorkspaceTrustStatus`](/docs/sdk/igni-client/models-reference#workspacetruststatus).
 
-| Field | Type | Default |
-|---|---|---|
-| `can_trust` | `bool` | required |
-| `gated` | `str` | `'project tools, hooks, workflows, language servers, monitors, plugins, markdown-command shell tokens, and its permission and safety settings'` |
-| `path` | `str` | required |
-| `policy_mode` | `str` | required |
-| `reason` | `str` | required |
-| `remote` | `str \| None` | `None` |
-| `source` | `str` | `''` |
-| `state` | `Literal['trusted', 'untrusted', 'ask']` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `can_trust` | `bool` | required | `false` when the organisation's policy forbids trusting this folder. |
+| `gated` | `str` | `'project tools, hooks, workflows, language servers, monitors, plugins, markdown-command shell tokens, and its permission and safety settings'` | Short summary of what an untrusted folder does not get, for showing to the user. |
+| `path` | `str` | required | The folder's full canonical path. |
+| `policy_mode` | `str` | required | The organisation's trust policy: `ask` (the user decides), `trusted_remotes` (only folders whose git remote is approved) or `never` (no folder is trusted). |
+| `reason` | `str` | required | Human-readable explanation of the current state. |
+| `remote` | `str \| None` | `None` | The folder's git remote URL, with any credentials removed; `null` if none. |
+| `source` | `str` | `''` | How the state was reached: `policy` (organisation policy), `run` (trusted once, until igni exits), `store` (the user's saved answer) or `unset` (no answer yet). |
+| `state` | `Literal['trusted', 'untrusted', 'ask']` | required | `trusted`, `untrusted`, or `ask` when nobody has decided yet (the folder is treated as untrusted meanwhile). |
 
 **Streamed by** [`session.workspace.set_trust()`](/docs/sdk/igni-client/workspace#session-workspace-set-trust).
 
@@ -982,16 +936,16 @@ Channel `workspace_trust_required`; `payload` is [`WorkspaceTrustStatus`](/docs/
 
 ### Cancel
 
-Cancel current run.
+Stop the run in progress.
 
 Wire type `cancel`. igni-client does not send it: `cancel_run` does the same and answers, so `session.cancel()` calls it.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['cancel']` | `'cancel'` | always `'cancel'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['cancel']` | `'cancel'` | always `'cancel'`. Always `cancel`: what kind of message this is. |
 
 ### CancelLogin
 
@@ -1001,239 +955,206 @@ Wire type `cancel_login`. igni-client sends it as [`igni.auth.cancel_login()`](/
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['cancel_login']` | `'cancel_login'` | always `'cancel_login'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['cancel_login']` | `'cancel_login'` | always `'cancel_login'`. Always `cancel_login`: what kind of message this is. |
 
 ### Command
 
-Slash command from user.
+A slash command the person typed. igni answers with a `command_result`.
 
 Wire type `command`. igni-client sends it as [`session.command()`](/docs/sdk/igni-client/skills-and-commands#session-command).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['command']` | `'command'` | always `'command'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The command as typed, slash included, e.g. `/help`. |
+| `type` | `Literal['command']` | `'command'` | always `'command'`. Always `command`: what kind of message this is. |
 
 ### HitlDecision
 
-One row inside a `HITLResponseBatch`. See `HITLResponse`
-for the `action` / `choice` typing note.
-
-`set_permission_mode` is an optional atomic-mode-flip: when
-set, the BE applies the named mode to the session BEFORE
-resuming the agent — so the very next tool check after the
-HITL pause resolves sees the new mode. Used by the FE's
-"Accept all edits during this session" shortcut: a previous
-version fired a separate `/accept on` slash command that
-raced the resume and lost ~half the time, causing the next
-edit to re-prompt instead of auto-approving. Default `None`
-keeps the wire shape unchanged for existing clients.
+One answer inside a `hitl_response_batch`: as `hitl_response`,
+plus a permission mode to switch to before the run resumes
+(`set_permission_mode`), so the very next tool call is checked
+under it.
 
 Wire type `hitl_decision`. igni-client sends it from a row of `hitl_response_batch`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `action` | `str` | `''` |  |
-| `choice` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `requirement_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `set_permission_mode` | `str` | `''` |  |
-| `type` | `Literal['hitl_decision']` | `'hitl_decision'` | always `'hitl_decision'`. |
+| `action` | `Literal['confirm', 'reject']` | `'reject'` | `confirm` to run the tool call, `reject` to refuse it. |
+| `choice` | `Literal['', 'once', 'always', 'similar', 'deny']` | `''` | How long the answer stands. `once` (or empty): this call only. `always`: save a rule allowing this exact call. `similar`: save a rule allowing calls like it. `deny`: save a rule refusing it. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `requirement_id` | `str` | `''` | The approval request's id, from its `hitl_request`. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `set_permission_mode` | `Literal['', 'default', 'plan', 'acceptEdits', 'bypassPermissions']` | `''` | A permission mode to switch to before the run resumes; empty to keep the current one. |
+| `type` | `Literal['hitl_decision']` | `'hitl_decision'` | always `'hitl_decision'`. Always `hitl_decision`: what kind of message this is. |
 
 ### HitlResponse
 
-User responded to a permission dialog.
-
-`action` / `choice` stay as raw `str` on the wire; use
-`HITLAction` / `HITLChoice` members at producer
-callsites for autocompletion + typo-checking. `StrEnum`
-coerces to the underlying string on assignment.
+The person's answer to one approval request (from `run_paused`).
 
 Wire type `hitl_response`. igni-client does not send it: answers one call of a pause and leaves the rest refused; `hitl_response_batch` answers every call of it, which is what `ApprovalRequested` sends.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `action` | `str` | `''` |  |
-| `choice` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `requirement_id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['hitl_response']` | `'hitl_response'` | always `'hitl_response'`. |
+| `action` | `Literal['confirm', 'reject']` | `'reject'` | `confirm` to run the tool call, `reject` to refuse it. |
+| `choice` | `Literal['', 'once', 'always', 'similar', 'deny']` | `''` | How long the answer stands. `once` (or empty): this call only. `always`: save a rule allowing this exact call. `similar`: save a rule allowing calls like it. `deny`: save a rule refusing it. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `requirement_id` | `str` | `''` | The approval request's id, from its `hitl_request`. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['hitl_response']` | `'hitl_response'` | always `'hitl_response'`. Always `hitl_response`: what kind of message this is. |
 
 ### HitlResponseBatch
 
-User responded to *every* requirement in a multi-req pause.
-
-Agno's `acontinue_run` treats requirements not in the resolution
-list as denied, so a per-req resolve loop dropped 7-of-8 calls in
-a batched tool plan. The batch envelope carries every decision in
-one round-trip so the backend can call `acontinue_run` exactly
-once with the full set of resolved requirements.
+The person's answers to every approval request of one pause, sent
+together: a request left out is taken as rejected.
 
 Wire type `hitl_response_batch`. igni-client sends it from `ApprovalRequested.approve()`, `.reject()` and `.decide()`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `decisions` | `list[`[`HitlDecision`](/docs/sdk/igni-client/events-reference#hitldecision)`]` | `[]` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['hitl_response_batch']` | `'hitl_response_batch'` | always `'hitl_response_batch'`. |
+| `decisions` | `list[`[`HitlDecision`](/docs/sdk/igni-client/events-reference#hitldecision)`]` | `[]` | One answer per approval request. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['hitl_response_batch']` | `'hitl_response_batch'` | always `'hitl_response_batch'`. Always `hitl_response_batch`: what kind of message this is. |
 
 ### McpToggle
 
-Toggle MCP server connection.
+Connect or disconnect one of the configured MCP servers.
 
 Wire type `mcp_toggle`. igni-client does not send it: the methods `mcp_connect` and `mcp_disconnect` do the same, so `session.mcp.connect()` and `.disconnect()` call them.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `connect` | `bool` | `True` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `server_name` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['mcp_toggle']` | `'mcp_toggle'` | always `'mcp_toggle'`. |
+| `connect` | `bool` | `True` | True to connect, false to disconnect. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `server_name` | `str` | `''` | The MCP server's name, as configured. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['mcp_toggle']` | `'mcp_toggle'` | always `'mcp_toggle'`. Always `mcp_toggle`: what kind of message this is. |
 
 ### ModelSwitch
 
-Switch model.
+Switch the session to a different model.
 
 Wire type `model_switch`. igni-client does not send it: the method `switch_model` does the same, so `session.models.switch()` calls it.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `model_name` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['model_switch']` | `'model_switch'` | always `'model_switch'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `model_name` | `str` | `''` | The id of the model to switch to. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['model_switch']` | `'model_switch'` | always `'model_switch'`. Always `model_switch`: what kind of message this is. |
 
 ### QueueMessage
 
-User types while agent is running.
+A message the person sends while a run is still going; it is queued for the agent.
 
 Wire type `queue_message`. igni-client sends it from `session.queue()`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['queue_message']` | `'queue_message'` | always `'queue_message'`. |
+| `client_id` | `str` | `''` | This client's id, from `welcome`, so it can recognise its own echo. Empty is allowed. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The message. |
+| `type` | `Literal['queue_message']` | `'queue_message'` | always `'queue_message'`. Always `queue_message`: what kind of message this is. |
 
 ### RpcRequest
 
-Generic RPC call for accessor/utility methods.
+A call to one of igni's methods. igni answers with an `rpc_response` carrying the same `id`.
 
 Wire type `rpc_request`. igni-client sends it from every generated method.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `args` | `dict[str, JsonValue]` | `{}` |  |
-| `caller` | `str \| None` | `None` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `method` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['rpc_request']` | `'rpc_request'` | always `'rpc_request'`. |
+| `args` | `dict[str, JsonValue]` | `{}` | The method's arguments, by name. |
+| `caller` | `str \| None` | `None` | The id of the extension whose page is making the call; null for igni's own interface. Methods under `ext.` need it: an extension may reach only its own service. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `method` | `str` | `''` | The name of the method to call. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['rpc_request']` | `'rpc_request'` | always `'rpc_request'`. Always `rpc_request`: what kind of message this is. |
 
 ### SessionList
 
-Request session list.
+Ask for the saved sessions. igni answers with a `session_list_result`.
 
 Wire type `session_list`. igni-client does not send it: the method `list_sessions` answers the same, so `session.list_sessions()` calls it.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['session_list']` | `'session_list'` | always `'session_list'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['session_list']` | `'session_list'` | always `'session_list'`. Always `session_list`: what kind of message this is. |
 
 ### SessionSwitch
 
-Switch to a different session.
+Switch to a different saved session.
 
 Wire type `session_switch`. igni-client does not send it: the method `switch_session` does the same, so `session.switch()` calls it.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['session_switch']` | `'session_switch'` | always `'session_switch'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The id of the session to switch to. |
+| `type` | `Literal['session_switch']` | `'session_switch'` | always `'session_switch'`. Always `session_switch`: what kind of message this is. |
 
 ### Shutdown
 
-Graceful shutdown.
+Shut igni down cleanly.
 
 Wire type `shutdown`. igni-client does not send it: stops igni itself, for every window and program attached, and only igni's window may; `session.shutdown()` winds one session down instead.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `type` | `Literal['shutdown']` | `'shutdown'` | always `'shutdown'`. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `type` | `Literal['shutdown']` | `'shutdown'` | always `'shutdown'`. Always `shutdown`: what kind of message this is. |
 
 ### Typing
 
-Live draft of a client's composer, broadcast to every view.
+What the person is typing in one client, shared with every other client of the session.
 
-Carries the FULL draft text (not per-character deltas) so views
-can't drift on a dropped frame; senders throttle. Empty `text`
-clears the remote draft (sent on submit/clear).
+Each message carries the whole draft, not a change to it. Send it at
+a modest rate while the person types.
 
 Wire type `typing`. igni-client sends it as [`session.typing()`](/docs/sdk/igni-client/sessions#session-typing).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['typing']` | `'typing'` | always `'typing'`. |
+| `client_id` | `str` | `''` | The id of the client the person is typing in. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The whole draft so far; empty when it was sent or cleared. |
+| `type` | `Literal['typing']` | `'typing'` | always `'typing'`. Always `typing`: what kind of message this is. |
 
 ### UserMessage
 
-User sends a chat message.
-
-`client_id` (mirroring) identifies the sending view so the BE's
-`UserMessageReceived` broadcast lets every OTHER view paint the
-bubble while the sender skips its own echo. Empty for views that
-predate mirroring — the echo then renders everywhere except
-nowhere, which is harmless for a single view.
-
-`force` (default `False`) tells the BE to supersede any
-interrupted or pending rows for the session before starting the
-run. Used by the FE's "Retry" action on an interrupted-banner:
-discard the stale interrupted state, then start clean with the
-same prompt. Backwards compatible — pre-force clients keep the
-existing behaviour (the old rows linger until natural
-completion or explicit discard).
+The person sends a chat message, starting a run.
 
 Wire type `user_message`. igni-client sends it from `session.send()` and `session.ask()`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `client_id` | `str` | `''` |  |
-| `event_seq` | `int` | `0` |  |
-| `file_contents` | `dict[str, str]` | `{}` |  |
-| `force` | `bool` | `False` |  |
-| `id` | `str` | `''` |  |
-| `session_id` | `str` | `''` |  |
-| `text` | `str` | `''` |  |
-| `type` | `Literal['user_message']` | `'user_message'` | always `'user_message'`. |
+| `client_id` | `str` | `''` | This client's id, from `welcome`. igni echoes the message to every other client attached to the session (`user_message_received`); the sender recognises its own by this id. Empty is allowed. |
+| `event_seq` | `int` | `0` | The message's place in its stream, counting from 1; a client drops a message whose (id, event_seq) it has seen. 0 on messages sent to igni. |
+| `file_contents` | `dict[str, str]` | `{}` | Files attached to the message: their contents, keyed by path. |
+| `force` | `bool` | `False` | True to discard any interrupted or pending runs of the session first, then start afresh with this message; for retrying after an interruption. |
+| `id` | `str` | `''` | Ties messages together: a reply carries its request's id, and the events a request streams carry it too. Empty when nothing is tied. |
+| `session_id` | `str` | `''` | The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular. |
+| `text` | `str` | `''` | The message. |
+| `type` | `Literal['user_message']` | `'user_message'` | always `'user_message'`. Always `user_message`: what kind of message this is. |

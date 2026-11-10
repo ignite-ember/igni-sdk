@@ -71,13 +71,13 @@ ServiceEvent(
 
 One event from this extension's service.
 
-| Field | Type | Default |
-|---|---|---|
-| `event_id` | `str` | required |
-| `extension_id` | `str` | `''` |
-| `client_id` | `str` | `''` |
-| `type` | `str` | required |
-| `payload` | `dict[str, Any]` | factory |
-| `event_key` | `str \| None` | `None` |
-| `created_at` | `str \| None` | `None` |
-| `expires_at` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `event_id` | `str` | required | igni's id for it; a repeat has the same one. |
+| `extension_id` | `str` | `''` | The extension it is for: this one. |
+| `client_id` | `str` | `''` | The service that sent it (its client id). |
+| `type` | `str` | required | The service's own word for what happened: `claim.created`. |
+| `payload` | `dict[str, Any]` | factory | What the service sent with it. |
+| `event_key` | `str \| None` | `None` | The key the service sent it with, if any: one event per key. |
+| `created_at` | `str \| None` | `None` | When igni stored it, ISO 8601. |
+| `expires_at` | `str \| None` | `None` | When igni stops trying to deliver it, ISO 8601. |

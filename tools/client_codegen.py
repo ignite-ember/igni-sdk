@@ -38,7 +38,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from tools.client_contract import CONTRACT_FILE, PUSH_PREFIX, PushChannelContract, RpcContract
+from tools.client_contract import (
+    CONTRACT_FILE,
+    PUSH_PREFIX,
+    Correlation,
+    PushChannelContract,
+    RpcContract,
+)
 from tools.client_names import (
     CLASS_NAMES,
     FOLLOWED,
@@ -51,6 +57,7 @@ from tools.client_names import (
     NOT_FOR_CLIENTS,
     OWN_SESSION_ARG,
     SCOPE_EXCEPTIONS,
+    SELF_MADE,
     UNFOLLOWED,
     UNION_NAMES,
 )
@@ -79,6 +86,18 @@ _RUN_FIELDS = ("run_id", "parent_run_id")
 
 class ContractError(ValueError):
     """The contract says something this generator cannot turn into Python."""
+
+
+def _correlation(correlation: Correlation | None) -> str:
+    """The contract's correlation, as the Python the generated table holds."""
+    if correlation is None:
+        return "None"
+    parts = [f"by={correlation.by!r}"]
+    if correlation.source:
+        parts.append(f"source={correlation.source!r}")
+    if correlation.equals:
+        parts.append(f"equals={correlation.equals!r}")
+    return f"Correlation({', '.join(parts)})"
 
 
 def snake(name: str) -> str:
@@ -368,14 +387,15 @@ class Plan:
                     f"{wire} has scope {method.scope} but is placed at {path}; "
                     "place it by its scope or say why in SCOPE_EXCEPTIONS"
                 )
-        streaming = {w for w, m in self.contract.methods.items() if m.streams} - set(
-            NOT_FOR_CLIENTS
-        )
+        streaming = {
+            w for w, m in self.contract.methods.items() if m.streams or m.may_stream
+        } - set(NOT_FOR_CLIENTS)
         decided = set(FOLLOWED) | set(UNFOLLOWED)
         if streaming != decided:
             raise ContractError(
-                "every method that streams is either followed or says why not: "
-                f"undecided {sorted(streaming - decided)}, not streaming {sorted(decided - streaming)}"
+                "every method that causes events is either followed or says why not: "
+                f"undecided {sorted(streaming - decided)}, "
+                f"not causing events {sorted(decided - streaming)}"
             )
         paths = [Placement.of(w, p).path for w, p in METHODS.items()]
         clashes = {p for p in paths if paths.count(p) > 1}
@@ -432,8 +452,21 @@ class Plan:
 
     def stream_classes(self, wire: str) -> list[str]:
         """The classes of what ``wire`` streams, in the contract's order."""
+        return self._classes(self.contract.methods[wire].streams)
+
+    def event_classes(self, wire: str) -> list[str]:
+        """The classes of what ``wire`` causes: what it streams, and what may
+        be pushed while it runs.
+
+        A call's events are what it causes, not only what it streams: a run
+        that goes on after the call answers still pushes what its tools do.
+        """
+        method = self.contract.methods[wire]
+        return self._classes((*method.streams, *method.may_stream))
+
+    def _classes(self, streams: Iterable[str]) -> list[str]:
         out: list[str] = []
-        for stream in self.contract.methods[wire].streams:
+        for stream in streams:
             if stream.startswith(PUSH_PREFIX):
                 channel = stream.removeprefix(PUSH_PREFIX)
                 name = (
@@ -755,6 +788,7 @@ class ApiGenerator:
         out.append(f"from pydantic import {', '.join(pydantic)}")
         out.append("")
         out.append("from igni_client.calls import Call, Caller, MethodSpec")
+        out.append("from igni_client.follow import Correlation")
         models = sorted(self.models)
         out.append("from igni_client.models import (")
         out += [f"    {m}," for m in models]
@@ -799,9 +833,9 @@ class ApiGenerator:
         return pascal(wire) + "Event"
 
     def _event_aliases(self) -> list[str]:
-        out = ["", "", "# What each method that is followed streams."]
+        out = ["", "", "# What each method that is followed causes."]
         for wire in sorted(FOLLOWED):
-            classes = [self._use(c) for c in self.plan.stream_classes(wire)]
+            classes = [self._use(c) for c in self.plan.event_classes(wire)]
             out.append(f"type {self.event_alias(wire)} = {' | '.join(classes)}")
         return out
 
@@ -809,17 +843,20 @@ class ApiGenerator:
         out = [
             "",
             "#: Every method a client calls, by wire name: who may call it, how igni",
-            "#: answers it, and what it streams.",
+            "#: answers it, how long it takes, and what it streams.",
             "METHODS: dict[str, MethodSpec] = {",
         ]
         for wire in sorted(self.plan.placements):
             m = self.contract.methods[wire]
             placement = self.plan.placements[wire]
             streams = "".join(f"{s!r}, " for s in m.streams)
+            may = "".join(f"{s!r}, " for s in m.may_stream)
             out.append(
                 f"    {wire!r}: MethodSpec(wire={wire!r}, python={placement.path!r}, "
                 f"scope={m.scope!r}, access={m.access!r}, reply={m.reply!r}, "
-                f"streams=({streams}), followed={wire in FOLLOWED}),"
+                f"streams=({streams}), may_stream=({may}), "
+                f"duration={m.duration!r}, timeout_seconds={m.timeout_seconds!r}, "
+                f"correlate={_correlation(m.correlate)}, followed={wire in FOLLOWED}),"
             )
         out.append("}")
         out += [
@@ -880,7 +917,24 @@ class ApiGenerator:
                     empty = "{}" if kind == "object" else "[]"
                     value = f"({empty} if {python} is None else {python})"
             params.append(Param(python, annotation, default, value))
+        self._fill(placement.wire, params)
         return params, model
+
+    def _fill(self, wire: str, params: list[Param]) -> None:
+        """Fill in the arguments igni-client makes for itself.
+
+        A run's id, the writer's own name for a change: igni echoes them
+        back on the call's own events, so that they can be told from
+        another call's. The caller may give their own; one is made when
+        they do not.
+        """
+        for name, expression in SELF_MADE.get(wire, {}).items():
+            for param in params:
+                if param.name != name:
+                    continue
+                if param.default is None:
+                    raise ContractError(f"{wire}: {name} is required; it cannot be made")
+                param.value = f"{param.name} or {expression}"
 
     def signature(self, placement: Placement, params: list[Param]) -> str:
         """``self``, then a lone required argument by position, then the rest by keyword.

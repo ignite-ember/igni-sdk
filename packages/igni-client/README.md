@@ -832,8 +832,7 @@ and the [access](#who-may-call-what) it needs.
 
 #### Who may call what
 
-Who may make a call, as the backend enforces it
-(`backend/standing_policy.py`, `backend/message_admission.py`).
+Who may make a call, as igni enforces it.
 
 * `client` — any connection igni admitted.
 * `approver` — igni's window, or a connection standing as an approver.
@@ -846,7 +845,7 @@ Who may make a call, as the backend enforces it
   connection.
 
 A connection's standing is decided once, at the WebSocket handshake,
-by the token it offers (`transport/ws_auth.py`):
+by the token it offers:
 
 * **Local client, on the desktop.** igni's desktop app launches igni
   with a per-launch secret that only the app holds, so only the app's
@@ -1198,7 +1197,7 @@ Takes no arguments. Answers from what was last read, asking nobody;
 </details>
 
 <details>
-<summary><code>await igni.notifications.list()</code> → <code>NotificationsListResult</code></summary>
+<summary><code>igni.notifications.list()</code> → <code>Call[NotificationsListResult, NotificationsListEvent]</code></summary>
 
 Wire method `notifications_list` · access `client` · streams `notifications_changed`
 
@@ -1211,12 +1210,12 @@ whether it is read), the unread `counts` in all and per
 extension, and `server_error` when igni server could not be
 read. The fresh counts are also pushed as `notifications_changed`.
 
-Not followed: the `notifications_changed` push repeats the counts the answer carries, to every client, and does not say what caused it.
+Followed: `async with` the call to follow it: it yields the `notifications_changed` push that says the list was read, and ends with the answer.
 
 </details>
 
 <details>
-<summary><code>await igni.notifications.mark_read(*, ids: list[str] | None = None, source: str | None = None)</code> → <code>NotificationsReadResult</code></summary>
+<summary><code>igni.notifications.mark_read(*, ids: list[str] | None = None, source: str | None = None)</code> → <code>Call[NotificationsReadResult, NotificationsMarkReadEvent]</code></summary>
 
 Wire method `notifications_mark_read` · access `client` · streams `notifications_changed`
 
@@ -1228,7 +1227,7 @@ the unread `counts` afterwards, also pushed as
 `notifications_changed`, and `server_error` when igni server
 could not be told.
 
-Not followed: the `notifications_changed` push repeats the counts the answer carries, to every client, and does not say what caused it.
+Followed: `async with` the call to follow it: it yields the `notifications_changed` push that says the notifications were marked read, and ends with the answer.
 
 </details>
 
@@ -1284,9 +1283,9 @@ output, not running.
 igni's sessions: attach one, or make a new one in a project folder.
 
 <details>
-<summary><code>await igni.sessions.attach(*, project_dir: str = '', session_id: str = '')</code> → <code>AttachSessionResult</code></summary>
+<summary><code>igni.sessions.attach(*, project_dir: str = '', session_id: str = '')</code> → <code>Call[AttachSessionResult, AttachSessionEvent]</code></summary>
 
-Wire method `attach_session` · access `client` · streams `content_delta`, `error`, `info`, `model_completed`, `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `plan_submitted`, `process_exited`, `process_line`, `process_started`, `todos_updated`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started`
+Wire method `attach_session` · access `client` · streams `content_delta`, `error`, `info`, `model_completed`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started`
 
 Bind to a session — an existing one, or a new one in a project folder.
 
@@ -1302,12 +1301,13 @@ waiting on is shown again (a `run_paused` carrying its
 `hitl_request` items), since a client that reloaded lost its
 dialog; a run igni was continuing when it stopped is reported with
 an `info`, and a sub-agent's interrupted run is continued, which
-streams as any run does.
+streams as any run does. Each of those messages carries this
+request's `id`, and a `stream_end` of that `id` ends them.
 
 Fails when `project_dir` is not a directory, or the session belongs
-to another project.
+to another project folder — an attach never moves a session.
 
-Not followed: the approvals and runs it shows again carry no request id and no end, and every client attaching the session shows them again; watch them with `session.events()`, which offers each waiting approval as an `ApprovalRequested`.
+Followed: `async with` the call to follow it: it yields the approvals the session is still waiting for and the run it continues again — every message of them carries the attach's own request id — and ends with the `stream_end` that closes them.
 
 </details>
 
@@ -1316,7 +1316,7 @@ Not followed: the approvals and runs it shows again carry no request id and no e
 igni's own window's model — its fields, toasts and dialog.
 
 <details>
-<summary><code>await igni.window.model(*, op: Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog'], window: str, connection_id: str = '', dialog_id: str = '', field: str = '', kind: str = '', token: str = '', value: JsonValue = None)</code> → <code>WindowModelResult</code></summary>
+<summary><code>igni.window.model(*, op: Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog'], window: str, connection_id: str = '', dialog_id: str = '', field: str = '', kind: str = '', token: str = '', value: JsonValue = None)</code> → <code>Call[WindowModelResult, WindowModelEvent]</code></summary>
 
 Wire method `window_model` · access `window` · streams `window_model_changed`
 
@@ -1337,7 +1337,7 @@ Fails when the model refuses the write (an unknown field, a field
 that is not writable, a value that does not fit its type), or when
 the window's saved state could not be read or written.
 
-Not followed: a `window_model_changed` push says which window changed and its new revision, but not which request changed it, and a request that changes nothing pushes nothing.
+Followed: `async with` the call to follow it: it yields the `window_model_changed` push that carries this change, and ends with the answer. The change's token is the one given; igni-client makes one when the caller does not, so the push can be told from another window's.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -1348,18 +1348,19 @@ Access: `window`. Through Fleet's gateway every connection stands as igni's wind
 The methods igni answers for one session; `Session` is one.
 
 <details>
-<summary><code>await session.cancel()</code> → <code>None</code></summary>
+<summary><code>session.cancel()</code> → <code>Call[CancelRunResult, CancelRunEvent]</code></summary>
 
 Wire method `cancel_run` · access `client` · streams `info`, `stream_end`
 
 Stop the turn this session is running.
 
-Takes no arguments and returns nothing; with no turn running it does
-nothing. The turn's stream ends with an `info` saying it was
+Takes no arguments. Returns `cancelled`: whether a turn was
+running. Its stream then ends with an `info` saying it was
 cancelled and its `stream_end`, and the run is recorded as
-interrupted. A foreground shell command the turn started is killed.
+interrupted; a foreground shell command the turn started is killed.
+With no turn running nothing happens and nothing is streamed.
 
-Not followed: the `info` and `stream_end` it causes belong to the turn it stops, whose own stream (`session.send()`) ends with them; with no turn going nothing follows, and the answer does not say which it was.
+Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
 
 </details>
 
@@ -1477,7 +1478,7 @@ none) and every style's `name` and `description`.
 </details>
 
 <details>
-<summary><code>await session.run_shell(command: str = '')</code> → <code>RunShellResult</code></summary>
+<summary><code>session.run_shell(command: str = '')</code> → <code>Call[RunShellResult, RunShellEvent]</code></summary>
 
 Wire method `run_shell` · access `window` · streams `background_process_done`, `process_exited`, `process_line`, `process_started`
 
@@ -1492,7 +1493,7 @@ minutes moves to the background: the answer then comes at once with
 process — `process_started`, a `process_line` per line,
 `process_exited` and `background_process_done`.
 
-Not followed: a command that moves to the background is reported by `process_*` pushes carrying its `pid`, but the answer does not say the `pid`; watch `igni.processes.list()` or `igni.events()`.
+Followed: `async with` the call to follow it: a command that finishes inside the wait pushes nothing, and the answer is its output. A command that outlives the wait moves to the background: the answer names the pid, and the `process_started`, `process_line`, `process_exited` and `background_process_done` pushes of that pid follow, ending with the last of them.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -1724,7 +1725,7 @@ Access: `window`. Through Fleet's gateway every connection stands as igni's wind
 </details>
 
 <details>
-<summary><code>await session.auth.sign_out()</code> → <code>StatusUpdate</code></summary>
+<summary><code>session.auth.sign_out()</code> → <code>Call[StatusUpdate, ClearCloudCredentialsEvent]</code></summary>
 
 Wire method `clear_cloud_credentials` · access `window` · streams `notifications_changed`
 
@@ -1736,7 +1737,7 @@ badges (`notifications_changed`). Returns the session's status
 afterwards as a `status_update` message, sent in place of an
 `rpc_response`.
 
-Not followed: `notifications_changed` carries the new counts, not what changed them; read `igni.notifications.counts()`.
+Followed: `async with` the call to follow it: it yields the `notifications_changed` push that says the person signed out, and ends with the answer — the session's status.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -1761,7 +1762,7 @@ Zeros when it cannot be measured.
 </details>
 
 <details>
-<summary><code>await session.context.compact(*, ctx_tokens: int, max_ctx: int)</code> → <code>SessionCleared | None</code></summary>
+<summary><code>await session.context.compact(*, ctx_tokens: int, max_ctx: int)</code> → <code>CompactionOutcome</code></summary>
 
 Wire method `compact_if_needed` · access `client`
 
@@ -1770,9 +1771,7 @@ Compact this session's conversation when its context is nearly full.
 `ctx_tokens` is the context the last turn used and `max_ctx`
 the model's window; at 80% or more the conversation is summarised
 and replaced by the summary (the `PreCompact` hooks may refuse).
-Returns a `session_cleared` message, sent in place of an
-`rpc_response`, carrying the `summary`; or `null` (in an
-`rpc_response`) when nothing was compacted.
+Returns `compacted` and, when it was, the `summary`.
 
 </details>
 
@@ -2171,8 +2170,9 @@ Save a permission rule for this session's project.
 `rule` is a permission rule (`Bash(git status)`, a tool name);
 `level` is `allow`, `ask` or `deny`. The rule is written to
 the project's `.igni/settings.local.json` (the person's own when
-there is no project). Returns nothing. Fails when the settings file
-cannot be written.
+there is no project), and the session follows it from its next tool
+call. Returns nothing. Fails when the settings file cannot be
+written.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -2418,9 +2418,9 @@ completed, failed or was cancelled, whose record is left as it is.
 </details>
 
 <details>
-<summary><code>await session.scheduler.execute(description: str)</code> → <code>str</code></summary>
+<summary><code>session.scheduler.execute(description: str, *, run_id: str = '')</code> → <code>Call[ScheduledTaskRunResult, ExecuteScheduledTaskEvent]</code></summary>
 
-Wire method `execute_scheduled_task` · access `client` · streams `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `process_exited`, `process_line`, `process_started`, `todos_updated`
+Wire method `execute_scheduled_task` · access `client`
 
 Run a scheduled task's work now, in this session, and wait for the answer.
 
@@ -2428,11 +2428,15 @@ Run a scheduled task's work now, in this session, and wait for the answer.
 task's `description`). The agent runs it as a stored task firing,
 not as a live message: its run is not streamed to the windows, and
 the task's own record is not touched. What its tools push while
-they work still goes out. Returns the agent's answer as text.
-Fails when the organisation's group policy refuses the run, or the
-run fails.
+they work still goes out. It is the session's run while it goes:
+it waits for a turn already running, `get_processing` reports
+it, and `cancel_run` stops it. Returns the agent's answer as
+text with the run's `run_id` — the one given, or one made — which
+every push the run's tools make carries too. Fails when the
+organisation's group policy refuses the run, the run is cancelled,
+or the run fails.
 
-Not followed: what the task's tools push carries nothing that says which run it came from, so it cannot be told from another run's in the same session; watch `igni.events()`.
+Followed: `async with` the call to follow it: it yields the pushes of the run it starts — what its tools do while it works — as they come, and ends with the answer, which is the agent's own words. The run's id is the one given; igni-client makes one when the caller does not, so the pushes can be told from another run's.
 
 </details>
 
@@ -2454,7 +2458,7 @@ created, its `status`, its `result` or `error`, and its
 <details>
 <summary><code>session.scheduler.start()</code> → <code>Call[None, StartSchedulerEvent]</code></summary>
 
-Wire method `start_scheduler` · access `client` · streams `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `process_exited`, `process_line`, `process_started`, `scheduler_completed`, `scheduler_started`, `todos_updated`
+Wire method `start_scheduler` · access `client` · streams `scheduler_completed`, `scheduler_started`
 
 Start running this project's scheduled tasks as they fall due.
 
@@ -2568,7 +2572,7 @@ Followed: `async with` the call to follow it: it yields every `workflow_event` p
 Whether this session's project folder is trusted.
 
 <details>
-<summary><code>await session.workspace.set_trust(decision: Literal['trust', 'distrust', 'once'])</code> → <code>WorkspaceTrustStatus</code></summary>
+<summary><code>session.workspace.set_trust(decision: Literal['trust', 'distrust', 'once'])</code> → <code>Call[WorkspaceTrustStatus, SetWorkspaceTrustEvent]</code></summary>
 
 Wire method `set_workspace_trust` · access `window` · streams `workspace_trust_required`
 
@@ -2582,7 +2586,7 @@ told the new status (`workspace_trust_required`). Returns the new
 status. Fails when the organisation's policy does not let the folder
 be trusted.
 
-Not followed: igni pushes `workspace_trust_required` only to the windows showing the trust dialog; the answer is the new status.
+Followed: `async with` the call to follow it: it yields the `workspace_trust_required` push that tells the windows the folder's trust changed, and ends with the answer — the new status.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 

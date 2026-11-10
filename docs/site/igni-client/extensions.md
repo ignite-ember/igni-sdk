@@ -66,8 +66,8 @@ a setting's options, or igni has no extension support.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `extension_id` | `str` | required | `extension_id` is the extension; |
-| `values` | `dict[str, JsonValue]` | required | `values` the settings to change, by key, merged over what is stored. |
+| `extension_id` | `str` | required | The id of the extension to configure. |
+| `values` | `dict[str, JsonValue]` | required | Setting key to new value, merged over the stored values. A key the extension does not declare is refused. |
 
 **Returns** [`ExtensionListResult`](/docs/sdk/igni-client/models-reference#extensionlistresult).
 

@@ -30,7 +30,7 @@ when `message_id` is empty or the store could not be written.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `message_id` | `str` | required | `message_id` names the run (from `get_interrupted_runs`); |
+| `message_id` | `str` | required | Id of the message that started the run, as listed by `get_interrupted_runs`; must not be empty. |
 
 **Returns** [`DiscardInterruptedRunResult`](/docs/sdk/igni-client/models-reference#discardinterruptedrunresult).
 

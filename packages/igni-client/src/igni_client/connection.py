@@ -165,6 +165,8 @@ class Connection:
         *,
         session_id: str = "",
         timeout: float | None = DEFAULT_TIMEOUT,
+        request_id: str = "",
+        reply: str = "rpc_response",
     ) -> Event:
         """Call `method` with `args` and return igni's answer as it came.
 
@@ -172,34 +174,41 @@ class Connection:
         `RpcError` it is here), but some methods answer with a message of
         their own — `get_status` with a `StatusUpdate` — and that message is
         returned as it is. `timeout` is how long to wait for it — `None`
-        for as long as it takes, `RPC_TIMEOUT` when left out.
+        for as long as it takes, `RPC_TIMEOUT` when left out. `request_id`
+        is the id to send the call as; one is made when it is left out.
+        `reply` is what the answer looks like: `rpc_response` or `message`.
         """
         if method in REFUSED_METHODS:
             raise ValueError(f"{method} is not a client's to send")
         wait = self.RPC_TIMEOUT if timeout == DEFAULT_TIMEOUT else timeout
         for _ in range(self.UNBOUND_RETRIES):
-            request_id = self.router.new_id("rpc")
+            sent_as = request_id or self.router.new_id("rpc")
             envelope = {"session_id": session_id} if session_id else {}
             request = RpcRequest.model_validate(
-                {"id": request_id, "method": method, "args": args or {}, **envelope}
+                {"id": sent_as, "method": method, "args": args or {}, **envelope}
             )
-            reply = await self._exchange(request, request_id, method, wait)
-            if isinstance(reply, RpcResponse) and reply.error:
-                if reply.error == UNBOUND:
+            reply_frame = await self._exchange(request, sent_as, method, wait, reply)
+            if isinstance(reply_frame, RpcResponse) and reply_frame.error:
+                if reply_frame.error == UNBOUND:
                     await asyncio.sleep(self.UNBOUND_RETRY_SECONDS)
                     continue
-                raise RpcError.of(method, reply.error)
-            return reply
+                raise RpcError.of(method, reply_frame.error)
+            return reply_frame
         raise Unavailable(f"{self.target.describe()} was not bound to its producer in time")
 
     async def exchange(self, frame: BaseModel, request_id: str, what: str) -> Event:
         """Send `frame` and return the first message igni answers it with, by `request_id`."""
-        return await self._exchange(frame, request_id, what, self.RPC_TIMEOUT)
+        return await self._exchange(frame, request_id, what, self.RPC_TIMEOUT, "message")
 
     async def _exchange(
-        self, frame: BaseModel, request_id: str, what: str, timeout: float | None
+        self,
+        frame: BaseModel,
+        request_id: str,
+        what: str,
+        timeout: float | None,
+        reply: str = "rpc_response",
     ) -> Event:
-        answer = self.router.expect(request_id)
+        answer = self.router.expect(request_id, reply)
         try:
             await self.send(frame)
             return await asyncio.wait_for(answer, timeout)

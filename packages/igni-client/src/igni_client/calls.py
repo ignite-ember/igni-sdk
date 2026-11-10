@@ -36,7 +36,7 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from igni_client import access
 from igni_client.errors import InvalidArguments, RpcError, UnexpectedAnswer
-from igni_client.follow import RULES, Context, Rule
+from igni_client.follow import RULES, Context, Correlation, Rule
 from igni_client.models import ErrorMessage, RpcResponse
 from igni_client.routing import Interruption
 from igni_client.wire import Event
@@ -65,34 +65,17 @@ class MethodSpec:
     reply: str
     #: The messages and push channels it causes.
     streams: tuple[str, ...]
+    #: The push channels it may cause while it runs, beyond those it streams.
+    may_stream: tuple[str, ...]
+    #: How long it takes: `instant`, `io`, `network`, `long` or `person`.
+    duration: str
+    #: A timeout that leaves a healthy call room; `None`: none.
+    timeout_seconds: float | None
+    #: How its events are told from every other call's, as the contract says;
+    #: `None` where the contract says nothing.
+    correlate: Correlation | None
     #: Whether its `Call` follows those (`igni_client.follow`).
     followed: bool
-
-
-#: How long a method may take, where it is longer than `Connection.RPC_TIMEOUT`;
-#: `None` waits for as long as it takes. igni-core's contract says nothing of it.
-TIMEOUTS: dict[str, float | None] = {
-    # The agent runs the task's whole work before it answers.
-    "execute_scheduled_task": None,
-    # A command still running after two minutes moves to the background.
-    "run_shell": 180.0,
-    # A model summarises or reads the conversation.
-    "compact_if_needed": 600.0,
-    "extract_learnings": 600.0,
-    # Each fetches from the network: a git clone, a marketplace's index, MCP servers.
-    "install_plugin": 600.0,
-    "update_plugin": 600.0,
-    "preview_plugin": 300.0,
-    "add_marketplace": 300.0,
-    "refresh_marketplaces": 300.0,
-    "ensure_mcp": 300.0,
-    "mcp_connect": 120.0,
-    "discover_server": 120.0,
-    # Rebuilding the session's tools, hooks and plugins.
-    "set_workspace_trust": 300.0,
-    # Winding the session down: hooks, MCP servers, processes.
-    "shutdown": 120.0,
-}
 
 
 def spec(method: str) -> MethodSpec:
@@ -100,6 +83,35 @@ def spec(method: str) -> MethodSpec:
     from igni_client.api import METHODS  # the generated table imports this module
 
     return METHODS[method]
+
+
+def timeout_of(method: str) -> float | None:
+    """How long to wait for `method`'s answer, as igni's contract says.
+
+    The contract classes every method by how long it takes — `instant`,
+    `io`, `network`, `long` or `person` — and gives each a timeout that
+    leaves a healthy call room. `None` waits for as long as it takes:
+    the call waits for the person.
+    """
+    try:
+        timeout = spec(method).timeout_seconds
+    except KeyError:
+        return DEFAULT_TIMEOUT
+    return None if timeout is None else float(timeout)
+
+
+def reply_of(method: str) -> str:
+    """What `method`'s answer looks like, as igni's contract says.
+
+    `rpc_response` for the methods igni answers with one, `message` for
+    those it answers with a message of their own. The events a call
+    streams may carry the request's id, so this says which of the frames
+    that carry it is the answer.
+    """
+    try:
+        return spec(method).reply
+    except KeyError:
+        return "rpc_response"
 
 
 class Caller:
@@ -118,6 +130,15 @@ class Caller:
     @property
     def conn(self) -> Connection:
         return self._conn
+
+    def new_id(self, prefix: str) -> str:
+        """An id of this client's own making, for a call that takes one.
+
+        igni echoes it back on the call's own events — a run's id, the
+        writer's own name for a change — so that they can be told from
+        another call's.
+        """
+        return self._conn.router.new_id(prefix)
 
     async def rpc[R](
         self,
@@ -148,13 +169,17 @@ class Caller:
         except ValidationError as exc:
             raise InvalidArguments(method, str(exc)) from exc
 
-    async def answer[R](self, method: str, params: BaseModel, result: TypeAdapter[R]) -> R:
+    async def answer[R](
+        self, method: str, params: BaseModel, result: TypeAdapter[R], request_id: str = ""
+    ) -> R:
         """Send the call and read what igni answers."""
         reply = await self._conn.ask(
             method,
             params.model_dump(mode="json", by_alias=True),
             session_id=self.session_id,
-            timeout=TIMEOUTS.get(method, DEFAULT_TIMEOUT),
+            timeout=timeout_of(method),
+            request_id=request_id,
+            reply=reply_of(method),
         )
         return read(method, reply, result)
 
@@ -218,7 +243,12 @@ class Call[R, E]:
         self._params = params
         self._result = result
         self._rule = rule
-        self._context = Context(args=params, session_id=caller.session_id)
+        #: The id this call is sent as: what igni's messages carry back
+        #: when they are this call's own.
+        self._request_id = caller.conn.router.new_id("rpc")
+        self._context = Context(
+            args=params, session_id=caller.session_id, request_id=self._request_id
+        )
         self._queue: asyncio.Queue[Event | Interruption] | None = None
         self._task: asyncio.Future[R] | None = None
         self._held: list[Event] = []
@@ -234,7 +264,9 @@ class Call[R, E]:
     async def result(self) -> R:
         """The call's result: sent now when the call was not entered, else awaited."""
         if self._task is None:
-            return await self._caller.answer(self.method, self._params, self._result)
+            return await self._caller.answer(
+                self.method, self._params, self._result, self._request_id
+            )
         return await asyncio.shield(self._task)
 
     # ── Following ──
@@ -244,7 +276,7 @@ class Call[R, E]:
             raise RuntimeError(f"this call of {self.method} was already entered")
         self._queue = self._caller.conn.router.follow()
         self._task = asyncio.ensure_future(
-            self._caller.answer(self.method, self._params, self._result)
+            self._caller.answer(self.method, self._params, self._result, self._request_id)
         )
         self._task.add_done_callback(_retrieve)
         return self
@@ -292,10 +324,11 @@ class Call[R, E]:
         self._consider(item)
 
     def _consider(self, event: Event) -> None:
-        if self._done or not self._rule.match(self._context, event):
+        if self._done or not self._rule.is_ours(self._context, event, self.method):
             return
         self._ready.append(event)  # type: ignore[arg-type]  # the rule matched one of E
         if self._rule.last(self._context, event):
+            self._context.ended = True
             self._done = True
 
     def _settle(self) -> None:
@@ -323,4 +356,4 @@ def _retrieve(task: asyncio.Future[Any]) -> None:
         task.exception()
 
 
-__all__ = ["TIMEOUTS", "Call", "Caller", "MethodSpec", "read", "spec"]
+__all__ = ["Call", "Caller", "MethodSpec", "read", "spec", "timeout_of"]

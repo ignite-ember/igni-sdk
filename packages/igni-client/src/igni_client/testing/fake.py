@@ -10,6 +10,7 @@ from igni_client.auth.tokens import TokenSource
 from igni_client.models import (
     Cancel,
     CancelLogin,
+    CancelRunResult,
     Command,
     CommandResult,
     HitlResponseBatch,
@@ -79,7 +80,11 @@ class FakeIgni:
         answers it; everything else is broadcast."""
         match frame:
             case RpcRequest(method="cancel_run") if "cancel_run" not in self.methods.answers:
-                await reply(FakeMethods.reply(frame, None))
+                await reply(
+                    FakeMethods.reply(
+                        frame, CancelRunResult(cancelled=self.runs.running(frame.session_id))
+                    )
+                )
                 await self.runs.cancel(Cancel(session_id=frame.session_id))
             case RpcRequest():
                 await reply(await self.methods.answer(frame))

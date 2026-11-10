@@ -8,7 +8,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 |---|---|
 | [`BundleArchive`](#bundlearchive) | A deterministic gzipped tar of a directory, manifest at its root. |
 | [`Delivery`](#delivery) | One person told about one notification, after igni's rules. |
-| [`FakeAgents`](#fakeagents) | — |
+| [`FakeAgents`](#fakeagents) | igni's side of `host.agent(producer)`: the items, files and statuses a service sends. |
 | [`FakeCaps`](#fakecaps) | The platform's caps; igni server's defaults. |
 | [`FakeIgni`](#fakeigni) | Every igni endpoint a service calls, composed of one collaborator per part of igni. |
 | [`FakeVmProfiles`](#fakevmprofiles) | One deployment's VM profiles and the requests for them, per organisation. |
@@ -44,6 +44,11 @@ A deterministic gzipped tar of a directory, manifest at its root.
 def write(staging: Path, out: Path) -> bytes
 ```
 
+Write `staging`'s files to `out` as a gzipped tar and answer its bytes.
+
+The same files make the same bytes every time: sorted, with no times,
+owners or modes of their own.
+
 ### BundleArchive.read_manifest()
 
 ```python
@@ -66,12 +71,12 @@ Delivery(*, org_id: str, user_id: str, source: str, notification: Notification)
 
 One person told about one notification, after igni's rules.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
-| `user_id` | `str` | required |
-| `source` | `str` | required |
-| `notification` | `Notification` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the person was told in. |
+| `user_id` | `str` | required | Who was told. |
+| `source` | `str` | required | The service that told them: its client id. |
+| `notification` | `Notification` | required | What they were told. |
 
 ## FakeAgents
 
@@ -80,11 +85,19 @@ class FakeAgents
 FakeAgents(*, is_member: Callable[[str, str], bool], clock: Callable[[], float])
 ```
 
+igni's side of `host.agent(producer)`: the items, files and statuses a service sends.
+
+`fake.agents.items` is every item stored, `uploads` every file, and
+`settle(event_id, state)` plays the producer's igni taking one. Set
+`grants` to play an extension that declares less.
+
 ### FakeAgents.reset()
 
 ```python
 def reset() -> None
 ```
+
+Forget the items and files, and grant everything again.
 
 ### FakeAgents.settle()
 
@@ -100,11 +113,15 @@ Play the producer's igni: the item is now `state`.
 def event(body: bytes, client_id: str, org_id: str) -> httpx.Response
 ```
 
+Answer `POST /v1/service-events` as igni does. Called by the fake's router.
+
 ### FakeAgents.item()
 
 ```python
 def item(body: bytes, client_id: str, org_id: str) -> httpx.Response
 ```
+
+Answer `POST /v1/service-items` as igni does. Called by the fake's router.
 
 ### FakeAgents.upload()
 
@@ -118,11 +135,15 @@ def upload(
 ) -> httpx.Response
 ```
 
+Answer `POST /v1/service-attachments` as igni does. Called by the fake's router.
+
 ### FakeAgents.status()
 
 ```python
 def status(event_id: str, client_id: str) -> httpx.Response
 ```
+
+Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router.
 
 ## FakeCaps
 
@@ -139,12 +160,12 @@ FakeCaps(
 
 The platform's caps; igni server's defaults.
 
-| Field | Type | Default |
-|---|---|---|
-| `max_memory_mib` | `int` | `8192` |
-| `max_vcpus` | `int` | `4` |
-| `max_idle_before_pause_s` | `int \| None` | `3600` |
-| `max_volume_gib` | `int` | `200` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `max_memory_mib` | `int` | `8192` | The most memory a VM may have, in MiB. |
+| `max_vcpus` | `int` | `4` | The most virtual CPUs. |
+| `max_idle_before_pause_s` | `int \| None` | `3600` | The longest a VM may stay idle before it is paused; `None` allows never pausing. |
+| `max_volume_gib` | `int` | `200` | The largest volume, in GiB. |
 
 ### FakeCaps.refusal()
 
@@ -263,11 +284,15 @@ its VM profile request, its pages — without a lifespan or a build.
 def transport() -> httpx.MockTransport
 ```
 
+An `httpx` transport that reaches the fake: pass it as a service's `http`.
+
 ### FakeIgni.http_client()
 
 ```python
 def http_client() -> httpx.AsyncClient
 ```
+
+An `httpx.AsyncClient` that reaches the fake.
 
 ## FakeVmProfiles
 
@@ -333,17 +358,24 @@ Say how many groups and apps an org admin gave a profile.
 def app_put(org_id: str, app_id: str, name: str, body: bytes) -> httpx.Response
 ```
 
+Answer an app's `PUT` of its VM profile request as igni does. Called by the fake's
+router.
+
 ### FakeVmProfiles.app_get()
 
 ```python
 def app_get(org_id: str, app_id: str) -> httpx.Response
 ```
 
+Answer an app's `GET` of its request as igni does. Called by the fake's router.
+
 ### FakeVmProfiles.app_profile()
 
 ```python
 def app_profile(org_id: str, app_id: str) -> httpx.Response
 ```
+
+Answer an app's `GET` of what its VM gets now as igni does. Called by the fake's router.
 
 ### FakeVmProfiles.service()
 
@@ -374,14 +406,14 @@ HeldExtension(
 
 A bundle igni holds for a client.
 
-| Field | Type | Default |
-|---|---|---|
-| `client_id` | `str` | required |
-| `extension_id` | `str` | required |
-| `version` | `str` | required |
-| `sha256` | `str` | required |
-| `archive` | `bytes` | required |
-| `manifest` | `UploadedManifest` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `client_id` | `str` | required | The service that uploaded it. |
+| `extension_id` | `str` | required | Its manifest `id`. |
+| `version` | `str` | required | Its manifest `version`. |
+| `sha256` | `str` | required | The SHA-256 of the archive, hex. |
+| `archive` | `bytes` | required | The bundle's bytes, as uploaded. |
+| `manifest` | `UploadedManifest` | factory | What the fake read from its manifest. |
 
 ### HeldExtension.pages
 
@@ -389,6 +421,8 @@ A bundle igni holds for a client.
 @property
 pages: list[str]
 ```
+
+The kind of each page its manifest contributes.
 
 ### HeldExtension.published()
 
@@ -412,11 +446,11 @@ IgniAddresses(
 
 Where the fake is reached, what it calls itself, and the service it signs for.
 
-| Field | Type | Default |
-|---|---|---|
-| `base_url` | `str` | `'http://igni.test'` |
-| `issuer` | `str` | `'https://igni.example.test'` |
-| `service_url` | `str` | `'http://service.test'` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `base_url` | `str` | `'http://igni.test'` | Where the fake is reached: `http://igni.test`. |
+| `issuer` | `str` | `'https://igni.example.test'` | The issuer its tokens name, which is not where it is reached: `https://igni.example.test`. |
+| `service_url` | `str` | `'http://service.test'` | The service's URL its tokens are for: `http://service.test`. |
 
 ### IgniAddresses.authorization_endpoint
 
@@ -448,6 +482,8 @@ Every `aud` a client assertion may carry.
 ```python
 def discovery() -> FakeDiscovery
 ```
+
+The OpenID Connect discovery document these addresses make.
 
 ## IgniPaths
 
@@ -492,12 +528,16 @@ What became of one item this service sent.
 def extension(client_id: str) -> str
 ```
 
+Where igni holds `client_id`'s extension bundle.
+
 ### IgniPaths.extension_asset()
 
 ```python
 @classmethod
 def extension_asset(client_id: str, sha256: str) -> str
 ```
+
+Where igni holds one asset of `client_id`'s extension, by its SHA-256.
 
 ## ManualClock
 
@@ -530,6 +570,8 @@ Seconds on a clock that never goes back.
 def advance(seconds: float) -> None
 ```
 
+Move the clock forward `seconds`; both `monotonic` and `wall` move.
+
 ## NoVmProfileRequest
 
 ```python
@@ -552,11 +594,11 @@ NotifyCall(
 
 One `POST /v1/service-notifications`, as the service sent it.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
-| `client_id` | `str` | required |
-| `notifications` | `list[Notification]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the service token named. |
+| `client_id` | `str` | required | The service that sent it: its client id at igni. |
+| `notifications` | `list[Notification]` | required | The notifications in the call, as sent. |
 
 ## OrganisationDeletion
 
@@ -567,11 +609,11 @@ OrganisationDeletion(*, org_id: str, path: str, headers: dict[str, str])
 
 What igni sends a service when it deletes an organisation.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
-| `path` | `str` | required |
-| `headers` | `dict[str, str]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation igni deleted. |
+| `path` | `str` | required | The service's route igni calls: `/v1/igni/organisations/<org_id>`. |
+| `headers` | `dict[str, str]` | required | igni's headers, its own token among them. |
 
 ### OrganisationDeletion.send()
 
@@ -599,14 +641,14 @@ PersonClaims(
 
 A person's claims, for one organisation, as igni's directory knows them.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_name` | `str` | `''` |
-| `org_role` | `str` | `'member'` |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
-| `super_admin` | `bool` | `False` |
-| `azp` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_name` | `str` | `''` | The organisation's display name. |
+| `org_role` | `str` | `'member'` | `admin` or `member` in the organisation. |
+| `email` | `str` | `''` | The person's email address. |
+| `name` | `str` | `''` | The person's display name. |
+| `super_admin` | `bool` | `False` | Whether the person is a super admin of the deployment. |
+| `azp` | `str \| None` | `None` | The client a person signed in to, on a token issued at the token endpoint. |
 
 ## PortalRefused
 
@@ -632,13 +674,13 @@ SeenRequest(
 
 One request the fake was sent.
 
-| Field | Type | Default |
-|---|---|---|
-| `method` | `str` | required |
-| `path` | `str` | required |
-| `headers` | `dict[str, str]` | required |
-| `body` | `bytes` | required |
-| `query` | `dict[str, list[str]]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `method` | `str` | required | The HTTP method. |
+| `path` | `str` | required | The path, without the query. |
+| `headers` | `dict[str, str]` | required | The headers, names lower-cased. |
+| `body` | `bytes` | required | The body's bytes. |
+| `query` | `dict[str, list[str]]` | factory | The query string, parsed: each name to its values. |
 
 ### SeenRequest.of()
 
@@ -647,11 +689,15 @@ One request the fake was sent.
 def of(request: httpx.Request) -> SeenRequest
 ```
 
+What `request` was, read whole.
+
 ### SeenRequest.json_body()
 
 ```python
 def json_body() -> Any
 ```
+
+The body, read as JSON.
 
 ### SeenRequest.json_model()
 
@@ -666,6 +712,8 @@ The body as `model`, or the 422 igni answers a body it cannot read with.
 ```python
 def form() -> TokenForm
 ```
+
+The body, read as the form a token or revocation request posts.
 
 ### SeenRequest.bearer()
 
@@ -710,24 +758,24 @@ SentEvent(
 
 One item a service sent for a producer, as igni stored it.
 
-| Field | Type | Default |
-|---|---|---|
-| `event_id` | `str` | required |
-| `org_id` | `str` | required |
-| `client_id` | `str` | required |
-| `producer` | `Producer` | required |
-| `kind` | `ItemKind` | `'event'` |
-| `type` | `str` | required |
-| `payload` | `dict[str, object]` | factory |
-| `thread` | `str \| None` | `None` |
-| `text` | `str \| None` | `None` |
-| `title` | `str \| None` | `None` |
-| `start_run` | `bool` | `True` |
-| `action` | `ChatAction \| None` | `None` |
-| `attachments` | `list[str]` | factory |
-| `event_key` | `str \| None` | `None` |
-| `state` | `ItemState` | `'pending'` |
-| `created_at` | `datetime` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `event_id` | `str` | required | The id igni gave it. |
+| `org_id` | `str` | required | The organisation the service token named. |
+| `client_id` | `str` | required | The service that sent it. |
+| `producer` | `Producer` | required | Whose igni it is for. |
+| `kind` | `ItemKind` | `'event'` | `event`, `message`, `chat` or `action`. |
+| `type` | `str` | required | An event's type; for the other kinds, the kind. |
+| `payload` | `dict[str, object]` | factory | An event's payload. |
+| `thread` | `str \| None` | `None` | The chat thread it belongs to, if any. |
+| `text` | `str \| None` | `None` | A message's text. |
+| `title` | `str \| None` | `None` | A chat's title, or an action's new one. |
+| `start_run` | `bool` | `True` | Whether a message starts a run (`Chat.queue` sends `False`). |
+| `action` | `ChatAction \| None` | `None` | What an `action` item does to the chat. |
+| `attachments` | `list[str]` | factory | The ids of the files it names. |
+| `event_key` | `str \| None` | `None` | The key it was sent with, if any. |
+| `state` | `ItemState` | `'pending'` | Where it stands; `fake.agents.settle` moves it. |
+| `created_at` | `datetime` | required | When the fake stored it. |
 
 ## SettingsOverrides
 
@@ -754,18 +802,18 @@ Only the fields a test sets are applied (`exclude_unset`): every other
 one is the fake's address, its URL for the service, or `IgniSettings`'
 own default. A field `IgniSettings` lacks is refused, not ignored.
 
-| Field | Type | Default |
-|---|---|---|
-| `igni_server_url` | `str` | `''` |
-| `public_base_url` | `str` | `''` |
-| `service_name` | `str` | `''` |
-| `client_kind` | `str` | `'service'` |
-| `redirect_uris` | `list[str]` | factory |
-| `key_encryption_key` | `str` | `''` |
-| `key_database_url` | `str` | `''` |
-| `extension_bundle_path` | `str` | `''` |
-| `revocations_max_staleness` | `float` | `30.0` |
-| `timeout` | `float` | `10.0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `igni_server_url` | `str` | `''` | `IGNI_SERVER_URL`; the fake's address unless set. |
+| `public_base_url` | `str` | `''` | `PUBLIC_BASE_URL`; `http://service.test` unless set. |
+| `service_name` | `str` | `''` | `SERVICE_NAME`. |
+| `client_kind` | `str` | `'service'` | `IGNI_CLIENT_KIND`: `service`. |
+| `redirect_uris` | `list[str]` | factory | `IGNI_REDIRECT_URIS`: more addresses igni may send a signed-in person back to. |
+| `key_encryption_key` | `str` | `''` | `IGNI_KEY_ENCRYPTION_KEY`. |
+| `key_database_url` | `str` | `''` | `IGNI_KEY_DATABASE_URL`. |
+| `extension_bundle_path` | `str` | `''` | `IGNI_EXTENSION_BUNDLE_PATH`: the bundle the service uploads at start-up. |
+| `revocations_max_staleness` | `float` | `30.0` | `IGNI_REVOCATIONS_MAX_STALENESS`, in seconds. |
+| `timeout` | `float` | `10.0` | `IGNI_SERVER_TIMEOUT`: each call to igni, in seconds. |
 
 ### SettingsOverrides.settings_for()
 
@@ -784,11 +832,11 @@ SpaceClaims(*, org: str, kind: Literal['space'] = 'space', app: str, external_id
 
 A space's token exchanged for a service (§9.2, §17).
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `Literal['space']` | `'space'` |
-| `app` | `str` | required |
-| `external_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `Literal['space']` | `'space'` | Always `space`. |
+| `app` | `str` | required | The app the space belongs to. |
+| `external_id` | `str` | required | The app's own name for its end user. |
 
 ## TokenOverrides
 
@@ -812,16 +860,16 @@ What a test changes about a token; `None` is "as igni would sign it".
 `org=""` is a change (a token for no organisation), which is why every
 field is optional rather than defaulted.
 
-| Field | Type | Default |
-|---|---|---|
-| `aud` | `str \| None` | `None` |
-| `iss` | `str \| None` | `None` |
-| `use` | `str \| None` | `None` |
-| `sub` | `str \| None` | `None` |
-| `org` | `str \| None` | `None` |
-| `kid` | `str \| None` | `None` |
-| `key` | `RsaKeyPair \| None` | `None` |
-| `lifetime` | `float \| timedelta \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `aud` | `str \| None` | `None` | Another audience: a token for another service. |
+| `iss` | `str \| None` | `None` | Another issuer: a token somebody other than igni signed. |
+| `use` | `str \| None` | `None` | Another `token_use`: the wrong kind of token. |
+| `sub` | `str \| None` | `None` | Another subject. |
+| `org` | `str \| None` | `None` | Another organisation; an empty string is a token for none. |
+| `kid` | `str \| None` | `None` | Another key id in the header: a key igni does not publish. |
+| `key` | `RsaKeyPair \| None` | `None` | Another key to sign with: a signature igni's keys do not verify. |
+| `lifetime` | `float \| timedelta \| None` | `None` | How long it lives, in seconds or as a `timedelta`; negative is already expired. |
 
 ### TokenOverrides.seconds()
 
@@ -840,10 +888,10 @@ VmProfileSubject(*, kind: Literal['app', 'extension'], subject_id: str)
 
 Whose VM profile request: an app's, or an extension's.
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `Literal['app', 'extension']` | required |
-| `subject_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `Literal['app', 'extension']` | required | `app` or `extension`. |
+| `subject_id` | `str` | required | The app's id, or the extension's manifest id. |
 
 ### VmProfileSubject.app()
 

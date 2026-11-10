@@ -2,7 +2,8 @@
 
 igni-core publishes ``docs/rpc-contract.json`` (``igni_core.protocol.rpc_contract``):
 every RPC method — its arguments, its result, who may call it, what it acts
-on and what it streams — and every message on igni's socket, each as JSON
+on, what it streams and how a client tells which of the messages igni
+streams are its own — and every message on igni's socket, each as JSON
 Schema over one shared ``defs`` table. This repository keeps a copy in
 ``contracts/rpc-contract.json`` (``make contracts``) and generates
 igni-client's models and methods from it (``tools/client_codegen.py``).
@@ -34,6 +35,32 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class DurationContract(_Strict):
+    """One class of how long a call takes."""
+
+    #: What takes that long.
+    doc: str
+    #: A timeout that leaves a healthy call room; ``None``: no timeout.
+    timeout_seconds: int | None = None
+
+
+class Correlation(_Strict):
+    """How a client tells which of the messages igni streams are a call's own.
+
+    ``by`` is the place in a streamed message that holds the value found
+    at ``from`` — a place in the call — or at ``equals``, a fixed value.
+    """
+
+    #: Where in the streamed message the value is: ``id``, ``session_id``,
+    #: ``run_id``, ``payload.<field>`` or ``channel``.
+    by: str
+    #: Where in the call the value comes from: ``request.id``,
+    #: ``request.session_id``, ``args.<field>`` or ``result.<field>``.
+    source: str = Field(default="", alias="from")
+    #: A fixed value the message must carry.
+    equals: str = ""
+
+
 class MethodContract(_Strict):
     """One RPC method."""
 
@@ -46,6 +73,17 @@ class MethodContract(_Strict):
     result: dict[str, Any]
     streams: list[str] = Field(default_factory=list)
     reply: Literal["rpc_response", "message"] = "rpc_response"
+    #: The push channels the call may cause while it runs, beyond the
+    #: messages it streams itself.
+    may_stream: list[str] = Field(default_factory=list)
+    #: How a client tells which of the messages igni streams are this
+    #: call's; ``None`` where there is nothing to tell them apart by.
+    correlate: Correlation | None = None
+    #: How long the call takes: ``instant``, ``io``, ``network``,
+    #: ``long`` or ``person``.
+    duration: str = ""
+    #: A timeout that leaves a healthy call room; ``None``: none.
+    timeout_seconds: int | None = None
 
 
 class MessageContract(_Strict):
@@ -54,6 +92,8 @@ class MessageContract(_Strict):
     direction: Direction
     doc: str
     schema_: dict[str, Any] = Field(alias="schema")
+    #: What igni takes of a message a client may send.
+    accepts: dict[str, Any] | None = None
 
 
 class PushChannelContract(_Strict):
@@ -73,6 +113,10 @@ class RpcContract(_Strict):
     push_channels: dict[str, PushChannelContract] = Field(default_factory=dict)
     #: Which access level a connection reaches, and how it gets it: prose.
     access: str = ""
+    #: The classes of how long a call takes, and a timeout for each.
+    durations: dict[str, DurationContract] = Field(default_factory=dict)
+    #: What each error code means.
+    errors: dict[str, str] = Field(default_factory=dict)
 
     @classmethod
     def read(cls, path: Path = CONTRACT_FILE) -> RpcContract:
@@ -99,7 +143,9 @@ __all__ = [
     "CONTRACT_FILE",
     "PUSH_PREFIX",
     "Access",
+    "Correlation",
     "Direction",
+    "DurationContract",
     "MessageContract",
     "MethodContract",
     "PushChannelContract",

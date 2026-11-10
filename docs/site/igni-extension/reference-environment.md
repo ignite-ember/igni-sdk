@@ -11,7 +11,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`HostEndpoint`](#hostendpoint) | Where the igni host's object model is: `IGNI_HOST_URL`, `IGNI_HOST_SECRET`. |
 | [`Secrets`](#secrets) | Every declared secret the deployment supplied, by the manifest's name. |
 | [`Workspace`](#workspace) | The project this process may read (or write), when it was granted one. |
-| [`WorkspaceMode`](#workspacemode) | — |
+| [`WorkspaceMode`](#workspacemode) | How much of the project a process was granted: `IGNI_WORKSPACE_MODE`. |
 
 ## Assets
 
@@ -22,9 +22,9 @@ Assets(*, root: pathlib.Path | None = None)
 
 What the extension ships for this platform: `ext.assets.path("neo4j")`.
 
-| Field | Type | Default |
-|---|---|---|
-| `root` | `Path \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `root` | `Path \| None` | `None` | `IGNI_EXTENSION_ASSETS`; None outside igni, or with nothing declared. |
 
 ### Assets.path()
 
@@ -62,14 +62,14 @@ ExtensionEnvironment(
 
 What igni granted this process, read from its environment.
 
-| Field | Type | Default |
-|---|---|---|
-| `workspace` | `Workspace` | factory |
-| `data_dir` | `Path \| None` | `None` |
-| `assets` | `Assets` | factory |
-| `secrets` | `Secrets` | factory |
-| `service` | `ServiceEndpoint` | factory |
-| `host` | `HostEndpoint` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `workspace` | `Workspace` | factory | The project this process may read or write, if any. |
+| `data_dir` | `Path \| None` | `None` | This extension's own directory on this machine; None outside igni. |
+| `assets` | `Assets` | factory | What it ships for this platform, laid out by igni. |
+| `secrets` | `Secrets` | factory | The secrets the manifest declares, as the deployment supplied them. |
+| `service` | `ServiceEndpoint` | factory | The extension's own service, and the host's token endpoint for it. |
+| `host` | `HostEndpoint` | factory | Where the igni host's object model is. |
 
 ### ExtensionEnvironment.read()
 
@@ -77,6 +77,8 @@ What igni granted this process, read from its environment.
 @classmethod
 def read(environ: Mapping[str, str] | None = None) -> ExtensionEnvironment
 ```
+
+What igni granted, read from `environ` (`os.environ` when `None`).
 
 ## HostEndpoint
 
@@ -87,10 +89,10 @@ HostEndpoint(*, url: str = '', secret: str = '')
 
 Where the igni host's object model is: `IGNI_HOST_URL`, `IGNI_HOST_SECRET`.
 
-| Field | Type | Default |
-|---|---|---|
-| `url` | `str` | `''` |
-| `secret` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `url` | `str` | `''` | The host's WebSocket address: `IGNI_HOST_URL`. |
+| `secret` | `str` | `''` | What proves this process to it: `IGNI_HOST_SECRET`. |
 
 ### HostEndpoint.configured
 
@@ -98,6 +100,8 @@ Where the igni host's object model is: `IGNI_HOST_URL`, `IGNI_HOST_SECRET`.
 @property
 configured: bool
 ```
+
+Whether igni gave this process the host's address (both variables are set).
 
 ## Secrets
 
@@ -108,9 +112,9 @@ Secrets(*, by_env_name: dict[str, str] = <factory>)
 
 Every declared secret the deployment supplied, by the manifest's name.
 
-| Field | Type | Default |
-|---|---|---|
-| `by_env_name` | `dict[str, str]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `by_env_name` | `dict[str, str]` | factory | Each secret's value, by the name igni gave its variable (`LEDGER_TOKEN`). |
 
 ### Secrets.env_name()
 
@@ -127,6 +131,9 @@ def env_name(name: str) -> str
 def get(name: str) -> str | None
 ```
 
+The secret the manifest names `name` (`ledger-token`), or `None` when the deployment
+supplied none.
+
 ## Workspace
 
 ```python
@@ -141,11 +148,11 @@ Workspace(
 
 The project this process may read (or write), when it was granted one.
 
-| Field | Type | Default |
-|---|---|---|
-| `root` | `Path \| None` | `None` |
-| `mode` | `WorkspaceMode` | `WorkspaceMode.NONE` |
-| `paths` | `tuple[str, ...]` | `()` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `root` | `Path \| None` | `None` | The project's directory: `IGNI_WORKSPACE`; `None` when none was granted. |
+| `mode` | `WorkspaceMode` | `WorkspaceMode.NONE` | `none`, `read` or `write`: `IGNI_WORKSPACE_MODE`. |
+| `paths` | `tuple[str, ...]` | `()` | Globs within the project the grant is limited to; empty means all of it. |
 
 ### Workspace.granted
 
@@ -154,6 +161,8 @@ The project this process may read (or write), when it was granted one.
 granted: bool
 ```
 
+Whether the process may read the project at all.
+
 ### Workspace.writable
 
 ```python
@@ -161,11 +170,15 @@ granted: bool
 writable: bool
 ```
 
+Whether it may also write it.
+
 ## WorkspaceMode
 
 ```python
 class WorkspaceMode(StrEnum)
 ```
+
+How much of the project a process was granted: `IGNI_WORKSPACE_MODE`.
 
 | Member | Value |
 |---|---|

@@ -23,16 +23,18 @@ One `permissions.tools` entry: the tool's namespaced name and its four hints.
 Dumped `by_alias`, the hints are spelled as MCP and a manifest spell them
 (`readOnlyHint`, ...).
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `annotations` | `ToolAnnotations` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | The tool's namespaced name: `<extension id>.<tool>`. |
+| `annotations` | `ToolAnnotations` | required | Its four hints, as MCP spells them. |
 
 ### ManifestTool.wire()
 
 ```python
 def wire() -> dict[str, Any]
 ```
+
+The entry as the manifest's JSON spells it.
 
 ## ToolNames
 
@@ -46,12 +48,12 @@ Every name one tool goes by, from where each is written.
 `tool` is the name in this code (the function's, or `name=`); the
 others are derived from it and the extension's id, by igni's rules.
 
-| Field | Type | Default |
-|---|---|---|
-| `tool` | `str` | required |
-| `manifest` | `str` | required |
-| `rpc` | `str` | required |
-| `registered` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `tool` | `str` | required | What `ext.tool` registered, and `HostHarness.call` takes. |
+| `manifest` | `str` | required | The manifest's `permissions.tools[].name` (and `permissions.rpc` is `rpc` below): namespaced by the extension's id, so an administrator reading it knows whose tool it is. |
+| `rpc` | `str` | required | What a page calls with `bridge.rpc(...)`, and `permissions.rpc` grants. |
+| `registered` | `str` | required | What igni registers it as for its agent, and the name its permission rules and settings-file hooks match: `mcp_ext:<id>_<tool>`. |
 
 ### ToolNames.of()
 
@@ -59,6 +61,8 @@ others are derived from it and the extension's id, by igni's rules.
 @classmethod
 def of(extension_id: str, tool: str) -> ToolNames
 ```
+
+Every name the tool `tool` of the extension `extension_id` goes by.
 
 ## ToolHints
 
@@ -69,12 +73,12 @@ ToolHints(*, read_only: bool, destructive: bool, idempotent: bool, open_world: b
 
 What a tool is, in the four words igni's permission modes read.
 
-| Field | Type | Default |
-|---|---|---|
-| `read_only` | `bool` | required |
-| `destructive` | `bool` | required |
-| `idempotent` | `bool` | required |
-| `open_world` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `read_only` | `bool` | required | It changes nothing anywhere. |
+| `destructive` | `bool` | required | A change it makes can delete or overwrite something. `False` for a read. |
+| `idempotent` | `bool` | required | Calling it again with the same arguments changes nothing more. |
+| `open_world` | `bool` | required | It reaches beyond its own system: the web, another service, somebody else's data. |
 
 ### ToolHints.annotations()
 

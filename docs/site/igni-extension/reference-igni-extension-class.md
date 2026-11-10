@@ -117,6 +117,119 @@ be cancelled: it ends with the process.
 signals: SignalHandlers
 ```
 
+The handlers `@ext.on` registered, by signal (`SignalHandlers`).
+
+`@ext.on(signal)` is how an extension handles a signal; this is
+what it registers into, and the host's socket delivers into. Use
+it to see what is handled, or — in a test, with no host — to run
+the handlers as if the host had sent the signal:
+
+- `ext.signals.wires()` — every handled signal, by wire name
+  (`["session.switched"]`): what the socket subscribes to.
+- `ext.signals.handlers(signal)` — one signal's handlers, in
+  registration order.
+- `await ext.signals.emit(signal, value)` — run them with a typed
+  `value`, as the host's delivery does. A handler that raises is
+  logged and the others still run.
+- `await ext.signals.deliver(wire, raw)` — the same from the wire
+  name and the JSON value the host sends, parsed first; a signal
+  nobody handles, or a value of the wrong shape, is skipped.
+
+Example::
+
+```python
+from igni_extension.host_model import SessionChange
+
+@ext.on(ext.host.sessions.current_changed)
+async def follow(change: SessionChange) -> None: ...
+
+assert ext.signals.wires() == ["session.switched"]
+await ext.signals.emit(
+    ext.host.sessions.current_changed, SessionChange(session_id="s-2")
+)
+```
+
+### IgniExtension.connection
+
+```python
+@property
+connection: HostConnection
+```
+
+The socket to the igni host: what `ext.host`, signals, hooks and service events travel on.
+
+igni starts the process with `IGNI_HOST_URL` and `IGNI_HOST_SECRET`,
+a WebSocket on the device's loopback interface and the secret that
+says which process this is. `ext.run()` keeps it open, and the first
+`ext.host` call opens it, so an extension rarely needs it. Use it to:
+
+- tell whether there is a host at all: `ext.connection.configured`
+  is `False` outside igni, when `ext.host` reaches igni only through
+  `notifications.notify`;
+- see what the host granted: once connected, `ext.connection.granted`
+  is the `permissions.host` grants it said this extension holds
+  (`["chat.read", "chat.post", "sessions"]`), and
+  `ext.connection.schema_version` the host model's version;
+- drive the extension without `run()`, in a test or a script:
+  `await ext.connect()` connects once (it is
+  `ext.connection.connect()`); `ext.connection.serve_forever()`, as
+  a task, stays connected and reconnects every two seconds as
+  `run()` does; `ext.connection.connected` says whether it is
+  connected now. `await ext.aclose()` closes it.
+
+Its other methods are the SDK's wire to the host, not an API.
+
+Example::
+
+```python
+await ext.connect()
+if "chat.post" not in ext.connection.granted:
+    print("permissions.host does not grant chat.post")
+await ext.aclose()
+```
+
+### IgniExtension.process
+
+```python
+@property
+process: ExtensionProcess
+```
+
+What `ext.run()` serves: the MCP server, the host's socket beside it, the `on_start` work.
+
+`ext.run()` is `ext.process.run()`: MCP over stdio until igni closes
+the pipe, the host's socket kept open, every `@ext.on_start`
+function in the background. Use the process itself to serve one
+MCP session over streams you hold rather than stdio — an in-memory
+client in a test, or a program that embeds the extension:
+
+- `await ext.process.serve(read_stream, write_stream)` checks every
+  tool's hints (raising `ToolHintsMissing`) and serves the session
+  until its streams close. It neither connects to the host nor
+  starts the `on_start` work: call `await ext.connect()` for the
+  one, and start the other yourself.
+- `ext.process.run()` — what `ext.run()` does.
+- `ext.process.on_start(fn)` — what `@ext.on_start` does.
+
+`igni_extension.testing.HostHarness` serves this way, and is the
+usual way to call a tool in a test.
+
+Example::
+
+```python
+import anyio
+from mcp import ClientSession
+
+to_server, server_reads = anyio.create_memory_object_stream(16)
+server_writes, to_client = anyio.create_memory_object_stream(16)
+async with anyio.create_task_group() as tasks:
+    tasks.start_soon(ext.process.serve, server_reads, server_writes)
+    async with ClientSession(to_client, to_server) as session:
+        await session.initialize()
+        tools = await session.list_tools()
+    tasks.cancel_scope.cancel()
+```
+
 ### IgniExtension.assets
 
 ```python
@@ -168,6 +281,9 @@ arrive; a test or a script that drives the extension without
 ```python
 async def aclose() -> None
 ```
+
+Close the host's socket and the HTTP clients. `run()` calls it on the way out; a test
+that called `connect()` calls it itself.
 
 ### IgniExtension.run()
 

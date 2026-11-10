@@ -8,7 +8,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 |---|---|
 | [`IgniService`](#igniservice) | A service's place in an igni deployment. |
 | [`IgniSettings`](#ignisettings) | Read from the environment. Every field can also be passed directly. |
-| [`IgniTables`](#ignitables) | — |
+| [`IgniTables`](#ignitables) | The SDK's own tables in the service's database, on one `MetaData`. |
 
 ## IgniService
 
@@ -78,8 +78,9 @@ def install(app: FastAPI) -> None
 Put igni's part of the service on `app`: igni's calls
 (`router`), sign-in to the service's own pages (`web.router`), and
 cross-origin calls from the extension's page to every route that
-takes a person's token (`BearerCors`) — any origin, the token and
-nothing else, never cookies.
+takes its caller's bearer token (`BearerCors`: `person`,
+`optional_person`, `org_admin`, `caller`, `token`, `optional_token`)
+— any origin, the token and nothing else, never cookies.
 
 ### IgniService.router
 
@@ -145,6 +146,9 @@ async def caller(
 FastAPI dependency: whoever a request's token names — a `Person`, an
 `App` or a `Space` — among the kinds this service accepts
 (`accepted_callers`, people only by default). 401 for anybody else.
+
+A bearer route like `person`'s: the extension's page may call it
+(`BearerCors`).
 
 ### IgniService.caller_of()
 
@@ -307,18 +311,18 @@ IgniSettings(
 
 Read from the environment. Every field can also be passed directly.
 
-| Field | Type | Default |
-|---|---|---|
-| `igni_server_url` | `str` | `''` |
-| `public_base_url` | `str` | `''` |
-| `service_name` | `str` | `''` |
-| `client_kind` | `str` | `'service'` |
-| `redirect_uris` | `list[str]` | factory |
-| `key_encryption_key` | `str` | `''` |
-| `key_database_url` | `str` | `''` |
-| `extension_bundle_path` | `str` | `''` |
-| `revocations_max_staleness` | `float` | `30.0` |
-| `timeout` | `float` | `10.0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `igni_server_url` | `str` | `''` | Where this service reaches igni server. Often an in-cluster address, not igni's public URL — the two need not match. |
+| `public_base_url` | `str` | `''` | This service's own public URL, on a hostname of its own. It is the audience of every token people bring, and where igni calls it. |
+| `service_name` | `str` | `''` | What the registration is called in igni's portal. |
+| `client_kind` | `str` | `'service'` | `service`, or `app` for something acting only for signed-in people. |
+| `redirect_uris` | `list[str]` | factory | Where people's browsers come back to after signing in to this service's own portal, if it has one. |
+| `key_encryption_key` | `str` | `''` | The Fernet key this service's private key is sealed under. |
+| `key_database_url` | `str` | `''` | An async SQLAlchemy URL for the key store, when the service does not hand one over itself (`postgresql+asyncpg://…`). |
+| `extension_bundle_path` | `str` | `''` | The extension bundle this service ships. Empty or missing: nothing is uploaded. |
+| `revocations_max_staleness` | `float` | `30.0` | Seconds the revocation list may go unrefreshed before every token is refused (it fails closed): a removed person can do nothing after that. |
+| `timeout` | `float` | `10.0` | Seconds before a call to igni gives up. |
 
 ## IgniTables
 
@@ -326,3 +330,9 @@ Read from the environment. Every field can also be passed directly.
 class IgniTables
 IgniTables()
 ```
+
+The SDK's own tables in the service's database, on one `MetaData`.
+
+`SqlKeyStore` and `SqlWebSessionStore` create them on first use. A
+service that owns its schema in migrations adds `IgniTables.metadata`
+to Alembic's `target_metadata` and passes `create_table=False`.

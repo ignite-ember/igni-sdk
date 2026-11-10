@@ -27,6 +27,8 @@ igni's directory, for one organisation. What `host.directory` is.
 org_id: str
 ```
 
+The organisation this directory answers for.
+
 ### Directory.organisation()
 
 ```python
@@ -89,6 +91,8 @@ HTTP client are the service's, shared by every `Host`.
 @property
 org_id: str
 ```
+
+The organisation this host is for.
 
 ### Host.notify()
 
@@ -172,14 +176,14 @@ Member(
 
 One member of an organisation, present or former, as the directory describes them.
 
-| Field | Type | Default |
-|---|---|---|
-| `user_id` | `str` | required |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
-| `role` | `str` | `'member'` |
-| `status` | `str` | `'active'` |
-| `super_admin` | `bool` | `False` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `user_id` | `str` | required | The member's igni user id: what a `Person.user_id` is. |
+| `email` | `str` | `''` | Their email address. |
+| `name` | `str` | `''` | Their display name; may be empty. |
+| `role` | `str` | `'member'` | `admin` or `member`. |
+| `status` | `str` | `'active'` | `active`, or `deactivated` for somebody who has left. |
+| `super_admin` | `bool` | `False` | Whether they are a super admin of the igni deployment. |
 
 ### Member.is_active
 
@@ -188,12 +192,16 @@ One member of an organisation, present or former, as the directory describes the
 is_active: bool
 ```
 
+Whether they are still a member (`status == "active"`).
+
 ### Member.display_name
 
 ```python
 @property
 display_name: str
 ```
+
+Their name, or their email address when they have no name.
 
 ## Organisation
 
@@ -211,10 +219,10 @@ Organisation(
 
 The organisation a token names.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
-| `name` | `str` | `''` |
-| `slug` | `str` | `''` |
-| `tenant_number` | `int` | `0` |
-| `domains` | `list[str]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation's id: what `Person.org_id` is. |
+| `name` | `str` | `''` | Its display name. |
+| `slug` | `str` | `''` | Its short name, unique in the deployment. |
+| `tenant_number` | `int` | `0` | Derive per-organisation databases and index names from this. |
+| `domains` | `list[str]` | factory | The email domains it owns. |

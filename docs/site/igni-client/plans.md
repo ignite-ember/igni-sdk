@@ -32,7 +32,7 @@ mode change, and `ok`; `ok: false` with `error` when
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `run_id` | `str` | `''` | `run_id` is the run that submitted the plan (`plan_submitted` carries it). |
+| `run_id` | `str` | `''` | Id of the run that submitted the plan, as `plan_submitted` carries it. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`PlanDecisionResult`](/docs/sdk/igni-client/models-reference#plandecisionresult), or `async with` it to follow its events too.
 
@@ -74,7 +74,7 @@ false` with `error` when `run_id` is empty.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `run_id` | `str` | `''` | `run_id` is the run that submitted the plan. |
+| `run_id` | `str` | `''` | Id of the run that submitted the plan, as `plan_submitted` carries it. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`PlanDecisionResult`](/docs/sdk/igni-client/models-reference#plandecisionresult), or `async with` it to follow its events too.
 

@@ -24,9 +24,9 @@ IgniCall(*, org_id: str)
 
 igni itself calling this service, for one organisation.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation igni is calling about. |
 
 ## PEOPLE_ONLY
 
@@ -43,11 +43,11 @@ App(*, app_id: str, org_id: str, name: str = '')
 
 An app acting as itself: igni's `app` token for this service.
 
-| Field | Type | Default |
-|---|---|---|
-| `app_id` | `str` | required |
-| `org_id` | `str` | required |
-| `name` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as an org admin registered it (the token's `sub`). |
+| `org_id` | `str` | required | The organisation the app belongs to. |
+| `name` | `str` | `''` | The app's display name, when the token carries it. |
 
 ### App.kind
 
@@ -56,12 +56,16 @@ An app acting as itself: igni's `app` token for this service.
 kind: CallerKind
 ```
 
+Always `CallerKind.APP`.
+
 ### App.from_claims()
 
 ```python
 @classmethod
 def from_claims(claims: dict[str, Any]) -> App
 ```
+
+The app a verified `app` token's claims describe.
 
 ## Caller
 
@@ -90,6 +94,8 @@ Who a request may come from: a person, an app, or an app's space.
 token_use: str
 ```
 
+The `token_use` claim a token of this kind carries: `user`, `app` or `space`.
+
 ## Person
 
 ```python
@@ -108,15 +114,15 @@ Person(
 
 A person, as their token describes them, in the one organisation it names.
 
-| Field | Type | Default |
-|---|---|---|
-| `user_id` | `str` | required |
-| `org_id` | `str` | required |
-| `org_name` | `str` | `''` |
-| `org_role` | `str` | `'member'` |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
-| `super_admin` | `bool` | `False` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `user_id` | `str` | required | The person's igni user id (the token's `sub`). |
+| `org_id` | `str` | required | The organisation the token is for; every call it makes is in this one. |
+| `org_name` | `str` | `''` | The organisation's display name, when the token carries it. |
+| `org_role` | `str` | `'member'` | `admin` or `member` in `org_id`. |
+| `email` | `str` | `''` | The person's email address, when the token carries it. |
+| `name` | `str` | `''` | The person's display name, when the token carries it. |
+| `super_admin` | `bool` | `False` | Whether the person is a super admin of the igni deployment. It does not make them an admin of `org_id`. |
 
 ### Person.kind
 
@@ -125,12 +131,16 @@ A person, as their token describes them, in the one organisation it names.
 kind: CallerKind
 ```
 
+Always `CallerKind.PERSON`: what a `match` on a `Caller` reads.
+
 ### Person.is_org_admin
 
 ```python
 @property
 is_org_admin: bool
 ```
+
+Whether the person is an admin of `org_id` (`org_role == "admin"`).
 
 ### Person.display_name
 
@@ -139,12 +149,16 @@ is_org_admin: bool
 display_name: str
 ```
 
+Their name, or their email address when the token has no name.
+
 ### Person.from_claims()
 
 ```python
 @classmethod
 def from_claims(claims: dict[str, Any]) -> Person
 ```
+
+The person a verified token's claims describe (`sub`, `org`, `org_role`, ...).
 
 ## Space
 
@@ -155,12 +169,12 @@ Space(*, space_id: str, org_id: str, app_id: str, external_id: str = '')
 
 One end user of an app, a producer of its own: igni's `space` token for this service.
 
-| Field | Type | Default |
-|---|---|---|
-| `space_id` | `str` | required |
-| `org_id` | `str` | required |
-| `app_id` | `str` | required |
-| `external_id` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `space_id` | `str` | required | The space's id at igni (the token's `sub`). |
+| `org_id` | `str` | required | The organisation the space's app belongs to. |
+| `app_id` | `str` | required | The app the space belongs to. |
+| `external_id` | `str` | `''` | The app's own name for its end user. |
 
 ### Space.kind
 
@@ -169,12 +183,16 @@ One end user of an app, a producer of its own: igni's `space` token for this ser
 kind: CallerKind
 ```
 
+Always `CallerKind.SPACE`.
+
 ### Space.from_claims()
 
 ```python
 @classmethod
 def from_claims(claims: dict[str, Any]) -> Space
 ```
+
+The space a verified `space` token's claims describe.
 
 ## TokenRefused
 

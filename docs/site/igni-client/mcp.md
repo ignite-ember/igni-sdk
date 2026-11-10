@@ -34,7 +34,7 @@ reason is also `get_mcp_server_details`'s `error` for it.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `server_name` | `str` | required | `server_name` is the server's name in the MCP configuration. |
+| `server_name` | `str` | required | The server's name in the MCP configuration. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
@@ -65,7 +65,7 @@ whether or not the server was connected.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `server_name` | `str` | required | `server_name` is the server's name in the MCP configuration. |
+| `server_name` | `str` | required | The server's name in the MCP configuration. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
@@ -195,9 +195,9 @@ cannot be written.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `enabled` | `bool` | required | `enabled` is its new state. |
-| `server` | `str` | required | `server` and `tool` name the tool; |
-| `tool` | `str` | required | `server` and `tool` name the tool; |
+| `enabled` | `bool` | required | The tool's new state: `true` lets the agent use it. |
+| `server` | `str` | required | Name of the MCP server; not checked to exist. |
+| `tool` | `str` | required | Name of the server's tool; not checked to exist. |
 
 **Returns** [`McpToolToggleResult`](/docs/sdk/igni-client/models-reference#mcptooltoggleresult).
 

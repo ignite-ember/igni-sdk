@@ -1,11 +1,11 @@
-// GENERATED from the igni host schema 1.11.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
+// GENERATED from the igni host schema 1.12.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 //
 // `bridge.host` as an extension's page sees it. Read
 // `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
 
 import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";
 
-export const SCHEMA_VERSION = "1.11.0";
+export const SCHEMA_VERSION = "1.12.0";
 
 /** One change anywhere in the model, as `host.changed` reports it. */
 export interface Change {
@@ -152,6 +152,8 @@ export interface ComposerChange {
 
 /** A transient message on screen. */
 export interface Toast {
+  /** Always `toast`: what this is. */
+  type: string;
   id: string;
   /** Its first line. */
   text: string;
@@ -173,6 +175,8 @@ export interface ToastChange {
 
 /** A dialog on screen: igni's own (`spec.kind` is `update`) or an extension's (`show_dialog`). One at a time; a new one replaces the last, which closes unanswered. */
 export interface Dialog {
+  /** Always `dialog`: what this is. */
+  type: string;
   id: string;
   spec: JsonValue;
   /** The extension that asked; `None` for igni. */

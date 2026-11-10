@@ -22,9 +22,9 @@ How many deliveries igni wrote: fewer than named is normal, not an error.
 Somebody who is not an active member, was the actor, or was already
 told about the `event_key` is not delivered to.
 
-| Field | Type | Default |
-|---|---|---|
-| `delivered` | `int` | `0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `delivered` | `int` | `0` | How many people igni wrote a delivery for. |
 
 ## Notification
 
@@ -44,15 +44,15 @@ Notification(
 
 One thing that happened, and who it concerns.
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `str` | required |
-| `title` | `str` | required |
-| `body` | `str` | `''` |
-| `actor` | `str` | `''` |
-| `target` | `Target \| None` | `None` |
-| `event_key` | `str` | `''` |
-| `recipients` | `list[str]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `str` | required | The extension's own word for what happened: `comment`, `access_requested`. |
+| `title` | `str` | required | What it is about. |
+| `body` | `str` | `''` | One line. Whitespace is collapsed here; igni cuts a long one short. |
+| `actor` | `str` | `''` | Who did it: a user id or an address. Never told about it. |
+| `target` | `Target \| None` | `None` | Where to go: one of this service's extension pages. |
+| `event_key` | `str` | `''` | The same event is delivered once per person, however often it is sent. |
+| `recipients` | `list[str]` | factory | User ids or addresses, in this organisation. |
 
 ### Notification.split()
 
@@ -75,7 +75,7 @@ Target(
 
 Where in the extension to go: one of its pages, and that page's params.
 
-| Field | Type | Default |
-|---|---|---|
-| `page` | `str` | required |
-| `params` | `dict[str, ParamValue]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `page` | `str` | required | The page's id, as the extension's manifest declares it. |
+| `params` | `dict[str, ParamValue]` | factory | What the page is opened with: strings, numbers, booleans or null; small as JSON. |

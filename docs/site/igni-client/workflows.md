@@ -34,7 +34,7 @@ there was no such run or it had already ended, with the
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `workflow_run_id` | `str` | required | `workflow_run_id` is the run (from `run_workflow`). |
+| `workflow_run_id` | `str` | required | Id of the workflow run to cancel. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`WorkflowCancelResponse`](/docs/sdk/igni-client/models-reference#workflowcancelresponse), or `async with` it to follow its events too.
 
@@ -109,8 +109,8 @@ workflow runtime is missing.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `args` | `dict[str, JsonValue] \| None` | `None` | `args` its input, a JSON object the workflow reads as it defines. |
-| `name` | `str` | required | `name` is the workflow (from `list_workflows`); |
+| `args` | `dict[str, JsonValue] \| None` | `None` | The workflow's own input, passed to it unchanged. Each workflow defines the keys it reads; omit for none. |
+| `name` | `str` | required | Name of the workflow to run. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`WorkflowRunResponse`](/docs/sdk/igni-client/models-reference#workflowrunresponse), or `async with` it to follow its events too.
 

@@ -1,4 +1,4 @@
-"""GENERATED from the igni host schema 1.11.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
+"""GENERATED from the igni host schema 1.12.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 
 `ext.host` as an extension's process sees it. Read
 `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
@@ -22,7 +22,7 @@ from igni_extension.members import (
 )
 from igni_extension.notifications import LocalNotification, Target
 
-SCHEMA_VERSION = "1.11.0"
+SCHEMA_VERSION = "1.12.0"
 """The version of igni's host object model this SDK was generated from."""
 
 NotificationTarget = Target
@@ -229,6 +229,8 @@ class Toast(BaseModel):
 
     model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
+    type: str
+    """Always `toast`: what this is."""
     id: str
     text: str
     """Its first line."""
@@ -256,6 +258,8 @@ class Dialog(BaseModel):
 
     model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
+    type: str
+    """Always `dialog`: what this is."""
     id: str
     spec: JsonValue
     source: str | None = None

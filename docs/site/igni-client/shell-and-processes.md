@@ -21,7 +21,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Run a shell command in this session's project folder and return its output.
 
 ```python
-async def run_shell(self, command: str = '') -> RunShellResult
+def run_shell(self, command: str = '') -> Call[RunShellResult, RunShellEvent]
 ```
 
 `command` is the command line (what follows `$` in the
@@ -35,24 +35,32 @@ process — `process_started`, a `process_line` per line,
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `command` | `str` | `''` | `command` is the command line (what follows `$` in the composer); blank runs nothing. |
+| `command` | `str` | `''` | The command line to run (without a leading `$`); blank runs nothing. |
 
-**Returns** [`RunShellResult`](/docs/sdk/igni-client/models-reference#runshellresult).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`RunShellResult`](/docs/sdk/igni-client/models-reference#runshellresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `background_process_done`, `process_exited`, `process_line`, `process_started` ([`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush)). This call does not follow them: a command that moves to the background is reported by `process_*` pushes carrying its `pid`, but the answer does not say the `pid`; watch `igni.processes.list()` or `igni.events()`.
+**Events** `RunShellEvent` is any of [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush) (igni streams `background_process_done`, `process_exited`, `process_line`, `process_started`).
+
+**How they are told apart** `async with` the call to follow it: a command that finishes inside the wait pushes nothing, and the answer is its output. A command that outlives the wait moves to the background: the answer names the pid, and the `process_started`, `process_line`, `process_exited` and `background_process_done` pushes of that pid follow, ending with the last of them.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `run_shell`, scope `session`, area `panels`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-result = await session.run_shell("git status --short")
-print(result.exit_code)
-print(result.output)
+from igni_client.models import ProcessLinePush
+
+async with session.run_shell("git status --short") as run:
+    async for event in run:
+        if isinstance(event, ProcessLinePush):
+            print(event.payload.line)  # a command that outlives the wait
+    result = await run.result()
+    print(result.exit_code)
+    print(result.output)
 ```
 
 ## igni.processes.list()
@@ -99,7 +107,7 @@ stop — its last lines, `process_exited` and
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `pid` | `int` | required | `pid` is the process. |
+| `pid` | `int` | required | Operating-system process id of the background process. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`StopProcessResult`](/docs/sdk/igni-client/models-reference#stopprocessresult), or `async with` it to follow its events too.
 
@@ -143,8 +151,8 @@ output, not running.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `pid` | `int` | required | `pid` is the process; |
-| `tail` | `int` | `200` | `tail` how many lines (default 200). |
+| `pid` | `int` | required | Operating-system process id of the background process. |
+| `tail` | `int` | `200` | How many of the last lines to return (at least 1). |
 
 **Returns** [`ProcessTailResult`](/docs/sdk/igni-client/models-reference#processtailresult).
 

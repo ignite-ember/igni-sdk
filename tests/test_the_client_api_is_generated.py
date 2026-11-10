@@ -63,6 +63,10 @@ def test_the_reader_takes_the_whole_contract() -> None:
             "result",
             "streams",
             "reply",
+            "may_stream",
+            "correlate",
+            "duration",
+            "timeout_seconds",
         }
 
 
@@ -75,8 +79,17 @@ def test_every_method_is_a_client_s_or_says_why_not() -> None:
 
 
 def test_every_method_that_streams_is_followed_or_says_why_not() -> None:
-    streaming = {w for w, m in CONTRACT.methods.items() if m.streams} - set(NOT_FOR_CLIENTS)
-    assert set(FOLLOWED) | set(UNFOLLOWED) == streaming
+    """A method a client can follow is one igni's contract says how to tell apart.
+
+    That is a method that streams messages of its own, or one that says
+    how a client tells its messages from another's — ``correlate``. A
+    call whose messages carry the id of another call's (`execute_scheduled_task`
+    and the run it starts) is followed too.
+    """
+    followable = {w for w, m in CONTRACT.methods.items() if m.streams or m.correlate} - set(
+        NOT_FOR_CLIENTS
+    )
+    assert set(FOLLOWED) | set(UNFOLLOWED) == followable
     assert not set(FOLLOWED) & set(UNFOLLOWED)
 
 

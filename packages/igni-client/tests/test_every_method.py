@@ -86,7 +86,7 @@ def test_every_method_is_where_its_scope_says() -> None:
 def test_followed_methods_are_exactly_those_with_a_rule() -> None:
     followed = {w for w, s in METHODS.items() if s.followed}
     assert followed == set(RULES)
-    streaming = {w for w, s in METHODS.items() if s.streams}
+    streaming = {w for w, s in METHODS.items() if s.streams or s.may_stream}
     assert streaming == followed | set(UNFOLLOWED)
 
 

@@ -32,7 +32,7 @@ completed, failed or was cancelled, whose record is left as it is.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `task_id` | `str` | required | `task_id` is the task's `id` (from `get_scheduled_tasks`). |
+| `task_id` | `str` | required | The task's `id`, as `get_scheduled_tasks` lists it. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
@@ -55,36 +55,46 @@ for task in await session.scheduler.list(include_done=False):
 Run a scheduled task's work now, in this session, and wait for the answer.
 
 ```python
-async def execute(self, description: str) -> str
+def execute(
+    self,
+    description: str,
+    *,
+    run_id: str = '',
+) -> Call[ScheduledTaskRunResult, ExecuteScheduledTaskEvent]
 ```
 
 `description` is what the task asks the agent to do (a scheduled
 task's `description`). The agent runs it as a stored task firing,
 not as a live message: its run is not streamed to the windows, and
 the task's own record is not touched. What its tools push while
-they work still goes out. Returns the agent's answer as text.
-Fails when the organisation's group policy refuses the run, or the
-run fails.
+they work still goes out. It is the session's run while it goes:
+it waits for a turn already running, `get_processing` reports
+it, and `cancel_run` stops it. Returns the agent's answer as
+text with the run's `run_id` — the one given, or one made — which
+every push the run's tools make carries too. Fails when the
+organisation's group policy refuses the run, the run is cancelled,
+or the run fails.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `description` | `str` | required | `description` is what the task asks the agent to do (a scheduled task's `description`). |
+| `description` | `str` | required | What the task asks the agent to do (a scheduled task's `description`). |
+| `run_id` | `str` | `''` | Id to give the run, so the caller can follow the run's pushes (their `run_id`) as they come; one is made when absent. |
 
-**Returns** `str`.
-
-**Events** while it runs igni also streams `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `process_exited`, `process_line`, `process_started`, `todos_updated` ([`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`FileEditedPush`](/docs/sdk/igni-client/events-reference#fileeditedpush), [`HttpRetryAttemptPush`](/docs/sdk/igni-client/events-reference#httpretryattemptpush), [`HttpRetrySucceededPush`](/docs/sdk/igni-client/events-reference#httpretrysucceededpush), [`OrchestrateEventPush`](/docs/sdk/igni-client/events-reference#orchestrateeventpush), [`PermissionModeChangedPush`](/docs/sdk/igni-client/events-reference#permissionmodechangedpush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush), [`TodosUpdatedPush`](/docs/sdk/igni-client/events-reference#todosupdatedpush)). This call does not follow them: what the task's tools push carries nothing that says which run it came from, so it cannot be told from another run's in the same session; watch `igni.events()`.
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`ScheduledTaskRunResult`](/docs/sdk/igni-client/models-reference#scheduledtaskrunresult), or `async with` it to follow its events too.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `execute_scheduled_task`, scope `session`, area `scheduler`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-answer = await session.scheduler.execute("Summarise yesterday's failed builds")
-print(answer)
+async with session.scheduler.execute("Summarise yesterday's failed builds") as task:
+    async for event in task:
+        print(event.channel)  # what the run's tools do while it works
+    print((await task.result()).result)
 ```
 
 ## session.scheduler.list()
@@ -103,7 +113,7 @@ created, its `status`, its `result` or `error`, and its
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `include_done` | `bool` | `True` | `include_done` (default `true`) lists finished, failed and cancelled tasks too. |
+| `include_done` | `bool` | `True` | Also list completed, failed and cancelled tasks. |
 
 **Returns** `list[`[`ScheduledTask`](/docs/sdk/igni-client/models-reference#scheduledtask)`]`.
 
@@ -137,7 +147,7 @@ Takes no arguments.
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, `None`, or `async with` it to follow its events too.
 
-**Events** `StartSchedulerEvent` is any of [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`FileEditedPush`](/docs/sdk/igni-client/events-reference#fileeditedpush), [`HttpRetryAttemptPush`](/docs/sdk/igni-client/events-reference#httpretryattemptpush), [`HttpRetrySucceededPush`](/docs/sdk/igni-client/events-reference#httpretrysucceededpush), [`OrchestrateEventPush`](/docs/sdk/igni-client/events-reference#orchestrateeventpush), [`PermissionModeChangedPush`](/docs/sdk/igni-client/events-reference#permissionmodechangedpush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush), [`SchedulerCompletedPush`](/docs/sdk/igni-client/events-reference#schedulercompletedpush), [`SchedulerStartedPush`](/docs/sdk/igni-client/events-reference#schedulerstartedpush), [`TodosUpdatedPush`](/docs/sdk/igni-client/events-reference#todosupdatedpush) (igni streams `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `process_exited`, `process_line`, `process_started`, `scheduler_completed`, `scheduler_started`, `todos_updated`).
+**Events** `StartSchedulerEvent` is any of [`SchedulerCompletedPush`](/docs/sdk/igni-client/events-reference#schedulercompletedpush), [`SchedulerStartedPush`](/docs/sdk/igni-client/events-reference#schedulerstartedpush) (igni streams `scheduler_completed`, `scheduler_started`).
 
 **How they are told apart** `async with` the call to follow it: it yields this session's `scheduler_started` and `scheduler_completed` pushes for as long as the block runs. What a task's tools push meanwhile carries nothing that says which run it came from, so it is not yielded; read it from `igni.events()`.
 

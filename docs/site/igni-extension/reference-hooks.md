@@ -21,15 +21,17 @@ Allow(*, outcome: Literal['allow'] = 'allow')
 
 Let it happen as it is.
 
-| Field | Type | Default |
-|---|---|---|
-| `outcome` | `Literal['allow']` | `'allow'` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `outcome` | `Literal['allow']` | `'allow'` | Always `allow`. |
 
 ### Allow.for_hook()
 
 ```python
 def for_hook(hook_id: str) -> HookAnswer
 ```
+
+The answer as it goes to igni for the hook `hook_id`.
 
 ## HookEvent
 
@@ -45,6 +47,9 @@ One of igni's hook events, and the value a handler is handed.
 ```python
 def parse(raw: Any) -> T
 ```
+
+The value igni sent, as the handler's model. Raises `ValidationError` for one it cannot
+read.
 
 ## Hooks
 
@@ -62,6 +67,8 @@ Every hook event an extension can answer: `@ext.hook(Hooks.PRE_TOOL_USE)`.
 def all() -> list[HookEvent[Any]]
 ```
 
+Every hook event, deciding and told.
+
 ## Modify
 
 ```python
@@ -71,16 +78,18 @@ Modify(value: Any, *, outcome: Literal['modify'] = 'modify')
 
 Let it happen, changed: the whole value, with only the fields it may change changed.
 
-| Field | Type | Default |
-|---|---|---|
-| `outcome` | `Literal['modify']` | `'modify'` |
-| `value` | `Any` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `outcome` | `Literal['modify']` | `'modify'` | Always `modify`. |
+| `value` | `Any` | required | The whole value, changed; only the event's `modify` fields may differ. |
 
 ### Modify.for_hook()
 
 ```python
 def for_hook(hook_id: str) -> HookAnswer
 ```
+
+The answer as it goes to igni for the hook `hook_id`.
 
 ## Reject
 
@@ -91,13 +100,15 @@ Reject(reason: str, *, outcome: Literal['reject'] = 'reject')
 
 Stop it. `reason` reaches the agent or the person, so write it for them.
 
-| Field | Type | Default |
-|---|---|---|
-| `outcome` | `Literal['reject']` | `'reject'` |
-| `reason` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `outcome` | `Literal['reject']` | `'reject'` | Always `reject`. |
+| `reason` | `str` | required | Why, for the agent or the person it reaches. |
 
 ### Reject.for_hook()
 
 ```python
 def for_hook(hook_id: str) -> HookAnswer
 ```
+
+The answer as it goes to igni for the hook `hook_id`.

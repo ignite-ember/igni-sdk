@@ -10,32 +10,31 @@ Grouped by the first reference page whose methods return them.
 
 ### GroupPolicyPackResult
 
-Wire shape for the `get_group_policy` RPC — the active
-group's pack for the current user. Nullable because
-a user may belong to no group.
+The policy pack of the group the current user belongs to on igni
+server. Every field is empty when the user belongs to no group.
 
-| Field | Type | Default |
-|---|---|---|
-| `default_model` | `str \| None` | `None` |
-| `entry_count` | `int` | `0` |
-| `fetched_at` | `str \| None` | `None` |
-| `group_id` | `str \| None` | `None` |
-| `group_name` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `default_model` | `str \| None` | `None` | The model this group's members get when nothing names one; `null` when the group sets none. |
+| `entry_count` | `int` | `0` | How many entries the pack holds. |
+| `fetched_at` | `str \| None` | `None` | When the pack was last fetched, as an ISO 8601 timestamp; `null` if never. |
+| `group_id` | `str \| None` | `None` | The group's id; `null` when in no group. |
+| `group_name` | `str \| None` | `None` | The group's name; `null` when in no group. |
 
 **Returned by** [`igni.group_policy()`](/docs/sdk/igni-client/igni#igni-group-policy).
 
 ### UpdateAvailable
 
-Wire shape for the `check_for_update` RPC — package updater
-notice. `None` means no update is available.
+A newer igni release that can be installed. When no update is
+available the call returns `null` instead.
 
-| Field | Type | Default |
-|---|---|---|
-| `available` | `bool` | required |
-| `current_version` | `str` | required |
-| `download_url` | `str` | required |
-| `latest_version` | `str` | required |
-| `pkg_name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `available` | `bool` | required | Always `true`: an update is available. |
+| `current_version` | `str` | required | The version running now. |
+| `download_url` | `str` | required | Where the new version can be downloaded. |
+| `latest_version` | `str` | required | The newest released version. |
+| `pkg_name` | `str` | required | The name of the package to upgrade. |
 
 **Returned by** [`igni.check_for_update()`](/docs/sdk/igni-client/igni#igni-check-for-update).
 
@@ -43,107 +42,98 @@ notice. `None` means no update is available.
 
 ### AttachSessionResult
 
-Wire shape for the `attach_session` RPC — the FE learns
-which session id + project directory the pool actually bound.
+The session a connection is now attached to.
 
-| Field | Type | Default |
-|---|---|---|
-| `project_dir` | `str` | required |
-| `session_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `project_dir` | `str` | required | The session's project folder, as an absolute path. |
+| `session_id` | `str` | required | The id of the session that was attached. |
 
 **Returned by** [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach).
 
+### CancelRunResult
+
+Result of cancelling the current turn: whether one was running.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cancelled` | `bool` | required | `true` when a turn was running and is being stopped: its stream ends with an `info` and a `stream_end`. `false` when nothing was running. |
+
+**Returned by** [`session.cancel()`](/docs/sdk/igni-client/sessions#session-cancel).
+
 ### DisplayConfig
 
-| Field | Type | Default |
-|---|---|---|
-| `color_theme` | `str` | `'auto'` |
-| `markdown` | `bool` | `True` |
-| `message_truncate_lines` | `int` | `10` |
-| `show_reasoning` | `bool` | `False` |
-| `show_routing` | `bool` | `False` |
-| `show_tool_calls` | `bool` | `True` |
-| `tool_result_preview_lines` | `int` | `4` |
+How the conversation is shown: the `display` section of igni's settings.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `color_theme` | `str` | `'auto'` | Color theme: `auto` (follow the terminal or system), `light` or `dark`. |
+| `markdown` | `bool` | `True` | Render agent replies as Markdown rather than plain text. |
+| `message_truncate_lines` | `int` | `10` | Number of lines of a long message shown before it is truncated. |
+| `show_reasoning` | `bool` | `False` | Show the model's reasoning, when it produces any. |
+| `show_routing` | `bool` | `False` | Verbose mode: show which agent handles each step and how work is routed. |
+| `show_tool_calls` | `bool` | `True` | Show the agent's tool calls in the conversation. |
+| `tool_result_preview_lines` | `int` | `4` | Number of lines of a tool's output shown before it is collapsed. |
 
 **Returned by** [`session.display_config()`](/docs/sdk/igni-client/sessions#session-display-config).
 
 ### SessionListEntry
 
-One row of `SessionListResult.sessions`.
+One saved session, as listed by `session_list`.
 
-Wire shape produced by
-`igni_core.core.session.schemas.SessionListRow.from_agno`:
-`{session_id, name, created_at, updated_at, run_count, summary,
-agent_name}`. Kept permissive (`extra='allow'`) so a future
-field on the persistence side lands on the wire without a
-schema-drift error at the boundary — the FE tolerates unknown
-keys.
+More fields may be present than those listed here; ignore any you
+do not know.
 
-Named `SessionListEntry` rather than `SessionSummary` to
-avoid collision with Agno's `agno.session.summary.SessionSummary`,
-which is used in
-`igni_core.core.session.compaction`. Defined in this
-module (not `backend/schemas_history.py`) because `protocol`
-is the leaf layer — the backend depends on protocol, never
-the reverse — and `SessionListResult` needs to reference
-this schema at the wire boundary.
-
-| Field | Type | Default |
-|---|---|---|
-| `agent_name` | `str` | `''` |
-| `created_at` | `int` | `0` |
-| `name` | `str` | `''` |
-| `run_count` | `int` | `0` |
-| `session_id` | `str` | `''` |
-| `summary` | `str` | `''` |
-| `updated_at` | `int` | `0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `agent_name` | `str` | `''` | The agent the session talks to. |
+| `created_at` | `int` | `0` | When the session was created, in Unix seconds. |
+| `name` | `str` | `''` | The session's name; empty when it has none. |
+| `run_count` | `int` | `0` | How many runs the session holds. |
+| `session_id` | `str` | `''` | The session's id. |
+| `summary` | `str` | `''` | A short summary of the conversation; empty when there is none. |
+| `updated_at` | `int` | `0` | When the session last changed, in Unix seconds. |
 
 **Part of** [`SessionListResult`](/docs/sdk/igni-client/events-reference#sessionlistresult).
 
 ### TodoItem
 
-The canonical todo row — the one shape every boundary carries.
+One item in the agent's todo checklist.
 
-`activeForm` is the verb-noun gerund the UI shows while the
-item is `in_progress` — e.g. `"Running tests"` (active)
-paired with `content` `"Run tests"` (imperative). The
-camelCase alias keeps CC parity: every `.model_dump()` emits
-`activeForm`.
-
-| Field | Type | Default |
-|---|---|---|
-| `active_form` (wire `activeForm`) | `str` | `''` |
-| `content` | `str` | required |
-| `status` | `Literal['pending', 'in_progress', 'completed']` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `active_form` (wire `activeForm`) | `str` | `''` | Present-tense form shown while the item is in progress, e.g. `Running tests`. Empty when the agent gave none. |
+| `content` | `str` | required | What the item is, in imperative form, e.g. `Run tests`. |
+| `status` | `Literal['pending', 'in_progress', 'completed']` | required | Progress of the item: `pending` (not started), `in_progress` (being worked on now) or `completed`. |
 
 **Returned by** [`session.todos()`](/docs/sdk/igni-client/sessions#session-todos).
 
-**Part of** [`LatestPlanResult`](/docs/sdk/igni-client/models-reference#latestplanresult), [`PlanSubmittedPayload`](/docs/sdk/igni-client/models-reference#plansubmittedpayload), [`TodosUpdatedPayload`](/docs/sdk/igni-client/models-reference#todosupdatedpayload).
+**Part of** [`LatestPlanResult`](/docs/sdk/igni-client/models-reference#latestplanresult), [`PlanSubmittedEventPayload`](/docs/sdk/igni-client/models-reference#plansubmittedeventpayload), [`TodosUpdatedEventPayload`](/docs/sdk/igni-client/models-reference#todosupdatedeventpayload).
 
 ### UploadAttachmentResult
 
-Wire shape for `FilesController.upload_attachment` —
-persisted FE-uploaded file location + byte count.
+Where an uploaded attachment was saved.
 
-| Field | Type | Default |
-|---|---|---|
-| `error` | `str` | `''` |
-| `path` | `str` | required |
-| `size` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why the upload failed, e.g. invalid base64; empty on success. |
+| `path` | `str` | required | The stored file's path, or an `attachment:<id>` reference when attachments are kept in shared storage; use it to refer to the file in a message. Empty on error. |
+| `size` | `int` | required | Size of the stored file in bytes; `0` on error. |
 
 **Returned by** [`session.upload_attachment()`](/docs/sdk/igni-client/sessions#session-upload-attachment).
 
 ### VisualizationActionResult
 
-Wire shape for `VisualizationActionBus.dispatch` —
-the FE's tool result echo of the action name + user-supplied
-params so it can render "you clicked X" in the conversation.
+Confirmation that a visualization action was dispatched.
 
-| Field | Type | Default |
-|---|---|---|
-| `action` | `str` | required |
-| `ok` | `bool` | required |
-| `params` | `dict[str, JsonValue]` | required |
+Echoes the action and its parameters, e.g. to show "you clicked X"
+in the conversation.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `action` | `str` | required | Name of the action. |
+| `ok` | `bool` | required | `true` when the action was dispatched. |
+| `params` | `dict[str, JsonValue]` | `{}` | Parameters attached to the action. |
 
 **Returned by** [`session.visualization_action()`](/docs/sdk/igni-client/sessions#session-visualization-action).
 
@@ -151,59 +141,42 @@ params so it can render "you clicked X" in the conversation.
 
 ### DiscardInterruptedRunResult
 
-Wire shape for `ContextController.discard_interrupted_run`.
-`ok` is `True` once no such interrupted run is left — also when
-there was none, so a retry is harmless — and `False` with
-`error` when the id was empty or the store could not be written.
+The outcome of discarding an interrupted run.
 
-| Field | Type | Default |
-|---|---|---|
-| `error` | `str` | `''` |
-| `ok` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why it failed; empty when `ok` is true. |
+| `ok` | `bool` | required | `true` once no such interrupted run is left, also when there was none, so a retry is harmless. `false` when the id was empty or the change could not be saved. |
 
 **Returned by** [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted).
 
 ### InterruptedRun
 
-Wire shape for one explicitly-interrupted run surfaced by
-`ContextController.get_interrupted_runs`.
+A run that stopped before it finished, and the user message that
+started it. A client can offer to retry it, discard it, or edit the
+message and send it again.
 
-A row is "interrupted" when the cancel or error path in
-`RunController` stamped it with `interrupted_at` and
-`interrupted_reason`. The FE renders this as the banner on
-the assistant bubble that was in-flight when the run stopped,
-with Retry / Discard / Edit-prompt actions.
-
-`reason` is the storage column's `InterruptedReason`.
-`last_error` is set when
-`reason == "errored"` and `None` otherwise.
-
-| Field | Type | Default |
-|---|---|---|
-| `content` | `str` | required |
-| `interrupted_at` | `int` | required |
-| `last_error` | `str \| None` | `None` |
-| `message_id` | `str` | required |
-| `reason` | `Literal['cancelled', 'errored', 'abandoned']` | required |
-| `received_at` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `content` | `str` | required | That message's text. |
+| `interrupted_at` | `int` | required | When the run stopped, in seconds since the Unix epoch. |
+| `last_error` | `str \| None` | `None` | The error, when `reason` is `errored`; `null` otherwise. |
+| `message_id` | `str` | required | The id of the user message that started the run. |
+| `reason` | `Literal['cancelled', 'errored', 'abandoned']` | required | Why it stopped: `cancelled` (the user stopped it), `errored` (it failed; see `last_error`) or `abandoned` (it never finished, e.g. igni stopped while it ran). |
+| `received_at` | `int` | required | When igni received the message, in seconds since the Unix epoch. |
 
 **Returned by** [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted).
 
 ### PendingMessage
 
-One pre-persisted user message row surfaced by
-`ContextController.get_pending_messages`. `role` is
-always `"user"` — only user turns get pre-persisted.
-
-Build one from a storage-row dataclass via
-`from_pending_row`.
+A user message whose run has started but not yet finished.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | required |  |
-| `message_id` | `str` | required |  |
-| `received_at` | `int` | required |  |
-| `role` | `Literal['user']` | `'user'` | always `'user'`. |
+| `content` | `str` | required | The message's text. |
+| `message_id` | `str` | required | The message's id. |
+| `received_at` | `int` | required | When igni received it, in seconds since the Unix epoch. |
+| `role` | `Literal['user']` | `'user'` | always `'user'`. Always `user`. |
 
 **Returned by** [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages).
 
@@ -211,15 +184,17 @@ Build one from a storage-row dataclass via
 
 ### AssistantTurn
 
-An assistant-visible-reply turn (may be one of many per run
-when the original stream interleaved `<think>` blocks).
+A visible reply from the assistant.
+
+One run can produce several of these when the reply was
+interleaved with thinking blocks.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | `''` |  |
-| `created_at` | `int` | `0` |  |
-| `role` | `Literal['assistant']` | `'assistant'` | always `'assistant'`. |
-| `run_id` | `str` | `''` |  |
+| `content` | `str` | `''` | The reply text (Markdown). |
+| `created_at` | `int` | `0` | When the message was created, in Unix epoch seconds; `0` if unknown. |
+| `role` | `Literal['assistant']` | `'assistant'` | always `'assistant'`. Turn kind; always `assistant`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -227,71 +202,62 @@ when the original stream interleaved `<think>` blocks).
 
 ### ChatSearchHit
 
-One match returned by
-`SessionsController.search_chat` /
-`igni_core.backend.chat_history_searcher.ChatHistorySearcher.search`.
+One match from searching a session's chat history.
 
-Wire shape: `{history_index, role, run_id, snippet, match_start,
-match_end, created_at}`. `history_index` MUST align with the
-emission order of `ChatHistoryRebuilder.rebuild` — the FE
-keeps a parallel `historyIndex → itemIndex` map built at
-session load, so any drift breaks the "click result → jump to
-chat item" mapping.
-
-`match_start` / `match_end` are positions within
-`snippet` (not the original content) — keeps the FE highlight
-logic trivial.
-
-| Field | Type | Default |
-|---|---|---|
-| `created_at` | `int` | `0` |
-| `history_index` | `int` | `0` |
-| `match_end` | `int` | `0` |
-| `match_start` | `int` | `0` |
-| `role` | `str` | `''` |
-| `run_id` | `str` | `''` |
-| `snippet` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `created_at` | `int` | `0` | When the turn was created, in Unix epoch seconds; `0` if unknown. |
+| `history_index` | `int` | `0` | Index of the matching turn in the list returned by `get_chat_history`; use it to jump to that turn. |
+| `match_end` | `int` | `0` | End offset (exclusive) of the match within `snippet`. |
+| `match_start` | `int` | `0` | Start offset of the match within `snippet` (not the full text). |
+| `role` | `str` | `''` | Kind of the matching turn, e.g. `user`, `assistant` or `tool`. |
+| `run_id` | `str` | `''` | Id of the agent run the matching turn belongs to. |
+| `snippet` | `str` | `''` | Excerpt of the turn's text around the match. |
 
 **Returned by** [`session.history.search()`](/docs/sdk/igni-client/history-and-context#session-history-search).
 
+### CompactionOutcome
+
+Whether the conversation was compacted, and if so the summary it
+was replaced by.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `compacted` | `bool` | required | `false` when the context was below the threshold, a `PreCompact` hook refused, or there was nothing to compact. |
+| `new_session_id` | `str` | `''` | The session the conversation continues in (currently the same id); empty when not compacted. |
+| `summary` | `str` | `''` | What the compacted conversation was replaced by; empty when not compacted. |
+
+**Returned by** [`session.context.compact()`](/docs/sdk/igni-client/history-and-context#session-context-compact).
+
 ### ContextBreakdown
 
-Per-component token breakdown of the current context.
+Token breakdown of the current context window.
 
-`total = runs + floor` (`floor` clamped to `0` in case
-of tokenizer inconsistency where `runs` > `total`).
-Consumed by the `/ctx` slash command to explain the
-irreducible portion `/compact` cannot shrink.
+`total = runs + floor`. `floor` is the part that compacting the
+conversation (`/compact`) cannot shrink, such as the system prompt
+and tool definitions.
 
-Construct via `from_totals` so the floor-clamp
-invariant lives on the model, not scattered at every call
-site.
-
-| Field | Type | Default |
-|---|---|---|
-| `floor` | `int` | required |
-| `runs` | `int` | required |
-| `total` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `floor` | `int` | required | Tokens that are always present regardless of history (system prompt, tool definitions and so on); never negative. |
+| `runs` | `int` | required | Tokens taken by the conversation history (previous runs). |
+| `total` | `int` | required | Total tokens currently in the context. |
 
 **Returned by** [`session.context.breakdown()`](/docs/sdk/igni-client/history-and-context#session-context-breakdown).
 
 ### PlanTurn
 
-A PlanCard turn synthesized in place of an `exit_plan_mode`
-tool result. `state` uses the empty-string sentinel during
-the walk — the post-walk pass rewrites it to
-`"pending"`/`"approved"`/`"dismissed"`. The empty-string
-default is preserved (rather than `None`) so the wire dump
-keeps the same shape the FE reads today.
+A plan the agent proposed in plan mode, shown in place of the
+`exit_plan_mode` tool call.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `created_at` | `int` | `0` |  |
-| `plan` | `str` | `''` |  |
-| `role` | `Literal['plan']` | `'plan'` | always `'plan'`. |
-| `run_id` | `str` | `''` |  |
-| `state` | `Literal['pending', 'approved', 'dismissed', '']` | `''` |  |
-| `tasks` | `list[JsonValue]` | required |  |
+| `created_at` | `int` | `0` | When the message was created, in Unix epoch seconds; `0` if unknown. |
+| `plan` | `str` | `''` | The plan text (Markdown). |
+| `role` | `Literal['plan']` | `'plan'` | always `'plan'`. Turn kind; always `plan`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
+| `state` | `Literal['pending', 'approved', 'dismissed', '']` | `''` | Whether the user acted on the plan: `pending` (not yet), `approved`, `dismissed`, or `""` if unknown. |
+| `tasks` | `list[JsonValue]` | `[]` | The task list submitted with the plan. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -299,19 +265,17 @@ keeps the same shape the FE reads today.
 
 ### StatsTurn
 
-The per-run input/output token badge. `duration` stays a
-float even when zero — the FE consumer treats `0` and
-`0.0` interchangeably but the persisted wire is float. No
-`created_at` on the wire (matches the pre-refactor output).
+Token usage and duration for one agent run, shown at the end of
+the run. Has no `created_at`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `duration` | `float` | `0.0` |  |
-| `input_tokens` | `int` | `0` |  |
-| `output_tokens` | `int` | `0` |  |
-| `reasoning_tokens` | `int` | `0` |  |
-| `role` | `Literal['stats']` | `'stats'` | always `'stats'`. |
-| `run_id` | `str` | `''` |  |
+| `duration` | `float` | `0.0` | How long the run took, in seconds. |
+| `input_tokens` | `int` | `0` | Input (prompt) tokens used by the run. |
+| `output_tokens` | `int` | `0` | Output tokens generated by the run. |
+| `reasoning_tokens` | `int` | `0` | Reasoning tokens generated by the run; `0` if the model reports none. |
+| `role` | `Literal['stats']` | `'stats'` | always `'stats'`. Turn kind; always `stats`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -319,16 +283,17 @@ float even when zero — the FE consumer treats `0` and
 
 ### ThinkingTurn
 
-A synthesized `thinking` card — either from Agno's
-`reasoning_content` sidecar or from an inline `<think>`
-block in the assistant content.
+The model's reasoning ("thinking") for part of a run.
+
+Comes either from the model's separate reasoning output or from an
+inline `<think>` block in the reply.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | `''` |  |
-| `created_at` | `int` | `0` |  |
-| `role` | `Literal['thinking']` | `'thinking'` | always `'thinking'`. |
-| `run_id` | `str` | `''` |  |
+| `content` | `str` | `''` | The reasoning text. |
+| `created_at` | `int` | `0` | When the message was created, in Unix epoch seconds; `0` if unknown. |
+| `role` | `Literal['thinking']` | `'thinking'` | always `'thinking'`. Turn kind; always `thinking`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -336,20 +301,22 @@ block in the assistant content.
 
 ### ToolTurn
 
-A rebuilt tool card (previously emitted live as
-`tool_started` + `tool_completed` events).
+One tool call the agent made, with its result.
+
+The history equivalent of the live `tool_started` and
+`tool_completed` events.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `args` | `str` | `''` |  |
-| `content` | `str` | `''` |  |
-| `created_at` | `int` | `0` |  |
-| `friendly_name` | `str` | `''` |  |
-| `is_error` | `bool` | `False` |  |
-| `is_rejected` | `bool` | `False` |  |
-| `role` | `Literal['tool']` | `'tool'` | always `'tool'`. |
-| `run_id` | `str` | `''` |  |
-| `tool_name` | `str` | `''` |  |
+| `args` | `str` | `''` | The call's arguments, as display text. |
+| `content` | `str` | `''` | The tool's result text. |
+| `created_at` | `int` | `0` | When the message was created, in Unix epoch seconds; `0` if unknown. |
+| `friendly_name` | `str` | `''` | Human-readable tool name for display. |
+| `is_error` | `bool` | `False` | `true` when the tool call failed. |
+| `is_rejected` | `bool` | `False` | `true` when the user rejected the call, so it never ran. |
+| `role` | `Literal['tool']` | `'tool'` | always `'tool'`. Turn kind; always `tool`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
+| `tool_name` | `str` | `''` | Internal name of the tool that was called. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -357,27 +324,25 @@ A rebuilt tool card (previously emitted live as
 
 ### TruncateHistoryResult
 
-Wire shape for `ContextController.truncate_history` —
-`removed` is the count of runs dropped (0 on any failure);
-`error` is empty on success.
+The outcome of cutting a session's history back to before a given run.
 
-| Field | Type | Default |
-|---|---|---|
-| `error` | `str` | `''` |
-| `removed` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why nothing was removed; empty on success. |
+| `removed` | `int` | required | How many runs were removed, the given one included; `0` on failure. |
 
 **Returned by** [`session.history.truncate()`](/docs/sdk/igni-client/history-and-context#session-history-truncate).
 
 ### UserTurn
 
-A user-input turn.
+A message the user sent.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `content` | `str` | `''` |  |
-| `created_at` | `int` | `0` |  |
-| `role` | `Literal['user']` | `'user'` | always `'user'`. |
-| `run_id` | `str` | `''` |  |
+| `content` | `str` | `''` | The text the user sent. |
+| `created_at` | `int` | `0` | When the message was created, in Unix epoch seconds; `0` if unknown. |
+| `role` | `Literal['user']` | `'user'` | always `'user'`. Turn kind; always `user`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -385,24 +350,22 @@ A user-input turn.
 
 ### VisualizationTurn
 
-A visualizer card spliced from the session event log.
+A visualization card (chart, diagram, extension view) shown in
+the chat during a run.
 
-`spec` stays a raw dict — the visualizer subagent owns the
-JSON schema and we don't validate it here. `seq` is the
-`SessionEvent.seq` for ordering within a run. No
-`created_at` on the wire — the FE derives display time from
-the neighboring turns.
+Has no `created_at`; use the neighbouring turns for display
+time.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `extension_id` | `str` | `''` |  |
-| `role` | `Literal['visualization']` | `'visualization'` | always `'visualization'`. |
-| `run_id` | `str` | `''` |  |
-| `seq` | `int` | `0` |  |
-| `source_agent` | `str` | `'visualizer'` |  |
-| `spec` | `dict[str, JsonValue]` | required |  |
-| `spec_id` | `str` | `''` |  |
-| `title` | `str` | `''` |  |
+| `extension_id` | `str` | `''` | Id of the extension that appended the card; empty when the built-in visualizer made it. Show the extension's name. |
+| `role` | `Literal['visualization']` | `'visualization'` | always `'visualization'`. Turn kind; always `visualization`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
+| `seq` | `int` | `0` | Position of the card in the session's event log, for ordering within a run. |
+| `source_agent` | `str` | `'visualizer'` | Name of the agent that produced the visualization. |
+| `spec` | `dict[str, JsonValue]` | `{}` | The visualization specification to render, as JSON. Not validated by igni. |
+| `spec_id` | `str` | `''` | Unique id of this visualization. |
+| `title` | `str` | `''` | The card's title, as given by the extension that appended it. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -412,65 +375,48 @@ the neighboring turns.
 
 ### LoopAdvance
 
-Wire shape for `LoopController.advance_loop`.
+What happened when a repeating prompt loop moved to its next iteration.
 
-Three effective variants, discriminated by `kind`:
+`kind` says which of three outcomes this is; only the fields
+belonging to that outcome are set, the rest keep their defaults:
 
-* `kind="completed"` — explicit cap hit; `total_iterations`
-  carries the final count.
-* `kind="safety_paused"` — implicit loop hit `LOOP_HARD_CAP`;
-  `iteration` carries the count reached.
-* `kind="step"` — normal advance: `prompt` /
-  `display_prompt` / `iteration` / `remaining` /
-  `cap_explicit` populated. `auto_extended` flags the
-  one-shot iteration right after the implicit safety net rolled
-  over.
+* `completed` - the loop reached the iteration count the user asked
+  for and has ended; `total_iterations` holds that count.
+* `safety_paused` - a loop with no explicit count reached igni's
+  safety limit and paused instead of ending; `iteration` holds the
+  count reached.
+* `step` - a normal next iteration: `prompt`, `display_prompt`,
+  `iteration`, `remaining` and `cap_explicit` are set.
 
-Flat shape (rather than a tagged union) so wire consumers keep
-the same JSON payload; a model-level validator enforces that
-each `kind` only carries its own fields. Build via the three
-named classmethods — they are the only spellings
-`LoopController` uses.
-
-| Field | Type | Default |
-|---|---|---|
-| `auto_extended` | `bool` | `False` |
-| `cap_explicit` | `bool` | `False` |
-| `completed` | `bool` | `False` |
-| `display_prompt` | `str` | `''` |
-| `iteration` | `int` | `0` |
-| `kind` | `Literal['completed', 'safety_paused', 'step']` | `'step'` |
-| `prompt` | `str` | `''` |
-| `remaining` | `int` | `0` |
-| `safety_cap_paused` | `bool` | `False` |
-| `total_iterations` | `int` | `0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `auto_extended` | `bool` | `False` | True on the first iteration after an open-ended loop was resumed past the safety limit. |
+| `cap_explicit` | `bool` | `False` | True when the user gave an explicit iteration count; false for an open-ended loop that runs until stopped or the safety limit. |
+| `completed` | `bool` | `False` | True when `kind` is `completed`. |
+| `display_prompt` | `str` | `''` | The user's own prompt text, for showing in the chat. Set only when `kind` is `step`. |
+| `iteration` | `int` | `0` | 1-based number of the iteration about to run (`step`), or the number reached when the loop paused (`safety_paused`). |
+| `kind` | `Literal['completed', 'safety_paused', 'step']` | `'step'` | Which outcome this is: `completed` (loop finished its requested count), `safety_paused` (an open-ended loop hit the safety limit and paused) or `step` (a normal next iteration). |
+| `prompt` | `str` | `''` | Full text sent to the agent for this iteration, including igni's loop instructions. Set only when `kind` is `step`. |
+| `remaining` | `int` | `0` | Iterations left after this one. Set only when `kind` is `step`. |
+| `safety_cap_paused` | `bool` | `False` | True when `kind` is `safety_paused`. |
+| `total_iterations` | `int` | `0` | Number of iterations the loop ran. Set only when `kind` is `completed`. |
 
 **Returned by** [`session.loop.next_iteration()`](/docs/sdk/igni-client/loop#session-loop-next-iteration).
 
 ### LoopStatusSnapshot
 
-RPC wire shape for `LoopController.status`.
+Status of the session's `/loop` (a prompt the agent repeats
+over several iterations).
 
-Renamed from the old inline `LoopStatus` (in `server_loop.py`)
-to avoid colliding with the sibling `LoopStatusView` chat
-card in this same module. Same eight fields, same wire contract
-(the RPC layer serialises via `.model_dump()` so the FE JSON
-payload is byte-identical).
-
-`from_session` is the canonical constructor — it encapsulates
-the announced-total lookup on `LoopProgressStore` so
-`LoopController` doesn't have to know that the total lives
-on a per-run key/value store.
-
-| Field | Type | Default |
-|---|---|---|
-| `active` | `bool` | required |
-| `announced_total` | `int \| None` | required |
-| `cap_explicit` | `bool` | required |
-| `iteration_index` | `int` | required |
-| `iterations_remaining` | `int` | required |
-| `paused` | `bool` | required |
-| `prompt` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `active` | `bool` | required | `true` when a loop is running or paused. |
+| `announced_total` | `int \| None` | required | Total number of iterations the agent said the loop will take, for progress display (`N / total`); `null` if the agent has not said. |
+| `cap_explicit` | `bool` | required | `true` when the user gave the iteration count (`/loop N <prompt>`), so the loop ends at the cap. `false`: the cap is a safety net that extends automatically. |
+| `iteration_index` | `int` | required | Number of iterations started so far (1-based); `0` when idle. |
+| `iterations_remaining` | `int` | required | Iterations left before the loop's cap is reached; `0` when idle. |
+| `paused` | `bool` | required | `true` when the loop stopped early (it hit the hard iteration cap or an iteration failed) and waits to be resumed. |
+| `prompt` | `str` | required | The prompt being looped; empty when no loop is active. |
 
 **Returned by** [`session.loop.status()`](/docs/sdk/igni-client/loop#session-loop-status).
 
@@ -478,59 +424,31 @@ on a per-run key/value store.
 
 ### LatestPlanResult
 
-Wire shape for `PlanSnapshotBuilder.latest` — the
-plan-mode panel reads this on open + after each `exit_plan_mode`.
+The session's current plan-mode plan and task list.
 
-`state` is `"pending"` when a plan exists (user hasn't
-approved/dismissed yet) or `""` when no plan submitted.
-`tasks` mirrors `TodoStore.items` (each row dumps
-`activeForm` camelCase on its own, see `TodoItemWire`) so the FE renders the plan and task list from a
-single payload.
+Read it when opening a plan view and again after the agent submits
+a plan.
 
-| Field | Type | Default |
-|---|---|---|
-| `history` | `list[str]` | required |
-| `latest` | `str` | `''` |
-| `state` | `Literal['pending', 'approved', 'dismissed', '']` | `''` |
-| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `history` | `list[str]` | `[]` | Earlier plans submitted in this session, oldest first. |
+| `latest` | `str` | `''` | The most recent plan text (Markdown); empty if none. |
+| `state` | `Literal['pending', 'approved', 'dismissed', '']` | `''` | `pending` when a plan is waiting for the user to approve or dismiss it; `""` when no plan has been submitted. |
+| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | `[]` | The session's current task (todo) list. |
 
 **Returned by** [`session.plan.latest()`](/docs/sdk/igni-client/plans#session-plan-latest).
 
 ### PlanDecisionResult
 
-Pattern-3 envelope for `PlanCoordinator.approve` /
-`PlanCoordinator.dismiss`.
+Outcome of approving or dismissing a plan the agent proposed.
 
-Surfaced to the FE via the `APPROVE_PLAN` / `DISMISS_PLAN`
-RPCs; the transport serializer auto-converts via
-`model_dump` so the wire keeps its dict shape.
-
-Fields:
-
-* `run_id` — the run in which `exit_plan_mode` was
-  called; identifies the specific plan the user decided on.
-* `decision` — the `PlanDecision` StrEnum value the
-  user chose (`"approved"` / `"dismissed"`). StrEnum
-  dumps as its `.value` on the wire so existing consumers
-  keying on `"approved"` / `"dismissed"` are unaffected.
-* `mode_status` — human-readable one-line summary of any
-  permission-mode change triggered by the decision (empty
-  for dismiss; `"mode → default"`-shaped for approve).
-* `ok` — `True` on success; `False` when the
-  coordinator refused the record (empty run_id, missing
-  plan_store, missing persistence, or DB failure on the
-  flip path). Callers key on this to surface an inline
-  error to the FE.
-* `error` — human-readable error string when `ok=False`;
-  `None` on success.
-
-| Field | Type | Default |
-|---|---|---|
-| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required |
-| `error` | `str \| None` | `None` |
-| `mode_status` | `str` | `''` |
-| `ok` | `bool` | `True` |
-| `run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required | The decision recorded: `approved` or `dismissed`. |
+| `error` | `str \| None` | `None` | Why the decision was not recorded. Null when `ok` is true. |
+| `mode_status` | `str` | `''` | One-line summary of the permission-mode change the decision caused (for example `mode → default` on approval). Empty when the mode did not change. |
+| `ok` | `bool` | `True` | True when the decision was recorded; false when it could not be (for example an unknown run or a storage failure). |
+| `run_id` | `str` | required | Run in which the agent submitted the plan; identifies which plan was decided. |
 
 **Returned by** [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve), [`session.plan.dismiss()`](/docs/sdk/igni-client/plans#session-plan-dismiss).
 
@@ -538,42 +456,37 @@ Fields:
 
 ### ModelRegistryEntryView
 
-One model as a client sees it: what it is and how it runs, never its key.
+One configured model as a client sees it: what it is and how it
+runs. Its API key is never included, and its URL has any credentials
+removed.
 
-`ModelRegistryEntry` holds the key itself (`api_key`), the
-command that prints it (`api_key_cmd`), and whatever extra keys the
-configuration carried; none of that is a client's to read. The URL
-loses anything that can carry a credential.
-
-| Field | Type | Default |
-|---|---|---|
-| `context_window` | `int \| None` | `None` |
-| `effort` | `str \| None` | `None` |
-| `has_api_key` | `bool` | required |
-| `max_tokens` | `int \| None` | `None` |
-| `model_id` | `str` | required |
-| `prompt_caching` | `bool` | required |
-| `provider` | `str` | required |
-| `source` | `str` | `''` |
-| `temperature` | `float \| None` | `None` |
-| `thinking` | `dict[str, JsonValue] \| None` | `None` |
-| `timeout` | `int` | required |
-| `url` | `str \| None` | `None` |
-| `vision` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `context_window` | `int \| None` | `None` | The model's context window, in tokens; `null` when not set. |
+| `effort` | `str \| None` | `None` | The reasoning effort asked of the model, `low` to `max` (Anthropic models only); `null` when not set. |
+| `has_api_key` | `bool` | required | Whether the entry says where its key comes from (a key, an environment variable or a command). Never the key itself. |
+| `max_tokens` | `int \| None` | `None` | Most tokens a reply may hold; `null` for the default. |
+| `model_id` | `str` | required | The model's id as the provider knows it. |
+| `prompt_caching` | `bool` | required | Whether the system prompt and tool list are sent as cacheable (Anthropic models only). |
+| `provider` | `str` | required | The provider that serves the model, e.g. `anthropic` or `openai_like`. |
+| `source` | `str` | `''` | Where the entry came from: `cloud` for igni server's models, empty for the local configuration's own. |
+| `temperature` | `float \| None` | `None` | Sampling temperature; `null` for the provider's default. |
+| `thinking` | `dict[str, JsonValue] \| None` | `None` | The `thinking` object sent to the model unchanged, e.g. `{"type": "adaptive"}` (Anthropic models only); `null` when not set. |
+| `timeout` | `int` | required | How long a request may take, in seconds. |
+| `url` | `str \| None` | `None` | The endpoint the model is reached at, without credentials; `null` for the provider's default. |
+| `vision` | `bool` | required | Whether the model accepts images. |
 
 **Part of** [`ModelRegistryResult`](/docs/sdk/igni-client/models-reference#modelregistryresult).
 
 ### ModelRegistryResult
 
-Wire shape for the `get_model_registry` RPC — the FE's
-model-picker source of truth (default, ceiling, per-model
-metadata rows).
+The models a user can pick from, and which one is the default.
 
-| Field | Type | Default |
-|---|---|---|
-| `default` | `str` | required |
-| `max_context_window` | `int` | required |
-| `registry` | `dict[str, `[`ModelRegistryEntryView`](/docs/sdk/igni-client/models-reference#modelregistryentryview)`]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `default` | `str` | required | The name of the default model, a key of `registry`; empty means the first entry of `registry` is used. |
+| `max_context_window` | `int` | required | The configured overall context-window limit, in tokens; also the size used while no model is configured. |
+| `registry` | `dict[str, `[`ModelRegistryEntryView`](/docs/sdk/igni-client/models-reference#modelregistryentryview)`]` | required | Every configured model, keyed by the name used to pick it. |
 
 **Returned by** [`session.models.list()`](/docs/sdk/igni-client/models#session-models-list).
 
@@ -581,18 +494,21 @@ metadata rows).
 
 ### WorkspaceTrustStatus
 
-What `get_workspace_trust` returns and `workspace_trust_required` carries.
+Whether the project folder is trusted, and why.
 
-| Field | Type | Default |
-|---|---|---|
-| `can_trust` | `bool` | required |
-| `gated` | `str` | `'project tools, hooks, workflows, language servers, monitors, plugins, markdown-command shell tokens, and its permission and safety settings'` |
-| `path` | `str` | required |
-| `policy_mode` | `str` | required |
-| `reason` | `str` | required |
-| `remote` | `str \| None` | `None` |
-| `source` | `str` | `''` |
-| `state` | `Literal['trusted', 'untrusted', 'ask']` | required |
+Until a folder is trusted, its own tools, hooks, plugins and
+configuration are not loaded.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `can_trust` | `bool` | required | `false` when the organisation's policy forbids trusting this folder. |
+| `gated` | `str` | `'project tools, hooks, workflows, language servers, monitors, plugins, markdown-command shell tokens, and its permission and safety settings'` | Short summary of what an untrusted folder does not get, for showing to the user. |
+| `path` | `str` | required | The folder's full canonical path. |
+| `policy_mode` | `str` | required | The organisation's trust policy: `ask` (the user decides), `trusted_remotes` (only folders whose git remote is approved) or `never` (no folder is trusted). |
+| `reason` | `str` | required | Human-readable explanation of the current state. |
+| `remote` | `str \| None` | `None` | The folder's git remote URL, with any credentials removed; `null` if none. |
+| `source` | `str` | `''` | How the state was reached: `policy` (organisation policy), `run` (trusted once, until igni exits), `store` (the user's saved answer) or `unset` (no answer yet). |
+| `state` | `Literal['trusted', 'untrusted', 'ask']` | required | `trusted`, `untrusted`, or `ask` when nobody has decided yet (the folder is treated as untrusted meanwhile). |
 
 **Returned by** [`session.workspace.trust()`](/docs/sdk/igni-client/workspace#session-workspace-trust), [`session.workspace.set_trust()`](/docs/sdk/igni-client/workspace#session-workspace-set-trust).
 
@@ -600,88 +516,83 @@ What `get_workspace_trust` returns and `workspace_trust_required` carries.
 
 ### DirListResult
 
-Wire shape for the `list_dirs` RPC — GUI folder browser.
+The sub-folders of one folder, for browsing to a project folder.
 
-| Field | Type | Default |
-|---|---|---|
-| `dirs` | `list[str]` | required |
-| `error` | `str` | required |
-| `home` | `str` | required |
-| `parent` | `str` | required |
-| `path` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `dirs` | `list[str]` | required | Names of the sub-folders in `path`, sorted case-insensitively. Hidden folders are left out unless they were asked for. Empty when the folder could not be read. |
+| `error` | `str` | required | Why the folder could not be read; empty on success. |
+| `home` | `str` | required | The user's home folder, as an absolute path. |
+| `parent` | `str` | required | The folder above `path`; empty when `path` is the filesystem root. |
+| `path` | `str` | required | The folder that was listed, as an absolute path. |
 
 **Returned by** [`igni.files.list_dirs()`](/docs/sdk/igni-client/files#igni-files-list-dirs).
 
 ### FileCompletion
 
-Wire shape for the `complete_files` RPC — @-mention picker
-hits + a running total (used to render "N more matches" when the
-limit was reached).
+Project files matching a partial name, for `@`-mention completion.
 
-| Field | Type | Default |
-|---|---|---|
-| `matches` | `list[str]` | required |
-| `total` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `matches` | `list[str]` | required | Matching file paths, relative to the project folder, best match first; at most the requested limit. |
+| `total` | `int` | required | How many files matched in all; more than the length of `matches` when the list was cut at the limit. |
 
 **Returned by** [`session.files.complete()`](/docs/sdk/igni-client/files#session-files-complete).
 
 ### PickDirResult
 
-Wire shape for the `pick_dir_native` RPC — OS folder picker.
+The folder the user chose in the operating system's own folder picker.
 
-| Field | Type | Default |
-|---|---|---|
-| `cancelled` | `bool` | required |
-| `error` | `str` | required |
-| `path` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cancelled` | `bool` | required | `true` when the user closed the picker without choosing. |
+| `error` | `str` | required | Why the picker could not be shown, e.g. no native dialog is available; empty otherwise. |
+| `path` | `str` | required | The chosen folder; empty when none was chosen. |
 
 **Returned by** [`session.files.pick_dir()`](/docs/sdk/igni-client/files#session-files-pick-dir).
 
 ### ReadFileResult
 
-Wire shape for `FilesController.read_file` — sandboxed
-FE preview.
+The contents of a text file, for previewing it.
 
-`error` is empty on success; `language` is the detected
-highlight hint (extension → name mapping) and stays empty on
-every non-success path so the FE never mis-highlights an
-error payload.
+Only files inside the project or igni's data folder can be read,
+and large files are refused.
 
-| Field | Type | Default |
-|---|---|---|
-| `contents` | `str` | required |
-| `error` | `str` | `''` |
-| `language` | `str` | `''` |
-| `path` | `str` | required |
-| `size` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `contents` | `str` | required | The file's text; empty when `error` is set. |
+| `error` | `str` | `''` | Why the file could not be read; empty on success. |
+| `language` | `str` | `''` | Syntax-highlighting language guessed from the file extension (e.g. `python`); empty if unknown or on error. |
+| `path` | `str` | required | The file's path (resolved to an absolute path when the read got that far). |
+| `size` | `int` | required | The file's size in bytes. |
 
 **Returned by** [`session.files.read()`](/docs/sdk/igni-client/files#session-files-read).
 
 ### SearchCodeMatch
 
-One hit in `SearchCodeResult.matches`.
+One place in the project where the searched text occurs.
 
-| Field | Type | Default |
-|---|---|---|
-| `end_line` | `int` | required |
-| `line` | `int` | required |
-| `path` | `str` | required |
-| `preview` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `end_line` | `int` | required | 1-based line where the match ends (inclusive). |
+| `line` | `int` | required | 1-based line where the match starts. |
+| `path` | `str` | required | File path, relative to the project root. |
+| `preview` | `str` | required | The first matching line, trimmed of surrounding whitespace. |
 
 **Part of** [`SearchCodeResult`](/docs/sdk/igni-client/models-reference#searchcoderesult).
 
 ### SearchCodeResult
 
-Wire shape for `SearchController.search_code` —
-composer paste decoration. `truncated` is True whenever the
-max-results cap was hit (or a search timed out) so the FE can
-render "and N more…". `error` is empty on success paths.
+Where a piece of text (e.g. pasted code) occurs in the project.
 
-| Field | Type | Default |
-|---|---|---|
-| `error` | `str` | `''` |
-| `matches` | `list[`[`SearchCodeMatch`](/docs/sdk/igni-client/models-reference#searchcodematch)`]` | `[]` |
-| `truncated` | `bool` | `False` |
+Text shorter than 5 characters is not searched and gives an empty
+result.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why the search failed, e.g. `search timed out`; empty on success. |
+| `matches` | `list[`[`SearchCodeMatch`](/docs/sdk/igni-client/models-reference#searchcodematch)`]` | `[]` | The matches found, up to the limit. |
+| `truncated` | `bool` | `False` | `true` when the result limit was hit or the search timed out, so there may be more matches. |
 
 **Returned by** [`session.files.search()`](/docs/sdk/igni-client/files#session-files-search).
 
@@ -689,55 +600,56 @@ render "and N more…". `error` is empty on success paths.
 
 ### ProcessRow
 
-One row of `ProcessesController.list`.
+A background process the agent started, running or recently
+finished.
 
-`is_running` / `exit_code` default to "running" so an older
-client that predates them — and the test fixtures that build rows
-by hand — read a listed row the way they always did.
-
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str` | required |
-| `elapsed_seconds` | `float` | required |
-| `exit_code` | `int \| None` | `None` |
-| `is_running` | `bool` | `True` |
-| `pid` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str` | required | The command line that started the process. |
+| `elapsed_seconds` | `float` | required | How long the process has run (or ran), in seconds. |
+| `exit_code` | `int \| None` | `None` | The process's exit code once it has finished; `null` while running. |
+| `is_running` | `bool` | `True` | `true` while the process is still running. |
+| `pid` | `int` | required | Operating-system process id. |
 
 **Returned by** [`igni.processes.list()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-list).
 
 ### ProcessTailResult
 
-Wire shape for `ProcessesController.read_tail`.
+The latest output of a background process.
 
-| Field | Type | Default |
-|---|---|---|
-| `exit_code` | `int \| None` | required |
-| `is_running` | `bool` | required |
-| `output` | `str` | required |
-| `pid` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `exit_code` | `int \| None` | required | The exit code once the process has finished; `null` while running or if unknown. |
+| `is_running` | `bool` | required | `true` while the process is still running; `false` for an unknown pid. |
+| `output` | `str` | required | The last lines of the process's combined stdout and stderr; empty for an unknown pid. |
+| `pid` | `int` | required | Operating-system process id that was asked for. |
 
 **Returned by** [`igni.processes.tail()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-tail).
 
 ### RunShellResult
 
-Wire shape for the `run_shell` RPC — `$`-prefix shell mode.
+What a `$` command printed and how it ended — or, when it outlived
+the wait, that it went on in the background and under which `pid`,
+the id its `process_*` pushes carry.
 
-| Field | Type | Default |
-|---|---|---|
-| `exit_code` | `int` | required |
-| `output` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `backgrounded` | `bool` | `False` | `true` when the command is still running, in the background. |
+| `exit_code` | `int` | required | The exit code; `0` for a command still running in the background. |
+| `output` | `str` | required | What the command printed, stdout and stderr together. |
+| `pid` | `int \| None` | `None` | The process's id, once it started; `null` when it could not start. |
 
 **Returned by** [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell).
 
 ### StopProcessResult
 
-Wire shape for `ProcessesController.stop`.
+Result of stopping a background process.
 
-| Field | Type | Default |
-|---|---|---|
-| `killed` | `bool` | required |
-| `message` | `str` | required |
-| `pid` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `killed` | `bool` | required | `true` when the process was stopped; `false` if it was unknown or had already exited. |
+| `message` | `str` | required | Human-readable explanation of what happened. |
+| `pid` | `int` | required | Operating-system process id that was asked for. |
 
 **Returned by** [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop).
 
@@ -745,72 +657,59 @@ Wire shape for `ProcessesController.stop`.
 
 ### AgentInfo
 
-Wire format for one agent — emitted by
-`BackendServer.get_agent_details`, consumed by the
-agents panel.
+One agent available in the session, as shown in the agents panel.
 
-Sub-set of `AgentDefinition` adapted for JSON transport:
-`source_path` is widened to `str` (Path doesn't serialize),
-and `is_ephemeral` is computed at the backend.
-
-| Field | Type | Default |
-|---|---|---|
-| `can_orchestrate` | `bool` | `True` |
-| `color` | `str` | `''` |
-| `description` | `str` | `''` |
-| `is_ephemeral` | `bool` | `False` |
-| `mcp_servers` | `list[str]` | required |
-| `model` | `str` | `''` |
-| `name` | `str` | required |
-| `source_path` | `str` | `''` |
-| `system_prompt` | `str` | `''` |
-| `tags` | `list[str]` | required |
-| `tools` | `list[str]` | required |
-| `unknown_tools` | `list[str]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `can_orchestrate` | `bool` | `True` | True when the agent may spawn sub-agents of its own. |
+| `color` | `str` | `''` | Display color declared for the agent. Empty when none. |
+| `description` | `str` | `''` | What the agent is for. Empty when not given. |
+| `is_ephemeral` | `bool` | `False` | True for an agent created during this session that has not been saved to disk; it disappears when the session ends unless promoted. |
+| `mcp_servers` | `list[str]` | `[]` | Names of the MCP servers whose tools the agent gets. |
+| `model` | `str` | `''` | Model the agent runs on. Empty to use the session's default model. |
+| `name` | `str` | required | Agent name; plugin agents are prefixed with the plugin name (`plugin:agent`). |
+| `source_path` | `str` | `''` | Path of the file the agent was loaded from. Empty for agents not loaded from a file. |
+| `system_prompt` | `str` | `''` | The agent's system prompt (the body of its definition file). |
+| `tags` | `list[str]` | `[]` | Free-form tags declared for the agent. |
+| `tools` | `list[str]` | `[]` | Names of the tools the agent may use. Empty when not restricted. |
+| `unknown_tools` | `list[str]` | `[]` | Tool names the agent declares that igni cannot find. Usually empty; when not, the agent fails when it is called. |
 
 **Returned by** [`session.agents.list()`](/docs/sdk/igni-client/agents#session-agents-list).
 
 ### CancelAgentRunResult
 
-Wire shape for `RunCoordinator.cancel_agent_run` —
-the FE renders a toast on `ok=False` so `error`
-differentiates the unknown-run-id case from a live cancel
-error.
+Result of cancelling one background agent run.
 
-| Field | Type | Default |
-|---|---|---|
-| `error` | `str` | `''` |
-| `ok` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why the cancel failed, e.g. the run id is unknown; empty when `ok` is `true`. |
+| `ok` | `bool` | required | `true` when the agent run was found and cancelled. |
 
 **Returned by** [`igni.agents.cancel_run()`](/docs/sdk/igni-client/agents#igni-agents-cancel-run).
 
 ### DiscardEphemeralResult
 
-Typed result for `AgentsPanelController.discard`.
+The outcome of discarding an agent created during a session.
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `ok` | `bool` | required |
-| `reason` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | The agent's name. |
+| `ok` | `bool` | required | Whether the agent was discarded. |
+| `reason` | `str` | `''` | Why it was not discarded; empty when `ok` is true. |
 
 **Returned by** [`session.agents.discard()`](/docs/sdk/igni-client/agents#session-agents-discard).
 
 ### PromoteEphemeralResult
 
-Typed result for `AgentsPanelController.promote`.
+The outcome of saving an agent created during a session as a
+permanent agent file.
 
-Replaces the stringly-typed `msg.Info(text=...)` return that
-used to conflate success and failure. `ok=False` +
-`reason=...` carries the caught exception message; `ok=True`
-+ `dest=...` carries the persisted file path.
-
-| Field | Type | Default |
-|---|---|---|
-| `dest` | `str` | `''` |
-| `name` | `str` | required |
-| `ok` | `bool` | required |
-| `reason` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `dest` | `str` | `''` | The file it was saved to; empty when `ok` is false. |
+| `name` | `str` | required | The agent's name. |
+| `ok` | `bool` | required | Whether the agent was saved. |
+| `reason` | `str` | `''` | Why it was not saved; empty when `ok` is true. |
 
 **Returned by** [`session.agents.promote()`](/docs/sdk/igni-client/agents#session-agents-promote).
 
@@ -818,14 +717,14 @@ used to conflate success and failure. `ok=False` +
 
 ### BuiltinSlashCommand
 
-A built-in slash command exposed to completion UIs.
+A slash command built into igni.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `argument_hint` | `str` | `''` |  |
-| `description` | `str` | `''` |  |
-| `name` | `str` | required |  |
-| `source` | `Literal['builtin']` | `'builtin'` | always `'builtin'`. |
+| `argument_hint` | `str` | `''` | A hint for the arguments it takes; empty when it takes none. |
+| `description` | `str` | `''` | What the command does, in one line. |
+| `name` | `str` | required | The command's name, without the leading `/`. |
+| `source` | `Literal['builtin']` | `'builtin'` | always `'builtin'`. Always `builtin`: a command built into igni. |
 
 **Returned by** [`session.slash_commands()`](/docs/sdk/igni-client/skills-and-commands#session-slash-commands).
 
@@ -835,18 +734,13 @@ A built-in slash command exposed to completion UIs.
 
 A slash command an installed extension answers.
 
-Carries `owner` because a command that fails should be
-attributable: "/compliance did not answer" is a support ticket,
-and "acme.scanner did not answer /compliance" is a thing an
-administrator can act on.
-
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `argument_hint` | `str` | `''` |  |
-| `description` | `str` | `''` |  |
-| `name` | `str` | required |  |
-| `owner` | `str` | `''` |  |
-| `source` | `Literal['extension']` | `'extension'` | always `'extension'`. |
+| `argument_hint` | `str` | `''` | A hint for the arguments it takes; empty when it takes none. |
+| `description` | `str` | `''` | What the command does, in one line. |
+| `name` | `str` | required | The command's name, without the leading `/`. |
+| `owner` | `str` | `''` | The id of the extension that answers it. |
+| `source` | `Literal['extension']` | `'extension'` | always `'extension'`. Always `extension`: a command an extension answers. |
 
 **Returned by** [`session.slash_commands()`](/docs/sdk/igni-client/skills-and-commands#session-slash-commands).
 
@@ -854,14 +748,14 @@ administrator can act on.
 
 ### MarkdownSlashCommand
 
-A user-authored `.md` slash command (CC-parity file drop).
+A slash command the user wrote as a Markdown file.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `argument_hint` | `str` | `''` |  |
-| `description` | `str` | `''` |  |
-| `name` | `str` | required |  |
-| `source` | `Literal['markdown']` | `'markdown'` | always `'markdown'`. |
+| `argument_hint` | `str` | `''` | A hint for the arguments it takes; empty when it takes none. |
+| `description` | `str` | `''` | What the command does, in one line. |
+| `name` | `str` | required | The command's name, without the leading `/`. |
+| `source` | `Literal['markdown']` | `'markdown'` | always `'markdown'`. Always `markdown`: a command defined in a Markdown file. |
 
 **Returned by** [`session.slash_commands()`](/docs/sdk/igni-client/skills-and-commands#session-slash-commands).
 
@@ -869,78 +763,67 @@ A user-authored `.md` slash command (CC-parity file drop).
 
 ### OutputStyleInfo
 
-One output-style entry in `OutputStylesResult.styles`.
+One output style the agent can answer in.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | required | What the style does, in one line. |
+| `name` | `str` | required | The style's name, as it is chosen. |
 
 **Part of** [`OutputStylesResult`](/docs/sdk/igni-client/models-reference#outputstylesresult).
 
 ### OutputStylesResult
 
-Wire shape for `OutputStylesCatalog.snapshot` —
-discovered styles + the currently-applied one for the picker
-chip.
+The output styles available, and which one is in use.
 
-| Field | Type | Default |
-|---|---|---|
-| `active` | `str` | required |
-| `styles` | `list[`[`OutputStyleInfo`](/docs/sdk/igni-client/models-reference#outputstyleinfo)`]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `active` | `str` | required | The name of the style in use. |
+| `styles` | `list[`[`OutputStyleInfo`](/docs/sdk/igni-client/models-reference#outputstyleinfo)`]` | required | Every style that can be chosen. |
 
 **Returned by** [`session.output_styles()`](/docs/sdk/igni-client/skills-and-commands#session-output-styles).
 
 ### SkillDefinition
 
-Wire shape for one entry in the `get_skill_definitions` RPC
-response. Consumed by the FE autocomplete + SDK skill picker;
-`prompt` may be empty for manifest-only skills.
+One skill the agent can use.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `name` | `str` | required |
-| `prompt` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | required | What the skill does, in one line. |
+| `name` | `str` | required | The skill's name, as typed after `/`. |
+| `prompt` | `str` | required | The skill's instructions; may be empty for a skill that has only a manifest. |
 
 **Returned by** [`session.skills.definitions()`](/docs/sdk/igni-client/skills-and-commands#session-skills-definitions).
 
 ### SkillInfo
 
-Wire format for one skill — emitted by
-`BackendServer.get_skill_details`, consumed by the skills
-panel.
+One skill available in the session, as shown in the skills panel.
 
-JSON-friendly subset of `SkillDefinition`: `source_dir`
-widened to `str` (Path doesn't round-trip), `body` is sent
-in full so the panel can head-clip for preview without an extra
-RPC. No `render` method — wire models are read-only.
-
-| Field | Type | Default |
-|---|---|---|
-| `agent` | `str` | `''` |
-| `argument_hint` | `str` | `''` |
-| `body` | `str` | `''` |
-| `category` | `str` | `'development'` |
-| `context` | `str` | `'inline'` |
-| `description` | `str` | `''` |
-| `name` | `str` | required |
-| `source_dir` | `str` | `''` |
-| `user_invocable` | `bool` | `True` |
-| `version` | `str` | `'0.1.0'` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `agent` | `str` | `''` | Agent the skill runs on when `context` is `fork`. Empty otherwise. |
+| `argument_hint` | `str` | `''` | Hint shown for the arguments the skill expects. Empty when it takes none. |
+| `body` | `str` | `''` | Full instruction text of the skill (its SKILL.md body). |
+| `category` | `str` | `'development'` | Category the skill is grouped under. |
+| `context` | `str` | `'inline'` | How the skill runs: `inline` (on the default skills agent) or `fork` (on the agent named in `agent`). |
+| `description` | `str` | `''` | What the skill does. Empty when not given. |
+| `name` | `str` | required | Skill name, used to invoke it (e.g. `/deploy`). |
+| `source_dir` | `str` | `''` | Directory the skill was loaded from. Empty when not loaded from disk. |
+| `user_invocable` | `bool` | `True` | True when the user can invoke the skill directly. |
+| `version` | `str` | `'0.1.0'` | Version declared by the skill. |
 
 **Returned by** [`session.skills.list()`](/docs/sdk/igni-client/skills-and-commands#session-skills-list).
 
 ### SkillSlashCommand
 
-A user-invocable skill exposed as a slash command.
+A skill the user can run as a slash command.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `argument_hint` | `str` | `''` |  |
-| `description` | `str` | `''` |  |
-| `name` | `str` | required |  |
-| `source` | `Literal['skill']` | `'skill'` | always `'skill'`. |
+| `argument_hint` | `str` | `''` | A hint for the arguments it takes; empty when it takes none. |
+| `description` | `str` | `''` | What the skill does, in one line. |
+| `name` | `str` | required | The skill's name, without the leading `/`. |
+| `source` | `Literal['skill']` | `'skill'` | always `'skill'`. Always `skill`: a skill. |
 
 **Returned by** [`session.slash_commands()`](/docs/sdk/igni-client/skills-and-commands#session-slash-commands).
 
@@ -950,24 +833,22 @@ A user-invocable skill exposed as a slash command.
 
 ### HookEntryView
 
-Flat, wire-friendly view of one hook for the hooks panel.
+One configured hook: what it runs, and on which event.
 
-The heterogeneous `session.hooks_map` may hold command hooks,
-HTTP hooks, MCP-tool hooks etc. — this projection collapses the
-union into a single dict-shaped record. Fields not applicable
-to a given hook type default to empty (`command` on an HTTP
-hook, `url` on a command hook, etc.).
+Hooks come in several types (a shell command, an HTTP call, an MCP
+tool call, …). A field that does not apply to a hook's type is
+empty, e.g. `command` on an HTTP hook or `url` on a command hook.
 
-| Field | Type | Default |
-|---|---|---|
-| `background` | `bool` | `False` |
-| `command` | `str` | `''` |
-| `event` | `str` | required |
-| `header_names` | `list[str]` | required |
-| `matcher` | `str` | `''` |
-| `timeout_ms` | `int` | `0` |
-| `type` | `str` | `''` |
-| `url` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `background` | `bool` | `False` | Whether the hook runs without making the agent wait for it. |
+| `command` | `str` | `''` | The shell command a `command` hook runs. |
+| `event` | `str` | required | The event the hook runs on. |
+| `header_names` | `list[str]` | `[]` | The names of the headers an `http` hook sends. Never their values, which may be credentials. |
+| `matcher` | `str` | `''` | Which targets the hook applies to; empty matches every target. |
+| `timeout_ms` | `int` | `0` | How long the hook may run, in milliseconds. |
+| `type` | `str` | `''` | The hook's type, e.g. `command` or `http`. |
+| `url` | `str` | `''` | The URL an `http` hook calls, with any credentials removed. |
 
 **Returned by** [`session.hooks.list()`](/docs/sdk/igni-client/hooks#session-hooks-list).
 
@@ -975,88 +856,84 @@ hook, `url` on a command hook, etc.).
 
 ### ScheduledTask
 
-A task scheduled for deferred execution.
+A prompt scheduled to run at a later time, once or repeatedly.
 
-For recurring tasks, `recurrence` holds the repeat pattern in the
-canonical `every N <minutes|hours|days|weeks>` form ("every 1
-hours", "every 1 days", "every 7 days") — that is the only form the
-field validator below accepts. User-facing phrases ("daily",
-"weekly") are not valid here; run them through
-`Recurrence.parse` and persist `.canonical()`. After
-completion, the runner creates the next occurrence automatically.
+When a recurring task completes, igni schedules its next occurrence
+as a new task.
 
-| Field | Type | Default |
-|---|---|---|
-| `created_at` | `datetime` | required |
-| `description` | `str` | required |
-| `error` | `str` | `''` |
-| `id` | `str` | required |
-| `recurrence` | `str` | `''` |
-| `result` | `str` | `''` |
-| `scheduled_at` | `datetime` | required |
-| `status` | [`TaskStatus`](/docs/sdk/igni-client/models-reference#taskstatus) | `'pending'` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `created_at` | `datetime` | `None` | When the task was scheduled, in the machine's local time. |
+| `description` | `str` | required | What the task does: the prompt igni runs when it is due. |
+| `error` | `str` | `''` | Error message when the run failed. Empty otherwise. |
+| `id` | `str` | required | Short identifier of the task (8 hex characters). |
+| `recurrence` | `str` | `''` | Repeat pattern in the form `every N <minutes\|hours\|days\|weeks>` (e.g. `every 1 days`, `every 7 days`). Empty for a one-time task. |
+| `result` | `str` | `''` | Output of the run once it completed. Empty until then. |
+| `scheduled_at` | `datetime` | required | When the task is due to run, in the machine's local time. |
+| `status` | [`TaskStatus`](/docs/sdk/igni-client/models-reference#taskstatus) | `'pending'` | Where the task is in its lifecycle. |
 
 **Returned by** [`session.scheduler.list()`](/docs/sdk/igni-client/scheduler#session-scheduler-list).
+
+### ScheduledTaskRunResult
+
+The answer of a scheduled task run, and the run's id.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `result` | `str` | required | The agent's answer, as text. |
+| `run_id` | `str` | required | The run's id: the one asked for, or the one made. |
+
+**Returned by** [`session.scheduler.execute()`](/docs/sdk/igni-client/scheduler#session-scheduler-execute).
 
 ## Workflows
 
 ### WorkflowCancelResponse
 
-`CANCEL_WORKFLOW` response.
+Result of cancelling a workflow run.
 
-`cancelled` is false when no such run is active — already
-finished, already cancelled, or an unknown id are the same
-outcome to the caller.
-
-| Field | Type | Default |
-|---|---|---|
-| `cancelled` | `bool` | required |
-| `workflow_run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cancelled` | `bool` | required | `true` when the run was stopped. `false` when no such run is active: it already finished, was already cancelled, or the id is unknown. |
+| `workflow_run_id` | `str` | required | Id of the run the request named. |
 
 **Returned by** [`session.workflows.cancel()`](/docs/sdk/igni-client/workflows#session-workflows-cancel).
 
 ### WorkflowListItem
 
-One `LIST_WORKFLOWS` row: `{name, description, whenToUse, phases, path}`.
+A workflow script available to run in this project.
 
-`when_to_use` goes out as `whenToUse` — the model serialises
-by alias, so the dispatcher's plain `model_dump()` emits the
-wire name.
-
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | `''` |
-| `name` | `str` | required |
-| `path` | `str` | required |
-| `phases` | `list[`[`WorkflowPhase`](/docs/sdk/igni-client/models-reference#workflowphase)`]` | required |
-| `when_to_use` (wire `whenToUse`) | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | `''` | What the workflow does; may be empty. |
+| `name` | `str` | required | The workflow's name; pass it to run the workflow. |
+| `path` | `str` | required | Where the workflow file is: relative to the project root, or absolute for a workflow outside the project (e.g. in the user's home). |
+| `phases` | `list[`[`WorkflowPhase`](/docs/sdk/igni-client/models-reference#workflowphase)`]` | required | The workflow's steps, in order. |
+| `when_to_use` (wire `whenToUse`) | `str` | `''` | When the workflow is the right choice; may be empty. |
 
 **Returned by** [`session.workflows.list()`](/docs/sdk/igni-client/workflows#session-workflows-list).
 
 ### WorkflowPhase
 
-One phase in a workflow's published `meta.phases` list.
+One step of a workflow, as the workflow describes itself.
 
-| Field | Type | Default |
-|---|---|---|
-| `detail` | `str` | `''` |
-| `title` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `detail` | `str` | `''` | Longer explanation of what the phase does; may be empty. |
+| `title` | `str` | required | Short name of the phase. |
 
 **Part of** [`WorkflowListItem`](/docs/sdk/igni-client/models-reference#workflowlistitem).
 
 ### WorkflowRunResponse
 
-`RUN_WORKFLOW` response.
+The workflow run that was started.
 
-Returned synchronously — the run is async on the BE side. The
-FE optimistically creates a workflow `ChatItem` keyed by
-`workflow_run_id` and folds subsequent `workflow_event`
-pushes into it.
+Returned as soon as the run starts; its progress then arrives as
+`workflow_event` pushes carrying the same `workflow_run_id`.
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `workflow_run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | Name of the workflow that was started. |
+| `workflow_run_id` | `str` | required | Id of the new run; use it to match events and to cancel the run. |
 
 **Returned by** [`session.workflows.run()`](/docs/sdk/igni-client/workflows#session-workflows-run).
 
@@ -1064,152 +941,102 @@ pushes into it.
 
 ### McpPrompt
 
-Wire shape for one MCP prompt entry.
+One prompt template an MCP server offers.
 
-`arguments` is a flat `list[str]` of argument names —
-the panel only needs the identity list, not the full
-argument metadata. If a future consumer needs the type /
-required-flag columns, add fields here and update
-`from_sdk` to project them.
-
-| Field | Type | Default |
-|---|---|---|
-| `arguments` | `list[str]` | required |
-| `description` | `str` | `''` |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `arguments` | `list[str]` | `[]` | Names of the arguments the prompt takes. Empty when it takes none. |
+| `description` | `str` | `''` | What the prompt is for. Empty when not given. |
+| `name` | `str` | required | Name of the prompt on its server. |
 
 **Part of** [`McpServerSnapshot`](/docs/sdk/igni-client/models-reference#mcpserversnapshot).
 
 ### McpResource
 
-Wire shape for one MCP resource entry.
+One resource an MCP server offers (a file, document or other data it can return).
 
-Fields are the four columns the panel actually renders —
-`uri` is the only required identity field, the rest
-default to `""` so servers that omit optional metadata
-still serialize cleanly.
+Only `uri` is always set; the other fields are empty when the
+server does not provide them.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | `''` |
-| `mime_type` | `str` | `''` |
-| `name` | `str` | `''` |
-| `uri` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | `''` | What the resource contains. Empty when not given. |
+| `mime_type` | `str` | `''` | MIME type of the resource content, e.g. `text/plain`. Empty when unknown. |
+| `name` | `str` | `''` | Human-readable name of the resource. Empty when not given. |
+| `uri` | `str` | required | URI that identifies the resource on its server. |
 
 **Part of** [`McpServerSnapshot`](/docs/sdk/igni-client/models-reference#mcpserversnapshot).
 
 ### McpServerSnapshot
 
-Full expanded-row payload returned by
-`McpController.server_details`.
+Full details of one configured MCP server: connection state,
+tools, resources and prompts.
 
-Nine wire fields — preserved verbatim from the previous
-raw-dict shape:
-
-* `name` — server key from the config file.
-* `connected` — currently in `mgr.list_connected()`.
-* `transport` — `config.type` (`stdio` / `sse`) or
-  `"unknown"` if no config was found.
-* `tool_names` — every tool the server advertised at connect
-  time (including individually-disabled ones).
-* `tool_descriptions` — `{tool_name: description}`.
-* `tools_disabled` — tools the user has toggled off.
-* `resources` — MCP `list_resources` result (async fetch),
-  typed as `MCPResource` for the wire.
-* `prompts` — MCP `list_prompts` result (async fetch),
-  typed as `MCPPrompt` for the wire.
-* `error` — last connection error string, or `""`.
-* `policy_blocked` — managed policy denies this server.
-
-| Field | Type | Default |
-|---|---|---|
-| `connected` | `bool` | required |
-| `error` | `str` | `''` |
-| `name` | `str` | required |
-| `policy_blocked` | `bool` | `False` |
-| `prompts` | `list[`[`McpPrompt`](/docs/sdk/igni-client/models-reference#mcpprompt)`]` | required |
-| `resources` | `list[`[`McpResource`](/docs/sdk/igni-client/models-reference#mcpresource)`]` | required |
-| `tool_descriptions` | `dict[str, str]` | required |
-| `tool_names` | `list[str]` | required |
-| `tools_disabled` | `list[str]` | required |
-| `transport` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `connected` | `bool` | required | `true` when igni is currently connected to the server. |
+| `error` | `str` | `''` | The last connection error; empty if none. |
+| `name` | `str` | required | The server's name, as configured. |
+| `policy_blocked` | `bool` | `False` | `true` when an administrator policy forbids using this server. |
+| `prompts` | `list[`[`McpPrompt`](/docs/sdk/igni-client/models-reference#mcpprompt)`]` | `[]` | Prompts the server offers; empty when it is not connected. |
+| `resources` | `list[`[`McpResource`](/docs/sdk/igni-client/models-reference#mcpresource)`]` | `[]` | Resources the server offers; empty when it is not connected. |
+| `tool_descriptions` | `dict[str, str]` | `{}` | Each tool's description, keyed by tool name. |
+| `tool_names` | `list[str]` | `[]` | Every tool the server offered when it connected, including disabled ones. |
+| `tools_disabled` | `list[str]` | `[]` | Tools the user has turned off; the agent cannot use them. |
+| `transport` | `str` | required | How igni talks to the server, e.g. `stdio` or `sse`; `unknown` if it has no config. |
 
 **Returned by** [`session.mcp.server_details()`](/docs/sdk/igni-client/mcp#session-mcp-server-details).
 
 ### McpServerSummary
 
-Cheap two-field `(name, connected)` row returned by
-`McpController.servers`.
+An MCP server's name and whether it is connected.
 
-Used when the panel just needs the connected-flag column
-without paying for the tools / resources / prompts fetch
-per row.
+A cheap listing; use the server details call for tools,
+resources and prompts.
 
-| Field | Type | Default |
-|---|---|---|
-| `connected` | `bool` | required |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `connected` | `bool` | required | `true` when igni is currently connected to the server. |
+| `name` | `str` | required | The server's name, as configured. |
 
 **Returned by** [`session.mcp.servers()`](/docs/sdk/igni-client/mcp#session-mcp-servers).
 
 ### McpToolToggleResult
 
-Wire shape for `McpController.set_tool_enabled` —
-the panel reads it back to confirm the row's new state without
-needing a second RPC roundtrip.
+Result of enabling or disabling one tool of an MCP server.
 
-| Field | Type | Default |
-|---|---|---|
-| `enabled` | `bool` | required |
-| `server` | `str` | required |
-| `tool` | `str` | required |
+Echoes the tool's new state, so no second call is needed to
+confirm it.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | `bool` | required | The tool's state now: `true` if the agent may use it. |
+| `server` | `str` | required | Name of the MCP server the tool belongs to. |
+| `tool` | `str` | required | Name of the tool. |
 
 **Returned by** [`session.mcp.set_tool_enabled()`](/docs/sdk/igni-client/mcp#session-mcp-set-tool-enabled).
 
 ### McpInitResult
 
-Pattern-3 envelope returned by `McpInitPhase.ensure`
-(forwarded by `SessionStartupCoordinator.ensure_mcp`).
+Outcome of connecting the session's configured MCP servers.
 
-Callers used to grep the log stream to know how many servers
-connected on first-message init. The envelope surfaces the
-same information at the return-value boundary so RPC clients
-(`BackendServer.ensure_mcp` / `McpController.ensure`) can
-project it back to the FE without side-channel scraping.
-
-Fields:
-
-* `connected` — sorted names of servers that came online.
-* `failed` — mapping `name → error string` for each server
-  whose `connect` returned `None`.
-* `rebuilt` — `True` iff the agent pool + main team were
-  rebuilt with at least one live client (matches the pre-
-  refactor log line "agents + main team rebuilt").
-* `skipped_reason` — set when `ensure` short-circuited
-  before reaching the connect loop. `None` when a connect
-  pass was actually executed.
-
-| Field | Type | Default |
-|---|---|---|
-| `connected` | `list[str]` | required |
-| `failed` | `dict[str, str]` | required |
-| `rebuilt` | `bool` | `False` |
-| `skipped_reason` | `Literal['already_initialized', 'no_configured_servers', 'no_clients_connected'] \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `connected` | `list[str]` | `[]` | Names of the servers that connected, sorted. |
+| `failed` | `dict[str, str]` | `{}` | Servers that failed to connect, mapped to the error for each. |
+| `rebuilt` | `bool` | `False` | True when the session's agents were rebuilt so they can use the newly connected servers' tools. |
+| `skipped_reason` | `Literal['already_initialized', 'no_configured_servers', 'no_clients_connected'] \| None` | `None` | Why no connection attempt was made, or why nothing changed: `already_initialized` (servers were connected earlier in the session), `no_configured_servers` (no MCP servers are configured) or `no_clients_connected` (every server failed, so the agents were not rebuilt). Null when a connection pass ran and at least one server connected. |
 
 **Returned by** [`session.mcp.ensure()`](/docs/sdk/igni-client/mcp#session-mcp-ensure).
 
 ### McpServerStatus
 
-Typed row for `McpLifecycleCoordinator.status`.
+Connection state of one configured MCP server.
 
-Replaces the raw `(name, connected)` tuple so consumers
-(backend RPC, TUI panel) reach for named attributes instead
-of positional indexing.
-
-| Field | Type | Default |
-|---|---|---|
-| `connected` | `bool` | required |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `connected` | `bool` | required | True when igni currently has a live connection to the server. |
+| `name` | `str` | required | Name of the MCP server as configured. |
 
 **Returned by** [`session.mcp.status()`](/docs/sdk/igni-client/mcp#session-mcp-status).
 
@@ -1217,159 +1044,144 @@ of positional indexing.
 
 ### MarketplaceInfo
 
-Wire format for one registered marketplace — registry-level
-metadata plus the cached catalog at the time of the last fetch.
+A plugin marketplace registered with igni, with its catalog as of the last fetch.
 
-| Field | Type | Default |
-|---|---|---|
-| `last_fetched` | `str` | `''` |
-| `name` | `str` | required |
-| `plugins` | `list[`[`MarketplacePluginInfo`](/docs/sdk/igni-client/models-reference#marketplaceplugininfo)`]` | `[]` |
-| `url` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `last_fetched` | `str` | `''` | When the catalog was last fetched, as an ISO 8601 UTC timestamp. Empty if never. |
+| `name` | `str` | required | Marketplace name. |
+| `plugins` | `list[`[`MarketplacePluginInfo`](/docs/sdk/igni-client/models-reference#marketplaceplugininfo)`]` | `[]` | Plugins in the catalog. Empty until the catalog has been fetched. |
+| `url` | `str` | required | Git URL the marketplace catalog is fetched from. |
 
 **Returned by** [`igni.marketplaces.list()`](/docs/sdk/igni-client/plugins#igni-marketplaces-list).
 
 ### MarketplacePluginInfo
 
-Wire format for one plugin entry inside a marketplace catalog.
+One plugin listed in a marketplace's catalog, available to install.
 
-| Field | Type | Default |
-|---|---|---|
-| `branch` | `str` | `''` |
-| `description` | `str` | `''` |
-| `name` | `str` | required |
-| `source` | `str` | required |
-| `version` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `branch` | `str` | `''` | Git branch to install from. Empty for the repository's default branch. |
+| `description` | `str` | `''` | What the plugin does. Empty when not given. |
+| `name` | `str` | required | Plugin name; install it as `@<marketplace>/<name>`. |
+| `source` | `str` | required | Where the plugin is fetched from: a git URL, followed by `[<subdirectory>]` when the plugin lives in a subdirectory of that repository. |
+| `version` | `str` | `''` | Version listed in the catalog. Empty when not given. |
 
 **Part of** [`MarketplaceInfo`](/docs/sdk/igni-client/models-reference#marketplaceinfo).
 
 ### PluginAgentInfo
 
-One agent entry in `PluginContents.agents`.
+An agent the plugin provides.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | `''` |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | `''` | What the agent does; may be empty. |
+| `name` | `str` | required | The agent's name. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
 ### PluginContents
 
-Wire shape returned by `PluginDirectoryScanner.scan`
-(and the
-`igni_core.backend.plugin_controller.PluginController.preview`
-marketplace-preview path that unwraps a clone into the same
-shape).
+What a plugin contains: its skills, agents, hooks, MCP servers,
+tools and README.
 
-`error` is populated when the caller failed to construct
-the payload (plugin not found, git clone failed, etc.) — in
-that case the collection fields stay empty and the FE renders
-the error card.
+Describes an installed plugin, or one previewed from a marketplace
+before installing. When `error` is set, the lists are empty.
 
-`preview_source` carries the structured `(url, subdir)` for
-preview payloads coming from the marketplace card so the FE can
-reconstruct the display without regex-parsing `root_path`.
-Only populated by the preview path — the installed-plugin path
-leaves it `None`.
-
-| Field | Type | Default |
-|---|---|---|
-| `agents` | `list[`[`PluginAgentInfo`](/docs/sdk/igni-client/models-reference#pluginagentinfo)`]` | `[]` |
-| `error` | `str` | `''` |
-| `hooks` | `list[`[`PluginHookInfo`](/docs/sdk/igni-client/models-reference#pluginhookinfo)`]` | `[]` |
-| `mcp_servers` | `list[`[`PluginMcpServerInfo`](/docs/sdk/igni-client/models-reference#pluginmcpserverinfo)`]` | `[]` |
-| `name` | `str` | `''` |
-| `preview_source` | [`PluginPreviewSource`](/docs/sdk/igni-client/models-reference#pluginpreviewsource)` \| None` | `None` |
-| `readme` | `str` | `''` |
-| `root_path` | `str` | `''` |
-| `skills` | `list[`[`PluginSkillInfo`](/docs/sdk/igni-client/models-reference#pluginskillinfo)`]` | `[]` |
-| `tools` | `list[`[`PluginToolInfo`](/docs/sdk/igni-client/models-reference#plugintoolinfo)`]` | `[]` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `agents` | `list[`[`PluginAgentInfo`](/docs/sdk/igni-client/models-reference#pluginagentinfo)`]` | `[]` | Agents the plugin provides. |
+| `error` | `str` | `''` | Why the plugin could not be read (not found, git clone failed, ...); empty on success. |
+| `hooks` | `list[`[`PluginHookInfo`](/docs/sdk/igni-client/models-reference#pluginhookinfo)`]` | `[]` | Hooks the plugin registers, per event. |
+| `mcp_servers` | `list[`[`PluginMcpServerInfo`](/docs/sdk/igni-client/models-reference#pluginmcpserverinfo)`]` | `[]` | MCP servers the plugin provides. |
+| `name` | `str` | `''` | The plugin's name. |
+| `preview_source` | [`PluginPreviewSource`](/docs/sdk/igni-client/models-reference#pluginpreviewsource)` \| None` | `None` | Where a previewed plugin comes from; `null` for an installed plugin. |
+| `readme` | `str` | `''` | The plugin's README (Markdown); empty if it has none. |
+| `root_path` | `str` | `''` | Folder the plugin was read from. |
+| `skills` | `list[`[`PluginSkillInfo`](/docs/sdk/igni-client/models-reference#pluginskillinfo)`]` | `[]` | Skills the plugin provides. |
+| `tools` | `list[`[`PluginToolInfo`](/docs/sdk/igni-client/models-reference#plugintoolinfo)`]` | `[]` | Custom tools the plugin provides. |
 
 **Returned by** [`session.plugins.contents()`](/docs/sdk/igni-client/plugins#session-plugins-contents), [`session.plugins.preview()`](/docs/sdk/igni-client/plugins#session-plugins-preview).
 
 ### PluginHookInfo
 
-One hook-event entry in `PluginContents.hooks`.
-`count` is the number of handlers registered for the
-event.
+Hooks the plugin registers for one event.
 
-| Field | Type | Default |
-|---|---|---|
-| `count` | `int` | required |
-| `event` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `count` | `int` | required | Number of hook handlers the plugin registers for the event. |
+| `event` | `str` | required | The hook event, e.g. `PreToolUse` or `Stop`. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
 ### PluginInfo
 
-Wire format for one installed plugin — emitted by
-`BackendServer.get_plugin_details`, consumed by the
-plugins panel.
+One installed plugin, with what it bundles and whether it is enabled.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | `''` |
-| `enabled` | `bool` | `True` |
-| `has_agents` | `bool` | `False` |
-| `has_hooks` | `bool` | `False` |
-| `has_lsp` | `bool` | `False` |
-| `has_mcp` | `bool` | `False` |
-| `has_monitors` | `bool` | `False` |
-| `has_skills` | `bool` | `False` |
-| `has_tools` | `bool` | `False` |
-| `managed` | `bool` | `False` |
-| `name` | `str` | required |
-| `path` | `str` | `''` |
-| `pin` | `str` | `''` |
-| `source_root` | `str` | `''` |
-| `version` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | `''` | What the plugin does. Empty when not given. |
+| `enabled` | `bool` | `True` | True when the plugin is active in this session. |
+| `has_agents` | `bool` | `False` | True when the plugin bundles agents. |
+| `has_hooks` | `bool` | `False` | True when the plugin bundles hooks. |
+| `has_lsp` | `bool` | `False` | True when the plugin bundles language-server configurations. |
+| `has_mcp` | `bool` | `False` | True when the plugin bundles MCP server configurations. |
+| `has_monitors` | `bool` | `False` | True when the plugin bundles monitors. |
+| `has_skills` | `bool` | `False` | True when the plugin bundles skills. |
+| `has_tools` | `bool` | `False` | True when the plugin bundles tools. |
+| `managed` | `bool` | `False` | True when a system administrator installed the plugin; it is always enabled and cannot be disabled by the user. |
+| `name` | `str` | required | Plugin name from its manifest. |
+| `path` | `str` | `''` | Directory the plugin is installed in. |
+| `pin` | `str` | `''` | Git commit the plugin is pinned to. Empty when it is not pinned. |
+| `source_root` | `str` | `''` | Where the plugin was found: `user-claude` (~/.claude/plugins), `user-igni` (~/.igni/plugins), `project-claude` (the project's .claude/plugins), `project-igni` (the project's .igni/plugins), `group-policy-igni` (installed by the organization's policy), `managed-claude` or `managed-igni` (installed by a system administrator). |
+| `version` | `str` | `''` | Version from the plugin's manifest. Empty when not given. |
 
 **Returned by** [`session.plugins.list()`](/docs/sdk/igni-client/plugins#session-plugins-list).
 
 ### PluginMcpServerInfo
 
-One MCP-server entry in `PluginContents.mcp_servers`.
+An MCP server the plugin provides.
 
-| Field | Type | Default |
-|---|---|---|
-| `command` | `str` | required |
-| `name` | `str` | required |
-| `transport` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `command` | `str` | required | The command that starts the server (or its URL); may be empty. |
+| `name` | `str` | required | The server's name. |
+| `transport` | `str` | required | How igni talks to the server, e.g. `stdio` or `sse`. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
 ### PluginPreviewSource
 
-Structured form of the marketplace's `"<url> [<subdir>]"`
-display string — parses back to (url, subdir) and formats back
-out. Single source of truth for the round-trip.
+Where a previewed plugin comes from: a git repository and,
+optionally, a folder inside it.
 
-| Field | Type | Default |
-|---|---|---|
-| `subdir` | `str` | `''` |
-| `url` | `str` | required |
+Displayed as `"<url> [<subdir>]"`.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `subdir` | `str` | `''` | Folder inside the repository that holds the plugin; empty for the root. |
+| `url` | `str` | required | The plugin's git repository URL. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
 ### PluginSkillInfo
 
-One skill entry in `PluginContents.skills`.
+A skill the plugin provides.
 
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | `''` |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | `''` | What the skill does; may be empty. |
+| `name` | `str` | required | The skill's name. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
 ### PluginToolInfo
 
-One custom-tool entry in `PluginContents.tools`.
+A custom tool the plugin provides.
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | The tool's name. |
 
 **Part of** [`PluginContents`](/docs/sdk/igni-client/models-reference#plugincontents).
 
@@ -1377,15 +1189,17 @@ One custom-tool entry in `PluginContents.tools`.
 
 ### ExtensionIndicator
 
-A status chip the host renders in its own chrome.
+A small status indicator an extension shows in the client's own
+interface. The client gets its current value by calling a tool of
+the extension's every `intervalSeconds`.
 
-| Field | Type | Default |
-|---|---|---|
-| `id` | `str` | required |
-| `interval_seconds` (wire `intervalSeconds`) | `float` | `30.0` |
-| `label` | `str` | required |
-| `opens` | `str` | `''` |
-| `source` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `id` | `str` | required | The indicator's id, a reverse-DNS name. |
+| `interval_seconds` (wire `intervalSeconds`) | `float` | `30.0` | How often to call `source`, in seconds. |
+| `label` | `str` | required | The indicator's name, for a person. |
+| `opens` | `str` | `''` | The `kind` of the extension page to open when the indicator is clicked; empty for an indicator that only reports. |
+| `source` | `str` | required | The extension tool to call for the current value; it answers `{label, tone, detail}`. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
@@ -1393,76 +1207,79 @@ A status chip the host renders in its own chrome.
 
 Every installed extension, in a stable order.
 
-| Field | Type | Default |
-|---|---|---|
-| `extensions` | `list[`[`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary)`]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `extensions` | `list[`[`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary)`]` | `[]` | The installed extensions. |
 
 **Returned by** [`igni.extensions.list()`](/docs/sdk/igni-client/extensions#igni-extensions-list), [`igni.extensions.set_settings()`](/docs/sdk/igni-client/extensions#igni-extensions-set-settings).
 
 ### ExtensionMenuEntry
 
-| Field | Type | Default |
-|---|---|---|
-| `command` | `str` | required |
-| `desc` | `str` | required |
-| `label` | `str` | required |
+An entry an extension adds to the tools menu; choosing it runs a slash command.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `command` | `str` | required | The slash command it runs, e.g. `/review`. |
+| `desc` | `str` | required | A one-line description of what it does. |
+| `label` | `str` | required | The entry's text, for a person. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
 ### ExtensionPage
 
-A surface the extension renders, as the sidebar needs it.
+A page an extension contributes to the client.
 
-| Field | Type | Default |
-|---|---|---|
-| `entry` | `str` | `'index.html'` |
-| `kind` | `str` | required |
-| `label` | `str` | required |
-| `sidebar` | `bool` | `False` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `entry` | `str` | `'index.html'` | The file, relative to the extension's `origin`, the page loads. |
+| `kind` | `str` | required | The page's kind, a reverse-DNS name unique across extensions, e.g. `com.example.notes`. |
+| `label` | `str` | required | The page's title, for a person. |
+| `sidebar` | `bool` | `False` | Whether the page is listed in the sidebar. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
 ### ExtensionSetting
 
-One configurable value, as the host's settings surface needs it.
+One setting an extension can be configured with.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `default` | `JsonValue` | `None` | Any JSON value. |
-| `key` | `str` | required |  |
-| `label` | `str` | required |  |
-| `options` | `list[str]` | required |  |
-| `type` | `str` | required |  |
+| `default` | `JsonValue` | `None` | The value used when none is set. |
+| `key` | `str` | required | The setting's key in `values`. |
+| `label` | `str` | required | The setting's name, for a person. |
+| `options` | `list[str]` | `[]` | The allowed values when `type` is `enum`; empty otherwise. |
+| `type` | `str` | required | The kind of value: `string`, `number`, `boolean` or `enum`. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
 ### ExtensionSummary
 
-One installed extension, as the frontend sees it.
+One installed extension: who it is, what state it is in, where its
+pages are served, and what it contributes.
 
-| Field | Type | Default |
-|---|---|---|
-| `allow` | `list[str]` | required |
-| `dropped` | `list[`[`ExtensionSwitchedOff`](/docs/sdk/igni-client/models-reference#extensionswitchedoff)`]` | required |
-| `faulty` | `str` | `''` |
-| `host` | `list[str]` | required |
-| `id` | `str` | required |
-| `indicators` | `list[`[`ExtensionIndicator`](/docs/sdk/igni-client/models-reference#extensionindicator)`]` | required |
-| `menu` | `list[`[`ExtensionMenuEntry`](/docs/sdk/igni-client/models-reference#extensionmenuentry)`]` | required |
-| `name` | `str` | required |
-| `origin` | `str` | `''` |
-| `pages` | `list[`[`ExtensionPage`](/docs/sdk/igni-client/models-reference#extensionpage)`]` | required |
-| `problems` | `list[str]` | required |
-| `reason` | `str` | `''` |
-| `sandbox` | `str` | `''` |
-| `service_url` | `str \| None` | `None` |
-| `settings` | `list[`[`ExtensionSetting`](/docs/sdk/igni-client/models-reference#extensionsetting)`]` | required |
-| `state` | `str` | required |
-| `switched_off` | `list[`[`ExtensionSwitchedOff`](/docs/sdk/igni-client/models-reference#extensionswitchedoff)`]` | required |
-| `tools` | `list[`[`ExtensionTool`](/docs/sdk/igni-client/models-reference#extensiontool)`]` | required |
-| `values` | `dict[str, JsonValue]` | required |
-| `version` | `str` | required |
-| `web_url` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `allow` | `list[str]` | `[]` | The RPC methods its pages were granted. igni checks every call; this copy lets a client refuse early. |
+| `dropped` | `list[`[`ExtensionSwitchedOff`](/docs/sdk/igni-client/models-reference#extensionswitchedoff)`]` | `[]` | Its prompt edits that have no effect, because another extension replaces that prompt and has no section the edit names. |
+| `faulty` | `str` | `''` | Why it is marked faulty (its calls timed out or crashed too often in a row, and igni restarted it); empty while it answers. |
+| `host` | `list[str]` | `[]` | The host permissions it was granted, for display. |
+| `id` | `str` | required | The extension's id, a reverse-DNS name. |
+| `indicators` | `list[`[`ExtensionIndicator`](/docs/sdk/igni-client/models-reference#extensionindicator)`]` | `[]` | Status indicators it contributes. |
+| `menu` | `list[`[`ExtensionMenuEntry`](/docs/sdk/igni-client/models-reference#extensionmenuentry)`]` | `[]` | Entries it adds to the tools menu. |
+| `name` | `str` | required | The extension's display name. |
+| `origin` | `str` | `''` | Where its pages are served from; empty when it contributes none. |
+| `pages` | `list[`[`ExtensionPage`](/docs/sdk/igni-client/models-reference#extensionpage)`]` | `[]` | Pages it contributes. |
+| `problems` | `list[str]` | `[]` | Problems that do not stop it working, e.g. a tool reporting other hints than its manifest declares. |
+| `reason` | `str` | `''` | Why it is not `READY`, and what to do; empty when it is. |
+| `sandbox` | `str` | `''` | How its process runs, e.g. `sandboxed (seatbelt)` or `not sandboxed: <why>`; empty when igni starts no process for it. An unsandboxed process has the user's full file and network access. |
+| `service_url` | `str \| None` | `None` | The URL of its own service, as its pages reach it; `null` when it has none a page may reach. |
+| `settings` | `list[`[`ExtensionSetting`](/docs/sdk/igni-client/models-reference#extensionsetting)`]` | `[]` | The settings it can be configured with; their current values are in `values`. |
+| `state` | `str` | required | What the extension is doing: `READY`, `PREPARING`, `DISABLED` or `FAILED`. |
+| `switched_off` | `list[`[`ExtensionSwitchedOff`](/docs/sdk/igni-client/models-reference#extensionswitchedoff)`]` | `[]` | What it does not get because it collides with another extension. Usually empty. |
+| `tools` | `list[`[`ExtensionTool`](/docs/sdk/igni-client/models-reference#extensiontool)`]` | `[]` | The tools it gives the agent. |
+| `values` | `dict[str, JsonValue]` | `{}` | The current setting values, by key, with defaults filled in and undeclared keys dropped. They reach its pages as launch parameters. |
+| `version` | `str` | required | The installed version, a semantic version. |
+| `web_url` | `str \| None` | `None` | Its home on the web, when one is known; `null` otherwise. |
 
 **Part of** [`ExtensionListResult`](/docs/sdk/igni-client/models-reference#extensionlistresult).
 
@@ -1470,10 +1287,10 @@ One installed extension, as the frontend sees it.
 
 One thing an extension does not get, because it collides with another.
 
-| Field | Type | Default |
-|---|---|---|
-| `claim` | `str` | required |
-| `reason` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `claim` | `str` | required | What it claimed, e.g. `prompt:main.workflow`, `command:/review` or `agent:explorer`. |
+| `reason` | `str` | required | Who decided against it, or that nobody has decided yet. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
@@ -1481,10 +1298,10 @@ One thing an extension does not get, because it collides with another.
 
 One tool an extension gives the agent, as the panel lists it.
 
-| Field | Type | Default |
-|---|---|---|
-| `hints` | `str` | required |
-| `name` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `hints` | `str` | required | What the tool says about itself, for a person, e.g. `read-only, local, idempotent`. |
+| `name` | `str` | required | The tool's name. |
 
 **Part of** [`ExtensionSummary`](/docs/sdk/igni-client/models-reference#extensionsummary).
 
@@ -1492,33 +1309,33 @@ One tool an extension gives the agent, as the panel lists it.
 
 ### FloorNotification
 
-One notification, as the client draws it.
+One notification for the person, from igni server or from an extension on this machine.
 
-| Field | Type | Default |
-|---|---|---|
-| `actor` | `str` | `''` |
-| `body` | `str` | `''` |
-| `created_at` | `datetime \| None` | `None` |
-| `id` | `str` | required |
-| `kind` | `str` | `''` |
-| `org_id` | `str` | `''` |
-| `org_name` | `str` | `''` |
-| `origin` | [`NotificationOrigin`](/docs/sdk/igni-client/models-reference#notificationorigin) | required |
-| `read` | `bool` | `False` |
-| `source` | `str` | required |
-| `target` | [`NotificationTarget`](/docs/sdk/igni-client/models-reference#notificationtarget)` \| None` | `None` |
-| `title` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `actor` | `str` | `''` | Who caused it, for display; empty when nobody in particular. |
+| `body` | `str` | `''` | The text under the headline; empty when there is none. |
+| `created_at` | `datetime \| None` | `None` | When it was created; null when unknown. |
+| `id` | `str` | required | The notification's id; use it to mark it read. |
+| `kind` | `str` | `''` | The extension's own name for what kind of notification it is; empty when none. |
+| `org_id` | `str` | `''` | The organisation it happened in, for one from igni server; empty for a local one. |
+| `org_name` | `str` | `''` | That organisation's name, set only when the person belongs to more than one. Show it when it is set. |
+| `origin` | [`NotificationOrigin`](/docs/sdk/igni-client/models-reference#notificationorigin) | required | Where it came from. |
+| `read` | `bool` | `False` | True once it has been marked read. |
+| `source` | `str` | required | The id of the extension it is from. |
+| `target` | [`NotificationTarget`](/docs/sdk/igni-client/models-reference#notificationtarget)` \| None` | `None` | The page to open when the person opens it; null when there is none. |
+| `title` | `str` | `''` | A one-line headline. |
 
 **Part of** [`NotificationsListResult`](/docs/sdk/igni-client/models-reference#notificationslistresult).
 
 ### NotificationCounts
 
-Unread, in all and per source — the badge on each extension.
+How many notifications are unread, in all and per extension — the numbers for badges.
 
-| Field | Type | Default |
-|---|---|---|
-| `by_source` | `dict[str, int]` | required |
-| `unread` | `int` | `0` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `by_source` | `dict[str, int]` | `{}` | Unread notifications per extension id; an extension with none is left out. |
+| `unread` | `int` | `0` | Unread notifications in all. |
 
 **Returned by** [`igni.notifications.counts()`](/docs/sdk/igni-client/notifications#igni-notifications-counts).
 
@@ -1528,33 +1345,33 @@ Unread, in all and per source — the badge on each extension.
 
 Where opening a notification goes: one of its extension's pages.
 
-| Field | Type | Default |
-|---|---|---|
-| `page` | `str` | required |
-| `params` | `dict[str, str]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `page` | `str` | required | The id of the extension's page to open. |
+| `params` | `dict[str, str]` | `{}` | The parameters to open the page with. Always strings: a number or a flag is given as its JSON text. |
 
 **Part of** [`FloorNotification`](/docs/sdk/igni-client/models-reference#floornotification).
 
 ### NotificationsListResult
 
-`notifications_list`: both paths, newest first, and the counts.
+The person's notifications, newest first, with the unread counts.
 
-| Field | Type | Default |
-|---|---|---|
-| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | required |
-| `notifications` | `list[`[`FloorNotification`](/docs/sdk/igni-client/models-reference#floornotification)`]` | required |
-| `server_error` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | `{'by_source': {}, 'unread': 0}` | The unread counts. |
+| `notifications` | `list[`[`FloorNotification`](/docs/sdk/igni-client/models-reference#floornotification)`]` | `[]` | The notifications, newest first. |
+| `server_error` | `str` | `''` | Why igni server could not be asked, when it could not; empty otherwise. The local notifications and the last ones fetched from the server are still returned. |
 
 **Returned by** [`igni.notifications.list()`](/docs/sdk/igni-client/notifications#igni-notifications-list).
 
 ### NotificationsReadResult
 
-`notifications_mark_read`: the counts after marking.
+The unread counts after marking notifications read.
 
-| Field | Type | Default |
-|---|---|---|
-| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | required |
-| `server_error` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | `{'by_source': {}, 'unread': 0}` | The unread counts now. |
+| `server_error` | `str` | `''` | Why igni server could not be told, when it could not; empty otherwise. Notifications from the server may then still count as unread. |
 
 **Returned by** [`igni.notifications.mark_read()`](/docs/sdk/igni-client/notifications#igni-notifications-mark-read).
 
@@ -1562,56 +1379,53 @@ Where opening a notification goes: one of its extension's pages.
 
 ### CloudPlan
 
-Wire shape for `AuthController.get_cloud_plan` — tier +
-org name for the org popover badge. Nullable fields because the
-token validation response may omit either.
+The signed-in account's plan and organisation on igni server.
+Any field may be `null` when the server did not report it.
 
-| Field | Type | Default |
-|---|---|---|
-| `email` | `str \| None` | `None` |
-| `full_name` | `str \| None` | `None` |
-| `org_name` | `str \| None` | required |
-| `tier` | `str \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `email` | `str \| None` | `None` | The signed-in user's email address. |
+| `full_name` | `str \| None` | `None` | The signed-in user's full name. |
+| `org_name` | `str \| None` | required | The organisation's display name; `null` when not reported. |
+| `tier` | `str \| None` | required | The plan tier; `null` when not reported. |
 
 **Returned by** [`session.auth.plan()`](/docs/sdk/igni-client/sign-in-and-server#session-auth-plan).
 
 ### LoginStarted
 
-Wire shape for the `login` RPC — one-field ack that a login
-task is now in flight; the actual result arrives asynchronously
-via a `login_result` push notification.
+Confirms that a sign-in has started. Its progress and outcome
+arrive later as `login_status` and `login_result` pushes.
 
-| Field | Type | Default |
-|---|---|---|
-| `started` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `flow_id` | `str` | `''` | This sign-in's id, which its `login_status` and `login_result` pushes carry. |
+| `started` | `bool` | required | `true` when the sign-in started. |
 
 **Returned by** [`igni.auth.login()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-login).
 
 ### ServerChoice
 
-`set_server` RPC result: the server written down, or why it
-was refused. `error` is empty on success.
+The igni server now in use, or why the choice was refused.
 
-| Field | Type | Default |
-|---|---|---|
-| `api_url` | `str` | `''` |
-| `error` | `str` | `''` |
-| `portal_url` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `api_url` | `str` | `''` | The server's API URL; empty when refused. |
+| `error` | `str` | `''` | Why the server was refused; empty on success. |
+| `portal_url` | `str` | `''` | Where a person signs in on that server; empty when refused. |
 
 **Returned by** [`igni.auth.set_server()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-set-server).
 
 ### ServerFound
 
-`discover_server` RPC result: where an address's organisation
-runs igni, or — with every URL empty — why nothing usable was
-published (`reason`).
+Where an email address's organisation runs igni, or, with every
+URL empty, why nothing usable was found.
 
-| Field | Type | Default |
-|---|---|---|
-| `api_url` | `str` | `''` |
-| `portal_url` | `str` | `''` |
-| `reason` | `str` | `''` |
-| `source` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `api_url` | `str` | `''` | The server's API URL; empty when none was found. |
+| `portal_url` | `str` | `''` | Where a person signs in; empty when it is derived from `api_url` or nothing was found. |
+| `reason` | `str` | `''` | Why nothing usable was found; empty when a server was found. A domain with no record is normal, not a fault. |
+| `source` | `str` | `''` | How the server was found: `well-known` (a document published on the domain) or `dns` (a DNS record); empty when nothing was found. |
 
 **Returned by** [`igni.auth.discover_server()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-discover-server).
 
@@ -1619,32 +1433,60 @@ published (`reason`).
 
 ### ApproverTokenMinted
 
-`mint_approver_token`'s answer: the token, for the window that asked.
+A new token that lets a program answer the agent's approval requests.
 
-| Field | Type | Default |
-|---|---|---|
-| `token` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `token` | `str` | required | The token. A program that connects with it may answer approval requests and approve plans. It is valid until igni exits or the tokens are revoked. |
 
 **Returned by** [`igni.approvers.mint_token()`](/docs/sdk/igni-client/approvers#igni-approvers-mint-token).
 
 ### ApproverTokensRevoked
 
-`revoke_approver_tokens`'s answer: how many were forgotten.
+How many approver tokens were revoked.
 
-| Field | Type | Default |
-|---|---|---|
-| `revoked` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `revoked` | `int` | required | The number of tokens revoked. |
 
 **Returned by** [`igni.approvers.revoke_tokens()`](/docs/sdk/igni-client/approvers#igni-approvers-revoke-tokens).
 
 ## igni's window model
 
+### Composer
+
+A window's composer: its draft, the files it names and its mode.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `attachments` | `list[str]` | `[]` | The files the draft names, in order. |
+| `mode` | `str` | `'chat'` | What the composer is in: `chat`, `command` (a slash command) or `shell`. |
+| `text` | `str` | `''` | The draft's text, as the person wrote it. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Dialog
+
+A dialog on screen: igni's own or an extension's. One at a time.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `id` | `str` | required | The dialog's own id: two writers cannot collide. |
+| `source` | `str \| None` | `None` | The extension that asked for it; null for igni's own. |
+| `spec` | `JsonValue \| None` | `None` | What the dialog shows: igni's own spec, or an extension's. |
+| `type` | `Literal['dialog']` | `'dialog'` | always `'dialog'`. Always `dialog`: what this is. |
+
+**Part of** [`DialogShown`](/docs/sdk/igni-client/models-reference#dialogshown), [`WindowChange`](/docs/sdk/igni-client/models-reference#windowchange), [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
 ### DialogAnswered
 
-| Field | Type | Default |
-|---|---|---|
-| `answered` | `bool` | required |
-| `rev` | `int` | required |
+The answer to `answer_dialog`: whether the dialog was still the open one, and the window's revision.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `answered` | `bool` | required | False when that dialog was no longer the open one, so the answer was not taken. |
+| `op` | `Literal['answer_dialog']` | `'answer_dialog'` | always `'answer_dialog'`. Always `answer_dialog`: the request this answers. |
+| `rev` | `int` | required | The window's revision after the answer. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
@@ -1652,10 +1494,13 @@ published (`reason`).
 
 ### DialogShown
 
-| Field | Type | Default |
-|---|---|---|
-| `dialog` | `dict[str, JsonValue]` | required |
-| `rev` | `int` | required |
+The answer to `open_dialog`: the dialog as shown, with its id, and the window's revision.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `dialog` | [`Dialog`](/docs/sdk/igni-client/models-reference#dialog) | required | The dialog as shown, its `id` included. |
+| `op` | `Literal['open_dialog']` | `'open_dialog'` | always `'open_dialog'`. Always `open_dialog`: the request this answers. |
+| `rev` | `int` | required | The window's revision after opening it. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
@@ -1663,46 +1508,160 @@ published (`reason`).
 
 ### Hydrated
 
-The whole model, its revision, and the fields nobody set.
+The answer to `hydrate`: the window's whole model, its revision, and the fields nobody has set.
 
-| Field | Type | Default |
-|---|---|---|
-| `rev` | `int` | required |
-| `state` | `dict[str, JsonValue]` | required |
-| `unset` | `list[str]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `op` | `Literal['hydrate']` | `'hydrate'` | always `'hydrate'`. Always `hydrate`: the request this answers. |
+| `rev` | `int` | required | The window's revision. |
+| `state` | [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate) | required | Every field of the window's model, as the model holds it. |
+| `unset` | `list[str]` | required | The fields still at their defaults, never set. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
 **Part of** [`WindowModelResult`](/docs/sdk/igni-client/models-reference#windowmodelresult).
+
+### Page
+
+One level of a window's page stack.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `str` | required | What kind of page this is: `plugins`, `extensions`, or an extension's own kind. |
+| `label` | `str` | `''` | The name shown for this page. |
+| `params` | `dict[str, str]` | `{}` | The page's parameters, as text: what the page was opened with. |
+
+**Part of** [`Toast`](/docs/sdk/igni-client/models-reference#toast), [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Panel
+
+The panel open over a window's chat. One at a time.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `str` | required | What kind of panel this is: `notifications`, `search`, `login` or `dir-picker`. |
+| `params` | `dict[str, JsonValue]` | `{}` | The panel's own parameters: what the panel shows, in the panel's own shape. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Preview
+
+The file a window's preview shows.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `path` | `str` | required | The path of the file being previewed. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
 
 ### Revised
 
-A change that answers nothing but the window's new revision.
+The answer to `dismiss_toast`: the window's new revision.
 
-| Field | Type | Default |
-|---|---|---|
-| `rev` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `op` | `Literal['dismiss_toast']` | `'dismiss_toast'` | always `'dismiss_toast'`. Always `dismiss_toast`: the request this answers. |
+| `rev` | `int` | required | The window's revision after the toast was dismissed. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
 **Part of** [`WindowModelResult`](/docs/sdk/igni-client/models-reference#windowmodelresult).
+
+### Scroll
+
+Where a window's transcript is scrolled to.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `at_bottom` | `bool` | `True` | Whether the transcript is scrolled to its end. |
+| `message_id` | `str \| None` | `None` | The message the transcript is scrolled to; null when it is at the end. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Selection
+
+What is selected in a window. Each part is independent; `None` for nothing.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `file` | `str \| None` | `None` | The file the selection is in; null when none is. |
+| `message_id` | `str \| None` | `None` | The message the selection starts in; null when nothing is selected. |
+| `text` | `str \| None` | `None` | The selected text; null when none is. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Sidebar
+
+A window's sidebar: open or not, its width and its section.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `open` | `bool` | `False` | Whether the sidebar is open. |
+| `section` | `str \| None` | `None` | The section the sidebar shows; null for none. |
+| `width` | `int \| None` | `None` | The sidebar's width in pixels; null for igni's own sidebar. |
+
+**Part of** [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
+
+### Toast
+
+A transient message on screen.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `body` | `str \| None` | `None` | A second line; null when there is none. |
+| `id` | `str` | `''` | The toast's own id: two writers cannot collide. |
+| `kind` | `str` | required | How it is styled: `info`, `success`, `warning` or `error`. |
+| `source` | `str \| None` | `None` | The extension that showed it; null for igni's own. |
+| `target` | [`Page`](/docs/sdk/igni-client/models-reference#page)` \| None` | `None` | Where clicking the toast goes; null when it goes nowhere. |
+| `text` | `str` | required | The toast's first line. |
+| `type` | `Literal['toast']` | `'toast'` | always `'toast'`. Always `toast`: what this is. |
+
+**Part of** [`ToastAdded`](/docs/sdk/igni-client/models-reference#toastadded), [`WindowChange`](/docs/sdk/igni-client/models-reference#windowchange), [`WindowModelState`](/docs/sdk/igni-client/models-reference#windowmodelstate).
 
 ### ToastAdded
 
-| Field | Type | Default |
-|---|---|---|
-| `rev` | `int` | required |
-| `toast` | `dict[str, JsonValue]` | required |
+The answer to `toast`: the toast as shown, with its id, and the window's revision.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `op` | `Literal['toast']` | `'toast'` | always `'toast'`. Always `toast`: the request this answers. |
+| `rev` | `int` | required | The window's revision after showing it. |
+| `toast` | [`Toast`](/docs/sdk/igni-client/models-reference#toast) | required | The toast as shown, its `id` included. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
 **Part of** [`WindowModelResult`](/docs/sdk/igni-client/models-reference#windowmodelresult).
 
+### WindowModelState
+
+A window's whole model: every field, as a window hydrates from it.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `composer` | [`Composer`](/docs/sdk/igni-client/models-reference#composer) | `{'attachments': [], 'mode': 'chat', 'text': ''}` | The window's composer. |
+| `dialog` | [`Dialog`](/docs/sdk/igni-client/models-reference#dialog)` \| None` | `None` | The dialog on screen. |
+| `focused` | `bool` | `False` | Whether this window has the focus. |
+| `panel` | [`Panel`](/docs/sdk/igni-client/models-reference#panel)` \| None` | `None` | The panel open over the chat. |
+| `preview` | [`Preview`](/docs/sdk/igni-client/models-reference#preview)` \| None` | `None` | The file being previewed. |
+| `project_dir` | `str` | `''` | The folder the window shows. |
+| `route` | `list[`[`Page`](/docs/sdk/igni-client/models-reference#page)`]` | `[]` | The window's page stack. |
+| `scroll` | [`Scroll`](/docs/sdk/igni-client/models-reference#scroll) | `{'at_bottom': True, 'message_id': None}` | Where the transcript is scrolled. |
+| `selection` | [`Selection`](/docs/sdk/igni-client/models-reference#selection) | `{'file': None, 'message_id': None, 'text': None}` | What is selected. |
+| `session` | `str` | `''` | The session the window shows. |
+| `sidebar` | [`Sidebar`](/docs/sdk/igni-client/models-reference#sidebar) | `{'open': False, 'section': None, 'width': None}` | The window's sidebar. |
+| `toasts` | `list[`[`Toast`](/docs/sdk/igni-client/models-reference#toast)`]` | `[]` | The toasts on screen. |
+
+**Part of** [`Hydrated`](/docs/sdk/igni-client/models-reference#hydrated).
+
 ### Written
 
-| Field | Type | Default |
-|---|---|---|
-| `rev` | `int` | required |
+The answer to `write`: the window's revision after it, and whether the value changed.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `changed` | `bool` | `True` | False when the field already held the value: nothing changed and no change was sent. |
+| `op` | `Literal['write']` | `'write'` | always `'write'`. Always `write`: the request this answers. |
+| `rev` | `int` | required | The window's revision after the write. |
 
 **Returned by** [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model).
 
@@ -1712,397 +1671,402 @@ A change that answers nothing but the window's new revision.
 
 ### AgentCompletedEvent
 
+A sub-agent finished its run, with its token usage.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `input_tokens` | `int` | `0` |  |
-| `is_error` | `bool` | `False` |  |
-| `output_tokens` | `int` | `0` |  |
-| `reasoning_tokens` | `int` | `0` |  |
-| `type` | `Literal['agent_completed']` | `'agent_completed'` | always `'agent_completed'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `input_tokens` | `int` | `0` | Input (prompt) tokens the sub-agent used. |
+| `is_error` | `bool` | `False` | True when the sub-agent ended with an error. |
+| `output_tokens` | `int` | `0` | Output (completion) tokens the sub-agent produced. |
+| `reasoning_tokens` | `int` | `0` | Reasoning tokens the sub-agent used; 0 when the model reports none. |
+| `type` | `Literal['agent_completed']` | `'agent_completed'` | always `'agent_completed'`. Always `agent_completed`: what kind of message this is. |
 
 ### AgentPausedEvent
 
+A sub-agent paused because it needs user input (e.g. a tool
+approval): the run waits for someone to answer its approvals.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `count` | `int` | `1` |  |
-| `type` | `Literal['agent_paused']` | `'agent_paused'` | always `'agent_paused'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `count` | `int` | `1` | Number of pending requests the agent is waiting on. |
+| `type` | `Literal['agent_paused']` | `'agent_paused'` | always `'agent_paused'`. Always `agent_paused`: what kind of message this is. |
 
 ### AgentStartedEvent
 
+A member of the run started: a sub-agent began running a task.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent` | `str` | required |  |
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `parent` | `str \| None` | `None` |  |
-| `run_id` | `str \| None` | `None` |  |
-| `task` | `str \| None` | `None` |  |
-| `type` | `Literal['agent_started']` | `'agent_started'` | always `'agent_started'`. |
+| `agent` | `str` | required | Name of the sub-agent that started. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `parent` | `str \| None` | `None` | Path of the agent that spawned it. Null for a top-level spawn. |
+| `run_id` | `str \| None` | `None` | Identifier of the sub-agent's run, when known. |
+| `task` | `str \| None` | `None` | Task text given to the sub-agent, when known. |
+| `type` | `Literal['agent_started']` | `'agent_started'` | always `'agent_started'`. Always `agent_started`: what kind of message this is. |
 
 ### BackgroundProcessDonePayload
 
-Channel `background_process_done`. Best-effort ping so the
-UI can badge the watcher panel when a backgrounded shell command
-finishes. The queue-injected assistant nudge carries the tail
-output; this payload is a lightweight header.
+Channel `background_process_done`. A shell command running in
+the background has finished. Sent alongside `process_exited`, for
+a client that only wants to show a notice. The agent is told about
+the output separately.
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str` | required |
-| `duration_seconds` | `float` | required |
-| `exit_code` | `int \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str` | required | The command that ran. |
+| `duration_seconds` | `float` | required | How long it ran, in seconds. |
+| `exit_code` | `int \| None` | required | Its exit code; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
 ### ContentPreviewEvent
 
+A short preview of what the agent is writing, mid-stream.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `text` | `str` | required |  |
-| `type` | `Literal['content_preview']` | `'content_preview'` | always `'content_preview'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `text` | `str` | required | Preview text of the sub-agent's latest output. |
+| `type` | `Literal['content_preview']` | `'content_preview'` | always `'content_preview'`. Always `content_preview`: what kind of message this is. |
 
 ### ExternalOpen
 
-The `open_external` push: which window opens which link, for whom.
+An extension asked for a link to be opened in the person's browser.
 
-| Field | Type | Default |
-|---|---|---|
-| `source` | `str` | required |
-| `url` | `str` | required |
-| `window` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `source` | `str` | required | The id of the extension that asked. |
+| `url` | `str` | required | The link to open. |
+| `window` | `str` | required | The id of the window that should open it; other windows ignore it. |
 
 ### FileEditedPayload
 
-Channel `file_edited`. Fired every time an edit tool writes
-to disk. A client with an editor buffer can refresh it; neither
-the desktop app nor the web client acts on it today.
+Channel `file_edited`. The agent has written a file. A client
+showing that file in an editor can reload it.
 
-| Field | Type | Default |
-|---|---|---|
-| `path` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `path` | `str` | required | The file that was written. |
 
 ### HostSignal
 
-The `host_signal` push: one signal for one extension's pages.
+A signal for one extension's pages: pass it to every page of that extension you show.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `extension_id` | `str` | required |  |
-| `signal` | `str` | required |  |
-| `value` | `JsonValue` | `None` | Any JSON value. |
+| `extension_id` | `str` | required | The id of the extension whose pages it is for. |
+| `signal` | `str` | required | The signal's name, e.g. `chat.run_completed` or `session.switched`. |
+| `value` | `JsonValue` | `None` | The signal's value; its shape depends on `signal`. |
 
-### HttpRetryAttemptPayload
+### HttpRetryAttemptEventPayload
 
-The `http_retry_attempt` broadcast, sent before each retry.
+A web fetch failed with a temporary error and igni is about to retry it.
 
-| Field | Type | Default |
-|---|---|---|
-| `attempt` | `int` | required |
-| `delay_seconds` | `float` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `attempt` | `int` | required | Number of the attempt about to be made, counting the first request as 1 (so the first retry is 2). |
+| `delay_seconds` | `float` | required | Seconds igni waits before making this attempt. |
 
-### HttpRetrySucceededPayload
+### HttpRetrySucceededEventPayload
 
-The `http_retry_succeeded` broadcast, sent when a fetch
-succeeds after at least one retry.
+A web fetch succeeded after at least one retry.
 
-| Field | Type | Default |
-|---|---|---|
-| `attempt_count` | `int` | required |
-| `delay_seconds` | `float` | required |
-| `url` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `attempt_count` | `int` | required | Total number of requests made, including the first. |
+| `delay_seconds` | `float` | required | Total seconds spent waiting between attempts. |
+| `url` | `str` | required | URL that was fetched. |
 
 ### LoginResultPayload
 
-Channel `login_result`. Terminal result of a login attempt
-(success + reason string). Pushed after the RPC ack, once the
-Anthropic OAuth flow completes.
+Channel `login_result`. How a sign-in ended. Sent once, after
+the `login` call has returned and the sign-in has finished.
 
-| Field | Type | Default |
-|---|---|---|
-| `result` | `str` | required |
-| `success` | `bool` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `flow_id` | `str` | `''` | The sign-in it ends: the `flow_id` that `login` returned. |
+| `result` | `str` | required | On success, the signed-in email address; on failure, why it failed. May be empty. |
+| `success` | `bool` | required | Whether the user is now signed in. |
 
 ### LoginStatusPayload
 
-Channel `login_status`. Human-readable status text streamed
-while a login attempt is in flight.
+Channel `login_status`. Progress of a sign-in that is under way,
+as text for a person.
 
-| Field | Type | Default |
-|---|---|---|
-| `text` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `flow_id` | `str` | `''` | The sign-in it is about: the `flow_id` that `login` returned. |
+| `text` | `str` | required | The current status, for a person. |
 
 ### NotificationsChanged
 
-The `notifications_changed` push: the counts moved.
+The unread notification counts changed. Refetch the list if you are showing it.
 
-| Field | Type | Default |
-|---|---|---|
-| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cause` | `Literal['server', 'listed', 'marked_read', 'extension', 'signed_out']` | `'server'` | What changed them. `server`: igni server's list was fetched again on its own (after signing in, or when the server said something changed). `listed`: a `notifications_list` call fetched it. `marked_read`: a `notifications_mark_read` call. `extension`: an extension on this machine posted a notice. `signed_out`: the person signed out. |
+| `counts` | [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts) | `{'by_source': {}, 'unread': 0}` | The unread counts now. |
 
-### OutputStyleChangedPayload
+### OrchestrateEventPayload
 
-The `output_style_changed` broadcast, emitted by
-`RuntimeModeCoordinator.set_output_style` after the
-active style has been swapped. The FE refreshes the status
-chip that shows the active style without polling.
+A sub-agent's progress (a tool call, its start, pause, end or error, a task) or a view the agent or an extension drew, told apart by `type`.
 
-| Field | Type | Default |
-|---|---|---|
-| `previous` | `str` | required |
-| `style` | `str` | required |
+No fields.
+
+### OutputStyleChangedEventPayload
+
+The session's output style changed.
+
+Lets a client update whatever shows the active style without
+polling.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `previous` | `str` | required | Name of the output style in effect before the change. |
+| `style` | `str` | required | Name of the output style now in effect. |
+
+### PermissionModeChangedEventPayload
+
+The session's permission mode was switched.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `Literal['switched']` | `'switched'` | always `'switched'`. Always `switched`: the mode was changed directly, as opposed to the agent entering plan mode on its own (reported with kind `plan_mode_entered`). |
+| `mode` | [`PermissionMode`](/docs/sdk/igni-client/models-reference#permissionmode) | required | Permission mode now in effect. |
+| `previous` | [`PermissionMode`](/docs/sdk/igni-client/models-reference#permissionmode) | required | Permission mode in effect before the switch. |
 
 ### PermissionModeChangedPayload
 
-The `permission_mode_changed` broadcast, emitted by
-`RuntimeModeCoordinator.set_permission_mode` after the
-live `PermissionEvaluator` mode flip.
+The session's permission mode changed: the switch itself (`mode` and `previous`), or the plan tool's note that the agent entered plan mode (`mode`, `source`, `reason`).
 
-| Field | Type | Default |
-|---|---|---|
-| `mode` | [`PermissionMode`](/docs/sdk/igni-client/models-reference#permissionmode) | required |
-| `previous` | [`PermissionMode`](/docs/sdk/igni-client/models-reference#permissionmode) | required |
+No fields.
 
-### PlanDecidedPayload
+### PlanDecidedEventPayload
 
-The `plan_decided` broadcast. The FE listens on this
-channel to flip the plan card from pending to
-approved/dismissed.
+A plan the agent proposed was approved or dismissed.
 
-| Field | Type | Default |
-|---|---|---|
-| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required |
-| `run_id` | `str` | required |
+Clients use it to move the plan card from pending to its final
+state.
 
-### PlanModeEnteredPayload
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `decision` | [`PlanDecision`](/docs/sdk/igni-client/models-reference#plandecision) | required | The decision recorded: `approved` or `dismissed`. |
+| `run_id` | `str` | required | Run in which the agent submitted the plan. |
 
-The `permission_mode_changed` broadcast the plan tool fires
-after switching into plan mode. The base flip is already
-broadcast by `RuntimeModeCoordinator`; this follow-up
-carries the agent-attribution + reason string the FE renders as
-a small banner.
+### PlanModeEnteredEventPayload
 
-| Field | Type | Default |
-|---|---|---|
-| `mode` | `Literal['default', 'plan', 'acceptEdits', 'bypassPermissions']` | required |
-| `reason` | `str` | `''` |
-| `source` | `Literal['agent', 'user']` | required |
+Plan mode was entered, with who entered it and why.
 
-### PlanSubmittedPayload
+Sent on the same channel as a plain permission-mode switch, after
+it; a client can show it as a short banner explaining the switch.
 
-The `plan_submitted` broadcast queued by
-`PlanTool.exit_plan_mode`. `tasks` rides along so
-the FE seeds the PlanCard checklist on first render — later
-`todos_updated` pushes refresh statuses live.
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `Literal['plan_mode_entered']` | `'plan_mode_entered'` | always `'plan_mode_entered'`. Always `plan_mode_entered`: tells this message apart from a plain mode switch (kind `switched`) on the same channel. |
+| `mode` | `Literal['default', 'plan', 'acceptEdits', 'bypassPermissions']` | required | Permission mode now in effect: `default` (ask before risky actions), `plan` (read-only planning, no edits), `acceptEdits` (file edits approved automatically) or `bypassPermissions` (no approval prompts). |
+| `reason` | `str` | `''` | Why plan mode was entered, as given. Empty when none was given. |
+| `source` | `Literal['agent', 'user']` | required | Who entered plan mode: `agent` (the agent chose to plan first) or `user`. |
 
-The rows are `TodoItemWire` checklist rows — the same
-shape the `todos_updated` broadcast carries, so the FE reads
-one row type for both channels.
+### PlanSubmittedEventPayload
 
-| Field | Type | Default |
-|---|---|---|
-| `plan` | `str` | required |
-| `run_id` | `str \| None` | `None` |
-| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required |
+The agent submitted a plan for the user to approve or dismiss.
+
+`tasks` is the plan's initial checklist, in the same row shape
+as the `todos_updated` push; later `todos_updated` pushes
+update the rows' statuses as work proceeds.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `plan` | `str` | required | The plan text, in Markdown. |
+| `run_id` | `str \| None` | `None` | Run in which the plan was submitted; pass it back when approving or dismissing the plan. Omitted when not known. |
+| `tasks` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | `[]` | Checklist of the plan's steps, all starting as `pending`. Empty when the plan has no task list. |
 
 ### ProcessExitedPayload
 
-Channel `process_exited`. A background process finished —
-the watcher panel flips its status pill.
+Channel `process_exited`. A background process has finished.
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str \| None` | required |
-| `duration_seconds` | `float \| None` | required |
-| `exit_code` | `int \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str \| None` | required | The command it ran; `null` when unknown. |
+| `duration_seconds` | `float \| None` | required | How long it ran, in seconds; `null` when unknown. |
+| `exit_code` | `int \| None` | required | Its exit code; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
 ### ProcessLinePayload
 
-Channel `process_line`. One line of stdout/stderr from a
-running background process (streamed live to the watcher panel).
+Channel `process_line`. One line of output from a running
+background process, sent as it is printed.
 
-| Field | Type | Default |
-|---|---|---|
-| `line` | `str \| None` | required |
-| `pid` | `int \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `line` | `str \| None` | required | The line, from stdout or stderr, without its line ending; `null` when there is none. |
+| `pid` | `int \| None` | required | The process's id; `null` when unknown. |
 
 ### ProcessStartedPayload
 
-Channel `process_started`. Emitted when the shell tool
-launches a new background process.
+Channel `process_started`. A background process has started.
 
-| Field | Type | Default |
-|---|---|---|
-| `cmd` | `str \| None` | required |
-| `pid` | `int \| None` | required |
-| `started_at` | `float \| None` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cmd` | `str \| None` | required | The command it runs; `null` when unknown. |
+| `pid` | `int \| None` | required | The process's id, which its later `process_*` pushes carry; `null` when unknown. |
+| `started_at` | `float \| None` | required | When it started, in seconds since the Unix epoch; `null` when unknown. |
 
 ### RunErrorEvent
 
+A sub-agent's run failed.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `error` | `str` | required |  |
-| `type` | `Literal['run_error']` | `'run_error'` | always `'run_error'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `error` | `str` | required | Error message describing the failure. |
+| `type` | `Literal['run_error']` | `'run_error'` | always `'run_error'`. Always `run_error`: what kind of message this is. |
 
 ### SchedulerCompletedPayload
 
-Channel `scheduler_completed`. Terminal result of a
-scheduled task's execution.
-
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `result` | `str` | required |
-| `task_id` | `str` | required |
-
-### SchedulerStartedPayload
-
-Channel `scheduler_started`. The scheduled-task runner just
-picked up a task and started executing it.
-
-| Field | Type | Default |
-|---|---|---|
-| `description` | `str` | required |
-| `task_id` | `str` | required |
-
-### SessionNamedPayload
-
-Channel `session_named`. The BE picked an auto-generated
-display name for a freshly-created session.
-
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `session_id` | `str` | required |
-
-### TaskCreatedEvent
+Channel `scheduler_completed`. A scheduled task has finished.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `assignee` | `str` | `''` |  |
-| `card_id` | `str \| None` | `None` |  |
-| `title` | `str` | `''` |  |
-| `type` | `Literal['task_created']` | `'task_created'` | always `'task_created'`. |
+| `description` | `str` | required | What the task does, as it was scheduled. |
+| `result` | `str` | required | The task's outcome, as text. |
+| `task_id` | `str` | required | The scheduled task's id. |
+
+### SchedulerStartedPayload
+
+Channel `scheduler_started`. A scheduled task has started running.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `description` | `str` | required | What the task does, as it was scheduled. |
+| `task_id` | `str` | required | The scheduled task's id. |
+
+### SessionNamedPayload
+
+Channel `session_named`. igni has given a new session a
+generated display name.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | Its new display name. |
+| `session_id` | `str` | required | The session that was named. |
+
+### TaskCreatedEvent
+
+A task was added to a team's task list.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `assignee` | `str` | `''` | Name of the team member assigned the task. Empty when unassigned. |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `title` | `str` | `''` | Task title. Empty when not given. |
+| `type` | `Literal['task_created']` | `'task_created'` | always `'task_created'`. Always `task_created`: what kind of message this is. |
 
 ### TaskSnapshot
 
-One task row inside a `TaskStateUpdated` batch.
+One task of a team run, as it stands now.
 
-Pre-refactor, `TaskStateUpdated.tasks` was
-`list[dict[str, Any]]` — an untyped bag that every callsite
-had to remember the keys of (`task_id` / `title` /
-`status` / `assignee`). Tightening it to this schema is
-wire-compatible: Pydantic serialises `TaskSnapshot` to the
-exact same JSON dict, and Pydantic's dict-coercion means
-`TaskStateUpdated(tasks=[{...}])` still works for callers
-that pass raw dicts.
-
-| Field | Type | Default |
-|---|---|---|
-| `assignee` | `str` | `''` |
-| `status` | `str` | `''` |
-| `task_id` | `str` | `''` |
-| `title` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `assignee` | `str` | `''` | The name of the member doing it; empty when unassigned. |
+| `status` | `str` | `''` | The task's status: `pending`, `running`, `completed`, `failed` or `cancelled`. Other values may appear; treat them as unknown. |
+| `task_id` | `str` | `''` | The task's id. |
+| `title` | `str` | `''` | What the task is, in a few words. |
 
 **Part of** [`TaskStateUpdated`](/docs/sdk/igni-client/events-reference#taskstateupdated).
 
 ### TaskUpdatedEvent
 
+A task in a team's task list changed status.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `status` | `str` | `''` |  |
-| `type` | `Literal['task_updated']` | `'task_updated'` | always `'task_updated'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `status` | `str` | `''` | New task status, such as `running`, `completed` or `failed`. Empty when unknown. |
+| `type` | `Literal['task_updated']` | `'task_updated'` | always `'task_updated'`. Always `task_updated`: what kind of message this is. |
 
-### TodosUpdatedPayload
+### TodosUpdatedEventPayload
 
-The `todos_updated` broadcast: the full todo snapshot in
-its `TodoItemWire` camelCase shape.
+The agent's todo checklist changed; carries the whole new list.
 
-| Field | Type | Default |
-|---|---|---|
-| `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required | The full checklist, in order. Replaces any list received before; empty when the agent cleared it. |
 
 ### ToolCompletedEvent
 
+A sub-agent's tool call finished — or failed, which is what
+`is_error` says.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `card_id` | `str \| None` | `None` |  |
-| `is_error` | `bool` | `False` |  |
-| `result` | `str` | `''` |  |
-| `tool` | `str` | required |  |
-| `tool_call_id` | `str \| None` | `None` |  |
-| `type` | `Literal['tool_completed']` | `'tool_completed'` | always `'tool_completed'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `is_error` | `bool` | `False` | True when the tool call failed. |
+| `result` | `str` | `''` | Preview of the tool output, or the error message when `is_error` is true; may be truncated. Empty when none. |
+| `tool` | `str` | required | Name of the tool that was called. |
+| `tool_call_id` | `str \| None` | `None` | Identifier of this tool call; matches the earlier `tool_started` event. Null when the model did not supply one. |
+| `type` | `Literal['tool_completed']` | `'tool_completed'` | always `'tool_completed'`. Always `tool_completed`: what kind of message this is. |
 
 ### ToolStartedEvent
 
+A tool call started: a sub-agent began calling a tool.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | required |  |
-| `args` | `str` | `''` |  |
-| `card_id` | `str \| None` | `None` |  |
-| `tool` | `str` | required |  |
-| `tool_call_id` | `str \| None` | `None` |  |
-| `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. |
+| `agent_path` | `str` | required | Dot-joined names of the agent that emitted the event, from the outermost spawning agent down to the emitter (`root` for the top level). |
+| `args` | `str` | `''` | Preview of the tool arguments as text (usually JSON, may be truncated). Empty when none. |
+| `card_id` | `str \| None` | `None` | Identifier of the team-progress card this event belongs to. All events of one spawn share it. Null when the event is not tied to a card. |
+| `tool` | `str` | required | Name of the tool being called. |
+| `tool_call_id` | `str \| None` | `None` | Identifier of this tool call; matches the `tool_completed` event for the same call. Null when the model did not supply one. |
+| `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. Always `tool_started`: what kind of message this is. |
 
-### VisualizationActionDispatchedPayload
+### VisualizationActionDispatchedEventPayload
 
 The `visualization_action_dispatched` broadcast, so log panels
 and dev tools can observe component interactions.
 
-| Field | Type | Default |
-|---|---|---|
-| `action` | `str` | required |
-| `params` | `dict[str, JsonValue]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `action` | `str` | required | Name of the action the user triggered in the visualization. |
+| `params` | `dict[str, JsonValue]` | required | Parameters the visualization attached to the action. |
 
 ### VisualizationDeltaPayload
 
-The payload of a `visualization_delta` entry: the viz card.
+A visualization card recorded in the session's event log.
 
-Subclasses the wire event the visualizer and the extensions send,
-so the log keeps one shape for a card; the two additions are the
-labels an extension's `chat.append` puts on its block — the
-card's `title` and the extension's id as `source`. The
-visualizer sends neither, so both read empty.
-
-`final` defaults to `True` here (the wire event defaults to
-`False`): a payload without the key means "the card is
-complete", which is the convention the view list and the history
-splicer have always read. The card's own fields default too — a
-producer that sends a partial card is logged as it sent it, and
-the readers skip what they can't use.
+The card's spec arrives as JSON text, possibly in several partial
+updates sharing one `spec_id`; the update with `final` set holds
+the complete spec. `title` and `source` are set only for cards
+an extension added to the chat.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `agent_path` | `str` | `''` |  |
-| `final` | `bool` | `True` |  |
-| `json_` (wire `json`) | `str` | `''` |  |
-| `source` | `str` | `''` |  |
-| `spec_id` | `str` | `''` |  |
-| `title` | `str` | `''` |  |
-| `type` | `Literal['visualization_delta']` | `'visualization_delta'` | always `'visualization_delta'`. |
+| `agent_path` | `str` | `''` | Dot-joined names of the agent that produced the card. Empty when not known. |
+| `card_id` | `str \| None` | `None` | The card this delta belongs to; it is not part of the event's wire shape. |
+| `final` | `bool` | `True` | True when `json` holds the complete spec; false for an in-progress update. |
+| `json_` (wire `json`) | `str` | `''` | The card's visualization spec as JSON text. Partial (possibly incomplete JSON) until `final` is true. |
+| `source` | `str` | `''` | Id of the extension that added the card. Empty for cards produced by an agent. |
+| `spec_id` | `str` | `''` | Identifier of the card; later updates with the same id replace earlier ones. |
+| `title` | `str` | `''` | Card title given by the extension that added it. Empty otherwise. |
+| `type` | `Literal['visualization_delta']` | `'visualization_delta'` | always `'visualization_delta'`. Always `visualization_delta`: what kind of message this is. |
 
 ### VmCredentialState
 
-`vm_sign_in`'s answer: the state of the VM's own credential after the sign-in.
+The state of a cloud VM's own credential after it signed in.
 
-The layer's credential keeper answers with its own model; it is read
-into this one, so what goes on the wire is what is published.
-
-| Field | Type | Default |
-|---|---|---|
-| `message` | `str` | `''` |
-| `state` | `Literal['ready', 'needs_sign_in', 'needs_reissue', 'unreachable']` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `message` | `str` | `''` | What went wrong; empty when nothing did. |
+| `state` | `Literal['ready', 'needs_sign_in', 'needs_reissue', 'unreachable']` | required | `ready`: the VM holds a credential and a token from it. `needs_sign_in`: the person must sign in through the gateway again. `needs_reissue`: an app VM's credential is gone and an organisation admin must re-issue it. `unreachable`: igni server could not be reached; the last token holds until it expires. |
 
 ### WindowChange
 
@@ -2110,54 +2074,45 @@ One change to one window's model, as listeners are told it.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `answer` | `JsonValue` | `None` | Any JSON value. |
-| `event` | `str` | `''` |  |
-| `field` | `str` | required |  |
-| `item` | `dict[str, JsonValue] \| None` | `None` |  |
-| `rev` | `int` | required |  |
-| `token` | `str` | `''` |  |
-| `value` | `JsonValue` | `None` | Any JSON value. |
-| `window` | `str` | required |  |
+| `answer` | `JsonValue \| None` | `None` | The answer given to the dialog, as JSON; null when it was dismissed. |
+| `event` | `str` | `''` | What happened, for the fields that hold a list or a dialog: `toast_shown`, `toast_dismissed`, `dialog_opened` or `dialog_closed`; empty otherwise. |
+| `field` | `str` | required | Which of the window's fields changed. |
+| `item` | `WindowItem \| None` | `None` | The toast or the dialog the event is about. |
+| `rev` | `int` | required | The window's revision after the change. |
+| `token` | `str` | `''` | The writer's own name for the write, echoed so the window that wrote it knows its own write; empty for an extension's. |
+| `value` | `JsonValue \| None` | `None` | The field's new value, as JSON. |
+| `window` | `str` | required | The window whose model changed. |
 
 ### WorkflowEventRecord
 
-One workflow event as the session log stores it and the frontend
-receives it on the `workflow_event` push channel.
+One progress event from a running workflow, as pushed on the
+`workflow_event` channel and kept in the session log.
 
-`payload` is the runtime's payload, forwarded as-is, or a dumped
-`SyntheticTerminalPayload`.
-
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `payload` | `dict[str, JsonValue]` | required |
-| `seq` | `int` | required |
-| `ts` | `int` | required |
-| `type` | `str` | required |
-| `workflow_run_id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | Name of the workflow. |
+| `payload` | `dict[str, JsonValue]` | required | Event details; keys depend on `type`. For the final event added by igni: `status` (`completed`, `failed` or `cancelled`), `exit_code` and `synthetic`. |
+| `seq` | `int` | required | Order of the event within its run, from `0`. `-1` for the final event igni adds itself when the workflow process exits without reporting an end. |
+| `ts` | `int` | required | When the event happened, in Unix epoch milliseconds. |
+| `type` | `str` | required | Event kind, e.g. `workflow_meta`, `phase_*`, `agent_*`, `parallel_*`, `pipeline_*`, `log`, and the final `workflow_completed` or `workflow_failed`. |
+| `workflow_run_id` | `str` | required | Id of the workflow run the event belongs to. |
 
 ## In arguments
 
 ### ToolCallArgs
 
-Typed replacement for the raw `dict[str, Any]`
-`tool_args` payload at the RPC wire seam.
+The arguments of a tool call, as a JSON object.
 
-Each tool defines its own arg keys (`command` for bash,
-`file_path` for read/write, `url` for fetch, …); we don't
-enumerate every one here because the set grows with the tool
-registry. `extra='allow'` preserves every provided key at the
-Pydantic seam so the downstream `ToolPermissions.check` reads
-them unchanged. Named fields are the common ones — they give
-static coverage for the handful of well-known keys without
-forcing the schema to know every tool.
+Each tool defines its own keys; any key is accepted and kept. The
+common ones are named below; leave out the ones the tool does not
+use.
 
-| Field | Type | Default |
-|---|---|---|
-| `command` | `str` | `''` |
-| `file_path` | `str` | `''` |
-| `query` | `str` | `''` |
-| `url` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `command` | `str` | `''` | Shell command, for shell tools. |
+| `file_path` | `str` | `''` | File path, for file read/write/edit tools. |
+| `query` | `str` | `''` | Search query, for search tools. |
+| `url` | `str` | `''` | URL, for web-fetch tools. |
 
 **Part of** [`CheckPermissionArgs`](/docs/sdk/igni-client/permissions#session-permissions-check).
 
@@ -2175,33 +2130,40 @@ One of [`BuiltinSlashCommand`](/docs/sdk/igni-client/models-reference#builtinsla
 
 Told apart by `source`.
 
+### WindowItem
+
+One of [`Toast`](/docs/sdk/igni-client/models-reference#toast) \| [`Dialog`](/docs/sdk/igni-client/models-reference#dialog).
+
+Told apart by `type`.
+
 ### WindowModelResult
 
 One of [`Hydrated`](/docs/sdk/igni-client/models-reference#hydrated) \| [`Written`](/docs/sdk/igni-client/models-reference#written) \| [`ToastAdded`](/docs/sdk/igni-client/models-reference#toastadded) \| [`Revised`](/docs/sdk/igni-client/models-reference#revised) \| [`DialogShown`](/docs/sdk/igni-client/models-reference#dialogshown) \| [`DialogAnswered`](/docs/sdk/igni-client/models-reference#dialoganswered).
 
-Nothing in the contract tells them apart: the one that fits best is taken.
+Told apart by `op`.
 
 ## Enumerations
 
 ### CommandAction
 
-Closed set of actions a `CommandResult` can request.
+What a command result asks the client to do.
 
-Was an unconstrained `str` field — comparisons in
-`app.py`/`commands.py` used string literals like
-`"quit"`, `"clear"`, which made typos silent (mismatched
-arm would never fire) and made it hard to know the full
-surface from one place. `StrEnum` keeps wire compatibility
-(Pydantic serialises enum values to their strings) while
-giving the dispatch sites a single authoritative list.
-
-There is deliberately no `UNKNOWN` member and no `_missing_`
-override here (unlike the ingest-side enums — see the module
-docstring). Every `CommandAction` is stamped in-process by this
-backend's own command handlers; nothing parses one back off the
-wire on the Python side, so an unlisted value means a producer
-typo and should raise at construction rather than degrade into a
-silent no-op. `NONE` (`""`) is the real "no action" value.
+* empty: nothing; just show `content`.
+* `quit`: close the client.
+* `clear`: clear the conversation view.
+* `fork`: the session was duplicated; `content` is the new session's id.
+* `sessions`: show the saved sessions.
+* `model`: show the model picker.
+* `model_switched`: the model changed; refresh what shows it.
+* `login` / `logout`: start signing in / out of igni cloud.
+* `help`: show help.
+* `mcp`, `plugins`, `extensions`, `agents`, `skills`,
+  `hooks`, `loop`, `schedule`: open the page that manages them.
+* `watcher`: open the background-process panel.
+* `compact`: compact the conversation.
+* `ctx`: open the context-breakdown page.
+* `programs`: open the approver-token page.
+* `run_prompt`: send `content` to the agent as a prompt.
 
 One of `''`, `'quit'`, `'clear'`, `'fork'`, `'sessions'`, `'model'`, `'model_switched'`, `'login'`, `'logout'`, `'help'`, `'mcp'`, `'plugins'`, `'extensions'`, `'agents'`, `'skills'`, `'hooks'`, `'loop'`, `'schedule'`, `'watcher'`, `'compact'`, `'ctx'`, `'programs'`, `'run_prompt'`.
 
@@ -2209,20 +2171,13 @@ One of `''`, `'quit'`, `'clear'`, `'fork'`, `'sessions'`, `'model'`, `'model_swi
 
 ### CommandResultKind
 
-How the FE should render a `CommandResult.content` payload.
+How a client should show a command result's `content`.
 
-Was a free-string field so producers and consumers had to agree
-on literals like `"info"` / `"markdown"` without any
-type-checker help. Wire format stays string-compatible via
-`StrEnum`.
-
-* `MARKDOWN` — render as rich markdown (default for slash
-  commands that emit long-form help text).
-* `INFO` — single-line dim chat line (status updates,
-  confirmations).
-* `ERROR` — single-line red chat line.
-* `ACTION` — no content to render directly; the FE
-  dispatches off `action` to open a panel / picker / etc.
+* `markdown`: render as Markdown (long-form text such as help).
+* `info`: a single, quiet line (status, confirmations).
+* `error`: a single line shown as an error.
+* `action`: nothing to show; act on the result's `action`
+  instead (open a panel, a picker, ...).
 
 One of `'markdown'`, `'info'`, `'error'`, `'action'`.
 
@@ -2230,7 +2185,11 @@ One of `'markdown'`, `'info'`, `'error'`, `'action'`.
 
 ### NotificationOrigin
 
-Which of the two paths a notification came by.
+Where a notification came from.
+
+* `server`: delivered by igni server, which keeps whether it was read.
+* `local`: posted by an extension on this machine; this igni keeps
+  whether it was read.
 
 One of `'server'`, `'local'`.
 
@@ -2248,7 +2207,7 @@ prompts unless an explicit deny / ask rule matches.
 
 One of `'default'`, `'dontAsk'`, `'acceptEdits'`, `'bypassPermissions'`, `'plan'`.
 
-**Part of** [`PermissionModeChangedPayload`](/docs/sdk/igni-client/models-reference#permissionmodechangedpayload).
+**Part of** [`PermissionModeChangedEventPayload`](/docs/sdk/igni-client/models-reference#permissionmodechangedeventpayload).
 
 ### PlanDecision
 
@@ -2258,11 +2217,24 @@ wire strings so serialised blobs round-trip cleanly.
 
 One of `'approved'`, `'dismissed'`.
 
-**Part of** [`PlanDecidedPayload`](/docs/sdk/igni-client/models-reference#plandecidedpayload), [`PlanDecisionResult`](/docs/sdk/igni-client/models-reference#plandecisionresult).
+**Part of** [`PlanDecidedEventPayload`](/docs/sdk/igni-client/models-reference#plandecidedeventpayload), [`PlanDecisionResult`](/docs/sdk/igni-client/models-reference#plandecisionresult).
+
+### RpcErrorCode
+
+Why a call failed, as a word a client can branch on; `error` beside
+it is the sentence for a person.
+
+One of `'unknown_method'`, `'invalid'`, `'forbidden'`, `'not_found'`, `'refused'`, `'unavailable'`, `'cancelled'`, `'failed'`.
+
+**Part of** [`RpcResponse`](/docs/sdk/igni-client/events-reference#rpcresponse).
 
 ### TaskStatus
 
 Lifecycle of one scheduled task.
+
+`pending` (waiting for its time), `running` (executing now),
+`completed` (finished successfully), `failed` (finished with an
+error) or `cancelled` (cancelled before it ran).
 
 One of `'pending'`, `'running'`, `'completed'`, `'failed'`, `'cancelled'`.
 

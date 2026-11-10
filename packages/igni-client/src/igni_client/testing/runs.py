@@ -55,6 +55,10 @@ class FakeRuns:
             UserMessageReceived(session_id=message.session_id, text=message.text, queued=True)
         )
 
+    def running(self, session_id: str) -> bool:
+        """Whether a turn is running in `session_id`."""
+        return bool(self._active.get(session_id))
+
     async def cancel(self, cancel: Cancel) -> None:
         active = self._active.pop(cancel.session_id, "")
         if not active:

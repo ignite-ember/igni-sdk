@@ -34,12 +34,12 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Bind to a session — an existing one, or a new one in a project folder.
 
 ```python
-async def attach(
+def attach(
     self,
     *,
     project_dir: str = '',
     session_id: str = '',
-) -> AttachSessionResult
+) -> Call[AttachSessionResult, AttachSessionEvent]
 ```
 
 `session_id` names the session to resume; `project_dir` the folder
@@ -54,31 +54,37 @@ waiting on is shown again (a `run_paused` carrying its
 `hitl_request` items), since a client that reloaded lost its
 dialog; a run igni was continuing when it stopped is reported with
 an `info`, and a sub-agent's interrupted run is continued, which
-streams as any run does.
+streams as any run does. Each of those messages carries this
+request's `id`, and a `stream_end` of that `id` ends them.
 
 Fails when `project_dir` is not a directory, or the session belongs
-to another project.
+to another project folder — an attach never moves a session.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `project_dir` | `str` | `''` | `project_dir` the folder it works in. |
-| `session_id` | `str` | `''` | `session_id` names the session to resume; |
+| `project_dir` | `str` | `''` | The folder the session works in; empty for igni's own. |
+| `session_id` | `str` | `''` | The session to attach to; empty for the default one, or a new one when `project_dir` is given. |
 
-**Returns** [`AttachSessionResult`](/docs/sdk/igni-client/models-reference#attachsessionresult).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`AttachSessionResult`](/docs/sdk/igni-client/models-reference#attachsessionresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `content_delta`, `error`, `info`, `model_completed`, `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `plan_submitted`, `process_exited`, `process_line`, `process_started`, `todos_updated`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started` ([`ContentDelta`](/docs/sdk/igni-client/events-reference#contentdelta), [`ErrorMessage`](/docs/sdk/igni-client/events-reference#errormessage), [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`ModelCompleted`](/docs/sdk/igni-client/events-reference#modelcompleted), [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`FileEditedPush`](/docs/sdk/igni-client/events-reference#fileeditedpush), [`HttpRetryAttemptPush`](/docs/sdk/igni-client/events-reference#httpretryattemptpush), [`HttpRetrySucceededPush`](/docs/sdk/igni-client/events-reference#httpretrysucceededpush), [`OrchestrateEventPush`](/docs/sdk/igni-client/events-reference#orchestrateeventpush), [`PermissionModeChangedPush`](/docs/sdk/igni-client/events-reference#permissionmodechangedpush), [`PlanSubmittedPush`](/docs/sdk/igni-client/events-reference#plansubmittedpush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush), [`TodosUpdatedPush`](/docs/sdk/igni-client/events-reference#todosupdatedpush), [`ReasoningStarted`](/docs/sdk/igni-client/events-reference#reasoningstarted), [`RequirementDetails`](/docs/sdk/igni-client/events-reference#requirementdetails), [`RunCompleted`](/docs/sdk/igni-client/events-reference#runcompleted), [`RunError`](/docs/sdk/igni-client/events-reference#runerror), [`RunPaused`](/docs/sdk/igni-client/events-reference#runpaused), [`RunStarted`](/docs/sdk/igni-client/events-reference#runstarted), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend), [`StreamingDone`](/docs/sdk/igni-client/events-reference#streamingdone), [`TaskCreated`](/docs/sdk/igni-client/events-reference#taskcreated), [`TaskIteration`](/docs/sdk/igni-client/events-reference#taskiteration), [`TaskStateUpdated`](/docs/sdk/igni-client/events-reference#taskstateupdated), [`TaskUpdated`](/docs/sdk/igni-client/events-reference#taskupdated), [`ToolCompleted`](/docs/sdk/igni-client/events-reference#toolcompleted), [`ToolError`](/docs/sdk/igni-client/events-reference#toolerror), [`ToolStarted`](/docs/sdk/igni-client/events-reference#toolstarted)). This call does not follow them: the approvals and runs it shows again carry no request id and no end, and every client attaching the session shows them again; watch them with `session.events()`, which offers each waiting approval as an `ApprovalRequested`.
+**Events** `AttachSessionEvent` is any of [`ContentDelta`](/docs/sdk/igni-client/events-reference#contentdelta), [`ErrorMessage`](/docs/sdk/igni-client/events-reference#errormessage), [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`ModelCompleted`](/docs/sdk/igni-client/events-reference#modelcompleted), [`ReasoningStarted`](/docs/sdk/igni-client/events-reference#reasoningstarted), [`RequirementDetails`](/docs/sdk/igni-client/events-reference#requirementdetails), [`RunCompleted`](/docs/sdk/igni-client/events-reference#runcompleted), [`RunError`](/docs/sdk/igni-client/events-reference#runerror), [`RunPaused`](/docs/sdk/igni-client/events-reference#runpaused), [`RunStarted`](/docs/sdk/igni-client/events-reference#runstarted), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend), [`StreamingDone`](/docs/sdk/igni-client/events-reference#streamingdone), [`TaskCreated`](/docs/sdk/igni-client/events-reference#taskcreated), [`TaskIteration`](/docs/sdk/igni-client/events-reference#taskiteration), [`TaskStateUpdated`](/docs/sdk/igni-client/events-reference#taskstateupdated), [`TaskUpdated`](/docs/sdk/igni-client/events-reference#taskupdated), [`ToolCompleted`](/docs/sdk/igni-client/events-reference#toolcompleted), [`ToolError`](/docs/sdk/igni-client/events-reference#toolerror), [`ToolStarted`](/docs/sdk/igni-client/events-reference#toolstarted) (igni streams `content_delta`, `error`, `info`, `model_completed`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started`).
+
+**How they are told apart** `async with` the call to follow it: it yields the approvals the session is still waiting for and the run it continues again — every message of them carries the attach's own request id — and ends with the `stream_end` that closes them.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `attach_session`, scope `session`, area `attach_session`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-attached = await igni.sessions.attach(session_id="0b7c…", project_dir="/work/api")
-print(attached.session_id, attached.project_dir)
+async with igni.sessions.attach(session_id="0b7c…", project_dir="/work/api") as attached:
+    async for event in attached:
+        print(event.type)  # the approvals the session is still waiting on
+    bound = await attached.result()
+    print(bound.session_id, bound.project_dir)
 ```
 
 ## session.status()
@@ -266,7 +272,7 @@ an empty session under that id.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `session_id` | `str` | required | `session_id` is the stored session to continue; the conversation, its history and its runs are read from it from now on. |
+| `session_id` | `str` | required | Id of the session to act on. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
@@ -288,30 +294,36 @@ print(info.text)
 Stop the turn this session is running.
 
 ```python
-async def cancel(self) -> None
+def cancel(self) -> Call[CancelRunResult, CancelRunEvent]
 ```
 
-Takes no arguments and returns nothing; with no turn running it does
-nothing. The turn's stream ends with an `info` saying it was
+Takes no arguments. Returns `cancelled`: whether a turn was
+running. Its stream then ends with an `info` saying it was
 cancelled and its `stream_end`, and the run is recorded as
-interrupted. A foreground shell command the turn started is killed.
+interrupted; a foreground shell command the turn started is killed.
+With no turn running nothing happens and nothing is streamed.
 
 Takes no arguments.
 
-**Returns** `None`.
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`CancelRunResult`](/docs/sdk/igni-client/models-reference#cancelrunresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `info`, `stream_end` ([`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend)). This call does not follow them: the `info` and `stream_end` it causes belong to the turn it stops, whose own stream (`session.send()`) ends with them; with no turn going nothing follows, and the answer does not say which it was.
+**Events** `CancelRunEvent` is any of [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend) (igni streams `info`, `stream_end`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `cancel_run`, scope `session`, area `session`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-await session.cancel()
+async with session.cancel() as stopping:
+    async for event in stopping:
+        print(event.type)  # the info and the stream_end of the turn
+    print((await stopping.result()).cancelled)
 ```
 
 ## session.shutdown()
@@ -358,7 +370,7 @@ async def typing(self, text: str = '') -> None
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `text` | `str` | `''` | `text` is the whole draft, not a change to it; empty clears it. igni relays it to every client attached, this one included, as a `Typing` event. |
+| `text` | `str` | `''` | The whole draft so far; empty when it was sent or cleared. |
 
 **Returns** `None`.
 
@@ -397,8 +409,8 @@ Fails when the file cannot be stored.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `content_base64` | `str` | required | `content_base64` its bytes, base64-encoded. |
-| `filename` | `str` | required | `filename` is the file's name (made safe for the disk; a clash gets a `-N` suffix); |
+| `content_base64` | `str` | required | The file's bytes, base64-encoded. |
+| `filename` | `str` | required | The file's name. It is made safe for the disk; a name clash gets a `-N` suffix. |
 
 **Returns** [`UploadAttachmentResult`](/docs/sdk/igni-client/models-reference#uploadattachmentresult).
 
@@ -520,8 +532,8 @@ later sessions, and a failure is only logged.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `assistant_msg` | `str` | required | `user_msg` and `assistant_msg` are the turn's message and answer. |
-| `user_msg` | `str` | required | `user_msg` and `assistant_msg` are the turn's message and answer. |
+| `assistant_msg` | `str` | required | The assistant's answer in the turn. |
+| `user_msg` | `str` | required | The user's message in the turn. |
 
 **Returns** `None`.
 
@@ -560,8 +572,8 @@ Returns the action and params as recorded, with `ok`.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `str` | `''` | `action` is the control's action name; |
-| `params` | `dict[str, JsonValue] \| None` | `None` | `params` the values the view attached to it (JSON). |
+| `action` | `str` | `''` | The control's action name. |
+| `params` | `dict[str, JsonValue] \| None` | `None` | Values the visualization attached to the action; omit for none. |
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`VisualizationActionResult`](/docs/sdk/igni-client/models-reference#visualizationactionresult), or `async with` it to follow its events too.
 

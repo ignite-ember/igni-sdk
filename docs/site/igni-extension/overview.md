@@ -2,64 +2,36 @@
 
 # Overview
 
-An igni extension's process, as its author writes it: tools igni can
-call, its own service reached as the signed-in person, and the host it
-runs in — without an address, a token or a protocol message in the
-extension's code.
+**The Python SDK for an igni extension's process.**
+
+An igni extension usually comes in two parts:
+
+- **The extension itself** runs inside igni, on each person's device or in
+  their Fleet VM. It has a *page*, shown in the igni app (a sandboxed
+  frame, built with the npm package `@ignite-ember/extension-bridge`), and
+  a *process*, which the igni backend on the device starts in an OS
+  sandbox. The process gives the agent tools, has a say in what the agent
+  does through hooks, and can drive the igni app. **The process is built
+  with this package.**
+- **Its backend service** is your web service. It runs once, in the
+  organisation's cloud or data centre, and keeps what is shared between
+  people. It is built with `igni-service`.
+
+The process and the page call the backend service **as the person signed
+in to igni**. This package fetches that person's token from the igni
+backend, attaches it to every request and renews it. Your code never
+holds an address, a token or a protocol message.
+
+| Package | What it is for | Where it runs |
+|---|---|---|
+| `igni-service` | an extension's backend service: joins it to igni, ships the extension bundle, talks to igni server for an organisation | the organisation's cloud or data centre, once |
+| `igni-extension` | the extension's process: tools, hooks, reactions, its service as the person (this package) | inside igni, on each person's device or Fleet VM |
+| `igni-client` | your own program driving an igni from outside: sessions, prompts, commands | wherever your program runs |
+
+Everything runs in the organisation's own infrastructure: igni server,
+Fleet and every service. Ignite Ember hosts nothing.
 
 Building an extension for the first time? Follow
-[Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md) from an empty
-directory to a tool the agent calls, a page, a hook and a service; this
-README is the reference.
-
-**How an extension reaches people.** Its service uploads the signed
-bundle to igni server at start-up. Two decisions then put it on a
-person's machine, and both are needed: a **super admin approves the
-service** (portal, *Services*), and an **org admin switches the
-extension on for a group** (portal, *Extensions*). Every signed-in igni
-of a person in that group then installs it the next time it syncs with igni server. Approval
-alone installs it nowhere.
-
-```python
-from igni_extension import IgniExtension, LocalNotification, NotSignedIn, Target, ToolHints
-
-ext = IgniExtension("acme.example")
-
-READS = ToolHints(read_only=True, destructive=False, idempotent=True, open_world=False)
-
-@ext.tool(hints=READS)
-async def summarise(slug: str) -> str:
-    """Summarise one of the organisation's documents."""
-    try:
-        response = await ext.service.get(f"/documents/{slug}/summary")
-    except NotSignedIn:
-        return "Sign in to igni to read documents."
-    response.raise_for_status()
-    return response.json()["summary"]
-
-@ext.tool(hints=ToolHints(read_only=False, destructive=False, idempotent=False, open_world=False))
-async def export(slug: str) -> str:
-    """Export a document to PDF and say so when it is ready."""
-    export_id = await render_pdf(slug)
-    await ext.host.notifications.notify(
-        LocalNotification(
-            kind="export_ready",
-            title=f"{slug}.pdf",
-            body="Your export is ready",
-            target=Target(page="acme.example", params={"export": export_id}),
-            event_key=f"export:{export_id}",
-        )
-    )
-    return export_id
-
-async def render_pdf(slug: str) -> str:
-    return f"export-{slug}"   # your own work
-
-def main() -> None:   # the console script the manifest's `python.entry` names
-    ext.run()
-```
-
-`ext.run()` serves igni over stdio. Started from a terminal rather than by
-igni, it says so on stderr — how to run it inside igni, and how to try a
-tool without it (*Testing an extension*) — and then waits for MCP as
-before.
+[Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md)
+from an empty directory to a tool the agent calls, a page, a hook and a
+service. This README is the reference.

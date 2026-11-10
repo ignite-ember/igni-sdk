@@ -19,8 +19,11 @@ from __future__ import annotations
 EXAMPLES: dict[str, str] = {
     # ── igni as a whole ──────────────────────────────────────────────
     "attach_session": """
-attached = await igni.sessions.attach(session_id="0b7c…", project_dir="/work/api")
-print(attached.session_id, attached.project_dir)
+async with igni.sessions.attach(session_id="0b7c…", project_dir="/work/api") as attached:
+    async for event in attached:
+        print(event.type)  # the approvals the session is still waiting on
+    bound = await attached.result()
+    print(bound.session_id, bound.project_dir)
 """,
     "cancel_agent_run": """
 answer = await igni.agents.cancel_run("run_42")
@@ -85,9 +88,19 @@ print(info.text)
 info = await igni.marketplaces.remove("acme")
 print(info.text)
 """,
+    "notifications_list": """
+async with igni.notifications.list() as listing:
+    async for event in listing:
+        print(event.payload.counts.unread)
+    listed = await listing.result()
+    print([n.title for n in listed.notifications])
+""",
     "notifications_mark_read": """
-read = await igni.notifications.mark_read(source="acme.tickets")
-print(read.counts.unread, "unread left")
+async with igni.notifications.mark_read(source="acme.tickets") as marking:
+    async for event in marking:
+        print(event.payload.counts.unread)
+    read = await marking.result()
+    print(read.counts.unread, "unread left")
 """,
     "stop_background_process": """
 from igni_client.models import BackgroundProcessDonePush, ProcessLinePush
@@ -108,12 +121,17 @@ if not tail.is_running:
     print("exit code", tail.exit_code)
 """,
     "window_model": """
-changed = await igni.window.model(op="toast", window="main", value={"text": "Deployed"})
-print(changed)
+async with igni.window.model(op="toast", window="main", value={"text": "Deployed"}) as changed:
+    async for event in changed:
+        print(event.payload.window, event.payload.field)
+    print((await changed.result()).rev)
 """,
     # ── One session ──────────────────────────────────────────────────
     "cancel_run": """
-await session.cancel()
+async with session.cancel() as stopping:
+    async for event in stopping:
+        print(event.type)  # the info and the stream_end of the turn
+    print((await stopping.result()).cancelled)
 """,
     "shutdown": """
 await session.shutdown()
@@ -144,9 +162,15 @@ await session.extract_learnings(
 )
 """,
     "run_shell": """
-result = await session.run_shell("git status --short")
-print(result.exit_code)
-print(result.output)
+from igni_client.models import ProcessLinePush
+
+async with session.run_shell("git status --short") as run:
+    async for event in run:
+        if isinstance(event, ProcessLinePush):
+            print(event.payload.line)  # a command that outlives the wait
+    result = await run.result()
+    print(result.exit_code)
+    print(result.output)
 """,
     "dispatch_visualization_action": """
 async with session.visualization_action(action="select", params={"row": 3}) as dispatched:
@@ -231,8 +255,10 @@ print(verdict)  # "allow", "ask" or "deny"
 await session.permissions.save_rule(rule="Bash(git status:*)", level="allow")
 """,
     "set_workspace_trust": """
-status = await session.workspace.set_trust("trust")
-print(status.state)
+async with session.workspace.set_trust("trust") as trusting:
+    async for event in trusting:
+        print(event.payload.state)
+    print((await trusting.result()).state)
 """,
     "complete_files": """
 completion = await session.files.complete(query="src/app", limit=10)
@@ -275,8 +301,10 @@ async with session.scheduler.start() as scheduler:
             print("done", event.payload.task_id, event.payload.result)
 """,
     "execute_scheduled_task": """
-answer = await session.scheduler.execute("Summarise yesterday's failed builds")
-print(answer)
+async with session.scheduler.execute("Summarise yesterday's failed builds") as task:
+    async for event in task:
+        print(event.channel)  # what the run's tools do while it works
+    print((await task.result()).result)
 """,
     "cancel_scheduled_task": """
 for task in await session.scheduler.list(include_done=False):
@@ -339,8 +367,10 @@ status = await session.auth.reload_credentials()
 print(status.cloud_connected, status.cloud_email)
 """,
     "clear_cloud_credentials": """
-status = await session.auth.sign_out()
-print(status.cloud_connected)
+async with session.auth.sign_out() as signing_out:
+    async for event in signing_out:
+        print(event.payload.cause)  # "signed_out"
+    print((await signing_out.result()).cloud_connected)
 """,
 }
 

@@ -18,10 +18,10 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Answer "Trust this folder?" for this session's project folder.
 
 ```python
-async def set_trust(
+def set_trust(
     self,
     decision: Literal['trust', 'distrust', 'once'],
-) -> WorkspaceTrustStatus
+) -> Call[WorkspaceTrustStatus, SetWorkspaceTrustEvent]
 ```
 
 `decision` is `trust` (remembered), `once` (until igni exits)
@@ -34,23 +34,27 @@ be trusted.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `decision` | `Literal['trust', 'distrust', 'once']` | required | `decision` is `trust` (remembered), `once` (until igni exits) or `distrust`. |
+| `decision` | `Literal['trust', 'distrust', 'once']` | required | `trust`: trust the folder and remember it. `once`: trust it until igni exits. `distrust`: do not trust it, and remember that. |
 
-**Returns** [`WorkspaceTrustStatus`](/docs/sdk/igni-client/models-reference#workspacetruststatus).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`WorkspaceTrustStatus`](/docs/sdk/igni-client/models-reference#workspacetruststatus), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `workspace_trust_required` ([`WorkspaceTrustRequiredPush`](/docs/sdk/igni-client/events-reference#workspacetrustrequiredpush)). This call does not follow them: igni pushes `workspace_trust_required` only to the windows showing the trust dialog; the answer is the new status.
+**Events** `SetWorkspaceTrustEvent` is any of [`WorkspaceTrustRequiredPush`](/docs/sdk/igni-client/events-reference#workspacetrustrequiredpush) (igni streams `workspace_trust_required`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `workspace_trust_required` push that tells the windows the folder's trust changed, and ends with the answer — the new status.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `set_workspace_trust`, scope `session`, area `workspace_trust`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-status = await session.workspace.set_trust("trust")
-print(status.state)
+async with session.workspace.set_trust("trust") as trusting:
+    async for event in trusting:
+        print(event.payload.state)
+    print((await trusting.result()).state)
 ```
 
 ## session.workspace.trust()

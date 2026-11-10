@@ -6,8 +6,7 @@ Each method says which connections may call it: its **access**. igni-client chec
 
 ## Who may call what
 
-Who may make a call, as the backend enforces it
-(`backend/standing_policy.py`, `backend/message_admission.py`).
+Who may make a call, as igni enforces it.
 
 * `client` — any connection igni admitted.
 * `approver` — igni's window, or a connection standing as an approver.
@@ -20,7 +19,7 @@ Who may make a call, as the backend enforces it
   connection.
 
 A connection's standing is decided once, at the WebSocket handshake,
-by the token it offers (`transport/ws_auth.py`):
+by the token it offers:
 
 * **Local client, on the desktop.** igni's desktop app launches igni
   with a per-launch secret that only the app holds, so only the app's

@@ -58,13 +58,13 @@ LocalNotification(
 
 Something to tell the person using this igni. No recipients: it is them.
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `str` | required |
-| `title` | `str` | required |
-| `body` | `str` | `''` |
-| `target` | `Target` | required |
-| `event_key` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `str` | required | The extension's own word for what happened: `export_ready`. |
+| `title` | `str` | required | What it is about. |
+| `body` | `str` | `''` | One line. Whitespace is collapsed here. |
+| `target` | `Target` | required | Where opening it goes: one of this extension's pages. Required — the host shows nothing it cannot open. |
+| `event_key` | `str` | required | The same event is shown once, however often it is sent. Required. |
 
 ## Notifications
 
@@ -110,11 +110,16 @@ A value of a host object. `await prop` reads it; `set` writes it.
 path: str
 ```
 
+Its full path in the host model: `chat.processing`.
+
 ### Property.get()
 
 ```python
 async def get() -> T
 ```
+
+Read it from the host; `await prop` is the same. Raises `HostError` when the host
+refuses.
 
 ### Property.set()
 
@@ -127,7 +132,7 @@ Write it, as the person's UI would. Refused where theirs would be.
 ## SCHEMA_VERSION
 
 ```python
-SCHEMA_VERSION: str = '1.11.0'
+SCHEMA_VERSION: str = '1.12.0'
 ```
 
 ## Signal
@@ -149,6 +154,8 @@ events that predate the model their topic strings
 def parse(value: Any) -> T
 ```
 
+The value the host sent, as `T`.
+
 ## Target
 
 ```python
@@ -166,7 +173,7 @@ Where in the extension to go: one of its pages, and that page's params.
 (`NotificationTarget` in the host schema, a page's route): a page
 reads them from its location, where everything is a string.
 
-| Field | Type | Default |
-|---|---|---|
-| `page` | `str` | required |
-| `params` | `dict[str, str]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `page` | `str` | required | The page's id, as the extension's manifest declares it. |
+| `params` | `dict[str, str]` | factory | What the page is opened with: strings only, as a page reads them from its location. |

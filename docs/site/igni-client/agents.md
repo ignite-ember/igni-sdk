@@ -30,7 +30,7 @@ ephemeral.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `name` | `str` | required | `name` is the ephemeral agent. |
+| `name` | `str` | required | Name of the agent created during the session. |
 
 **Returns** [`DiscardEphemeralResult`](/docs/sdk/igni-client/models-reference#discardephemeralresult).
 
@@ -97,8 +97,8 @@ unknown, not ephemeral, or the destination exists.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `name` | `str` | required | `name` is the ephemeral agent; |
-| `target` | `str \| None` | `None` | `target` is `project` (the default: the project's agents) or `personal` (the person's own). |
+| `name` | `str` | required | Name of the agent created during the session. |
+| `target` | `str \| None` | `None` | Where to save it: `project` (the project's agents; the default) or `personal` (the user's own agents). |
 
 **Returns** [`PromoteEphemeralResult`](/docs/sdk/igni-client/models-reference#promoteephemeralresult).
 
@@ -130,7 +130,7 @@ the cancellation failed.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `run_id` | `str` | `''` | `run_id` is the sub-agent run's id, as its events carry it. |
+| `run_id` | `str` | `''` | Id of the sub-agent run, as its events carry it; must not be empty. |
 
 **Returns** [`CancelAgentRunResult`](/docs/sdk/igni-client/models-reference#cancelagentrunresult).
 

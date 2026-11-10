@@ -59,7 +59,7 @@ was found both are empty and `reason` says why.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `email` | `str` | required | `email` is the person's work address. igni reads the record the organisation publishes on the address's domain (a well-known URL, then DNS) and changes nothing. |
+| `email` | `str` | required | The user's email address; its domain is looked up for an igni server. |
 
 **Returns** [`ServerFound`](/docs/sdk/igni-client/models-reference#serverfound).
 
@@ -140,8 +140,8 @@ written.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `api_url` | `str` | required | `api_url` is the server's API address (`https` only); |
-| `portal_url` | `str` | `''` | `portal_url` its portal, empty to derive it from `api_url`. |
+| `api_url` | `str` | required | The server's API URL. |
+| `portal_url` | `str` | `''` | Where a person signs in; empty to derive it from `api_url`. |
 
 **Returns** [`ServerChoice`](/docs/sdk/igni-client/models-reference#serverchoice).
 
@@ -226,7 +226,7 @@ print(status.cloud_connected, status.cloud_email)
 Sign this session out of igni server.
 
 ```python
-async def sign_out(self) -> StatusUpdate
+def sign_out(self) -> Call[StatusUpdate, ClearCloudCredentialsEvent]
 ```
 
 Takes no arguments. The session forgets its cloud credentials, and
@@ -237,19 +237,23 @@ afterwards as a `status_update` message, sent in place of an
 
 Takes no arguments.
 
-**Returns** [`StatusUpdate`](/docs/sdk/igni-client/events-reference#statusupdate).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`StatusUpdate`](/docs/sdk/igni-client/events-reference#statusupdate), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `notifications_changed` ([`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush)). This call does not follow them: `notifications_changed` carries the new counts, not what changed them; read `igni.notifications.counts()`.
+**Events** `ClearCloudCredentialsEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the person signed out, and ends with the answer — the session's status.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `clear_cloud_credentials`, scope `session`, area `auth`; igni answers with `message`.
 
 **Example**
 
 ```python
-status = await session.auth.sign_out()
-print(status.cloud_connected)
+async with session.auth.sign_out() as signing_out:
+    async for event in signing_out:
+        print(event.payload.cause)  # "signed_out"
+    print((await signing_out.result()).cloud_connected)
 ```

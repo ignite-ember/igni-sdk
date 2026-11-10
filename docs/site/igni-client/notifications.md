@@ -47,7 +47,7 @@ print(counts.by_source, counts.unread)
 List the signed-in person's notifications, newest first.
 
 ```python
-async def list(self) -> NotificationsListResult
+def list(self) -> Call[NotificationsListResult, NotificationsListEvent]
 ```
 
 Takes no arguments. Reads igni server again and merges in what
@@ -59,21 +59,26 @@ read. The fresh counts are also pushed as `notifications_changed`.
 
 Takes no arguments.
 
-**Returns** [`NotificationsListResult`](/docs/sdk/igni-client/models-reference#notificationslistresult).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`NotificationsListResult`](/docs/sdk/igni-client/models-reference#notificationslistresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `notifications_changed` ([`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush)). This call does not follow them: the `notifications_changed` push repeats the counts the answer carries, to every client, and does not say what caused it.
+**Events** `NotificationsListEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the list was read, and ends with the answer.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `notifications_list`, scope `igni`, area `notifications`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-listed = await igni.notifications.list()
-print(listed.counts, listed.notifications)
+async with igni.notifications.list() as listing:
+    async for event in listing:
+        print(event.payload.counts.unread)
+    listed = await listing.result()
+    print([n.title for n in listed.notifications])
 ```
 
 ## igni.notifications.mark_read()
@@ -81,12 +86,12 @@ print(listed.counts, listed.notifications)
 Mark notifications read.
 
 ```python
-async def mark_read(
+def mark_read(
     self,
     *,
     ids: list[str] | None = None,
     source: str | None = None,
-) -> NotificationsReadResult
+) -> Call[NotificationsReadResult, NotificationsMarkReadEvent]
 ```
 
 `ids` names the notifications; `source` (an extension id) marks
@@ -97,22 +102,27 @@ could not be told.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `ids` | `list[str] \| None` | `None` | `ids` names the notifications; |
-| `source` | `str \| None` | `None` | `source` (an extension id) marks all of that extension's; neither marks every notification. |
+| `ids` | `list[str] \| None` | `None` | Ids of the notifications to mark read. |
+| `source` | `str \| None` | `None` | An extension id: marks all of that extension's notifications read. |
 
-**Returns** [`NotificationsReadResult`](/docs/sdk/igni-client/models-reference#notificationsreadresult).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`NotificationsReadResult`](/docs/sdk/igni-client/models-reference#notificationsreadresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `notifications_changed` ([`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush)). This call does not follow them: the `notifications_changed` push repeats the counts the answer carries, to every client, and does not say what caused it.
+**Events** `NotificationsMarkReadEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the notifications were marked read, and ends with the answer.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `notifications_mark_read`, scope `igni`, area `notifications`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-read = await igni.notifications.mark_read(source="acme.tickets")
-print(read.counts.unread, "unread left")
+async with igni.notifications.mark_read(source="acme.tickets") as marking:
+    async for event in marking:
+        print(event.payload.counts.unread)
+    read = await marking.result()
+    print(read.counts.unread, "unread left")
 ```

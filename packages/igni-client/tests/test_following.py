@@ -24,20 +24,39 @@ from igni_client import (
     Session,
 )
 from igni_client.events import Unknown, parse_event
+from igni_client.follow import PUSH_PREFIX, RULES, causes_of
 from igni_client.models import (
+    AttachSessionResult,
+    BackgroundProcessDonePush,
+    FileEditedPush,
+    InfoMessage,
     LoginResultPush,
     LoginStarted,
     LoginStatusPush,
+    NotificationCounts,
+    NotificationsChangedPush,
+    NotificationsListResult,
+    NotificationsReadResult,
     PlanDecidedPush,
     PlanDecisionResult,
+    ProcessExitedPush,
     ProcessLinePush,
+    ProcessStartedPush,
     PushNotification,
     RunPaused,
+    RunShellResult,
+    ScheduledTaskRunResult,
+    StatusUpdate,
     StopProcessResult,
+    StreamEnd,
     VisualizationActionResult,
+    WindowModelChangedPush,
     WorkflowCancelResponse,
     WorkflowEventPush,
     WorkflowRunResponse,
+    WorkspaceTrustRequiredPush,
+    WorkspaceTrustStatus,
+    Written,
 )
 from igni_client.testing import FakeIgni, Steps, sample
 from igni_client.wire import Event
@@ -58,6 +77,12 @@ async def _follow(call: Any) -> tuple[list[Any], Any]:
     async with call as following:
         events = [event async for event in following]
         return events, await following.result()
+
+
+async def _drain(stream: Any) -> None:
+    """Run a run to its end, answering nothing."""
+    async for _ in stream:
+        pass
 
 
 def _later(fake: FakeIgni, *pushes: tuple[str, dict[str, Any], str]) -> asyncio.Task[None]:
@@ -259,18 +284,280 @@ async def test_a_scheduler_yields_its_session_s_tasks_until_the_block_is_left() 
 
 async def test_signing_in_yields_its_status_until_its_result() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
-        fake.methods.answers["login"] = LoginStarted(started=True)
+        fake.methods.answers["login"] = LoginStarted(started=True, flow_id="flow-1")
         _later(
             fake,
-            ("login_status", {"text": "Opening your browser"}, ""),
-            ("login_result", {"success": True, "result": "ada@acme.dev"}, ""),
-            ("notifications_changed", {"counts": {"total": 0, "by_extension": {}}}, ""),
+            ("login_status", {"flow_id": "flow-1", "text": "Opening your browser"}, ""),
+            ("login_status", {"flow_id": "flow-other", "text": "another sign-in"}, ""),
+            ("login_result", {"flow_id": "flow-1", "success": True, "result": "ada@acme.dev"}, ""),
+            ("notifications_changed", {"counts": {"unread": 0, "by_source": {}}}, ""),
         )
         events, started = await _follow(igni.auth.login())
 
-    assert started.started
+    assert started.started and started.flow_id == "flow-1"
     assert [type(e) for e in events] == [LoginStatusPush, LoginResultPush]
+    assert events[0].payload.text == "Opening your browser"
     assert events[-1].payload.result == "ada@acme.dev"
+
+
+async def test_attaching_a_session_yields_the_approvals_it_shows_again() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        request_id = ""
+
+        async def answer(args: dict[str, Any]) -> Any:
+            nonlocal request_id
+            request_id = fake.methods.calls[-1].id
+            await fake.socket.broadcast(
+                RunPaused(id=request_id, session_id=session.id, run_id="r-1", requirements=[])
+            )
+            await fake.socket.broadcast(
+                RunPaused(
+                    id="another-request", session_id=session.id, run_id="r-1", requirements=[]
+                )
+            )
+            await fake.socket.broadcast(StreamEnd(id=request_id, session_id=session.id))
+            return AttachSessionResult(session_id=session.id, project_dir="/workspace")
+
+        fake.methods.answers["attach_session"] = answer
+        events, attached = await _follow(igni.sessions.attach(session_id=session.id))
+
+    assert attached.session_id == session.id
+    assert [type(e) for e in events] == [RunPaused, StreamEnd]
+    assert events[0].id == request_id
+
+
+async def test_stopping_a_turn_yields_its_info_and_its_end() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.runs.script = lambda text: [Steps.approval("deploy")]
+        await _drain(session.send("a long turn"))
+        events, cancelled = await _follow(session.cancel())
+
+    assert cancelled.cancelled is True
+    assert [type(e) for e in events] == [InfoMessage, StreamEnd]
+
+
+async def test_stopping_a_turn_that_is_not_running_ends_with_the_answer() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        events, cancelled = await asyncio.wait_for(_follow(session.cancel()), 5)
+
+    assert events == []
+    assert cancelled.cancelled is False
+
+
+async def test_a_scheduled_task_yields_the_pushes_of_the_run_it_starts() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        sent = ""
+
+        async def answer(args: dict[str, Any]) -> Any:
+            nonlocal sent
+            sent = args["run_id"]
+            await fake.socket.broadcast(
+                PushNotification(
+                    channel="file_edited",
+                    payload={"path": "/workspace/a.py"},
+                    run_id=sent,
+                    session_id=session.id,
+                )
+            )
+            await fake.socket.broadcast(
+                PushNotification(
+                    channel="file_edited",
+                    payload={"path": "/workspace/other.py"},
+                    run_id="another-run",
+                    session_id=session.id,
+                )
+            )
+            return ScheduledTaskRunResult(result="done", run_id=sent)
+
+        fake.methods.answers["execute_scheduled_task"] = answer
+        events, result = await _follow(session.scheduler.execute("review the payments"))
+
+    assert sent.startswith("run-"), "igni-client makes the run's id"
+    assert result.run_id == sent
+    assert [type(e) for e in events] == [FileEditedPush]
+    assert [e.payload.path for e in events] == ["/workspace/a.py"]
+
+
+async def test_listing_notifications_yields_the_push_that_says_the_list_was_read() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["notifications_list"] = _answer(
+            fake,
+            [
+                ("notifications_changed", {"cause": "server", "counts": {"unread": 3}}, ""),
+                ("notifications_changed", {"cause": "listed", "counts": {"unread": 0}}, ""),
+            ],
+            NotificationsListResult(counts=NotificationCounts(unread=0)),
+        )
+        events, listed = await _follow(igni.notifications.list())
+
+    assert [type(e) for e in events] == [NotificationsChangedPush]
+    assert [e.payload.cause for e in events] == ["listed"]
+    assert listed.counts.unread == 0
+
+
+async def test_marking_notifications_read_yields_the_push_that_says_so() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["notifications_mark_read"] = _answer(
+            fake,
+            [
+                ("notifications_changed", {"cause": "listed", "counts": {"unread": 1}}, ""),
+                ("notifications_changed", {"cause": "marked_read", "counts": {"unread": 0}}, ""),
+            ],
+            NotificationsReadResult(counts=NotificationCounts(unread=0)),
+        )
+        events, read = await _follow(igni.notifications.mark_read(ids=["n-1"]))
+
+    assert [e.payload.cause for e in events] == ["marked_read"]
+    assert read.counts.unread == 0
+
+
+async def test_signing_out_yields_the_push_that_says_the_person_signed_out() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["clear_cloud_credentials"] = _answer(
+            fake,
+            [
+                ("notifications_changed", {"cause": "server", "counts": {"unread": 1}}, session.id),
+                (
+                    "notifications_changed",
+                    {"cause": "signed_out", "counts": {"unread": 0}},
+                    session.id,
+                ),
+            ],
+            StatusUpdate(session_id=session.id),
+        )
+        events, status = await _follow(session.auth.sign_out())
+
+    assert [e.payload.cause for e in events] == ["signed_out"]
+    assert isinstance(status, StatusUpdate)
+
+
+async def test_trusting_a_folder_yields_the_push_that_tells_the_windows() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        status = WorkspaceTrustStatus(
+            can_trust=True,
+            path="/workspace",
+            policy_mode="ask",
+            reason="trusted for now",
+            state="trusted",
+        )
+        fake.methods.answers["set_workspace_trust"] = _answer(
+            fake,
+            [
+                (
+                    "workspace_trust_required",
+                    status.model_dump(mode="json"),
+                    session.id,
+                )
+            ],
+            status,
+        )
+        events, trusted = await _follow(session.workspace.set_trust("trust"))
+
+    assert [type(e) for e in events] == [WorkspaceTrustRequiredPush]
+    assert events[0].payload.path == "/workspace"
+    assert trusted.state == "trusted"
+
+
+async def test_a_window_model_write_yields_the_push_that_carries_it() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        token = ""
+
+        async def answer(args: dict[str, Any]) -> Any:
+            nonlocal token
+            token = args["token"]
+            await fake.socket.broadcast(
+                PushNotification(
+                    channel="window_model_changed",
+                    payload={
+                        "field": "composer",
+                        "rev": 2,
+                        "token": token,
+                        "value": {"text": "hi"},
+                        "window": "w-1",
+                    },
+                )
+            )
+            await fake.socket.broadcast(
+                PushNotification(
+                    channel="window_model_changed",
+                    payload={
+                        "field": "composer",
+                        "rev": 3,
+                        "token": "another-writer's-token",
+                        "value": {"text": "hi"},
+                        "window": "w-2",
+                    },
+                )
+            )
+            return Written(op="write", rev=2)
+
+        fake.methods.answers["window_model"] = answer
+        events, written = await _follow(
+            igni.window.model(op="write", window="w-1", field="composer", value={"text": "hi"})
+        )
+
+    assert token.startswith("change-"), "igni-client makes the token"
+    assert written.rev == 2
+    assert [type(e) for e in events] == [WindowModelChangedPush]
+    assert [e.payload.window for e in events] == ["w-1"]
+
+
+async def test_a_shell_command_that_goes_on_yields_its_process_pushes() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["run_shell"] = RunShellResult(
+            output="", exit_code=0, backgrounded=True, pid=42
+        )
+        _later(
+            fake,
+            ("process_started", {"cmd": "sleep 60", "pid": 42, "started_at": 1.0}, session.id),
+            ("process_line", {"line": "still going", "pid": 42}, session.id),
+            ("process_started", {"cmd": "other", "pid": 43, "started_at": 1.0}, session.id),
+            (
+                "process_exited",
+                {"cmd": "sleep 60", "duration_seconds": 1.0, "exit_code": 0, "pid": 42},
+                session.id,
+            ),
+            (
+                "background_process_done",
+                {"cmd": "sleep 60", "duration_seconds": 1.0, "exit_code": 0, "pid": 42},
+                session.id,
+            ),
+        )
+        events, result = await _follow(session.run_shell("sleep 60"))
+
+    assert result.backgrounded is True and result.pid == 42
+    assert [type(e) for e in events] == [
+        ProcessStartedPush,
+        ProcessLinePush,
+        ProcessExitedPush,
+        BackgroundProcessDonePush,
+    ]
+    assert [e.payload.pid for e in events] == [42, 42, 42, 42]
+
+
+async def test_a_shell_command_that_finishes_ends_with_its_answer() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["run_shell"] = RunShellResult(
+            output="done", exit_code=0, backgrounded=False, pid=42
+        )
+        events, result = await asyncio.wait_for(_follow(session.run_shell("true")), 5)
+
+    assert events == []
+    assert result.output == "done" and result.backgrounded is False
+
+
+def test_every_rule_yields_only_what_the_contract_says_its_call_causes() -> None:
+    for wire, rule in RULES.items():
+        causes = {cause.removeprefix(PUSH_PREFIX) for cause in causes_of(wire)}
+        assert set(rule.yields) <= causes, wire
 
 
 async def test_a_call_igni_refuses_raises_from_its_stream() -> None:

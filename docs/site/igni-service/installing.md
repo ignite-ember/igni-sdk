@@ -2,30 +2,17 @@
 
 # Installing
 
-> **Until the SDKs are on PyPI: build from a checkout.** `igni-service`
-> and `igni-extension` are not published yet, so `uv add igni-service`
-> finds nothing. Build both wheels from an igni-sdk checkout and install
-> from them:
->
-> ```bash
-> git clone https://github.com/ignite-ember/igni-sdk.git
-> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-service
-> uv build --wheel --out-dir ./sdk-wheels igni-sdk/packages/igni-extension
-> uv add igni-service --find-links ./sdk-wheels      # or: pip install --find-links ./sdk-wheels igni-service
-> ```
->
-> The bundle builder resolves the extension's dependencies the same way,
-> so it needs the same directory:
-> `igni-service-bundle --extension extension --out extension-bundle.tar.gz --find-links ./sdk-wheels`.
-> It says so when it cannot find `igni-extension`.
-
-Once published, from PyPI:
-
 ```bash
-uv add igni-service        # or: pip install igni-service
+pip install igni-service        # or: uv add igni-service
 ```
 
+It needs Python 3.12 or later. It brings FastAPI, httpx, Pydantic,
+pydantic-settings, PyJWT with `cryptography`, and SQLAlchemy (async). Add
+the async database driver your deployment uses, for example `asyncpg`
+for PostgreSQL or `aiosqlite` for SQLite. To run the service, add an ASGI
+server such as `uvicorn`.
+
 Each release's wheels and sdists are also attached to igni-sdk's GitHub
-release (`sdk-v<version>`), for a build that cannot reach PyPI. The
-versions, and working against an igni-sdk checkout instead, are in igni-sdk's
-`docs/PUBLISHING_THE_SDKS.md`.
+release (`sdk-v<version>`), for a build machine that cannot reach PyPI.
+The versions, and working from an igni-sdk checkout, are in
+[PUBLISHING_THE_SDKS.md](https://github.com/ignite-ember/igni-sdk/blob/main/docs/PUBLISHING_THE_SDKS.md).

@@ -10,7 +10,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`ConcurrencyProblem`](#concurrencyproblem) | The extension blocked its loop, or let one call see another's caller. |
 | [`ConcurrencyReport`](#concurrencyreport) | What one concurrent run found. |
 | [`ConcurrentCall`](#concurrentcall) | One call the harness makes, as one caller. |
-| [`ConcurrentResult`](#concurrentresult) | — |
+| [`ConcurrentResult`](#concurrentresult) | One call's answer, and how long it took. |
 | [`FakeHost`](#fakehost) | igni's host object model for one extension process, on a loopback socket. |
 | [`FakeHostTokenEndpoint`](#fakehosttokenendpoint) | The host's token endpoint for one extension process (service identity §9). |
 | [`HostCall`](#hostcall) | One `get`, `set` or `call` an extension made of `FakeHost`. |
@@ -71,6 +71,9 @@ Make every call at once; `ConcurrencyProblem` on a stall or a leak, unless `chec
 def check(report: ConcurrencyReport) -> None
 ```
 
+Raise `ConcurrencyProblem` when `report` found the loop held too long, or a caller
+leaked.
+
 ### ConcurrencyHarness.sent_index()
 
 ```python
@@ -86,6 +89,9 @@ Which of the harness's calls the request being served is.
 @staticmethod
 def compare(leaks: list[str], tool: str, when: str, expected: Caller) -> None
 ```
+
+Add a line to `leaks` when the caller current now is not `expected`: the tool `tool` saw
+another's caller `when`.
 
 ## ConcurrencyProblem
 
@@ -109,11 +115,11 @@ ConcurrencyReport(
 
 What one concurrent run found.
 
-| Field | Type | Default |
-|---|---|---|
-| `results` | `list[ConcurrentResult]` | required |
-| `longest_stall` | `float` | required |
-| `leaks` | `list[str]` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `results` | `list[ConcurrentResult]` | required | Each call's answer, in the order the calls were given. |
+| `longest_stall` | `float` | required | The longest the extension's event loop went without running anything else, in seconds — what a blocking call costs every other caller. |
+| `leaks` | `list[str]` | required | Calls during which `Caller.current()` named somebody else. |
 
 ## ConcurrentCall
 
@@ -124,11 +130,11 @@ ConcurrentCall(*, tool: str, arguments: dict[str, Any] = {}, caller: Caller)
 
 One call the harness makes, as one caller.
 
-| Field | Type | Default |
-|---|---|---|
-| `tool` | `str` | required |
-| `arguments` | `dict[str, Any]` | `{}` |
-| `caller` | `Caller` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `tool` | `str` | required | The tool's name, as `ext.tool` registered it. |
+| `arguments` | `dict[str, Any]` | `{}` | Its arguments. |
+| `caller` | `Caller` | required | Whom the call is for: what `Caller.current()` must say during it. |
 
 ## ConcurrentResult
 
@@ -143,12 +149,14 @@ ConcurrentResult(
 )
 ```
 
-| Field | Type | Default |
-|---|---|---|
-| `call` | `ConcurrentCall` | required |
-| `result` | `Any` | `None` |
-| `is_error` | `bool` | `False` |
-| `took` | `float` | `0.0` |
+One call's answer, and how long it took.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `call` | `ConcurrentCall` | required | The call it answers. |
+| `result` | `Any` | `None` | The tool's result: its structured content, or its text. |
+| `is_error` | `bool` | `False` | Whether the tool raised. |
+| `took` | `float` | `0.0` | Seconds from sending the call to its answer. |
 
 ## FakeHost
 
@@ -195,11 +203,15 @@ The variables igni starts the process with, for its host.
 async def start() -> None
 ```
 
+Listen on a free loopback port. `async with FakeHost()` calls it.
+
 ### FakeHost.stop()
 
 ```python
 async def stop() -> None
 ```
+
+Stop listening and close every socket. `async with` calls it on the way out.
 
 ### FakeHost.emit()
 
@@ -294,11 +306,15 @@ The variables igni starts the process with, for its service.
 def sign_in(*, user_id: str, org_id: str, email: str = '', name: str = '') -> None
 ```
 
+Play somebody signing in to igni: tokens are theirs from now on.
+
 ### FakeHostTokenEndpoint.sign_out()
 
 ```python
 def sign_out() -> None
 ```
+
+Play the person signing out: token requests are refused until `sign_in`.
 
 ### FakeHostTokenEndpoint.transport
 
@@ -307,11 +323,16 @@ def sign_out() -> None
 transport: httpx.MockTransport
 ```
 
+An `httpx` transport answering as the endpoint: pass it as
+`IgniExtension(token_transport=...)`.
+
 ### FakeHostTokenEndpoint.handle()
 
 ```python
 def handle(request: httpx.Request) -> httpx.Response
 ```
+
+Answer one request as the host's token endpoint does.
 
 ### FakeHostTokenEndpoint.unsigned()
 
@@ -342,14 +363,14 @@ One `get`, `set` or `call` an extension made of `FakeHost`.
 What the request asked, without the number the connection gave it, so
 a test can compare it with one it writes down.
 
-| Field | Type | Default |
-|---|---|---|
-| `op` | `str` | required |
-| `path` | `str` | required |
-| `window` | `str \| None` | `None` |
-| `session` | `str \| None` | `None` |
-| `params` | `dict[str, Any]` | `{}` |
-| `value` | `Any` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `op` | `str` | required | `get`, `set` or `call`. |
+| `path` | `str` | required | The member asked: `chat.processing`, `chat.post`. |
+| `window` | `str \| None` | `None` | The window, for `host.windows.ui(id)`. |
+| `session` | `str \| None` | `None` | The session, for `host.sessions.chat(id)`. |
+| `params` | `dict[str, Any]` | `{}` | A call's parameters, by name. |
+| `value` | `Any` | `None` | The value of a `set`. |
 
 ### HostCall.of()
 
@@ -357,6 +378,8 @@ a test can compare it with one it writes down.
 @classmethod
 def of(request: Request) -> HostCall
 ```
+
+What `request` asked, without its number.
 
 ## HostHarness
 
@@ -373,6 +396,9 @@ The igni host's MCP session with one extension, in this process.
 @property
 session: ClientSession
 ```
+
+The MCP client session talking to the extension, for what `call` does not cover. Raises
+`RuntimeError` outside `async with`.
 
 ### HostHarness.call()
 
@@ -431,11 +457,15 @@ A clock that moves only when told to.
 def monotonic() -> float
 ```
 
+Seconds on the system's monotonic clock: only differences mean anything.
+
 ### ManualClock.advance()
 
 ```python
 def advance(seconds: float) -> None
 ```
+
+Move the clock forward `seconds`.
 
 ## Minter
 
@@ -461,12 +491,12 @@ TokenClaims(
 
 What the fake host's tokens say: enough for `ext.tokens.signed_in`.
 
-| Field | Type | Default |
-|---|---|---|
-| `sub` | `str` | required |
-| `org` | `str` | required |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
-| `aud` | `str` | required |
-| `token_use` | `str` | `'user'` |
-| `jti` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `sub` | `str` | required | The person's user id. |
+| `org` | `str` | required | Their organisation. |
+| `email` | `str` | `''` | Their email address. |
+| `name` | `str` | `''` | Their name. |
+| `aud` | `str` | required | The service's URL: whom the token is for. |
+| `token_use` | `str` | `'user'` | Always `user`: a person's token. |
+| `jti` | `str` | required | The token's own id, fresh for each one handed out. |

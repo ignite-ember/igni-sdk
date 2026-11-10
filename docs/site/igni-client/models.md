@@ -59,7 +59,7 @@ not in the registry.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `model_name` | `str` | required | `model_name` is a name from the model registry (`get_model_registry`). |
+| `model_name` | `str` | required | A model name from the model registry (see `get_model_registry`). |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 

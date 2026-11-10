@@ -32,6 +32,7 @@ class Router:
         self._tag = secrets.token_hex(4)
         self._ids = itertools.count(1)
         self._waiting: dict[str, asyncio.Future[Event]] = {}
+        self._replies: dict[str, str] = {}
         self._streams: dict[str, asyncio.Queue[Event | Interruption]] = {}
         self._listeners: list[asyncio.Queue[Event]] = []
         self._followers: list[asyncio.Queue[Event | Interruption]] = []
@@ -42,14 +43,23 @@ class Router:
 
     # ── Calls ──
 
-    def expect(self, request_id: str) -> asyncio.Future[Event]:
-        """The answer to `request_id`, once it arrives. `forget` it when done."""
+    def expect(self, request_id: str, reply: str = "rpc_response") -> asyncio.Future[Event]:
+        """The answer to `request_id`, once it arrives. `forget` it when done.
+
+        `reply` is what the answer looks like: `rpc_response` for the
+        methods igni answers with one, `message` for those it answers with
+        a message of its own. A message that carries the request's id but
+        is not the answer — one of the events a call streams — is passed
+        over.
+        """
         future: asyncio.Future[Event] = asyncio.get_running_loop().create_future()
         self._waiting[request_id] = future
+        self._replies[request_id] = reply
         return future
 
     def forget(self, request_id: str) -> None:
         self._waiting.pop(request_id, None)
+        self._replies.pop(request_id, None)
 
     # ── Streams and listeners ──
 
@@ -104,13 +114,24 @@ class Router:
         if not event.id:
             return
         waiter = self._waiting.get(event.id)
-        if waiter is not None and event.type != "rpc_request":
+        if waiter is not None and event.type != "rpc_request" and self._is_answer(event.id, event):
             if not waiter.done():
                 waiter.set_result(event)
             return
         stream = self._streams.get(event.id)
         if stream is not None:
             stream.put_nowait(event)
+
+    def _is_answer(self, request_id: str, event: Event) -> bool:
+        """Whether `event` is the answer to `request_id`, and not one of its events.
+
+        The events a call streams may carry the request's own id — the
+        approvals an attach shows again do — so the id alone does not say
+        which is which: what the answer looks like does.
+        """
+        if self._replies.get(request_id, "rpc_response") == "rpc_response":
+            return event.type in ("rpc_response", "error")
+        return event.type != "rpc_response"
 
     def interrupt(self, error: IgniClientError) -> None:
         """End every call and run in flight: they cannot be followed any more."""

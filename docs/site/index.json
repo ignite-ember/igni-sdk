@@ -1070,6 +1070,11 @@
         },
         {
           "level": 3,
+          "id": "cancelrunresult",
+          "title": "CancelRunResult"
+        },
+        {
+          "level": 3,
           "id": "displayconfig",
           "title": "DisplayConfig"
         },
@@ -1127,6 +1132,11 @@
           "level": 3,
           "id": "chatsearchhit",
           "title": "ChatSearchHit"
+        },
+        {
+          "level": 3,
+          "id": "compactionoutcome",
+          "title": "CompactionOutcome"
         },
         {
           "level": 3,
@@ -1374,6 +1384,11 @@
           "title": "ScheduledTask"
         },
         {
+          "level": 3,
+          "id": "scheduledtaskrunresult",
+          "title": "ScheduledTaskRunResult"
+        },
+        {
           "level": 2,
           "id": "workflows",
           "title": "Workflows"
@@ -1615,6 +1630,16 @@
         },
         {
           "level": 3,
+          "id": "composer",
+          "title": "Composer"
+        },
+        {
+          "level": 3,
+          "id": "dialog",
+          "title": "Dialog"
+        },
+        {
+          "level": 3,
           "id": "dialoganswered",
           "title": "DialogAnswered"
         },
@@ -1630,13 +1655,53 @@
         },
         {
           "level": 3,
+          "id": "page",
+          "title": "Page"
+        },
+        {
+          "level": 3,
+          "id": "panel",
+          "title": "Panel"
+        },
+        {
+          "level": 3,
+          "id": "preview",
+          "title": "Preview"
+        },
+        {
+          "level": 3,
           "id": "revised",
           "title": "Revised"
         },
         {
           "level": 3,
+          "id": "scroll",
+          "title": "Scroll"
+        },
+        {
+          "level": 3,
+          "id": "selection",
+          "title": "Selection"
+        },
+        {
+          "level": 3,
+          "id": "sidebar",
+          "title": "Sidebar"
+        },
+        {
+          "level": 3,
+          "id": "toast",
+          "title": "Toast"
+        },
+        {
+          "level": 3,
           "id": "toastadded",
           "title": "ToastAdded"
+        },
+        {
+          "level": 3,
+          "id": "windowmodelstate",
+          "title": "WindowModelState"
         },
         {
           "level": 3,
@@ -1690,13 +1755,13 @@
         },
         {
           "level": 3,
-          "id": "httpretryattemptpayload",
-          "title": "HttpRetryAttemptPayload"
+          "id": "httpretryattempteventpayload",
+          "title": "HttpRetryAttemptEventPayload"
         },
         {
           "level": 3,
-          "id": "httpretrysucceededpayload",
-          "title": "HttpRetrySucceededPayload"
+          "id": "httpretrysucceededeventpayload",
+          "title": "HttpRetrySucceededEventPayload"
         },
         {
           "level": 3,
@@ -1715,8 +1780,18 @@
         },
         {
           "level": 3,
-          "id": "outputstylechangedpayload",
-          "title": "OutputStyleChangedPayload"
+          "id": "orchestrateeventpayload",
+          "title": "OrchestrateEventPayload"
+        },
+        {
+          "level": 3,
+          "id": "outputstylechangedeventpayload",
+          "title": "OutputStyleChangedEventPayload"
+        },
+        {
+          "level": 3,
+          "id": "permissionmodechangedeventpayload",
+          "title": "PermissionModeChangedEventPayload"
         },
         {
           "level": 3,
@@ -1725,18 +1800,18 @@
         },
         {
           "level": 3,
-          "id": "plandecidedpayload",
-          "title": "PlanDecidedPayload"
+          "id": "plandecidedeventpayload",
+          "title": "PlanDecidedEventPayload"
         },
         {
           "level": 3,
-          "id": "planmodeenteredpayload",
-          "title": "PlanModeEnteredPayload"
+          "id": "planmodeenteredeventpayload",
+          "title": "PlanModeEnteredEventPayload"
         },
         {
           "level": 3,
-          "id": "plansubmittedpayload",
-          "title": "PlanSubmittedPayload"
+          "id": "plansubmittedeventpayload",
+          "title": "PlanSubmittedEventPayload"
         },
         {
           "level": 3,
@@ -1790,8 +1865,8 @@
         },
         {
           "level": 3,
-          "id": "todosupdatedpayload",
-          "title": "TodosUpdatedPayload"
+          "id": "todosupdatedeventpayload",
+          "title": "TodosUpdatedEventPayload"
         },
         {
           "level": 3,
@@ -1805,8 +1880,8 @@
         },
         {
           "level": 3,
-          "id": "visualizationactiondispatchedpayload",
-          "title": "VisualizationActionDispatchedPayload"
+          "id": "visualizationactiondispatchedeventpayload",
+          "title": "VisualizationActionDispatchedEventPayload"
         },
         {
           "level": 3,
@@ -1855,6 +1930,11 @@
         },
         {
           "level": 3,
+          "id": "windowitem",
+          "title": "WindowItem"
+        },
+        {
+          "level": 3,
           "id": "windowmodelresult",
           "title": "WindowModelResult"
         },
@@ -1887,6 +1967,11 @@
           "level": 3,
           "id": "plandecision",
           "title": "PlanDecision"
+        },
+        {
+          "level": 3,
+          "id": "rpcerrorcode",
+          "title": "RpcErrorCode"
         },
         {
           "level": 3,
@@ -2384,128 +2469,285 @@
     },
     {
       "package": "igni-extension",
-      "slug": "tools-and-what-each-says-it-is",
-      "title": "Tools, and what each says it is",
-      "description": "Every tool states MCP's four hints — read_only, destructive, idempotent, open_world — because igni's permission modes decide on them: plan mode runs a read-only tool and refuses one that changes things, Accept Edits…",
+      "slug": "install",
+      "title": "Install",
+      "description": "Python 3.12 or later. The package depends on mcp 2, httpx, pydantic, pydantic-settings, anyio and websockets.",
       "category": "guide",
       "order": 1,
-      "file": "igni-extension/tools-and-what-each-says-it-is.md",
+      "file": "igni-extension/install.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "quick-start",
+      "title": "Quick start",
+      "description": "An extension is one module with one IgniExtension object. Each tool is a decorated function:",
+      "category": "guide",
+      "order": 2,
+      "file": "igni-extension/quick-start.md",
+      "sections": []
+    },
+    {
+      "package": "igni-extension",
+      "slug": "concepts",
+      "title": "Concepts",
+      "description": "The backend service uploads the signed extension bundle to igni server when it starts. Two decisions then put the extension on a person's device, and both are needed:",
+      "category": "guide",
+      "order": 3,
+      "file": "igni-extension/concepts.md",
       "sections": [
+        {
+          "level": 2,
+          "id": "how-an-extension-reaches-people",
+          "title": "How an extension reaches people"
+        },
+        {
+          "level": 2,
+          "id": "the-process-and-its-lifecycle",
+          "title": "The process and its lifecycle"
+        },
+        {
+          "level": 2,
+          "id": "tools-and-their-four-hints",
+          "title": "Tools and their four hints"
+        },
         {
           "level": 2,
           "id": "one-tool-five-names",
           "title": "One tool, five names"
+        },
+        {
+          "level": 2,
+          "id": "callers-whom-a-call-is-for",
+          "title": "Callers: whom a call is for"
+        },
+        {
+          "level": 2,
+          "id": "the-host-igni-as-the-extension-sees-it",
+          "title": "The host: igni as the extension sees it"
+        },
+        {
+          "level": 2,
+          "id": "hooks-having-a-say",
+          "title": "Hooks: having a say"
+        },
+        {
+          "level": 2,
+          "id": "calling-the-backend-service",
+          "title": "Calling the backend service"
+        },
+        {
+          "level": 2,
+          "id": "what-the-service-sends-events-and-messages",
+          "title": "What the service sends: events and messages"
+        },
+        {
+          "level": 2,
+          "id": "the-sandbox-and-its-network-rules",
+          "title": "The sandbox and its network rules"
         }
       ]
     },
     {
       "package": "igni-extension",
-      "slug": "installing",
-      "title": "Installing",
-      "description": "Once published, from PyPI:",
-      "category": "guide",
-      "order": 2,
-      "file": "igni-extension/installing.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "its-service-ext-service",
-      "title": "Its service: ext.service",
-      "description": "An httpx.AsyncClient for the extension's own service, as the person signed in to igni. Paths are relative to the service.",
-      "category": "guide",
-      "order": 3,
-      "file": "igni-extension/its-service-ext-service.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "whom-a-call-is-for-caller",
-      "title": "Whom a call is for: Caller",
-      "description": "Every call igni makes — a tool call, a page's call, a hook — names whom it is for: a person (kind=\"person\", their id, org and the one group they belong to) or, later, an app (no group).",
+      "slug": "guides",
+      "title": "Guides",
+      "description": "ext.service behaves like any httpx.AsyncClient. Catch NotSignedIn where you can tell the person what to do.",
       "category": "guide",
       "order": 4,
-      "file": "igni-extension/whom-a-call-is-for-caller.md",
-      "sections": []
+      "file": "igni-extension/guides.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "calling-the-service-as-the-person",
+          "title": "Calling the service as the person"
+        },
+        {
+          "level": 2,
+          "id": "driving-and-watching-igni",
+          "title": "Driving and watching igni"
+        },
+        {
+          "level": 2,
+          "id": "answering-hooks",
+          "title": "Answering hooks"
+        },
+        {
+          "level": 2,
+          "id": "handling-service-events",
+          "title": "Handling service events"
+        },
+        {
+          "level": 2,
+          "id": "background-work-data-and-assets",
+          "title": "Background work, data and assets"
+        },
+        {
+          "level": 2,
+          "id": "prompt-conditions",
+          "title": "Prompt conditions"
+        },
+        {
+          "level": 2,
+          "id": "staying-awake-in-the-cloud",
+          "title": "Staying awake in the cloud"
+        },
+        {
+          "level": 2,
+          "id": "plain-functions-run-off-the-loop",
+          "title": "Plain functions run off the loop"
+        },
+        {
+          "level": 2,
+          "id": "testing-an-extension",
+          "title": "Testing an extension"
+        },
+        {
+          "level": 2,
+          "id": "shipping-the-extension",
+          "title": "Shipping the extension"
+        }
+      ]
     },
     {
       "package": "igni-extension",
-      "slug": "the-host-ext-host",
-      "title": "The host: ext.host",
-      "description": "ext.host is igni as the extension sees it — the host object model (docs/HOST_OBJECT_MODEL.md in igni): one object per part of the app, each with properties, signals and methods.",
+      "slug": "api-reference",
+      "title": "API reference",
+      "description": "Everything below is importable from igni_extension unless another module is named.",
       "category": "guide",
       "order": 5,
-      "file": "igni-extension/the-host-ext-host.md",
-      "sections": []
+      "file": "igni-extension/api-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniextension",
+          "title": "IgniExtension"
+        },
+        {
+          "level": 3,
+          "id": "ext-signals",
+          "title": "ext.signals"
+        },
+        {
+          "level": 3,
+          "id": "ext-connection",
+          "title": "ext.connection"
+        },
+        {
+          "level": 3,
+          "id": "ext-process",
+          "title": "ext.process"
+        },
+        {
+          "level": 2,
+          "id": "toolhints-toolhintsmissing",
+          "title": "ToolHints, ToolHintsMissing"
+        },
+        {
+          "level": 2,
+          "id": "toolnames-manifesttool",
+          "title": "ToolNames, ManifestTool"
+        },
+        {
+          "level": 2,
+          "id": "caller-callerkind-nocaller",
+          "title": "Caller, CallerKind, NoCaller"
+        },
+        {
+          "level": 2,
+          "id": "serviceclient-signedin",
+          "title": "ServiceClient, SignedIn"
+        },
+        {
+          "level": 2,
+          "id": "host-notifications-property-signal-schema-version",
+          "title": "Host, Notifications, Property, Signal, SCHEMA_VERSION"
+        },
+        {
+          "level": 3,
+          "id": "the-host-objects",
+          "title": "The host objects"
+        },
+        {
+          "level": 2,
+          "id": "localnotification-target",
+          "title": "LocalNotification, Target"
+        },
+        {
+          "level": 2,
+          "id": "hooks-hookevent-allow-reject-modify",
+          "title": "Hooks, HookEvent, Allow, Reject, Modify"
+        },
+        {
+          "level": 2,
+          "id": "serviceevent",
+          "title": "ServiceEvent"
+        },
+        {
+          "level": 2,
+          "id": "promptconditions",
+          "title": "PromptConditions"
+        },
+        {
+          "level": 2,
+          "id": "extensionenvironment-workspace-workspacemode-secrets-assets-hostendpoint",
+          "title": "ExtensionEnvironment, Workspace, WorkspaceMode, Secrets, Assets, HostEndpoint"
+        },
+        {
+          "level": 2,
+          "id": "errors",
+          "title": "Errors"
+        },
+        {
+          "level": 2,
+          "id": "igni-extension-testing",
+          "title": "igni_extension.testing"
+        },
+        {
+          "level": 2,
+          "id": "python-m-igni-extension-manifest",
+          "title": "python -m igni_extension.manifest"
+        },
+        {
+          "level": 2,
+          "id": "environment-variables",
+          "title": "Environment variables"
+        },
+        {
+          "level": 2,
+          "id": "names-kept-from-0-1-0",
+          "title": "Names kept from 0.1.0"
+        }
+      ]
     },
     {
       "package": "igni-extension",
-      "slug": "having-a-say-ext-hook",
-      "title": "Having a say: @ext.hook",
-      "description": "igni's hook events (docs/HOOKS.md in igni) are where an extension gets a say before something happens, in one pipeline with igni's own settings-file hooks:",
+      "slug": "troubleshooting-and-faq",
+      "title": "Troubleshooting and FAQ",
+      "description": "igni gave the process no service. A bundle igni distributed always has one. A development install needs a serviceUrl setting in contributes.settings, set;",
       "category": "guide",
       "order": 6,
-      "file": "igni-extension/having-a-say-ext-hook.md",
+      "file": "igni-extension/troubleshooting-and-faq.md",
       "sections": []
     },
     {
       "package": "igni-extension",
-      "slug": "what-your-service-sends-events-and-messages",
-      "title": "What your service sends: events and messages",
-      "description": "Your service reaches a producer's igni — on their desktop, or in their Fleet VM, woken for it — two ways (igni server's service-identity §15, igni-core's docs/CLOUD.md §6).",
+      "slug": "changes-since-0-1-0",
+      "title": "Changes since 0.1.0",
+      "description": "On purpose:",
       "category": "guide",
       "order": 7,
-      "file": "igni-extension/what-your-service-sends-events-and-messages.md",
+      "file": "igni-extension/changes-since-0-1-0.md",
       "sections": []
     },
     {
       "package": "igni-extension",
-      "slug": "staying-awake-ext-busy",
-      "title": "Staying awake: ext.busy",
-      "description": "In the cloud igni's VM sleeps when nothing is busy. Work your process does on its own — indexing, a sync — says so:",
+      "slug": "license",
+      "title": "License",
+      "description": "Apache-2.0. See LICENSE.",
       "category": "guide",
       "order": 8,
-      "file": "igni-extension/staying-awake-ext-busy.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "plain-functions-run-off-the-loop",
-      "title": "Plain functions run off the loop",
-      "description": "The process serves igni on one event loop. A plain def you hand the SDK — a tool, a hook handler, a reaction (@ext.on), a background job (@ext.on_start) — runs in a worker thread, so a slow one never holds the calls…",
-      "category": "guide",
-      "order": 9,
-      "file": "igni-extension/plain-functions-run-off-the-loop.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "the-agent-s-prompt-ext-prompt",
-      "title": "The agent's prompt: ext.prompt",
-      "description": "A manifest's contributes.prompt overrides a prompt — the main prompt, plan mode, any agent — with a whole one of its own, or edits it: appends a section, inserts one before or after a named section, replaces a named…",
-      "category": "guide",
-      "order": 10,
-      "file": "igni-extension/the-agent-s-prompt-ext-prompt.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "its-own-work-and-its-own-directory",
-      "title": "Its own work, and its own directory",
-      "description": "Work the extension does for as long as it runs — a sync loop, processes it starts — goes in @ext.on_start. It starts with ext.run() and is cancelled when igni closes the extension, so it cleans up in its own finally:",
-      "category": "guide",
-      "order": 11,
-      "file": "igni-extension/its-own-work-and-its-own-directory.md",
-      "sections": []
-    },
-    {
-      "package": "igni-extension",
-      "slug": "testing-an-extension",
-      "title": "Testing an extension",
-      "description": "MCP session ext.run() serves, and host.call(tool, args, caller=...) calls one tool for one caller. A Caller is whom igni says the call is for — build one per person a test plays:",
-      "category": "guide",
-      "order": 12,
-      "file": "igni-extension/testing-an-extension.md",
+      "file": "igni-extension/license.md",
       "sections": []
     },
     {
@@ -2514,7 +2756,7 @@
       "title": "IgniExtension",
       "description": "Reference: IgniExtension — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 13,
+      "order": 9,
       "file": "igni-extension/reference-igni-extension-class.md",
       "sections": [
         {
@@ -2554,6 +2796,16 @@
         },
         {
           "level": 3,
+          "id": "igniextension-connection",
+          "title": "IgniExtension.connection"
+        },
+        {
+          "level": 3,
+          "id": "igniextension-process",
+          "title": "IgniExtension.process"
+        },
+        {
+          "level": 3,
           "id": "igniextension-assets",
           "title": "IgniExtension.assets"
         },
@@ -2590,7 +2842,7 @@
       "title": "Tools: hints and names",
       "description": "Reference: ManifestTool, ToolNames, ToolHints, ToolHintsMissing — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 14,
+      "order": 10,
       "file": "igni-extension/reference-tools.md",
       "sections": [
         {
@@ -2651,7 +2903,7 @@
       "title": "Callers and the backend service",
       "description": "Reference: Caller, CallerKind, NoCaller, ServiceClient, SignedIn — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 15,
+      "order": 11,
       "file": "igni-extension/reference-callers-and-service.md",
       "sections": [
         {
@@ -2732,7 +2984,7 @@
       "title": "The host",
       "description": "Reference: Host, LocalNotification, Notifications, Property, SCHEMA_VERSION, Signal… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 16,
+      "order": 12,
       "file": "igni-extension/reference-host.md",
       "sections": [
         {
@@ -2818,7 +3070,7 @@
       "title": "Hooks",
       "description": "Reference: Allow, HookEvent, Hooks, Modify, Reject — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 17,
+      "order": 13,
       "file": "igni-extension/reference-hooks.md",
       "sections": [
         {
@@ -2879,7 +3131,7 @@
       "title": "Service events and prompt conditions",
       "description": "Reference: PromptConditions, ServiceEvent — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 18,
+      "order": 14,
       "file": "igni-extension/reference-service-events-and-prompts.md",
       "sections": [
         {
@@ -2920,7 +3172,7 @@
       "title": "Environment",
       "description": "Reference: Assets, ExtensionEnvironment, HostEndpoint, Secrets, Workspace, WorkspaceMode — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 19,
+      "order": 15,
       "file": "igni-extension/reference-environment.md",
       "sections": [
         {
@@ -3001,7 +3253,7 @@
       "title": "Errors",
       "description": "Reference: HostError, HostErrorCode, HostUnavailable, IgniExtensionError, NotConfigured, NotSignedIn — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 20,
+      "order": 16,
       "file": "igni-extension/reference-errors.md",
       "sections": [
         {
@@ -3042,7 +3294,7 @@
       "title": "igni_extension.testing",
       "description": "Reference: ConcurrencyHarness, ConcurrencyProblem, ConcurrencyReport, ConcurrentCall, ConcurrentResult, FakeHost… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 21,
+      "order": 17,
       "file": "igni-extension/reference-testing.md",
       "sections": [
         {
@@ -3246,7 +3498,7 @@
       "package": "igni-service",
       "slug": "installing",
       "title": "Installing",
-      "description": "Once published, from PyPI:",
+      "description": "It needs Python 3.12 or later. It brings FastAPI, httpx, Pydantic, pydantic-settings, PyJWT with cryptography, and SQLAlchemy (async).",
       "category": "guide",
       "order": 1,
       "file": "igni-service/installing.md",
@@ -3254,154 +3506,450 @@
     },
     {
       "package": "igni-service",
-      "slug": "what-happens-on-its-own",
-      "title": "What happens on its own",
-      "description": "igni.lifespan runs in the background, retrying with backoff while igni is unreachable, so the service starts and serves either way:",
+      "slug": "quick-start",
+      "title": "Quick start",
+      "description": "A complete service. It takes comments from the extension, notifies the people watching a document, searches the directory, serves three pages of its own, and answers igni's erasure and export calls:",
       "category": "guide",
       "order": 2,
-      "file": "igni-service/what-happens-on-its-own.md",
+      "file": "igni-service/quick-start.md",
       "sections": []
     },
     {
       "package": "igni-service",
-      "slug": "people",
-      "title": "People",
-      "description": "gave them (from the extension on their machine). A Person: user_id, org_id, org_name, org_role, email, name, super_admin. Every check on the token is made here;",
+      "slug": "concepts",
+      "title": "Concepts",
+      "description": "Each idea is explained once here. The API reference and the Guides build on these words.",
       "category": "guide",
       "order": 3,
-      "file": "igni-service/people.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "apps-and-their-spaces",
-      "title": "Apps and their spaces",
-      "description": "An app — and each of its end users, a space — can call a service too, with a token igni exchanged for the service's URL (token_use app or space). A service takes people only unless it says more:",
-      "category": "guide",
-      "order": 4,
-      "file": "igni-service/apps-and-their-spaces.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "what-a-vm-needs-vm-profile-requests",
-      "title": "What a VM needs: VM profile requests",
-      "description": "In igni's cloud every producer — a person, an app, an app's space — runs in a microVM of its own, built from a VM profile: memory, vCPUs, idle before a pause, its volume, and the packages and setup script baked into the…",
-      "category": "guide",
-      "order": 5,
-      "file": "igni-service/what-a-vm-needs-vm-profile-requests.md",
+      "file": "igni-service/concepts.md",
       "sections": [
         {
           "level": 2,
+          "id": "who-runs-where",
+          "title": "Who runs where"
+        },
+        {
+          "level": 2,
+          "id": "registration-and-approval",
+          "title": "Registration and approval"
+        },
+        {
+          "level": 2,
+          "id": "the-extension-bundle",
+          "title": "The extension bundle"
+        },
+        {
+          "level": 2,
+          "id": "people-s-tokens-and-other-callers",
+          "title": "People's tokens, and other callers"
+        },
+        {
+          "level": 2,
+          "id": "organisations",
+          "title": "Organisations"
+        },
+        {
+          "level": 2,
+          "id": "producers-and-their-agents",
+          "title": "Producers and their agents"
+        },
+        {
+          "level": 2,
+          "id": "messages-and-events",
+          "title": "Messages and events"
+        },
+        {
+          "level": 2,
+          "id": "somebody-removed",
+          "title": "Somebody removed"
+        },
+        {
+          "level": 2,
+          "id": "privacy-requests",
+          "title": "Privacy requests"
+        },
+        {
+          "level": 2,
+          "id": "what-happens-on-its-own",
+          "title": "What happens on its own"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "api-reference",
+      "title": "API reference",
+      "description": "Everything below is importable from igni_service unless it says otherwise. Signatures are shown as Python stubs.",
+      "category": "guide",
+      "order": 4,
+      "file": "igni-service/api-reference.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "igniservice",
+          "title": "IgniService"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-from-settings",
+          "title": "IgniService.from_settings"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-lifespan",
+          "title": "IgniService.lifespan"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-install",
+          "title": "IgniService.install"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-router",
+          "title": "IgniService.router"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-on-erase-on-export-on-organisation-deleted",
+          "title": "IgniService.on_erase, on_export, on_organisation_deleted"
+        },
+        {
+          "level": 3,
+          "id": "fastapi-dependencies-for-callers",
+          "title": "FastAPI dependencies for callers"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-person-of-caller-of",
+          "title": "IgniService.person_of, caller_of"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-host",
+          "title": "IgniService.host"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-thumbprint",
+          "title": "IgniService.thumbprint"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-challenge",
+          "title": "IgniService.challenge"
+        },
+        {
+          "level": 3,
+          "id": "igniservice-aclose",
+          "title": "IgniService.aclose"
+        },
+        {
+          "level": 3,
+          "id": "attributes",
+          "title": "Attributes"
+        },
+        {
+          "level": 2,
+          "id": "ignisettings",
+          "title": "IgniSettings"
+        },
+        {
+          "level": 2,
+          "id": "callers-person-app-space",
+          "title": "Callers: Person, App, Space"
+        },
+        {
+          "level": 2,
+          "id": "websignin-sign-in-to-the-service-s-own-pages",
+          "title": "WebSignIn: sign-in to the service's own pages"
+        },
+        {
+          "level": 2,
+          "id": "bearercors-calls-from-the-extension-s-page",
+          "title": "BearerCors: calls from the extension's page"
+        },
+        {
+          "level": 2,
+          "id": "host-igni-for-one-organisation",
+          "title": "Host: igni for one organisation"
+        },
+        {
+          "level": 3,
+          "id": "host-notify",
+          "title": "Host.notify"
+        },
+        {
+          "level": 3,
+          "id": "host-extension-vm-profile",
+          "title": "Host.extension_vm_profile"
+        },
+        {
+          "level": 2,
+          "id": "directory-member-organisation",
+          "title": "Directory, Member, Organisation"
+        },
+        {
+          "level": 2,
+          "id": "notification-target-delivered",
+          "title": "Notification, Target, Delivered"
+        },
+        {
+          "level": 2,
+          "id": "producer-agent-chat-attachment",
+          "title": "Producer, Agent, Chat, Attachment"
+        },
+        {
+          "level": 3,
+          "id": "agent",
+          "title": "Agent"
+        },
+        {
+          "level": 3,
+          "id": "chat",
+          "title": "Chat"
+        },
+        {
+          "level": 3,
+          "id": "attachment",
+          "title": "Attachment"
+        },
+        {
+          "level": 2,
+          "id": "eventaccepted-itemstatus",
+          "title": "EventAccepted, ItemStatus"
+        },
+        {
+          "level": 2,
+          "id": "subject-exportsection",
+          "title": "Subject, ExportSection"
+        },
+        {
+          "level": 2,
+          "id": "vm-profiles-and-igniapp",
+          "title": "VM profiles and IgniApp"
+        },
+        {
+          "level": 3,
+          "id": "igniapp",
+          "title": "IgniApp"
+        },
+        {
+          "level": 2,
+          "id": "key-and-session-storage",
+          "title": "Key and session storage"
+        },
+        {
+          "level": 2,
+          "id": "errors",
+          "title": "Errors"
+        },
+        {
+          "level": 2,
+          "id": "the-igni-service-bundle-command",
+          "title": "The igni-service-bundle command"
+        },
+        {
+          "level": 2,
+          "id": "igni-service-testing",
+          "title": "igni_service.testing"
+        },
+        {
+          "level": 3,
+          "id": "fakeigni",
+          "title": "FakeIgni"
+        },
+        {
+          "level": 3,
+          "id": "the-fake-s-collaborators",
+          "title": "The fake's collaborators"
+        },
+        {
+          "level": 3,
+          "id": "other-names-in-igni-service-testing",
+          "title": "Other names in igni_service.testing"
+        }
+      ]
+    },
+    {
+      "package": "igni-service",
+      "slug": "guides",
+      "title": "Guides",
+      "description": "Every variable is in IgniSettings.",
+      "category": "guide",
+      "order": 5,
+      "file": "igni-service/guides.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "deploying",
+          "title": "Deploying"
+        },
+        {
+          "level": 3,
+          "id": "environment",
+          "title": "Environment"
+        },
+        {
+          "level": 3,
+          "id": "where-the-key-and-sessions-are-kept",
+          "title": "Where the key and sessions are kept"
+        },
+        {
+          "level": 3,
+          "id": "logging",
+          "title": "Logging"
+        },
+        {
+          "level": 2,
+          "id": "building-and-shipping-the-extension-bundle",
+          "title": "Building and shipping the extension bundle"
+        },
+        {
+          "level": 3,
+          "id": "the-extension-s-directory",
+          "title": "The extension's directory"
+        },
+        {
+          "level": 3,
+          "id": "build-it",
+          "title": "Build it"
+        },
+        {
+          "level": 3,
+          "id": "tools-and-their-hints",
+          "title": "Tools and their hints"
+        },
+        {
+          "level": 3,
+          "id": "assets",
+          "title": "Assets"
+        },
+        {
+          "level": 3,
+          "id": "size",
+          "title": "Size"
+        },
+        {
+          "level": 3,
+          "id": "dependencies-with-no-wheel",
+          "title": "Dependencies with no wheel"
+        },
+        {
+          "level": 3,
+          "id": "a-build-machine-with-no-internet",
+          "title": "A build machine with no internet"
+        },
+        {
+          "level": 3,
+          "id": "shipping-a-new-version",
+          "title": "Shipping a new version"
+        },
+        {
+          "level": 2,
+          "id": "who-is-calling-routes-websockets-and-the-extension-s-page",
+          "title": "Who is calling: routes, WebSockets and the extension's page"
+        },
+        {
+          "level": 3,
+          "id": "sign-in-to-the-service-s-own-pages",
+          "title": "Sign-in to the service's own pages"
+        },
+        {
+          "level": 2,
+          "id": "apps-and-their-spaces-as-callers",
+          "title": "Apps and their spaces as callers"
+        },
+        {
+          "level": 2,
+          "id": "telling-people-notifications-and-the-directory",
+          "title": "Telling people: notifications and the directory"
+        },
+        {
+          "level": 2,
+          "id": "reaching-a-producer-s-agent",
+          "title": "Reaching a producer's agent"
+        },
+        {
+          "level": 2,
+          "id": "erasure-export-and-a-deleted-organisation",
+          "title": "Erasure, export and a deleted organisation"
+        },
+        {
+          "level": 2,
+          "id": "what-a-vm-needs-vm-profile-requests",
+          "title": "What a VM needs: VM profile requests"
+        },
+        {
+          "level": 3,
+          "id": "an-extension-asking",
+          "title": "An extension asking"
+        },
+        {
+          "level": 3,
           "id": "an-app-asking",
           "title": "An app asking"
         },
         {
-          "level": 2,
+          "level": 3,
           "id": "worked-example-a-headless-browser-chromium-playwright-mcp",
           "title": "Worked example: a headless browser (Chromium + Playwright MCP)"
         },
         {
-          "level": 2,
+          "level": 3,
           "id": "no-admin-calls-here",
           "title": "No admin calls here"
-        }
-      ]
-    },
-    {
-      "package": "igni-service",
-      "slug": "somebody-removed",
-      "title": "Somebody removed",
-      "description": "A person removed from an organisation (or deactivated, erased, their sessions withdrawn), an app or a space deleted: nothing they hold works from that moment, not for the ten minutes their token would still live (igni's…",
-      "category": "guide",
-      "order": 6,
-      "file": "igni-service/somebody-removed.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "calls-from-the-extension-s-page",
-      "title": "Calls from the extension's page",
-      "description": "igni.install(app) puts igni's routes on the app — igni.router (erasure, export, a deleted organisation) and igni.web.router (sign-in) — and BearerCors, which lets the extension's page call the service from igni's window…",
-      "category": "guide",
-      "order": 7,
-      "file": "igni-service/calls-from-the-extension-s-page.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "igni-for-one-organisation",
-      "title": "igni, for one organisation",
-      "description": "host = igni.host(org_id):",
-      "category": "guide",
-      "order": 8,
-      "file": "igni-service/igni-for-one-organisation.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "reaching-a-producer-s-agent",
-      "title": "Reaching a producer's agent",
-      "description": "A service reaches a producer's igni — on their desktop, or in their Fleet VM, woken for it — two ways, through igni server (service-identity §15, igni-core's docs/CLOUD.md §6):",
-      "category": "guide",
-      "order": 9,
-      "file": "igni-service/reaching-a-producer-s-agent.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "erasure-and-export",
-      "title": "Erasure and export",
-      "description": "igni.router (mounted by igni.install(app)) answers igni's two calls about one person, each with a token igni signs for this service (token_use igni, the organisation in org):",
-      "category": "guide",
-      "order": 10,
-      "file": "igni-service/erasure-and-export.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "a-deleted-organisation",
-      "title": "A deleted organisation",
-      "description": "@igni.on_organisation_deleted receives the id of an organisation igni deleted (DELETE /v1/igni/organisations/{org_id}, mounted by igni.router). Stop routing to its data;",
-      "category": "guide",
-      "order": 11,
-      "file": "igni-service/a-deleted-organisation.md",
-      "sections": []
-    },
-    {
-      "package": "igni-service",
-      "slug": "deploying",
-      "title": "Deploying",
-      "description": "IgniService.from_settings keeps both in IGNI_KEY_DATABASE_URL, in tables of the SDK's own (igni_service_key, igni_web_session, igni_web_login), created on first use. Rows are sealed with the key encryption key;",
-      "category": "guide",
-      "order": 12,
-      "file": "igni-service/deploying.md",
-      "sections": [
+        },
         {
           "level": 2,
-          "id": "where-the-key-and-sessions-are-kept",
-          "title": "Where the key and sessions are kept"
+          "id": "handling-errors",
+          "title": "Handling errors"
+        },
+        {
+          "level": 2,
+          "id": "testing-a-service",
+          "title": "Testing a service"
+        },
+        {
+          "level": 3,
+          "id": "testing-sign-in-to-the-service-s-own-pages",
+          "title": "Testing sign-in to the service's own pages"
+        },
+        {
+          "level": 3,
+          "id": "testing-a-held-version",
+          "title": "Testing a held version"
+        },
+        {
+          "level": 3,
+          "id": "testing-what-the-service-sent-an-agent",
+          "title": "Testing what the service sent an agent"
+        },
+        {
+          "level": 3,
+          "id": "sharing-one-fake-across-a-session",
+          "title": "Sharing one fake across a session"
         }
       ]
     },
     {
       "package": "igni-service",
-      "slug": "the-extension-bundle",
-      "title": "The extension bundle",
-      "description": "Builds what the service uploads: manifest.json (declaring the python packaging), the extension's README.md, plugin/ and ui/, and a wheelhouse with the extension's wheel and every dependency's for CPython 3.12 on macOS…",
+      "slug": "troubleshooting-and-faq",
+      "title": "Troubleshooting and FAQ",
+      "description": "raises ServiceNotApproved. No super admin has approved the service yet. In igni's portal, *Services*, they compare the thumbprint shown with the one in your service's banner and approve it.",
       "category": "guide",
-      "order": 13,
-      "file": "igni-service/the-extension-bundle.md",
+      "order": 6,
+      "file": "igni-service/troubleshooting-and-faq.md",
       "sections": []
     },
     {
       "package": "igni-service",
-      "slug": "testing-a-service",
-      "title": "Testing a service",
-      "description": "igni_service.testing.FakeIgni is igni in-process: it signs tokens, serves its keys, takes registrations and bundles, issues service tokens, answers the directory, plays the portal's sign-in, revokes sign-ins, and…",
+      "slug": "changes-since-0-1-0",
+      "title": "Changes since 0.1.0",
+      "description": "Changed on purpose, in igni_service.testing:",
       "category": "guide",
-      "order": 14,
-      "file": "igni-service/testing-a-service.md",
+      "order": 7,
+      "file": "igni-service/changes-since-0-1-0.md",
       "sections": []
     },
     {
@@ -3410,7 +3958,7 @@
       "title": "IgniService and its settings",
       "description": "Reference: IgniService, IgniSettings, IgniTables — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 15,
+      "order": 8,
       "file": "igni-service/reference-igni-service-class.md",
       "sections": [
         {
@@ -3536,7 +4084,7 @@
       "title": "Callers: Person, App, Space",
       "description": "Reference: IgniCall, PEOPLE_ONLY, App, Caller, CallerKind, Person… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 16,
+      "order": 9,
       "file": "igni-service/reference-callers.md",
       "sections": [
         {
@@ -3632,7 +4180,7 @@
       "title": "Web sign-in, sessions and CORS",
       "description": "Reference: BearerCors, MemoryWebSessionStore, SqlWebSessionStore, WebSession, WebSessionStore, WebSignIn — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 17,
+      "order": 10,
       "file": "igni-service/reference-web-sign-in.md",
       "sections": [
         {
@@ -3813,7 +4361,7 @@
       "title": "Host and directory",
       "description": "Reference: Directory, Host, Member, Organisation — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 18,
+      "order": 11,
       "file": "igni-service/reference-host-and-directory.md",
       "sections": [
         {
@@ -3909,7 +4457,7 @@
       "title": "Notifications",
       "description": "Reference: Delivered, Notification, Target — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 19,
+      "order": 12,
       "file": "igni-service/reference-notifications.md",
       "sections": [
         {
@@ -3940,7 +4488,7 @@
       "title": "Producers, agents and events",
       "description": "Reference: Agent, Attachment, Chat, EventAccepted, ItemStatus, Producer — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 20,
+      "order": 13,
       "file": "igni-service/reference-producers-and-agents.md",
       "sections": [
         {
@@ -4061,7 +4609,7 @@
       "title": "Erasure and export: Subject",
       "description": "Reference: ExportSection, Subject — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 21,
+      "order": 14,
       "file": "igni-service/reference-subjects.md",
       "sections": [
         {
@@ -4082,7 +4630,7 @@
       "title": "VM profiles and IgniApp",
       "description": "Reference: AppVmProfile, EffectiveVmProfile, IgniApp, ServiceVmProfile, VmPackages, VmProfileRequest… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 22,
+      "order": 15,
       "file": "igni-service/reference-vm-profiles.md",
       "sections": [
         {
@@ -4173,7 +4721,7 @@
       "title": "Key storage",
       "description": "Reference: KeyCipher, KeyStore, MemoryKeyStore, SqlKeyStore, StoredKey — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 23,
+      "order": 16,
       "file": "igni-service/reference-key-storage.md",
       "sections": [
         {
@@ -4259,7 +4807,7 @@
       "title": "Errors",
       "description": "Reference: VmProfileRefused, BundleError, ConfigurationError, EventRefused, IgniError, IgniUnavailable… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 24,
+      "order": 17,
       "file": "igni-service/reference-errors.md",
       "sections": [
         {
@@ -4320,7 +4868,7 @@
       "title": "igni_service.testing",
       "description": "Reference: BundleArchive, Delivery, FakeAgents, FakeCaps, FakeIgni, FakeVmProfiles… — signatures and docstrings, read from the code.",
       "category": "reference",
-      "order": 25,
+      "order": 18,
       "file": "igni-service/reference-testing.md",
       "sections": [
         {

@@ -36,11 +36,15 @@ A new key encryption key, for an operator to keep.
 def seal(plaintext: str) -> str
 ```
 
+`plaintext` encrypted under the key encryption key, as Fernet text.
+
 ### KeyCipher.open()
 
 ```python
 def open(sealed: str) -> str
 ```
+
+What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed.
 
 ## KeyStore
 
@@ -57,11 +61,18 @@ Keeps one key. See the module note for the contract.
 async def get() -> StoredKey | None
 ```
 
+The kept key, or `None` before there is one.
+
 ### KeyStore.claim()
 
 ```python
 async def claim(key: StoredKey) -> StoredKey
 ```
+
+Keep `key` unless one is already kept, and answer with whichever is kept.
+
+Two replicas that each made a key both call it: one wins, and both
+sign with the winner's from then on.
 
 ## MemoryKeyStore
 
@@ -78,11 +89,15 @@ A key kept in this process only. For tests; a restart is a new identity.
 async def get() -> StoredKey | None
 ```
 
+The key this process kept, or `None` before there is one.
+
 ### MemoryKeyStore.claim()
 
 ```python
 async def claim(key: StoredKey) -> StoredKey
 ```
+
+Keep `key` unless one is already kept; answer with whichever is.
 
 ## SqlKeyStore
 
@@ -100,17 +115,24 @@ Keeps the service's key sealed in one row of `igni_service_key`.
 engine: AsyncEngine
 ```
 
+The database engine the key is kept through.
+
 ### SqlKeyStore.get()
 
 ```python
 async def get() -> StoredKey | None
 ```
 
+The kept key, unsealed, or `None` before there is one. Creates the table first
+unless `create_table=False`.
+
 ### SqlKeyStore.claim()
 
 ```python
 async def claim(key: StoredKey) -> StoredKey
 ```
+
+Keep `key`, sealed, unless another replica kept one first; answer with the kept one.
 
 ## StoredKey
 
@@ -121,7 +143,7 @@ StoredKey(*, kid: str, private_pem: str)
 
 A kept key: its `kid` (thumbprint) and its private half, unsealed.
 
-| Field | Type | Default |
-|---|---|---|
-| `kid` | `str` | required |
-| `private_pem` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kid` | `str` | required | The key's id: its RFC 7638 thumbprint. |
+| `private_pem` | `str` | required | The private half, PEM-encoded, unsealed. |

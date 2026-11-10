@@ -10,7 +10,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`MemoryWebSessionStore`](#memorywebsessionstore) | Sessions in this process only. For tests, and for one replica. |
 | [`SqlWebSessionStore`](#sqlwebsessionstore) | Sessions in two of the service's tables, sealed. See `igni_service.tables`. |
 | [`WebSession`](#websession) | One person signed in to the service's pages. |
-| [`WebSessionStore`](#websessionstore) | — |
+| [`WebSessionStore`](#websessionstore) | Where `igni.web` keeps its people's sessions and sign-ins in flight. |
 | [`WebSignIn`](#websignin) | Sign-in to the service's own pages, and the dependencies that require it. |
 
 ## BearerCors
@@ -37,11 +37,15 @@ Sessions in this process only. For tests, and for one replica.
 async def get(session_id: str) -> WebSession | None
 ```
 
+The session `session_id` names, or `None` when there is none or it has expired.
+
 ### MemoryWebSessionStore.put()
 
 ```python
 async def put(session_id: str, session: WebSession) -> None
 ```
+
+Keep `session` under `session_id`, replacing what was there.
 
 ### MemoryWebSessionStore.delete()
 
@@ -49,17 +53,23 @@ async def put(session_id: str, session: WebSession) -> None
 async def delete(session_id: str) -> None
 ```
 
+Forget the session `session_id` names.
+
 ### MemoryWebSessionStore.put_login()
 
 ```python
 async def put_login(attempt: LoginAttempt) -> None
 ```
 
+Keep a sign-in in flight until igni sends the person back.
+
 ### MemoryWebSessionStore.take_login()
 
 ```python
 async def take_login(state: str) -> LoginAttempt | None
 ```
+
+The attempt for `state`, once and unexpired: a second take finds nothing.
 
 ## SqlWebSessionStore
 
@@ -82,11 +92,15 @@ Sessions in two of the service's tables, sealed. See `igni_service.tables`.
 async def get(session_id: str) -> WebSession | None
 ```
 
+The session `session_id` names, unsealed, or `None` when there is none or it has expired.
+
 ### SqlWebSessionStore.put()
 
 ```python
 async def put(session_id: str, session: WebSession) -> None
 ```
+
+Keep `session`, sealed, under a digest of `session_id`, replacing what was there.
 
 ### SqlWebSessionStore.delete()
 
@@ -94,17 +108,23 @@ async def put(session_id: str, session: WebSession) -> None
 async def delete(session_id: str) -> None
 ```
 
+Forget the session `session_id` names.
+
 ### SqlWebSessionStore.put_login()
 
 ```python
 async def put_login(attempt: LoginAttempt) -> None
 ```
 
+Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are deleted on the way.
+
 ### SqlWebSessionStore.take_login()
 
 ```python
 async def take_login(state: str) -> LoginAttempt | None
 ```
+
+The attempt for `state`, once and unexpired: of two replicas taking it, one gets it.
 
 ## WebSession
 
@@ -122,13 +142,13 @@ WebSession(
 
 One person signed in to the service's pages.
 
-| Field | Type | Default |
-|---|---|---|
-| `person` | `Person` | required |
-| `access_token` | `str` | required |
-| `refresh_token` | `str` | required |
-| `access_expires_at` | `float` | required |
-| `expires_at` | `float` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `person` | `Person` | required | Who is signed in. |
+| `access_token` | `str` | required | Their current access token for this service. |
+| `refresh_token` | `str` | required | What renews it, until the sign-in ends. |
+| `access_expires_at` | `float` | required | Wall-clock second the access token stops working. |
+| `expires_at` | `float` | required | Wall-clock second the session is dead: the refresh token's life. |
 
 ## WebSessionStore
 
@@ -137,11 +157,20 @@ class WebSessionStore(Protocol)
 WebSessionStore(*args, **kwargs)
 ```
 
+Where `igni.web` keeps its people's sessions and sign-ins in flight.
+
+`MemoryWebSessionStore` keeps them in the process; `SqlWebSessionStore`
+in the service's database, for several replicas. A store of your own
+implements these five methods. Session ids and `state`s are secrets:
+keep a digest of them, not the value.
+
 ### WebSessionStore.get()
 
 ```python
 async def get(session_id: str) -> WebSession | None
 ```
+
+The session `session_id` names, or `None` when there is none or it has expired.
 
 ### WebSessionStore.put()
 
@@ -149,17 +178,23 @@ async def get(session_id: str) -> WebSession | None
 async def put(session_id: str, session: WebSession) -> None
 ```
 
+Keep `session` under `session_id`, replacing what was there.
+
 ### WebSessionStore.delete()
 
 ```python
 async def delete(session_id: str) -> None
 ```
 
+Forget the session `session_id` names. Not an error when there is none.
+
 ### WebSessionStore.put_login()
 
 ```python
 async def put_login(attempt: LoginAttempt) -> None
 ```
+
+Keep a sign-in in flight until igni sends the person back.
 
 ### WebSessionStore.take_login()
 
@@ -193,12 +228,16 @@ Sign-in to the service's own pages, and the dependencies that require it.
 def redirect_uri_for(own_url: str) -> str
 ```
 
+The callback address igni sends a person back to, for a service at `own_url`.
+
 ### WebSignIn.redirect_uri
 
 ```python
 @property
 redirect_uri: str
 ```
+
+This service's callback address: `PUBLIC_BASE_URL` + `/auth/callback`.
 
 ### WebSignIn.login_path
 
@@ -225,12 +264,16 @@ Where a page posts to sign out of this service.
 store: WebSessionStore
 ```
 
+Where the sessions and sign-ins in flight are kept.
+
 ### WebSignIn.router
 
 ```python
 @property
 router: APIRouter
 ```
+
+The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `POST /auth/logout`. `igni.install(app)` mounts them.
 
 ### WebSignIn.login()
 

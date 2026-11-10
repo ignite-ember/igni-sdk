@@ -17,7 +17,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 Read or change the calling window's own model: its fields, toasts and dialog.
 
 ```python
-async def model(
+def model(
     self,
     *,
     op: Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog'],
@@ -28,7 +28,7 @@ async def model(
     kind: str = '',
     token: str = '',
     value: JsonValue = None,
-) -> WindowModelResult
+) -> Call[WindowModelResult, WindowModelEvent]
 ```
 
 A window spans sessions, so this is not tied to one. `op` says what
@@ -48,28 +48,32 @@ the window's saved state could not be read or written.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `connection_id` | `str` | `''` | — |
-| `dialog_id` | `str` | `''` | — |
-| `field` | `str` | `''` | — |
-| `kind` | `str` | `''` | — |
-| `op` | `Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog']` | required | `op` says what to do (see the arguments); |
-| `token` | `str` | `''` | — |
-| `value` | `JsonValue` | `None` | — |
-| `window` | `str` | required | `window` is the window's own stable id. |
+| `connection_id` | `str` | `''` | The window's connection id, for transports without connections (a terminal socket, an in-process client). Ignored over a WebSocket: the request's own connection is used. |
+| `dialog_id` | `str` | `''` | The dialog an `answer_dialog` closes. |
+| `field` | `str` | `''` | The model field a `write` sets. |
+| `kind` | `str` | `''` | What kind of window this is, recorded when it opens. |
+| `op` | `Literal['hydrate', 'write', 'toast', 'dismiss_toast', 'open_dialog', 'answer_dialog']` | required | What to do. `hydrate`: read the whole model, and report the window as open. `write`: set `field` to `value`. `toast`: show the toast `value`. `dismiss_toast`: remove the toast whose id is `value`. `open_dialog`: show igni's own dialog, `value` being its spec. `answer_dialog`: close dialog `dialog_id` with the answer `value` (`null`: dismissed). |
+| `token` | `str` | `''` | The writer's own name for this change, echoed on `window_model_changed`. |
+| `value` | `JsonValue` | `None` | What the op writes, shows or answers with; its shape depends on the op and field. |
+| `window` | `str` | required | The window's id, chosen by the window and stable across its reloads. |
 
-**Returns** [`WindowModelResult`](/docs/sdk/igni-client/models-reference#windowmodelresult).
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`WindowModelResult`](/docs/sdk/igni-client/models-reference#windowmodelresult), or `async with` it to follow its events too.
 
-**Events** while it runs igni also streams `window_model_changed` ([`WindowModelChangedPush`](/docs/sdk/igni-client/events-reference#windowmodelchangedpush)). This call does not follow them: a `window_model_changed` push says which window changed and its new revision, but not which request changed it, and a request that changes nothing pushes nothing.
+**Events** `WindowModelEvent` is any of [`WindowModelChangedPush`](/docs/sdk/igni-client/events-reference#windowmodelchangedpush) (igni streams `window_model_changed`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `window_model_changed` push that carries this change, and ends with the answer. The change's token is the one given; igni-client makes one when the caller does not, so the push can be told from another window's.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `window_model`, scope `igni`, area `host_model`; igni answers with `rpc_response`.
 
 **Example**
 
 ```python
-changed = await igni.window.model(op="toast", window="main", value={"text": "Deployed"})
-print(changed)
+async with igni.window.model(op="toast", window="main", value={"text": "Deployed"}) as changed:
+    async for event in changed:
+        print(event.payload.window, event.payload.field)
+    print((await changed.result()).rev)
 ```

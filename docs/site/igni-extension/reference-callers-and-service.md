@@ -7,7 +7,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | Name | What it is |
 |---|---|
 | [`Caller`](#caller) | The producer one call is for. |
-| [`CallerKind`](#callerkind) | — |
+| [`CallerKind`](#callerkind) | Who a call is for: a person, an app, or one end user of an app (a space). |
 | [`NoCaller`](#nocaller) | Asked for the caller outside a call igni made: in `on_start` work, say. |
 | [`ServiceClient`](#serviceclient) | `ext.service`: the extension's service, as the signed-in person. |
 | [`SignedIn`](#signedin) | Who the last token was for, read without checking it. |
@@ -30,15 +30,15 @@ Caller(
 
 The producer one call is for.
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `CallerKind` | required |
-| `id` | `str` | required |
-| `org` | `str \| None` | `None` |
-| `group` | `str \| None` | `None` |
-| `session` | `str \| None` | `None` |
-| `app` | `str \| None` | `None` |
-| `external_id` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `CallerKind` | required | `person`, `app` or `space`. |
+| `id` | `str` | required | The person's or the app's id on igni server. |
+| `org` | `str \| None` | `None` | Their organisation. |
+| `group` | `str \| None` | `None` | The one group a person belongs to in `org`; an app has none. |
+| `session` | `str \| None` | `None` | The igni session the call comes from, when there is one. |
+| `app` | `str \| None` | `None` | A space's app (its id); `None` for a person or an app. |
+| `external_id` | `str \| None` | `None` | The app's own name for a space's end user. |
 
 ### Caller.ref
 
@@ -81,6 +81,8 @@ The current caller; `NoCaller` outside a call igni made.
 ```python
 class CallerKind(StrEnum)
 ```
+
+Who a call is for: a person, an app, or one end user of an app (a space).
 
 | Member | Value |
 |---|---|
@@ -148,7 +150,7 @@ A WebSocket to `path` on the service, with the person's token.
 async def aclose() -> None
 ```
 
-Close transport and proxies.
+Close this client, and the clients `for_(caller)` made.
 
 ## SignedIn
 
@@ -162,12 +164,12 @@ Who the last token was for, read without checking it.
 For showing who is signed in and noticing that it changed. The service
 checks the token; this side never decides anything with what it says.
 
-| Field | Type | Default |
-|---|---|---|
-| `user_id` | `str` | `''` |
-| `org_id` | `str` | `''` |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `user_id` | `str` | `''` | The person's igni user id. |
+| `org_id` | `str` | `''` | The organisation the token is for. |
+| `email` | `str` | `''` | Their email address, when the token carries it. |
+| `name` | `str` | `''` | Their name, when the token carries it. |
 
 ### SignedIn.of()
 
@@ -175,3 +177,7 @@ checks the token; this side never decides anything with what it says.
 @classmethod
 def of(token: str) -> SignedIn
 ```
+
+Who `token` names, read from its claims without checking its signature.
+
+Every field is empty for a token that is not a JWT.

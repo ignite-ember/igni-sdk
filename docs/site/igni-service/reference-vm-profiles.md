@@ -40,9 +40,9 @@ Based on [`EffectiveVmProfile`](/docs/sdk/igni-service/reference-vm-profiles#eff
 
 What the app's own VM gets now, with its volume.
 
-| Field | Type | Default |
-|---|---|---|
-| `volume_gib` | `int` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `volume_gib` | `int` | required | The app's volume, in GiB: the profile's, or more where an admin grew it. |
 
 ## EffectiveVmProfile
 
@@ -67,20 +67,20 @@ EffectiveVmProfile(
 
 What a VM gets from a profile: its values, clamped to the platform's caps.
 
-| Field | Type | Default |
-|---|---|---|
-| `profile_id` | `str` | required |
-| `profile_name` | `str` | required |
-| `memory_mib` | `int` | required |
-| `normal_memory_mib` | `int` | required |
-| `expected_memory_mib` | `int \| None` | `None` |
-| `vcpus` | `int` | required |
-| `idle_before_pause_s` | `int \| None` | `None` |
-| `packages` | `VmPackages` | factory |
-| `setup_script` | `str \| None` | `None` |
-| `volume_max_gib` | `int` | required |
-| `erase_after_idle_days` | `int \| None` | `None` |
-| `internet` | `bool` | `False` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `profile_id` | `str` | required | The profile's id. |
+| `profile_name` | `str` | required | Its name, as the portal shows it. |
+| `memory_mib` | `int` | required | The most memory the VM may have, in MiB. |
+| `normal_memory_mib` | `int` | required | What it normally has, in MiB. |
+| `expected_memory_mib` | `int \| None` | `None` | What the node expects it to use; `None`: the node's rule. |
+| `vcpus` | `int` | required | Virtual CPUs. |
+| `idle_before_pause_s` | `int \| None` | `None` | Seconds idle before the VM is paused; `None` is never. |
+| `packages` | `VmPackages` | factory | What its read-only layer is built with. |
+| `setup_script` | `str \| None` | `None` | Run as root when the layer is built. |
+| `volume_max_gib` | `int` | required | The largest an admin may grow a volume to, in GiB. |
+| `erase_after_idle_days` | `int \| None` | `None` | Days unwoken after which a VM is erased; `None` is never. |
+| `internet` | `bool` | `False` | Whether the VM may reach the internet (where its node may grant it); False, and absent from an older igni server: internal only. |
 
 ## IgniApp
 
@@ -104,6 +104,8 @@ An app's place in an igni deployment: its key, its token, its VM's profile.
 ```python
 async def aclose() -> None
 ```
+
+Close the HTTP client this object opened.
 
 ### IgniApp.public_jwks()
 
@@ -158,13 +160,13 @@ ServiceVmProfile(
 
 A service's extension's request in one organisation, and the profile it became.
 
-| Field | Type | Default |
-|---|---|---|
-| `org_id` | `str` | required |
-| `extension_id` | `str \| None` | `None` |
-| `request` | `VmProfileRequestRecord \| None` | `None` |
-| `profile` | `EffectiveVmProfile \| None` | `None` |
-| `assigned` | `Assigned` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation asked about. |
+| `extension_id` | `str \| None` | `None` | `None` when this service ships no extension, or its manifest has no `vm`. |
+| `request` | `VmProfileRequestRecord \| None` | `None` | The extension's request there; `None` when none was made. |
+| `profile` | `EffectiveVmProfile \| None` | `None` | What the approval made, clamped to the caps; `None` until approved. |
+| `assigned` | `Assigned` | factory | Who the org admin gave that profile to. |
 
 ## VmPackages
 
@@ -180,11 +182,11 @@ VmPackages(
 
 What the profile's read-only layer is built with, per package manager.
 
-| Field | Type | Default |
-|---|---|---|
-| `apt` | `list[PackageName]` | factory |
-| `pip` | `list[PackageName]` | factory |
-| `npm` | `list[PackageName]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `apt` | `list[PackageName]` | factory | Debian packages, as `apt-get install` names them: `chromium`. |
+| `pip` | `list[PackageName]` | factory | Python packages, as `pip install` names them: `requests==2.32.3`. |
+| `npm` | `list[PackageName]` | factory | npm packages, installed globally: `@playwright/mcp@0.0.41`. |
 
 ## VmProfileRequest
 
@@ -213,19 +215,19 @@ server — only the fields set are sent (`body`). A nullable field set to
 `None` asks for that explicitly: `idle_before_pause_s=None` is never
 pausing, which the platform's caps may refuse.
 
-| Field | Type | Default |
-|---|---|---|
-| `memory_mib` | `int \| None` | `None` |
-| `normal_memory_mib` | `int \| None` | `None` |
-| `expected_memory_mib` | `int \| None` | `None` |
-| `vcpus` | `int \| None` | `None` |
-| `idle_before_pause_s` | `int \| None` | `None` |
-| `packages` | `VmPackages \| None` | `None` |
-| `setup_script` | `str \| None` | `None` |
-| `volume_gib` | `int \| None` | `None` |
-| `volume_max_gib` | `int \| None` | `None` |
-| `erase_after_idle_days` | `int \| None` | `None` |
-| `internet` | `bool \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `memory_mib` | `int \| None` | `None` | The most memory the VM may have, in MiB: its size at boot. |
+| `normal_memory_mib` | `int \| None` | `None` | What it normally has, in MiB; the node lends the rest while it needs it. |
+| `expected_memory_mib` | `int \| None` | `None` | What the node expects it to use, for placing it; `None`: the node's rule. |
+| `vcpus` | `int \| None` | `None` | Virtual CPUs (1-256). |
+| `idle_before_pause_s` | `int \| None` | `None` | Seconds idle before the VM is paused; `None` is never. |
+| `packages` | `VmPackages \| None` | `None` | What the profile's read-only layer is built with. |
+| `setup_script` | `str \| None` | `None` | Run as root when the profile's layer is built, after the packages. |
+| `volume_gib` | `int \| None` | `None` | A new VM's volume, and how far an admin may grow it, in GiB. |
+| `volume_max_gib` | `int \| None` | `None` | The largest an admin may grow the volume to, in GiB. |
+| `erase_after_idle_days` | `int \| None` | `None` | Days unwoken after which the app's VM is erased; `None` is never. |
+| `internet` | `bool \| None` | `None` | Whether the VM may reach the internet. Left out (or False): internal only — igni and the deployment's own allowed addresses. True asks the org admin for internet egress, a security grant they see as such; a node that is air-gapped, or not allowed to grant internet, still starts the VM internal-only. |
 
 ### VmProfileRequest.body()
 
@@ -260,22 +262,22 @@ VmProfileRequestRecord(
 
 One request, and what became of it.
 
-| Field | Type | Default |
-|---|---|---|
-| `id` | `str` | required |
-| `org_id` | `str` | required |
-| `subject` | `RequestSubject` | required |
-| `state` | `RequestState` | required |
-| `requested` | `RequestedVmProfile` | required |
-| `version` | `str` | required |
-| `packages_version` | `str` | required |
-| `within_caps` | `bool` | required |
-| `requested_by` | `Requester` | required |
-| `requested_at` | `datetime` | required |
-| `decided_by` | `Decider \| None` | `None` |
-| `decided_at` | `datetime \| None` | `None` |
-| `reason` | `str \| None` | `None` |
-| `profile_id` | `str \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `id` | `str` | required | The request's id. |
+| `org_id` | `str` | required | The organisation it was made in. |
+| `subject` | `RequestSubject` | required | Whose request it is: an app, or an extension. |
+| `state` | `RequestState` | required | `pending`, `approved` or `rejected`. |
+| `requested` | `RequestedVmProfile` | required | What it asks for, with igni's Standard values filled in. |
+| `version` | `str` | required | Changes whenever anything requested does; an approval names it. |
+| `packages_version` | `str` | required | Changes whenever the packages or the setup script do: the layer Fleet builds. |
+| `within_caps` | `bool` | required | False when it asks for more than the platform's caps allow now. |
+| `requested_by` | `Requester` | required | Who sent it. |
+| `requested_at` | `datetime` | required | When it was last sent (or changed). |
+| `decided_by` | `Decider \| None` | `None` | The admin who approved or rejected it; `None` while pending. |
+| `decided_at` | `datetime \| None` | `None` | When they did. |
+| `reason` | `str \| None` | `None` | Why it was rejected, when the admin said. |
+| `profile_id` | `str \| None` | `None` | The profile an approval made, holding what was last approved. |
 
 ### VmProfileRequestRecord.is_pending
 
@@ -284,6 +286,8 @@ One request, and what became of it.
 is_pending: bool
 ```
 
+Whether an org admin has yet to decide (`state == "pending"`).
+
 ### VmProfileRequestRecord.is_approved
 
 ```python
@@ -291,9 +295,13 @@ is_pending: bool
 is_approved: bool
 ```
 
+Whether an org admin approved it (`state == "approved"`).
+
 ### VmProfileRequestRecord.is_rejected
 
 ```python
 @property
 is_rejected: bool
 ```
+
+Whether an org admin rejected it (`state == "rejected"`); `reason` may say why.

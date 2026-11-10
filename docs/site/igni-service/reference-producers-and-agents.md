@@ -29,6 +29,8 @@ One producer's agent — a person's or an app's — in one organisation.
 producer: Producer
 ```
 
+Whose igni this agent is: the person or app every item goes to.
+
 ### Agent.send_message()
 
 ```python
@@ -97,7 +99,22 @@ The chat of `thread`: opened by its first item, whichever that is.
 async def status(event_id: str) -> ItemStatus
 ```
 
-`pending`, `delivered`, `expired`, `dropped` or `failed`, with the reason.
+Where an item igni accepted stands, as igni holds it now.
+
+`state` is one of:
+
+- `pending` — stored; the producer's igni has not taken it yet.
+- `delivered` — a message posted, or an event a handler took.
+- `not_handled` — an event no handler took: no handler for its
+  type, no running extension, or the handler raised;
+  `not_handled_reason` says which.
+- `expired` — not taken before `expires_at`.
+- `dropped` — the producer no longer has the extension;
+  `dropped_reason` says why.
+- `failed` — the platform gave up; `failed_reason` says why.
+
+Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
+`IgniUnavailable` otherwise.
 
 ### Agent.send_item()
 
@@ -132,11 +149,11 @@ Attachment(
 
 A file to send with an item: any type igni's composer takes, at most 5 MiB.
 
-| Field | Type | Default |
-|---|---|---|
-| `filename` | `str` | required |
-| `content_type` | `str` | `'application/octet-stream'` |
-| `data` | `bytes` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `filename` | `str` | required | The file's name, as people see it in the chat (1-200 characters). |
+| `content_type` | `str` | `'application/octet-stream'` | Its media type. |
+| `data` | `bytes` | required | Its bytes: at least one, at most 5 MiB. |
 
 ### Attachment.from_bytes()
 
@@ -149,12 +166,16 @@ def from_bytes(
 ) -> Attachment
 ```
 
+An attachment of `data`, its media type guessed from `filename` unless given.
+
 ### Attachment.from_path()
 
 ```python
 @classmethod
 def from_path(path: str | Path, content_type: str | None = None) -> Attachment
 ```
+
+The file at `path`, read now, named by its file name.
 
 ## Chat
 
@@ -212,6 +233,8 @@ A json-render view in the chat — `{root, elements}` — shown, never sent to t
 async def rename(title: str, *, event_key: str | None = None) -> EventAccepted
 ```
 
+Give the chat a new title (1-200 characters). Starts no run.
+
 ### Chat.cancel()
 
 ```python
@@ -234,11 +257,11 @@ EventAccepted(
 
 igni stored the event. `expires_at` is the time igni kept.
 
-| Field | Type | Default |
-|---|---|---|
-| `event_id` | `str` | required |
-| `expires_at` | `datetime \| None` | `None` |
-| `duplicate` | `bool` | `False` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `event_id` | `str` | required | The item's id: pass it to `Agent.status`. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops trying to deliver it: what was asked, or igni's 14-day limit. |
+| `duplicate` | `bool` | `False` | True when `event_key` matched an event already stored. |
 
 ## ItemStatus
 
@@ -265,22 +288,22 @@ ItemStatus(
 
 What became of an item: `GET /v1/service-events/{event_id}`.
 
-| Field | Type | Default |
-|---|---|---|
-| `event_id` | `str` | required |
-| `producer` | `Producer` | required |
-| `kind` | `ItemKind` | `'event'` |
-| `type` | `str` | required |
-| `thread` | `str \| None` | `None` |
-| `event_key` | `str \| None` | `None` |
-| `state` | `ItemState` | required |
-| `dropped_reason` | `str \| None` | `None` |
-| `failed_reason` | `str \| None` | `None` |
-| `not_handled_reason` | `str \| None` | `None` |
-| `created_at` | `datetime` | required |
-| `expires_at` | `datetime \| None` | `None` |
-| `delivered_at` | `datetime \| None` | `None` |
-| `updated_at` | `datetime` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `event_id` | `str` | required | The item's id, as `EventAccepted.event_id` gave it. |
+| `producer` | `Producer` | required | Whose igni the item was for. |
+| `kind` | `ItemKind` | `'event'` | `event`, `message`, `chat` or `action`. |
+| `type` | `str` | required | An event's type; for the other kinds, the kind igni recorded. |
+| `thread` | `str \| None` | `None` | The chat thread the item belongs to, if any. |
+| `event_key` | `str \| None` | `None` | The key the service sent it with, if any. |
+| `state` | `ItemState` | required | Where it stands: `pending`, `delivered`, `not_handled`, `expired`, `dropped` or `failed` (`Agent.status` says what each means). |
+| `dropped_reason` | `str \| None` | `None` | Why it was dropped, when `state` is `dropped`. |
+| `failed_reason` | `str \| None` | `None` | Why the platform gave up, when `state` is `failed`. |
+| `not_handled_reason` | `str \| None` | `None` | An event no handler took: why. |
+| `created_at` | `datetime` | required | When igni stored it. |
+| `expires_at` | `datetime \| None` | `None` | When it stops waiting to be taken. |
+| `delivered_at` | `datetime \| None` | `None` | When the producer's igni took it, once it has. |
+| `updated_at` | `datetime` | required | When its state last changed. |
 
 ## Producer
 
@@ -291,10 +314,10 @@ Producer(*, kind: Literal['person', 'app'], id: Annotated[str, MinLen(min_length
 
 Whose agent the event is for: a person or an app of the organisation.
 
-| Field | Type | Default |
-|---|---|---|
-| `kind` | `ProducerKind` | required |
-| `id` | `str` | required |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `ProducerKind` | required | `person` or `app`. |
+| `id` | `str` | required | The person's user id, or the app's id. |
 
 ### Producer.person()
 
@@ -303,9 +326,13 @@ Whose agent the event is for: a person or an app of the organisation.
 def person(user_id: str) -> Producer
 ```
 
+The igni of the person `user_id`.
+
 ### Producer.app()
 
 ```python
 @classmethod
 def app(app_id: str) -> Producer
 ```
+
+The igni of the app `app_id`, in its Fleet VM.

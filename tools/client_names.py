@@ -264,6 +264,11 @@ HAND_WRITTEN_NAMESPACES: dict[str, str] = {
 #: Methods that stream whose events igni-client follows, and how it tells
 #: this call's events from every other's. Each returns a `Call`
 #: (`igni_client.calls`); `igni_client.follow` holds the rule that matches.
+#:
+#: igni's contract says, per method, which place in a streamed message
+#: holds the value found in the call (`correlate`) and what the call causes
+#: at all; the SDK applies that, and each rule here adds only what the
+#: contract cannot say — when the call's stream has no more to come.
 FOLLOWED: dict[str, str] = {
     "approve_plan": (
         "``async with`` the call to follow it: it yields the ``plan_decided`` push whose "
@@ -305,53 +310,70 @@ FOLLOWED: dict[str, str] = {
         "ends with the ``login_result`` one. igni signs in one way at a time — a new "
         "``login`` cancels the one going — so these are the sign-in igni is doing."
     ),
+    "attach_session": (
+        "``async with`` the call to follow it: it yields the approvals the session is "
+        "still waiting for and the run it continues again — every message of them "
+        "carries the attach's own request id — and ends with the ``stream_end`` that "
+        "closes them."
+    ),
+    "cancel_run": (
+        "``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` "
+        "of the turn it stops, and ends with the ``stream_end``. With no turn running "
+        "nothing is streamed, and the answer says so."
+    ),
+    "execute_scheduled_task": (
+        "``async with`` the call to follow it: it yields the pushes of the run it "
+        "starts — what its tools do while it works — as they come, and ends with the "
+        "answer, which is the agent's own words. The run's id is the one given; "
+        "igni-client makes one when the caller does not, so the pushes can be told "
+        "from another run's."
+    ),
+    "notifications_list": (
+        "``async with`` the call to follow it: it yields the ``notifications_changed`` "
+        "push that says the list was read, and ends with the answer."
+    ),
+    "notifications_mark_read": (
+        "``async with`` the call to follow it: it yields the ``notifications_changed`` "
+        "push that says the notifications were marked read, and ends with the answer."
+    ),
+    "clear_cloud_credentials": (
+        "``async with`` the call to follow it: it yields the ``notifications_changed`` "
+        "push that says the person signed out, and ends with the answer — the "
+        "session's status."
+    ),
+    "set_workspace_trust": (
+        "``async with`` the call to follow it: it yields the ``workspace_trust_required`` "
+        "push that tells the windows the folder's trust changed, and ends with the "
+        "answer — the new status."
+    ),
+    "window_model": (
+        "``async with`` the call to follow it: it yields the ``window_model_changed`` "
+        "push that carries this change, and ends with the answer. The change's token "
+        "is the one given; igni-client makes one when the caller does not, so the push "
+        "can be told from another window's."
+    ),
+    "run_shell": (
+        "``async with`` the call to follow it: a command that finishes inside the wait "
+        "pushes nothing, and the answer is its output. A command that outlives the wait "
+        "moves to the background: the answer names the pid, and the "
+        "``process_started``, ``process_line``, ``process_exited`` and "
+        "``background_process_done`` pushes of that pid follow, ending with the last "
+        "of them."
+    ),
 }
 
 #: Methods that stream whose events igni gives a client nothing to tell apart
 #: from another call's. They return their result only; the reason says why
 #: and where the events can be watched instead.
-UNFOLLOWED: dict[str, str] = {
-    "attach_session": (
-        "the approvals and runs it shows again carry no request id and no end, and every "
-        "client attaching the session shows them again; watch them with "
-        "``session.events()``, which offers each waiting approval as an "
-        "``ApprovalRequested``."
-    ),
-    "cancel_run": (
-        "the ``info`` and ``stream_end`` it causes belong to the turn it stops, whose own "
-        "stream (``session.send()``) ends with them; with no turn going nothing follows, "
-        "and the answer does not say which it was."
-    ),
-    "run_shell": (
-        "a command that moves to the background is reported by ``process_*`` pushes "
-        "carrying its ``pid``, but the answer does not say the ``pid``; watch "
-        "``igni.processes.list()`` or ``igni.events()``."
-    ),
-    "execute_scheduled_task": (
-        "what the task's tools push carries nothing that says which run it came from, so "
-        "it cannot be told from another run's in the same session; watch ``igni.events()``."
-    ),
-    "clear_cloud_credentials": (
-        "``notifications_changed`` carries the new counts, not what changed them; read "
-        "``igni.notifications.counts()``."
-    ),
-    "notifications_list": (
-        "the ``notifications_changed`` push repeats the counts the answer carries, to "
-        "every client, and does not say what caused it."
-    ),
-    "notifications_mark_read": (
-        "the ``notifications_changed`` push repeats the counts the answer carries, to "
-        "every client, and does not say what caused it."
-    ),
-    "set_workspace_trust": (
-        "igni pushes ``workspace_trust_required`` only to the windows showing the trust "
-        "dialog; the answer is the new status."
-    ),
-    "window_model": (
-        "a ``window_model_changed`` push says which window changed and its new "
-        "revision, but not which request changed it, and a request that changes "
-        "nothing pushes nothing."
-    ),
+UNFOLLOWED: dict[str, str] = {}
+
+#: Arguments igni-client fills in when the caller leaves them out, and how.
+#: Each is a value igni echoes on the call's own events, so that they can be
+#: told from anyone else's: the run's id, and the writer's own name for a
+#: change. The expression is what the generated code uses.
+SELF_MADE: dict[str, dict[str, str]] = {
+    "execute_scheduled_task": {"run_id": "self._caller.new_id('run')"},
+    "window_model": {"token": "self._caller.new_id('change')"},
 }
 
 #: Messages a client sends that igni-client exposes as methods: the message
@@ -430,6 +452,7 @@ UNION_NAMES: dict[frozenset[str], str] = {
         }
     ): "OrchestrateEvent",
     frozenset({"PermissionModeChangedPayload", "PlanModeEnteredPayload"}): "PermissionModeChange",
+    frozenset({"Dialog", "Toast"}): "WindowItem",
 }
 
 #: Python class names for the contract's defs where its own name would read

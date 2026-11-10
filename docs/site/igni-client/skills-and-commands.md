@@ -113,7 +113,7 @@ async def command(self, text: str = '') -> CommandResult
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `text` | `str` | `''` | `text` is the command line, its leading `/` optional. |
+| `text` | `str` | `''` | The command as typed, slash included, e.g. `/help`. |
 
 **Returns** [`CommandResult`](/docs/sdk/igni-client/events-reference#commandresult).
 

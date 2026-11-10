@@ -2,113 +2,48 @@
 
 # Overview
 
-What a service needs to be part of an igni deployment, behind one object.
-Its own key, its registration, people's tokens, the directory,
-notifications, erasure and export, sign-in to its own pages, and the
-extension it ships — without a single igni address, token request or
-signature in the service's code.
+**The Python SDK for an extension's backend service.**
+
+An igni extension usually comes in two parts:
+
+- **The extension itself** runs inside igni, on each person's device or in
+  their Fleet VM: a page in the igni app, and a process that gives the
+  agent tools. It is built with `igni-extension`, and its page with
+  `@ignite-ember/extension-bridge`.
+- **Its backend service** is your web service. It runs once, in the
+  organisation's cloud or data centre, and keeps what is shared between
+  people: comments, tickets, documents. It is built with this package.
+
+The extension's process and its page call the backend service **as the
+person signed in to igni**. The service never signs anyone in itself: one
+line (`Depends(igni.person)`) tells it who is calling.
+
+What this package does for the service:
+
+- **Joins it to igni.** It creates the service's key and registers it with
+  igni server. An igni super admin approves it once, in igni's portal.
+- **Ships the extension.** It uploads the extension bundle. Once an org
+  admin switches the extension on for a group, every igni in that group
+  installs it.
+- **Talks to igni for an organisation.** It looks people up in the
+  directory, sends notifications, and sends a message or an event to a
+  person's or an app's agent, which igni wakes when it needs to.
+- **Answers igni's privacy requests.** It erases or exports what the
+  service holds about a person.
+
+None of this needs an igni address, token request or signature in the
+service's code.
+
+| Package | For |
+|---|---|
+| `igni-service` | an extension's backend service (this one) |
+| `igni-extension` | the extension's process, inside igni |
+| `igni-client` | your own program driving an igni from outside: sessions, prompts, commands |
 
 Building a service and its extension for the first time? Follow
 [Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md) from an empty
 directory to a working extension and service; this README is the
 reference.
 
-```python
-from fastapi import Depends, FastAPI
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-
-from igni_service import (
-    ExportSection, IgniService, IgniSettings, Notification, Person, Subject, Target,
-)
-
-class NewComment(BaseModel):
-    doc: str
-    text: str
-    watchers: list[str] = []
-
-def create_app(igni: IgniService | None = None) -> FastAPI:
-    """The service. In a test `igni` is `FakeIgni().service()`; in production it is
-    read from the environment (*Deploying*, below)."""
-    igni = igni or IgniService.from_settings(IgniSettings())
-    app = FastAPI(lifespan=igni.lifespan)
-    igni.install(app)  # igni's calls, sign-in to this service's pages, calls from the extension's page
-
-    # What this service keeps about people: their comments, by organisation and person.
-    comments: dict[tuple[str, str], list[NewComment]] = {}
-
-    @igni.on_erase
-    async def erase(subject: Subject) -> None:
-        comments.pop((subject.org_id, subject.user_id), None)
-
-    @igni.on_export
-    async def export(subject: Subject) -> list[ExportSection]:
-        mine = comments.get((subject.org_id, subject.user_id), [])
-        return [ExportSection(name="Comments", rows=[{"doc": c.doc, "text": c.text} for c in mine])]
-
-    @app.post("/comments")
-    async def comment(body: NewComment, person: Person = Depends(igni.person)) -> NewComment:
-        mine = comments.setdefault((person.org_id, person.user_id), [])
-        mine.append(body)
-        await igni.host(person.org_id).notify(
-            Notification(
-                kind="comment",
-                title=body.doc,
-                body=f"{person.display_name}: {body.text}",
-                actor=person.user_id,
-                target=Target(page="acme.example", params={"doc": body.doc}),
-                event_key=f"comment:{person.user_id}:{len(mine)}",
-                recipients=body.watchers,
-            )
-        )
-        return body
-
-    @app.get("/mentions")
-    async def mentions(query: str, person: Person = Depends(igni.person)) -> list[str]:
-        people = await igni.host(person.org_id).directory.members(query=query)
-        return [p.email for p in people if p.is_active]
-
-    @app.get("/settings", response_class=HTMLResponse)
-    async def settings_page(person: Person = Depends(igni.web.person)) -> str:
-        return f"<h1>Settings for {person.display_name}</h1>"
-
-    @app.get("/admin", response_class=HTMLResponse)
-    async def admin_page(person: Person = Depends(igni.web.super_admin)) -> str:
-        return "<h1>Every organisation</h1>"
-
-    @app.get("/organisation/settings", response_class=HTMLResponse)
-    async def org_settings(person: Person = Depends(igni.web.org_admin)) -> str:
-        return f"<h1>{person.org_name}</h1>"
-
-    return app
-```
-
-Run it with `uvicorn --factory service:create_app`. A factory rather than a
-module-level `igni = IgniService.from_settings(...)`, so a test hands it
-igni in-process instead (*Testing a service*, below):
-
-```python
-import httpx
-
-from igni_service import Member
-from igni_service.testing import FakeIgni
-
-fake = FakeIgni()
-fake.directory.add_member("org-1", Member(user_id="u-ada", email="ada@acme.test", name="Ada"))
-fake.directory.add_member("org-1", Member(user_id="u-max", email="max@acme.test", name="Max"))
-app = create_app(fake.service())
-
-ada = {"Authorization": f"Bearer {fake.signer.person_token('u-ada', org_id='org-1')}"}
-igni_itself = {"Authorization": f"Bearer {fake.signer.igni_token('org-1')}"}
-transport = httpx.ASGITransport(app=app)
-async with httpx.AsyncClient(transport=transport, base_url=fake.addresses.service_url) as http:
-    sent = await http.post(
-        "/comments", json={"doc": "runbook", "text": "Looks good", "watchers": ["u-max"]}, headers=ada
-    )
-    assert sent.status_code == 200, sent.text
-    assert [d.user_id for d in fake.notifications.deliveries] == ["u-max"]
-
-    exported = await http.get("/v1/igni/subjects/u-ada/export", headers=igni_itself)
-    assert exported.json()["sections"][0]["rows"] == [{"doc": "runbook", "text": "Looks good"}]
-    assert (await http.delete("/v1/igni/subjects/u-ada", headers=igni_itself)).status_code == 204
-```
+Everything here runs in the organisation's own cloud or data centre: igni
+server, Fleet, and your service. Ignite Ember hosts none of it.

@@ -22,10 +22,10 @@ ExportSection(
 
 One section of a subject-access export. igni files it under the service's name.
 
-| Field | Type | Default |
-|---|---|---|
-| `name` | `str` | required |
-| `rows` | `list[dict[str, CellValue]]` | factory |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `str` | required | The section's title: what the data is (`Notes`, `Comments`). |
+| `rows` | `list[dict[str, CellValue]]` | factory | The person's data, one dict per row: column name to a string, number, boolean or null. |
 
 ## Subject
 
@@ -48,10 +48,10 @@ present or former member — and are empty when it cannot. Data matched
 on an address should then still be erased by id; igni repeats an
 erasure until every service confirms it.
 
-| Field | Type | Default |
-|---|---|---|
-| `user_id` | `str` | required |
-| `org_id` | `str` | required |
-| `email` | `str` | `''` |
-| `name` | `str` | `''` |
-| `member` | `Member \| None` | `None` |
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `user_id` | `str` | required | The person's igni user id: erase and export by this. |
+| `org_id` | `str` | required | The organisation the request is about; data in other organisations is not. |
+| `email` | `str` | `''` | Their email address from igni's directory; empty when it could not be asked. |
+| `name` | `str` | `''` | Their name from igni's directory; empty when it could not be asked. |
+| `member` | `Member \| None` | `None` | The directory's whole entry for them, when it could be asked. |
