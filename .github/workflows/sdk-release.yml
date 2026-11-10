@@ -265,7 +265,7 @@ jobs:
     permissions:
       id-token: write  # trusted publishing
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-${{ needs.resolve.outputs.version }}
           path: dist/sdk
@@ -289,7 +289,7 @@ jobs:
     needs: [resolve, verify-python, verify-npm, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-${{ needs.resolve.outputs.version }}
           path: dist/sdk
@@ -339,7 +339,7 @@ jobs:
     permissions:
       id-token: write  # trusted publishing
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-${{ needs.resolve.outputs.version }}
           path: dist/sdk
@@ -364,7 +364,7 @@ jobs:
     permissions:
       id-token: write  # trusted publishing, and provenance
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-${{ needs.resolve.outputs.version }}
           path: dist/sdk
@@ -409,7 +409,7 @@ jobs:
       id-token: write      # Sigstore certificate for the attestation
       attestations: write  # store it on this repository
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: sdk-${{ needs.resolve.outputs.version }}
           path: dist/sdk
