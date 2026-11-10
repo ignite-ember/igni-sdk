@@ -40,6 +40,164 @@ _BANNER = (
     "Run `make host-sdks` after refreshing contracts/host-schema.json."
 )
 
+#: What a parameter the schema does not describe is. The schema owns
+#: the shape of the model; these are the words for the parameters it
+#: leaves to the SDKs, taken from igni-core's own implementation.
+#:
+#: The key is the object path, the method's name and the parameter's
+#: name — the schema's own names, in one place. A parameter the schema
+#: does describe is documented from the schema; this table is for the
+#: ones it leaves out, and a parameter in neither is left undocumented
+#: rather than given a meaning the contract does not have.
+PARAM_MEANINGS: dict[tuple[str, str, str], str] = {
+    ("", "decide", "questions"): ("The questions to ask, each with its own text and answer type."),
+    ("", "decide_batch", "contexts"): "The contexts to ask about, one decision each, in order.",
+    ("", "decide_batch", "questions"): "The questions to ask of every context.",
+    ("app", "set_verbose", "on"): "Whether routing detail is shown.",
+    ("app", "set_output_style", "name"): "The output style to switch to, by its name.",
+    ("app.state", "get", "key"): "The key to read the value of.",
+    ("app.state", "set", "key"): "The key to store the value under.",
+    ("app.state", "set", "value"): "The value to store.",
+    ("app.state", "delete", "key"): "The key to remove.",
+    ("ui", "open_panel", "params"): (
+        "The panel's own parameters: what the panel shows, in the panel's own shape."
+    ),
+    ("ui", "set_sidebar", "open"): "Whether the sidebar is open.",
+    ("ui", "open_preview", "path"): "The file to preview, by its path in the project.",
+    ("ui", "select", "selection"): (
+        "What is selected: a message, text or a file; the parts left out are cleared."
+    ),
+    ("ui", "set_composer", "text"): "The draft to put in the composer.",
+    ("ui", "toast", "text"): "The toast's first line.",
+    ("ui", "dismiss_toast", "toast_id"): "The toast to take away, by its id.",
+    ("ui", "show_dialog", "spec"): ("The dialog to show: its title, body, buttons and input."),
+    (
+        "ui",
+        "scroll_to",
+        "message_id",
+    ): "The message to scroll to, named by the run it belongs to; `bottom` for the newest.",
+    ("sessions", "open", "session_id"): "The session to open, by its id.",
+    ("sessions", "create", "project_dir"): (
+        "The folder the new session works in; this project when left out."
+    ),
+    ("sessions", "attach", "session_id"): "The session to make live, by its id.",
+    ("sessions", "attach", "project_dir"): (
+        "The folder the session works in; it must belong to that session."
+    ),
+    ("chat", "post", "text"): "The message to post, labelled as this extension's.",
+    ("chat", "queue", "text"): "The message to queue for the next turn.",
+    ("chat", "append", "title"): "The view's title, as it is shown in the transcript.",
+    ("chat", "replace", "view_id"): "The view to replace, by the id `append` returned.",
+    ("chat", "replace", "view"): "The new json-render spec: `{root, elements}`.",
+    ("chat", "replace", "title"): "The view's new title.",
+    ("chat", "search", "query"): "The text to find in the transcript.",
+    ("chat", "cancel_agent", "run_id"): "The sub-agent's run to stop, by its id.",
+    ("chat", "truncate", "run_id"): "The run to remove, with every run after it.",
+    ("chat", "extract_learnings", "user_msg"): "The turn's message, the one the person wrote.",
+    ("chat", "extract_learnings", "assistant_msg"): "The turn's answer, the one the agent gave.",
+    ("chat", "discard_interrupted", "message_id"): (
+        "The interrupted run to forget, named by the message that started it."
+    ),
+    ("chat", "upload", "filename"): "The file's name, made safe for the disk.",
+    ("chat", "upload", "content_base64"): "The file's bytes, base64-encoded.",
+    ("chat.approvals", "answer", "requirement_id"): "The waiting request to answer, by its id.",
+    ("chat.approvals", "answer_all", "answers"): "The answers to give, one per waiting request.",
+    ("chat.views", "dispatch", "view_id"): "The view the action was used on, by its id.",
+    ("chat.views", "dispatch", "action"): "The control's action name.",
+    ("chat.views", "dispatch", "params"): "The values the view attached to the action.",
+    ("plan", "approve", "run_id"): "The run that submitted the plan.",
+    ("plan", "dismiss", "run_id"): "The run that submitted the plan.",
+    ("agents", "promote_ephemeral", "name"): "The agent to keep, by its name.",
+    ("agents", "discard_ephemeral", "name"): "The agent to drop, by its name.",
+    ("workflows", "run", "name"): "The workflow to start, by its name.",
+    ("workflows", "run", "input"): "The workflow's input, a JSON object it reads as it defines.",
+    ("workflows", "cancel", "workflow_run_id"): "The run to stop, by its id.",
+    ("scheduler", "run_now", "task_id"): "The scheduled task to run now, by its id.",
+    ("scheduler", "cancel", "task_id"): "The scheduled task to cancel, by its id.",
+    ("processes", "tail", "pid"): "The shell to read the last lines of, by its process id.",
+    ("processes", "stop", "pid"): "The shell to stop, by its process id.",
+    ("processes", "run", "command"): "The command line to run in the project.",
+    ("workspace", "read", "path"): "The file to read, by its path in the project.",
+    ("workspace", "list", "dir"): (
+        "The directory to list, by its path in the project; the project itself when left out."
+    ),
+    ("workspace", "complete", "prefix"): "The path typed so far after `@`.",
+    ("workspace", "search", "query"): "The text to search the code for.",
+    ("mcp", "connect", "name"): "The server to connect, by its name in the MCP configuration.",
+    (
+        "mcp",
+        "disconnect",
+        "name",
+    ): "The server to disconnect, by its name in the MCP configuration.",
+    ("mcp", "set_tool_enabled", "server"): "The server the tool belongs to, by its name.",
+    ("mcp", "set_tool_enabled", "tool"): "The tool to offer or withhold, by its name.",
+    ("mcp", "set_tool_enabled", "on"): "Whether the tool is offered.",
+    ("plugins", "contents", "name"): "The installed plugin to describe, by its name.",
+    ("plugins", "preview", "source"): "The plugin's git URL, optionally followed by a subfolder.",
+    ("plugins", "preview", "branch"): (
+        "The branch, tag or commit to read; the default branch when left out."
+    ),
+    ("plugins", "preview", "subdir"): (
+        "The plugin's folder inside the repository, which wins over one in `source`."
+    ),
+    ("plugins", "install", "ref"): "The plugin to install: a git URL or `@<marketplace>/<plugin>`.",
+    ("plugins", "install", "install_ref"): (
+        "The branch, tag or commit to check out; the marketplace's, or the default "
+        "branch, when left out."
+    ),
+    ("plugins", "update", "name"): "The installed plugin to move, by its name.",
+    ("plugins", "update", "install_ref"): (
+        "The branch, tag or commit to move to; the remote's default branch when left out."
+    ),
+    ("plugins", "remove", "name"): "The installed plugin to remove, by its name.",
+    ("plugins", "set_enabled", "name"): "The installed plugin to switch on or off, by its name.",
+    ("plugins", "set_enabled", "on"): "Whether the plugin is enabled.",
+    ("plugins", "add_marketplace", "url"): "The marketplace's git URL.",
+    ("plugins", "remove_marketplace", "name"): "The marketplace to forget, by its name.",
+    ("plugins", "refresh_marketplaces", "name"): (
+        "The marketplace to fetch again; every one of them when left out."
+    ),
+    ("extensions", "set_settings", "values"): "The settings to change, as key to value.",
+    ("permissions", "check", "tool_name"): "The tool the call would use, by its name.",
+    ("permissions", "check", "func_name"): "The function of that tool the call would reach.",
+    ("permissions", "check", "tool_args"): (
+        "The call's arguments, which argument rules match against."
+    ),
+    ("permissions", "save_rule", "rule"): "The rule to save: `Bash(git status)`, a tool name.",
+    ("notifications", "notify", "notification"): "What to tell the person at this machine.",
+    ("notifications", "mark_read", "ids"): "The notifications to mark read, by their ids.",
+    ("notifications", "mark_read", "source"): (
+        "The source whose notifications to mark read; every one of them when left out."
+    ),
+    ("self", "busy", "reason"): "Why the extension is working inside igni's process.",
+    ("self", "done", "reason"): "The reason the lease was taken for.",
+}
+
+
+#: What the two accessors the schema does not carry take: the id of
+#: the window or the session the object is for. The schema has no
+#: member for them — they are how an object reaches another window's
+#: or another session's model.
+ACCESSOR_MEANINGS: dict[str, str] = {
+    "window_id": "The window to reach, by its id.",
+    "session_id": "The session to reach, by its id.",
+}
+
+
+def param_meaning(path: str, method: str, name: str, doc: str = "") -> str:
+    """What a parameter is: the schema's own words, or the table's.
+
+    The schema describes a parameter or does not. A parameter it
+    describes is documented from it; one it leaves out is documented
+    from :data:`PARAM_MEANINGS`, and one in neither is left
+    undocumented rather than given a meaning the contract does not
+    have.
+    """
+    described = (doc or "").strip()
+    if described:
+        return described
+    return PARAM_MEANINGS.get((path, method, name), "")
+
 
 class ObjectNaming:
     """Class names and the tree of objects, shared by both generators."""
@@ -169,9 +327,9 @@ class PythonGenerator:
     def _doc_with_args(self, text: str, args: list[tuple[str, str]], indent: str) -> list[str]:
         """A docstring: what it does, and what each of its parameters is.
 
-        The parameters are the ones the schema describes. One it does
-        not describe is left out rather than given a meaning the
-        contract does not have.
+        The parameters are the ones that have a meaning: the schema's
+        own words, or the table's. One with neither is left out rather
+        than given a meaning the contract does not have.
         """
         text = text.replace('"""', "'''").strip()
         out: list[str] = []
@@ -312,7 +470,7 @@ class PythonGenerator:
             )
             out += self._doc(s.doc, "        ")
         for m in spec.methods:
-            out += self._method(m)
+            out += self._method(spec, m)
         if spec.path == "windows":
             per_window = self.naming.per_window()
             for target in per_window:
@@ -321,7 +479,13 @@ class PythonGenerator:
                 out += [
                     "",
                     f"    def {attr}(self, window_id: str) -> {cls}:",
-                    f'        """`host.{target.path}` of one window, by its id."""',
+                ]
+                out += self._doc_with_args(
+                    f"`host.{target.path}` of one window, by its id.",
+                    [("window_id", ACCESSOR_MEANINGS["window_id"])],
+                    "        ",
+                )
+                out += [
                     f"        return {cls}(self._link, window_id)",
                 ]
         if spec.path == "sessions":
@@ -331,14 +495,20 @@ class PythonGenerator:
                 out += [
                     "",
                     f"    def {attr}(self, session_id: str) -> {cls}:",
-                    f'        """`host.{target.path}` of any session of this project, by its id,',
-                    "        without showing it. The session on screen's id is",
-                    f'        `host.{target.path}` itself."""',
+                ]
+                out += self._doc_with_args(
+                    f"`host.{target.path}` of any session of this project, by its id, "
+                    "without showing it. The session on screen's id is "
+                    f"`host.{target.path}` itself.",
+                    [("session_id", ACCESSOR_MEANINGS["session_id"])],
+                    "        ",
+                )
+                out += [
                     f"        return {cls}(self._link, None, session_id)",
                 ]
         return out
 
-    def _method(self, m: MethodSpec) -> list[str]:
+    def _method(self, spec: ObjectSpec, m: MethodSpec) -> list[str]:
         params = ["self"]
         body_args: list[str] = []
         for p in m.params:
@@ -356,7 +526,11 @@ class PythonGenerator:
         out = ["", signature]
         out += self._doc_with_args(
             m.doc,
-            [(p.name, p.doc.strip()) for p in m.params if (p.doc or "").strip()],
+            [
+                (p.name, param_meaning(spec.path, m.name, p.name, p.doc))
+                for p in m.params
+                if param_meaning(spec.path, m.name, p.name, p.doc)
+            ],
             "        ",
         )
         if m.result == "None":
@@ -408,16 +582,20 @@ class TypeScriptGenerator:
             return []
         return [f"{indent}/** {text} */"]
 
-    def _method_doc(self, m: MethodSpec, indent: str) -> list[str]:
+    def _method_doc(self, path: str, m: MethodSpec, indent: str) -> list[str]:
         """A method's JSDoc: what it does, and what each of its parameters is.
 
-        The schema describes a parameter or does not: a parameter it
-        describes is documented here, and one it does not is left
-        undocumented rather than given a meaning the contract does not
-        have.
+        A parameter is documented from the schema when the schema
+        describes it, and from the table when it does not; one with
+        neither is left undocumented rather than given a meaning the
+        contract does not have.
         """
         text = m.doc.replace("*/", "*\\/").strip()
-        params = [p for p in m.params if (p.doc or "").strip()]
+        params = [
+            (p.name, param_meaning(path, m.name, p.name, p.doc))
+            for p in m.params
+            if param_meaning(path, m.name, p.name, p.doc)
+        ]
         if not params:
             return self._doc(m.doc, indent)
         lines = [f"{indent}/**"]
@@ -425,8 +603,8 @@ class TypeScriptGenerator:
             for line in text.split("\n"):
                 lines.append(f"{indent} * {line}".rstrip())
         lines.append(f"{indent} *")
-        for p in params:
-            lines.append(f"{indent} * @param {p.name} — {p.doc.strip()}")
+        for name, meaning in params:
+            lines.append(f"{indent} * @param {name} — {meaning}")
         lines.append(f"{indent} */")
         return lines
 
@@ -516,14 +694,18 @@ class TypeScriptGenerator:
             out.append(f'    this.{s.name} = new Signal("{wire}");')
         out.append("  }")
         for m in spec.methods:
-            out += self._method(m)
+            out += self._method(spec, m)
         if spec.path == "windows":
             for target in self.naming.per_window():
                 cls = self.naming.class_name(target.path)
                 attr = self.naming.attribute(target)
                 out += [
                     "",
-                    f"  /** `host.{target.path}` of one window, by its id. */",
+                    "  /**",
+                    f"   * `host.{target.path}` of one window, by its id.",
+                    "   *",
+                    f"   * @param windowId — {ACCESSOR_MEANINGS['window_id']}",
+                    "   */",
                     f"  {attr}(windowId: string): {cls} {{",
                     f"    return new {cls}(this.link, windowId);",
                     "  }",
@@ -534,9 +716,13 @@ class TypeScriptGenerator:
                 attr = self.naming.attribute(target)
                 out += [
                     "",
-                    f"  /** `host.{target.path}` of any session of this project, by its id, "
+                    "  /**",
+                    f"   * `host.{target.path}` of any session of this project, by its id, "
                     "without showing it. The session on screen's id is "
-                    f"`host.{target.path}` itself. */",
+                    f"`host.{target.path}` itself.",
+                    "   *",
+                    f"   * @param sessionId — {ACCESSOR_MEANINGS['session_id']}",
+                    "   */",
                     f"  {attr}(sessionId: string): {cls} {{",
                     f"    return new {cls}(this.link, null, sessionId);",
                     "  }",
@@ -544,7 +730,7 @@ class TypeScriptGenerator:
         out += ["}", ""]
         return out
 
-    def _method(self, m: MethodSpec) -> list[str]:
+    def _method(self, spec: ObjectSpec, m: MethodSpec) -> list[str]:
         params: list[str] = []
         names: list[str] = []
         for p in m.params:
@@ -557,7 +743,7 @@ class TypeScriptGenerator:
         result = "void" if m.result == "None" else self.type(m.result)
         args = "{ " + ", ".join(names) + " }" if names else "{}"
         out = [""]
-        out += self._method_doc(m, "  ")
+        out += self._method_doc(spec.path, m, "  ")
         out.append(f"  {m.name}({', '.join(params)}): Promise<{result}> {{")
         out.append(f'    return this.call<{result}>("{m.name}", {args});')
         out.append("  }")
@@ -595,7 +781,9 @@ class HostSdks:
 
 
 __all__ = [
+    "ACCESSOR_MEANINGS",
     "HOST_SCHEMA",
+    "PARAM_MEANINGS",
     "PYTHON_OUTPUT",
     "SCHEMA_FILE",
     "TYPESCRIPT_OUTPUT",
@@ -603,4 +791,5 @@ __all__ = [
     "ObjectNaming",
     "PythonGenerator",
     "TypeScriptGenerator",
+    "param_meaning",
 ]

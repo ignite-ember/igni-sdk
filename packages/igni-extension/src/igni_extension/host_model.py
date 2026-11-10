@@ -1540,16 +1540,26 @@ class HostAppState(HostObject):
 
     async def get(self, key: str) -> str | None:
         """One value, or `None`.
+
+        Args:
+            key: The key to read the value of.
         """
         return cast(str | None, await self._call("get", {"key": key}, str | None))
 
     async def set(self, key: str, value: str) -> None:
         """Store one value.
+
+        Args:
+            key: The key to store the value under.
+            value: The value to store.
         """
         await self._call("set", {"key": key, "value": value}, NO_RESULT)
 
     async def delete(self, key: str) -> None:
         """Remove one key.
+
+        Args:
+            key: The key to remove.
         """
         await self._call("delete", {"key": key}, NO_RESULT)
 
@@ -1584,6 +1594,7 @@ class HostChatApprovals(HostObject):
         """Answer one request, as the person's dialog does.
 
         Args:
+            requirement_id: The waiting request to answer, by its id.
             action: `confirm` or `reject`.
             choice: `once`, `always` or `similar`.
         """
@@ -1591,6 +1602,9 @@ class HostChatApprovals(HostObject):
 
     async def answer_all(self, answers: list[ApprovalAnswer]) -> None:
         """Answer every request of a pause at once.
+
+        Args:
+            answers: The answers to give, one per waiting request.
         """
         await self._call("answer_all", {"answers": answers}, NO_RESULT)
 
@@ -1619,6 +1633,11 @@ class HostChatViews(HostObject):
 
     async def dispatch(self, view_id: str, action: str, params: dict[str, JsonValue] | None = None) -> JsonValue:
         """Act on a view as if the person had.
+
+        Args:
+            view_id: The view the action was used on, by its id.
+            action: The control's action name.
+            params: The values the view attached to the action.
         """
         return cast(JsonValue, await self._call("dispatch", {"view_id": view_id, "action": action, "params": params}, JsonValue))
 
@@ -1661,11 +1680,17 @@ class HostApp(HostObject):
 
     async def set_verbose(self, on: bool) -> Display:
         """Show or hide routing detail.
+
+        Args:
+            on: Whether routing detail is shown.
         """
         return cast(Display, await self._call("set_verbose", {"on": on}, Display))
 
     async def set_output_style(self, name: str) -> Display:
         """Switch the output style, as `/output-style <name>` does.
+
+        Args:
+            name: The output style to switch to, by its name.
         """
         return cast(Display, await self._call("set_output_style", {"name": name}, Display))
 
@@ -1710,7 +1735,11 @@ class HostWindows(HostObject):
         """A window took focus or lost it; `focused` says which."""
 
     def ui(self, window_id: str) -> HostUi:
-        """`host.ui` of one window, by its id."""
+        """`host.ui` of one window, by its id.
+
+        Args:
+            window_id: The window to reach, by its id.
+        """
         return HostUi(self._link, window_id)
 
 class HostUi(HostObject):
@@ -1789,6 +1818,7 @@ class HostUi(HostObject):
 
         Args:
             kind: `notifications`, `search`, `login` or `dir-picker`.
+            params: The panel's own parameters: what the panel shows, in the panel's own shape.
         """
         return cast(Panel, await self._call("open_panel", {"kind": kind, "params": params}, Panel))
 
@@ -1801,6 +1831,7 @@ class HostUi(HostObject):
         """Open or close the sidebar, and size it or bring a section into view.
 
         Args:
+            open: Whether the sidebar is open.
             width: In pixels, 180 to 600.
             section: `links` or `sessions`.
         """
@@ -1808,6 +1839,9 @@ class HostUi(HostObject):
 
     async def open_preview(self, path: str) -> Preview:
         """Preview a file of the project. (`preview` is the property.)
+
+        Args:
+            path: The file to preview, by its path in the project.
         """
         return cast(Preview, await self._call("open_preview", {"path": path}, Preview))
 
@@ -1818,6 +1852,9 @@ class HostUi(HostObject):
 
     async def select(self, selection: SelectionState) -> SelectionState:
         """Select a message, text or file. The parts left out are cleared.
+
+        Args:
+            selection: What is selected: a message, text or a file; the parts left out are cleared.
         """
         return cast(SelectionState, await self._call("select", {"selection": selection}, SelectionState))
 
@@ -1825,6 +1862,7 @@ class HostUi(HostObject):
         """Replace the draft.
 
         Args:
+            text: The draft to put in the composer.
             attachments: Files to refer to: each becomes an `@path` the draft does not already have.
             mode: `chat`, `command` or `shell`; unchanged if left out.
         """
@@ -1834,6 +1872,7 @@ class HostUi(HostObject):
         """Show a transient message, labelled as this extension's.
 
         Args:
+            text: The toast's first line.
             kind: `info` (default), `success`, `warning`, `error`.
             body: A second line.
             target: Where clicking it goes.
@@ -1842,16 +1881,25 @@ class HostUi(HostObject):
 
     async def dismiss_toast(self, toast_id: str) -> None:
         """Take one of this extension's toasts away.
+
+        Args:
+            toast_id: The toast to take away, by its id.
         """
         await self._call("dismiss_toast", {"toast_id": toast_id}, NO_RESULT)
 
     async def show_dialog(self, spec: JsonValue) -> JsonValue:
         """Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. Answers `{button, value}`, or `None` when the dialog was dismissed, or replaced by another. (`dialog` is the property.)
+
+        Args:
+            spec: The dialog to show: its title, body, buttons and input.
         """
         return cast(JsonValue, await self._call("show_dialog", {"spec": spec}, JsonValue))
 
     async def scroll_to(self, message_id: str) -> Scroll:
         """Scroll the transcript to a message, by its run; `bottom` for the newest.
+
+        Args:
+            message_id: The message to scroll to, named by the run it belongs to; `bottom` for the newest.
         """
         return cast(Scroll, await self._call("scroll_to", {"message_id": message_id}, Scroll))
 
@@ -1886,6 +1934,9 @@ class HostSessions(HostObject):
 
     async def open(self, session_id: str) -> SessionChange:
         """Show a session in the active window.
+
+        Args:
+            session_id: The session to open, by its id.
         """
         return cast(SessionChange, await self._call("open", {"session_id": session_id}, SessionChange))
 
@@ -1893,6 +1944,7 @@ class HostSessions(HostObject):
         """Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it.
 
         Args:
+            project_dir: The folder the new session works in; this project when left out.
             title: Its name in the session list.
             focus: Show it in the caller's window — a page's own, else the active one. False by default.
         """
@@ -1900,13 +1952,19 @@ class HostSessions(HostObject):
 
     async def attach(self, session_id: str, project_dir: str | None = None) -> SessionAttached:
         """Make sure a session is live, without showing it.
+
+        Args:
+            session_id: The session to make live, by its id.
+            project_dir: The folder the session works in; it must belong to that session.
         """
         return cast(SessionAttached, await self._call("attach", {"session_id": session_id, "project_dir": project_dir}, SessionAttached))
 
     def chat(self, session_id: str) -> HostChat:
-        """`host.chat` of any session of this project, by its id,
-        without showing it. The session on screen's id is
-        `host.chat` itself."""
+        """`host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself.
+
+        Args:
+            session_id: The session to reach, by its id.
+        """
         return HostChat(self._link, None, session_id)
 
 class HostChat(HostObject):
@@ -1990,12 +2048,16 @@ class HostChat(HostObject):
         """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
 
         Args:
+            text: The message to post, labelled as this extension's.
             attachments: Path → content.
         """
         await self._call("post", {"text": text, "attachments": attachments}, NO_RESULT)
 
     async def queue(self, text: str) -> None:
         """Post a message for the next turn, labelled as this extension.
+
+        Args:
+            text: The message to queue for the next turn.
         """
         await self._call("queue", {"text": text}, NO_RESULT)
 
@@ -2004,11 +2066,17 @@ class HostChat(HostObject):
 
         Args:
             view: A json-render spec: `{root, elements}`.
+            title: The view's title, as it is shown in the transcript.
         """
         return cast(str, await self._call("append", {"view": view, "title": title}, str))
 
     async def replace(self, view_id: str, view: JsonValue, title: str | None = None) -> None:
         """Replace a block this extension appended.
+
+        Args:
+            view_id: The view to replace, by the id `append` returned.
+            view: The new json-render spec: `{root, elements}`.
+            title: The view's new title.
         """
         await self._call("replace", {"view_id": view_id, "view": view, "title": title}, NO_RESULT)
 
@@ -2016,6 +2084,7 @@ class HostChat(HostObject):
         """Search the transcript.
 
         Args:
+            query: The text to find in the transcript.
             limit: At most this many; 50 by default.
         """
         return cast(list[JsonValue], await self._call("search", {"query": query, "limit": limit}, list[JsonValue]))
@@ -2027,11 +2096,17 @@ class HostChat(HostObject):
 
     async def cancel_agent(self, run_id: str) -> None:
         """Stop one sub-agent's run.
+
+        Args:
+            run_id: The sub-agent's run to stop, by its id.
         """
         await self._call("cancel_agent", {"run_id": run_id}, NO_RESULT)
 
     async def truncate(self, run_id: str) -> JsonValue:
         """Remove a run and everything after it.
+
+        Args:
+            run_id: The run to remove, with every run after it.
         """
         return cast(JsonValue, await self._call("truncate", {"run_id": run_id}, JsonValue))
 
@@ -2042,16 +2117,27 @@ class HostChat(HostObject):
 
     async def extract_learnings(self, user_msg: str, assistant_msg: str) -> None:
         """Have the agent note what a turn taught it.
+
+        Args:
+            user_msg: The turn's message, the one the person wrote.
+            assistant_msg: The turn's answer, the one the agent gave.
         """
         await self._call("extract_learnings", {"user_msg": user_msg, "assistant_msg": assistant_msg}, NO_RESULT)
 
     async def discard_interrupted(self, message_id: str) -> JsonValue:
         """Forget an interrupted run.
+
+        Args:
+            message_id: The interrupted run to forget, named by the message that started it.
         """
         return cast(JsonValue, await self._call("discard_interrupted", {"message_id": message_id}, JsonValue))
 
     async def upload(self, filename: str, content_base64: str) -> JsonValue:
         """Upload an attachment for a later `post`.
+
+        Args:
+            filename: The file's name, made safe for the disk.
+            content_base64: The file's bytes, base64-encoded.
         """
         return cast(JsonValue, await self._call("upload", {"filename": filename, "content_base64": content_base64}, JsonValue))
 
@@ -2078,11 +2164,17 @@ class HostPlan(HostObject):
 
     async def approve(self, run_id: str | None = None) -> PlanDecision:
         """Approve the plan.
+
+        Args:
+            run_id: The run that submitted the plan.
         """
         return cast(PlanDecision, await self._call("approve", {"run_id": run_id}, PlanDecision))
 
     async def dismiss(self, run_id: str | None = None) -> PlanDecision:
         """Send the plan back.
+
+        Args:
+            run_id: The run that submitted the plan.
         """
         return cast(PlanDecision, await self._call("dismiss", {"run_id": run_id}, PlanDecision))
 
@@ -2214,12 +2306,16 @@ class HostAgents(HostObject):
         """Keep an agent made for one task, as `/agents promote` does.
 
         Args:
+            name: The agent to keep, by its name.
             target: `project` (the default): `.igni/agents/`, committed and the team's, as `--project`; or `personal`: `.igni/agents.local/`, kept out of git and yours only, as `--personal`.
         """
         return cast(PromoteResult, await self._call("promote_ephemeral", {"name": name, "target": target}, PromoteResult))
 
     async def discard_ephemeral(self, name: str) -> DiscardResult:
         """Drop an agent made for one task.
+
+        Args:
+            name: The agent to drop, by its name.
         """
         return cast(DiscardResult, await self._call("discard_ephemeral", {"name": name}, DiscardResult))
 
@@ -2246,11 +2342,18 @@ class HostWorkflows(HostObject):
 
     async def run(self, name: str, input: dict[str, JsonValue] | None = None) -> WorkflowRun:
         """Start a workflow.
+
+        Args:
+            name: The workflow to start, by its name.
+            input: The workflow's input, a JSON object it reads as it defines.
         """
         return cast(WorkflowRun, await self._call("run", {"name": name, "input": input}, WorkflowRun))
 
     async def cancel(self, workflow_run_id: str) -> bool:
         """Stop a workflow run.
+
+        Args:
+            workflow_run_id: The run to stop, by its id.
         """
         return cast(bool, await self._call("cancel", {"workflow_run_id": workflow_run_id}, bool))
 
@@ -2282,11 +2385,17 @@ class HostScheduler(HostObject):
 
     async def run_now(self, task_id: str) -> str:
         """Run a scheduled task now.
+
+        Args:
+            task_id: The scheduled task to run now, by its id.
         """
         return cast(str, await self._call("run_now", {"task_id": task_id}, str))
 
     async def cancel(self, task_id: str) -> None:
         """Cancel a scheduled task.
+
+        Args:
+            task_id: The scheduled task to cancel, by its id.
         """
         await self._call("cancel", {"task_id": task_id}, NO_RESULT)
 
@@ -2315,17 +2424,24 @@ class HostProcesses(HostObject):
         """A shell's last lines.
 
         Args:
+            pid: The shell to read the last lines of, by its process id.
             lines: 200 by default.
         """
         return cast(ProcessTail, await self._call("tail", {"pid": pid, "lines": lines}, ProcessTail))
 
     async def stop(self, pid: int) -> ProcessStop:
         """Stop a shell.
+
+        Args:
+            pid: The shell to stop, by its process id.
         """
         return cast(ProcessStop, await self._call("stop", {"pid": pid}, ProcessStop))
 
     async def run(self, command: str) -> ShellResult:
         """Run a command in the project and wait for it.
+
+        Args:
+            command: The command line to run in the project.
         """
         return cast(ShellResult, await self._call("run", {"command": command}, ShellResult))
 
@@ -2356,21 +2472,33 @@ class HostWorkspace(HostObject):
 
     async def read(self, path: str) -> JsonValue:
         """Read a file in the project.
+
+        Args:
+            path: The file to read, by its path in the project.
         """
         return cast(JsonValue, await self._call("read", {"path": path}, JsonValue))
 
     async def list(self, dir: str | None = None) -> JsonValue:
         """List a directory in the project.
+
+        Args:
+            dir: The directory to list, by its path in the project; the project itself when left out.
         """
         return cast(JsonValue, await self._call("list", {"dir": dir}, JsonValue))
 
     async def complete(self, prefix: str) -> JsonValue:
         """Complete a path, as `@` does.
+
+        Args:
+            prefix: The path typed so far after `@`.
         """
         return cast(JsonValue, await self._call("complete", {"prefix": prefix}, JsonValue))
 
     async def search(self, query: str) -> JsonValue:
         """Search the code.
+
+        Args:
+            query: The text to search the code for.
         """
         return cast(JsonValue, await self._call("search", {"query": query}, JsonValue))
 
@@ -2437,11 +2565,17 @@ class HostMcp(HostObject):
 
     async def connect(self, name: str) -> None:
         """Connect a server.
+
+        Args:
+            name: The server to connect, by its name in the MCP configuration.
         """
         await self._call("connect", {"name": name}, NO_RESULT)
 
     async def disconnect(self, name: str) -> None:
         """Disconnect a server.
+
+        Args:
+            name: The server to disconnect, by its name in the MCP configuration.
         """
         await self._call("disconnect", {"name": name}, NO_RESULT)
 
@@ -2452,6 +2586,11 @@ class HostMcp(HostObject):
 
     async def set_tool_enabled(self, server: str, tool: str, on: bool) -> McpToolToggle:
         """Offer or withhold one tool.
+
+        Args:
+            server: The server the tool belongs to, by its name.
+            tool: The tool to offer or withhold, by its name.
+            on: Whether the tool is offered.
         """
         return cast(McpToolToggle, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, McpToolToggle))
 
@@ -2480,46 +2619,78 @@ class HostPlugins(HostObject):
 
     async def contents(self, name: str) -> PluginContents:
         """What a plugin carries.
+
+        Args:
+            name: The installed plugin to describe, by its name.
         """
         return cast(PluginContents, await self._call("contents", {"name": name}, PluginContents))
 
     async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> PluginContents:
         """What a plugin would install.
+
+        Args:
+            source: The plugin's git URL, optionally followed by a subfolder.
+            branch: The branch, tag or commit to read; the default branch when left out.
+            subdir: The plugin's folder inside the repository, which wins over one in `source`.
         """
         return cast(PluginContents, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, PluginContents))
 
     async def install(self, ref: str, install_ref: str | None = None) -> None:
         """Install a plugin.
+
+        Args:
+            ref: The plugin to install: a git URL or `@<marketplace>/<plugin>`.
+            install_ref: The branch, tag or commit to check out; the marketplace's, or the default branch, when left out.
         """
         await self._call("install", {"ref": ref, "install_ref": install_ref}, NO_RESULT)
 
     async def update(self, name: str, install_ref: str | None = None) -> None:
         """Update a plugin.
+
+        Args:
+            name: The installed plugin to move, by its name.
+            install_ref: The branch, tag or commit to move to; the remote's default branch when left out.
         """
         await self._call("update", {"name": name, "install_ref": install_ref}, NO_RESULT)
 
     async def remove(self, name: str) -> None:
         """Remove a plugin.
+
+        Args:
+            name: The installed plugin to remove, by its name.
         """
         await self._call("remove", {"name": name}, NO_RESULT)
 
     async def set_enabled(self, name: str, on: bool) -> None:
         """Enable or disable a plugin.
+
+        Args:
+            name: The installed plugin to switch on or off, by its name.
+            on: Whether the plugin is enabled.
         """
         await self._call("set_enabled", {"name": name, "on": on}, NO_RESULT)
 
     async def add_marketplace(self, url: str) -> None:
         """Add a marketplace.
+
+        Args:
+            url: The marketplace's git URL.
         """
         await self._call("add_marketplace", {"url": url}, NO_RESULT)
 
     async def remove_marketplace(self, name: str) -> None:
         """Remove a marketplace.
+
+        Args:
+            name: The marketplace to forget, by its name.
         """
         await self._call("remove_marketplace", {"name": name}, NO_RESULT)
 
     async def refresh_marketplaces(self, name: str | None = None) -> None:
         """Refresh marketplaces.
+
+        Args:
+            name: The marketplace to fetch again; every one of them when left out.
         """
         await self._call("refresh_marketplaces", {"name": name}, NO_RESULT)
 
@@ -2546,6 +2717,9 @@ class HostExtensions(HostObject):
 
     async def set_settings(self, values: dict[str, JsonValue]) -> SettingsChange:
         """Change this extension's own settings.
+
+        Args:
+            values: The settings to change, as key to value.
         """
         return cast(SettingsChange, await self._call("set_settings", {"values": values}, SettingsChange))
 
@@ -2603,6 +2777,11 @@ class HostPermissions(HostObject):
 
     async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> str:
         """Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`.
+
+        Args:
+            tool_name: The tool the call would use, by its name.
+            func_name: The function of that tool the call would reach.
+            tool_args: The call's arguments, which argument rules match against.
         """
         return cast(str, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, str))
 
@@ -2610,6 +2789,7 @@ class HostPermissions(HostObject):
         """Save a permission rule.
 
         Args:
+            rule: The rule to save: `Bash(git status)`, a tool name.
             level: `allow`, `ask` or `deny`.
         """
         await self._call("save_rule", {"rule": rule, "level": level}, NO_RESULT)
@@ -2689,11 +2869,18 @@ class HostNotifications(HostObject):
 
     async def notify(self, notification: LocalNotification) -> None:
         """Tell the person at this machine something. It never leaves the machine.
+
+        Args:
+            notification: What to tell the person at this machine.
         """
         await self._call("notify", {"notification": notification}, NO_RESULT)
 
     async def mark_read(self, ids: list[str] | None = None, source: str | None = None) -> NotificationCounts:
         """Mark notifications read: these ids, one source, or all of them.
+
+        Args:
+            ids: The notifications to mark read, by their ids.
+            source: The source whose notifications to mark read; every one of them when left out.
         """
         return cast(NotificationCounts, await self._call("mark_read", {"ids": ids, "source": source}, NotificationCounts))
 
@@ -2730,12 +2917,16 @@ class HostSelf(HostObject):
         """Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`.
 
         Args:
+            reason: Why the extension is working inside igni's process.
             ttl_seconds: Default and at most 600.
         """
         return cast(BusyLease, await self._call("busy", {"reason": reason, "ttl_seconds": ttl_seconds}, BusyLease))
 
     async def done(self, reason: str) -> None:
         """Let go of the lease `busy` took for `reason`. Nothing happens if there is none.
+
+        Args:
+            reason: The reason the lease was taken for.
         """
         await self._call("done", {"reason": reason}, NO_RESULT)
 
@@ -2811,11 +3002,16 @@ class Host(HostObject):
 
         Args:
             context: Named text fields.
+            questions: The questions to ask, each with its own text and answer type.
         """
         return cast(Decision, await self._call("decide", {"context": context, "questions": questions}, Decision))
 
     async def decide_batch(self, contexts: list[dict[str, str]], questions: list[DecisionQuestion]) -> list[Decision]:
         """`decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order.
+
+        Args:
+            contexts: The contexts to ask about, one decision each, in order.
+            questions: The questions to ask of every context.
         """
         return cast(list[Decision], await self._call("decide_batch", {"contexts": contexts, "questions": questions}, list[Decision]))
 

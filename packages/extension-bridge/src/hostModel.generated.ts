@@ -1193,17 +1193,30 @@ export class HostAppState extends HostObject {
     this.changed = new Signal("app.state.changed");
   }
 
-  /** One value, or `None`. */
+  /**
+   * One value, or `None`.
+   *
+   * @param key — The key to read the value of.
+   */
   get(key: string): Promise<string | null> {
     return this.call<string | null>("get", { key });
   }
 
-  /** Store one value. */
+  /**
+   * Store one value.
+   *
+   * @param key — The key to store the value under.
+   * @param value — The value to store.
+   */
   set(key: string, value: string): Promise<void> {
     return this.call<void>("set", { key, value });
   }
 
-  /** Remove one key. */
+  /**
+   * Remove one key.
+   *
+   * @param key — The key to remove.
+   */
   delete(key: string): Promise<void> {
     return this.call<void>("delete", { key });
   }
@@ -1252,6 +1265,7 @@ export class HostChatApprovals extends HostObject {
   /**
    * Answer one request, as the person's dialog does.
    *
+   * @param requirement_id — The waiting request to answer, by its id.
    * @param action — `confirm` or `reject`.
    * @param choice — `once`, `always` or `similar`.
    */
@@ -1259,7 +1273,11 @@ export class HostChatApprovals extends HostObject {
     return this.call<void>("answer", { requirement_id, action, choice });
   }
 
-  /** Answer every request of a pause at once. */
+  /**
+   * Answer every request of a pause at once.
+   *
+   * @param answers — The answers to give, one per waiting request.
+   */
   answer_all(answers: ApprovalAnswer[]): Promise<void> {
     return this.call<void>("answer_all", { answers });
   }
@@ -1299,7 +1317,13 @@ export class HostChatViews extends HostObject {
     this.action = new Signal("chat.views.action");
   }
 
-  /** Act on a view as if the person had. */
+  /**
+   * Act on a view as if the person had.
+   *
+   * @param view_id — The view the action was used on, by its id.
+   * @param action — The control's action name.
+   * @param params — The values the view attached to the action.
+   */
   dispatch(view_id: string, action: string, params?: Record<string, JsonValue>): Promise<JsonValue> {
     return this.call<JsonValue>("dispatch", { view_id, action, params });
   }
@@ -1360,12 +1384,20 @@ export class HostApp extends HostObject {
     this.activity_changed = new Signal("app.activity_changed");
   }
 
-  /** Show or hide routing detail. */
+  /**
+   * Show or hide routing detail.
+   *
+   * @param on — Whether routing detail is shown.
+   */
   set_verbose(on: boolean): Promise<Display> {
     return this.call<Display>("set_verbose", { on });
   }
 
-  /** Switch the output style, as `/output-style <name>` does. */
+  /**
+   * Switch the output style, as `/output-style <name>` does.
+   *
+   * @param name — The output style to switch to, by its name.
+   */
   set_output_style(name: string): Promise<Display> {
     return this.call<Display>("set_output_style", { name });
   }
@@ -1425,7 +1457,11 @@ export class HostWindows extends HostObject {
     this.focus_changed = new Signal("windows.focus_changed");
   }
 
-  /** `host.ui` of one window, by its id. */
+  /**
+   * `host.ui` of one window, by its id.
+   *
+   * @param windowId — The window to reach, by its id.
+   */
   ui(windowId: string): HostUi {
     return new HostUi(this.link, windowId);
   }
@@ -1535,6 +1571,7 @@ export class HostUi extends HostObject {
    * Open a panel over the chat, closing the one that was open.
    *
    * @param kind — `notifications`, `search`, `login` or `dir-picker`.
+   * @param params — The panel's own parameters: what the panel shows, in the panel's own shape.
    */
   open_panel(kind: string, params?: Record<string, JsonValue>): Promise<Panel> {
     return this.call<Panel>("open_panel", { kind, params });
@@ -1548,6 +1585,7 @@ export class HostUi extends HostObject {
   /**
    * Open or close the sidebar, and size it or bring a section into view.
    *
+   * @param open — Whether the sidebar is open.
    * @param width — In pixels, 180 to 600.
    * @param section — `links` or `sessions`.
    */
@@ -1555,7 +1593,11 @@ export class HostUi extends HostObject {
     return this.call<Sidebar>("set_sidebar", { open, width, section });
   }
 
-  /** Preview a file of the project. (`preview` is the property.) */
+  /**
+   * Preview a file of the project. (`preview` is the property.)
+   *
+   * @param path — The file to preview, by its path in the project.
+   */
   open_preview(path: string): Promise<Preview> {
     return this.call<Preview>("open_preview", { path });
   }
@@ -1565,7 +1607,11 @@ export class HostUi extends HostObject {
     return this.call<void>("close_preview", {});
   }
 
-  /** Select a message, text or file. The parts left out are cleared. */
+  /**
+   * Select a message, text or file. The parts left out are cleared.
+   *
+   * @param selection — What is selected: a message, text or a file; the parts left out are cleared.
+   */
   select(selection: SelectionState): Promise<SelectionState> {
     return this.call<SelectionState>("select", { selection });
   }
@@ -1573,6 +1619,7 @@ export class HostUi extends HostObject {
   /**
    * Replace the draft.
    *
+   * @param text — The draft to put in the composer.
    * @param attachments — Files to refer to: each becomes an `@path` the draft does not already have.
    * @param mode — `chat`, `command` or `shell`; unchanged if left out.
    */
@@ -1583,6 +1630,7 @@ export class HostUi extends HostObject {
   /**
    * Show a transient message, labelled as this extension's.
    *
+   * @param text — The toast's first line.
    * @param kind — `info` (default), `success`, `warning`, `error`.
    * @param body — A second line.
    * @param target — Where clicking it goes.
@@ -1591,17 +1639,29 @@ export class HostUi extends HostObject {
     return this.call<Toast>("toast", { text, kind, body, target });
   }
 
-  /** Take one of this extension's toasts away. */
+  /**
+   * Take one of this extension's toasts away.
+   *
+   * @param toast_id — The toast to take away, by its id.
+   */
   dismiss_toast(toast_id: string): Promise<void> {
     return this.call<void>("dismiss_toast", { toast_id });
   }
 
-  /** Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. Answers `{button, value}`, or `None` when the dialog was dismissed, or replaced by another. (`dialog` is the property.) */
+  /**
+   * Show a dialog and wait for the person's answer. `spec` is `{title, body, buttons: [{id, label, primary}], input: {label, placeholder, value}}` — `buttons` defaults to one OK, `input` is optional. Answers `{button, value}`, or `None` when the dialog was dismissed, or replaced by another. (`dialog` is the property.)
+   *
+   * @param spec — The dialog to show: its title, body, buttons and input.
+   */
   show_dialog(spec: JsonValue): Promise<JsonValue> {
     return this.call<JsonValue>("show_dialog", { spec });
   }
 
-  /** Scroll the transcript to a message, by its run; `bottom` for the newest. */
+  /**
+   * Scroll the transcript to a message, by its run; `bottom` for the newest.
+   *
+   * @param message_id — The message to scroll to, named by the run it belongs to; `bottom` for the newest.
+   */
   scroll_to(message_id: string): Promise<Scroll> {
     return this.call<Scroll>("scroll_to", { message_id });
   }
@@ -1650,7 +1710,11 @@ export class HostSessions extends HostObject {
     this.named = new Signal("sessions.named");
   }
 
-  /** Show a session in the active window. */
+  /**
+   * Show a session in the active window.
+   *
+   * @param session_id — The session to open, by its id.
+   */
   open(session_id: string): Promise<SessionChange> {
     return this.call<SessionChange>("open", { session_id });
   }
@@ -1658,6 +1722,7 @@ export class HostSessions extends HostObject {
   /**
    * Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. A `title` names it at once, kept as a service's chat title is, so no auto-name replaces it.
    *
+   * @param project_dir — The folder the new session works in; this project when left out.
    * @param title — Its name in the session list.
    * @param focus — Show it in the caller's window — a page's own, else the active one. False by default.
    */
@@ -1665,12 +1730,21 @@ export class HostSessions extends HostObject {
     return this.call<SessionAttached>("create", { project_dir, title, focus });
   }
 
-  /** Make sure a session is live, without showing it. */
+  /**
+   * Make sure a session is live, without showing it.
+   *
+   * @param session_id — The session to make live, by its id.
+   * @param project_dir — The folder the session works in; it must belong to that session.
+   */
   attach(session_id: string, project_dir?: string): Promise<SessionAttached> {
     return this.call<SessionAttached>("attach", { session_id, project_dir });
   }
 
-  /** `host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself. */
+  /**
+   * `host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself.
+   *
+   * @param sessionId — The session to reach, by its id.
+   */
   chat(sessionId: string): HostChat {
     return new HostChat(this.link, null, sessionId);
   }
@@ -1794,13 +1868,18 @@ export class HostChat extends HostObject {
   /**
    * Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
    *
+   * @param text — The message to post, labelled as this extension's.
    * @param attachments — Path → content.
    */
   post(text: string, attachments?: Record<string, string>): Promise<void> {
     return this.call<void>("post", { text, attachments });
   }
 
-  /** Post a message for the next turn, labelled as this extension. */
+  /**
+   * Post a message for the next turn, labelled as this extension.
+   *
+   * @param text — The message to queue for the next turn.
+   */
   queue(text: string): Promise<void> {
     return this.call<void>("queue", { text });
   }
@@ -1809,12 +1888,19 @@ export class HostChat extends HostObject {
    * Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id.
    *
    * @param view — A json-render spec: `{root, elements}`.
+   * @param title — The view's title, as it is shown in the transcript.
    */
   append(view: JsonValue, title?: string): Promise<string> {
     return this.call<string>("append", { view, title });
   }
 
-  /** Replace a block this extension appended. */
+  /**
+   * Replace a block this extension appended.
+   *
+   * @param view_id — The view to replace, by the id `append` returned.
+   * @param view — The new json-render spec: `{root, elements}`.
+   * @param title — The view's new title.
+   */
   replace(view_id: string, view: JsonValue, title?: string): Promise<void> {
     return this.call<void>("replace", { view_id, view, title });
   }
@@ -1822,6 +1908,7 @@ export class HostChat extends HostObject {
   /**
    * Search the transcript.
    *
+   * @param query — The text to find in the transcript.
    * @param limit — At most this many; 50 by default.
    */
   search(query: string, limit?: number): Promise<JsonValue[]> {
@@ -1833,12 +1920,20 @@ export class HostChat extends HostObject {
     return this.call<void>("cancel", {});
   }
 
-  /** Stop one sub-agent's run. */
+  /**
+   * Stop one sub-agent's run.
+   *
+   * @param run_id — The sub-agent's run to stop, by its id.
+   */
   cancel_agent(run_id: string): Promise<void> {
     return this.call<void>("cancel_agent", { run_id });
   }
 
-  /** Remove a run and everything after it. */
+  /**
+   * Remove a run and everything after it.
+   *
+   * @param run_id — The run to remove, with every run after it.
+   */
   truncate(run_id: string): Promise<JsonValue> {
     return this.call<JsonValue>("truncate", { run_id });
   }
@@ -1848,17 +1943,31 @@ export class HostChat extends HostObject {
     return this.call<SessionCleared | null>("compact", {});
   }
 
-  /** Have the agent note what a turn taught it. */
+  /**
+   * Have the agent note what a turn taught it.
+   *
+   * @param user_msg — The turn's message, the one the person wrote.
+   * @param assistant_msg — The turn's answer, the one the agent gave.
+   */
   extract_learnings(user_msg: string, assistant_msg: string): Promise<void> {
     return this.call<void>("extract_learnings", { user_msg, assistant_msg });
   }
 
-  /** Forget an interrupted run. */
+  /**
+   * Forget an interrupted run.
+   *
+   * @param message_id — The interrupted run to forget, named by the message that started it.
+   */
   discard_interrupted(message_id: string): Promise<JsonValue> {
     return this.call<JsonValue>("discard_interrupted", { message_id });
   }
 
-  /** Upload an attachment for a later `post`. */
+  /**
+   * Upload an attachment for a later `post`.
+   *
+   * @param filename — The file's name, made safe for the disk.
+   * @param content_base64 — The file's bytes, base64-encoded.
+   */
   upload(filename: string, content_base64: string): Promise<JsonValue> {
     return this.call<JsonValue>("upload", { filename, content_base64 });
   }
@@ -1895,12 +2004,20 @@ export class HostPlan extends HostObject {
     this.changed = new Signal("plan.changed");
   }
 
-  /** Approve the plan. */
+  /**
+   * Approve the plan.
+   *
+   * @param run_id — The run that submitted the plan.
+   */
   approve(run_id?: string): Promise<PlanDecision> {
     return this.call<PlanDecision>("approve", { run_id });
   }
 
-  /** Send the plan back. */
+  /**
+   * Send the plan back.
+   *
+   * @param run_id — The run that submitted the plan.
+   */
   dismiss(run_id?: string): Promise<PlanDecision> {
     return this.call<PlanDecision>("dismiss", { run_id });
   }
@@ -2083,13 +2200,18 @@ export class HostAgents extends HostObject {
   /**
    * Keep an agent made for one task, as `/agents promote` does.
    *
+   * @param name — The agent to keep, by its name.
    * @param target — `project` (the default): `.igni/agents/`, committed and the team's, as `--project`; or `personal`: `.igni/agents.local/`, kept out of git and yours only, as `--personal`.
    */
   promote_ephemeral(name: string, target?: string): Promise<PromoteResult> {
     return this.call<PromoteResult>("promote_ephemeral", { name, target });
   }
 
-  /** Drop an agent made for one task. */
+  /**
+   * Drop an agent made for one task.
+   *
+   * @param name — The agent to drop, by its name.
+   */
   discard_ephemeral(name: string): Promise<DiscardResult> {
     return this.call<DiscardResult>("discard_ephemeral", { name });
   }
@@ -2126,12 +2248,21 @@ export class HostWorkflows extends HostObject {
     this.changed = new Signal("workflows.changed");
   }
 
-  /** Start a workflow. */
+  /**
+   * Start a workflow.
+   *
+   * @param name — The workflow to start, by its name.
+   * @param input — The workflow's input, a JSON object it reads as it defines.
+   */
   run(name: string, input?: Record<string, JsonValue>): Promise<WorkflowRun> {
     return this.call<WorkflowRun>("run", { name, input });
   }
 
-  /** Stop a workflow run. */
+  /**
+   * Stop a workflow run.
+   *
+   * @param workflow_run_id — The run to stop, by its id.
+   */
   cancel(workflow_run_id: string): Promise<boolean> {
     return this.call<boolean>("cancel", { workflow_run_id });
   }
@@ -2173,12 +2304,20 @@ export class HostScheduler extends HostObject {
     return this.call<void>("start", {});
   }
 
-  /** Run a scheduled task now. */
+  /**
+   * Run a scheduled task now.
+   *
+   * @param task_id — The scheduled task to run now, by its id.
+   */
   run_now(task_id: string): Promise<string> {
     return this.call<string>("run_now", { task_id });
   }
 
-  /** Cancel a scheduled task. */
+  /**
+   * Cancel a scheduled task.
+   *
+   * @param task_id — The scheduled task to cancel, by its id.
+   */
   cancel(task_id: string): Promise<void> {
     return this.call<void>("cancel", { task_id });
   }
@@ -2218,18 +2357,27 @@ export class HostProcesses extends HostObject {
   /**
    * A shell's last lines.
    *
+   * @param pid — The shell to read the last lines of, by its process id.
    * @param lines — 200 by default.
    */
   tail(pid: number, lines?: number): Promise<ProcessTail> {
     return this.call<ProcessTail>("tail", { pid, lines });
   }
 
-  /** Stop a shell. */
+  /**
+   * Stop a shell.
+   *
+   * @param pid — The shell to stop, by its process id.
+   */
   stop(pid: number): Promise<ProcessStop> {
     return this.call<ProcessStop>("stop", { pid });
   }
 
-  /** Run a command in the project and wait for it. */
+  /**
+   * Run a command in the project and wait for it.
+   *
+   * @param command — The command line to run in the project.
+   */
   run(command: string): Promise<ShellResult> {
     return this.call<ShellResult>("run", { command });
   }
@@ -2272,22 +2420,38 @@ export class HostWorkspace extends HostObject {
     this.files_changed = new Signal("workspace.files-changed");
   }
 
-  /** Read a file in the project. */
+  /**
+   * Read a file in the project.
+   *
+   * @param path — The file to read, by its path in the project.
+   */
   read(path: string): Promise<JsonValue> {
     return this.call<JsonValue>("read", { path });
   }
 
-  /** List a directory in the project. */
+  /**
+   * List a directory in the project.
+   *
+   * @param dir — The directory to list, by its path in the project; the project itself when left out.
+   */
   list(dir?: string): Promise<JsonValue> {
     return this.call<JsonValue>("list", { dir });
   }
 
-  /** Complete a path, as `@` does. */
+  /**
+   * Complete a path, as `@` does.
+   *
+   * @param prefix — The path typed so far after `@`.
+   */
   complete(prefix: string): Promise<JsonValue> {
     return this.call<JsonValue>("complete", { prefix });
   }
 
-  /** Search the code. */
+  /**
+   * Search the code.
+   *
+   * @param query — The text to search the code for.
+   */
   search(query: string): Promise<JsonValue> {
     return this.call<JsonValue>("search", { query });
   }
@@ -2379,12 +2543,20 @@ export class HostMcp extends HostObject {
     this.changed = new Signal("mcp.changed");
   }
 
-  /** Connect a server. */
+  /**
+   * Connect a server.
+   *
+   * @param name — The server to connect, by its name in the MCP configuration.
+   */
   connect(name: string): Promise<void> {
     return this.call<void>("connect", { name });
   }
 
-  /** Disconnect a server. */
+  /**
+   * Disconnect a server.
+   *
+   * @param name — The server to disconnect, by its name in the MCP configuration.
+   */
   disconnect(name: string): Promise<void> {
     return this.call<void>("disconnect", { name });
   }
@@ -2394,7 +2566,13 @@ export class HostMcp extends HostObject {
     return this.call<McpInit>("ensure", {});
   }
 
-  /** Offer or withhold one tool. */
+  /**
+   * Offer or withhold one tool.
+   *
+   * @param server — The server the tool belongs to, by its name.
+   * @param tool — The tool to offer or withhold, by its name.
+   * @param on — Whether the tool is offered.
+   */
   set_tool_enabled(server: string, tool: string, on: boolean): Promise<McpToolToggle> {
     return this.call<McpToolToggle>("set_tool_enabled", { server, tool, on });
   }
@@ -2434,47 +2612,88 @@ export class HostPlugins extends HostObject {
     this.changed = new Signal("plugins.changed");
   }
 
-  /** What a plugin carries. */
+  /**
+   * What a plugin carries.
+   *
+   * @param name — The installed plugin to describe, by its name.
+   */
   contents(name: string): Promise<PluginContents> {
     return this.call<PluginContents>("contents", { name });
   }
 
-  /** What a plugin would install. */
+  /**
+   * What a plugin would install.
+   *
+   * @param source — The plugin's git URL, optionally followed by a subfolder.
+   * @param branch — The branch, tag or commit to read; the default branch when left out.
+   * @param subdir — The plugin's folder inside the repository, which wins over one in `source`.
+   */
   preview(source: string, branch?: string, subdir?: string): Promise<PluginContents> {
     return this.call<PluginContents>("preview", { source, branch, subdir });
   }
 
-  /** Install a plugin. */
+  /**
+   * Install a plugin.
+   *
+   * @param ref — The plugin to install: a git URL or `@<marketplace>/<plugin>`.
+   * @param install_ref — The branch, tag or commit to check out; the marketplace's, or the default branch, when left out.
+   */
   install(ref: string, install_ref?: string): Promise<void> {
     return this.call<void>("install", { ref, install_ref });
   }
 
-  /** Update a plugin. */
+  /**
+   * Update a plugin.
+   *
+   * @param name — The installed plugin to move, by its name.
+   * @param install_ref — The branch, tag or commit to move to; the remote's default branch when left out.
+   */
   update(name: string, install_ref?: string): Promise<void> {
     return this.call<void>("update", { name, install_ref });
   }
 
-  /** Remove a plugin. */
+  /**
+   * Remove a plugin.
+   *
+   * @param name — The installed plugin to remove, by its name.
+   */
   remove(name: string): Promise<void> {
     return this.call<void>("remove", { name });
   }
 
-  /** Enable or disable a plugin. */
+  /**
+   * Enable or disable a plugin.
+   *
+   * @param name — The installed plugin to switch on or off, by its name.
+   * @param on — Whether the plugin is enabled.
+   */
   set_enabled(name: string, on: boolean): Promise<void> {
     return this.call<void>("set_enabled", { name, on });
   }
 
-  /** Add a marketplace. */
+  /**
+   * Add a marketplace.
+   *
+   * @param url — The marketplace's git URL.
+   */
   add_marketplace(url: string): Promise<void> {
     return this.call<void>("add_marketplace", { url });
   }
 
-  /** Remove a marketplace. */
+  /**
+   * Remove a marketplace.
+   *
+   * @param name — The marketplace to forget, by its name.
+   */
   remove_marketplace(name: string): Promise<void> {
     return this.call<void>("remove_marketplace", { name });
   }
 
-  /** Refresh marketplaces. */
+  /**
+   * Refresh marketplaces.
+   *
+   * @param name — The marketplace to fetch again; every one of them when left out.
+   */
   refresh_marketplaces(name?: string): Promise<void> {
     return this.call<void>("refresh_marketplaces", { name });
   }
@@ -2511,7 +2730,11 @@ export class HostExtensions extends HostObject {
     this.state_changed = new Signal("extension.state-changed");
   }
 
-  /** Change this extension's own settings. */
+  /**
+   * Change this extension's own settings.
+   *
+   * @param values — The settings to change, as key to value.
+   */
   set_settings(values: Record<string, JsonValue>): Promise<SettingsChange> {
     return this.call<SettingsChange>("set_settings", { values });
   }
@@ -2590,7 +2813,13 @@ export class HostPermissions extends HostObject {
     this.mode_changed = new Signal("permissions.mode_changed");
   }
 
-  /** Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`. */
+  /**
+   * Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`.
+   *
+   * @param tool_name — The tool the call would use, by its name.
+   * @param func_name — The function of that tool the call would reach.
+   * @param tool_args — The call's arguments, which argument rules match against.
+   */
   check(tool_name: string, func_name: string, tool_args?: Record<string, JsonValue>): Promise<string> {
     return this.call<string>("check", { tool_name, func_name, tool_args });
   }
@@ -2598,6 +2827,7 @@ export class HostPermissions extends HostObject {
   /**
    * Save a permission rule.
    *
+   * @param rule — The rule to save: `Bash(git status)`, a tool name.
    * @param level — `allow`, `ask` or `deny`.
    */
   save_rule(rule: string, level: string): Promise<void> {
@@ -2710,12 +2940,21 @@ export class HostNotifications extends HostObject {
     this.changed = new Signal("notifications.changed");
   }
 
-  /** Tell the person at this machine something. It never leaves the machine. */
+  /**
+   * Tell the person at this machine something. It never leaves the machine.
+   *
+   * @param notification — What to tell the person at this machine.
+   */
   notify(notification: LocalNotification): Promise<void> {
     return this.call<void>("notify", { notification });
   }
 
-  /** Mark notifications read: these ids, one source, or all of them. */
+  /**
+   * Mark notifications read: these ids, one source, or all of them.
+   *
+   * @param ids — The notifications to mark read, by their ids.
+   * @param source — The source whose notifications to mark read; every one of them when left out.
+   */
   mark_read(ids?: string[], source?: string): Promise<NotificationCounts> {
     return this.call<NotificationCounts>("mark_read", { ids, source });
   }
@@ -2767,13 +3006,18 @@ export class HostSelf extends HostObject {
   /**
    * Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). A lease for `reason`: it expires after `ttl_seconds` (default and at most 600) unless renewed by calling again with the same reason, so an extension that stops answering cannot keep igni awake. Shown in `app.activity`'s `busy`.
    *
+   * @param reason — Why the extension is working inside igni's process.
    * @param ttl_seconds — Default and at most 600.
    */
   busy(reason: string, ttl_seconds?: number): Promise<BusyLease> {
     return this.call<BusyLease>("busy", { reason, ttl_seconds });
   }
 
-  /** Let go of the lease `busy` took for `reason`. Nothing happens if there is none. */
+  /**
+   * Let go of the lease `busy` took for `reason`. Nothing happens if there is none.
+   *
+   * @param reason — The reason the lease was taken for.
+   */
   done(reason: string): Promise<void> {
     return this.call<void>("done", { reason });
   }
@@ -2883,12 +3127,18 @@ export class Host extends HostObject {
    * Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer.
    *
    * @param context — Named text fields.
+   * @param questions — The questions to ask, each with its own text and answer type.
    */
   decide(context: Record<string, string>, questions: DecisionQuestion[]): Promise<Decision> {
     return this.call<Decision>("decide", { context, questions });
   }
 
-  /** `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order. */
+  /**
+   * `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order.
+   *
+   * @param contexts — The contexts to ask about, one decision each, in order.
+   * @param questions — The questions to ask of every context.
+   */
   decide_batch(contexts: (Record<string, string>)[], questions: DecisionQuestion[]): Promise<Decision[]> {
     return this.call<Decision[]>("decide_batch", { contexts, questions });
   }
