@@ -4,7 +4,7 @@
     {
       "name": "igni-client",
       "module": "igni_client",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there.",
       "pypi": "https://pypi.org/project/igni-client/",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-client"
@@ -12,7 +12,7 @@
     {
       "name": "igni-extension",
       "module": "igni_extension",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "What an igni extension's process needs: tools over MCP, its own service with the person's token, and the host's object model.",
       "pypi": "https://pypi.org/project/igni-extension/",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension"
@@ -20,7 +20,7 @@
     {
       "name": "igni-service",
       "module": "igni_service",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle.",
       "pypi": "https://pypi.org/project/igni-service/",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service"

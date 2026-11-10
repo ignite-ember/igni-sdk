@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "igni-client"
-version = "0.1.0"
+version = "0.2.0"
 description = "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there."
 readme = "README.md"
 license = "Apache-2.0"

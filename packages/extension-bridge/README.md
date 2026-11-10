@@ -105,7 +105,7 @@ cross-origin with nothing to configure (`igni.install(app)`).
 > ```bash
 > git clone https://github.com/ignite-ember/igni-sdk.git
 > npm pack --pack-destination ./sdk-packages ./igni-sdk/packages/extension-bridge
-> npm install ./sdk-packages/ignite-ember-extension-bridge-0.1.0.tgz
+> npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
 > ```
 >
 > (`mkdir sdk-packages` first.) It ships TypeScript source (*Source, not a

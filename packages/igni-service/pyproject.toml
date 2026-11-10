@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "igni-service"
-version = "0.1.0"
+version = "0.2.0"
 description = "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle."
 readme = "README.md"
 license = "Apache-2.0"

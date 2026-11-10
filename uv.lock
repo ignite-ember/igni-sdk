@@ -457,7 +457,7 @@ wheels = [
 
 [[package]]
 name = "igni-extension"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/igni-extension" }
 dependencies = [
     { name = "anyio" },
@@ -519,7 +519,7 @@ dev = [
 
 [[package]]
 name = "igni-service"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/igni-service" }
 dependencies = [
     { name = "cryptography" },
