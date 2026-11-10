@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { fenceInfo } from "./fenceInfo";
+import { fenceInfo } from "./fenceInfo.js";
 
 describe("fenceInfo", () => {
   it("reads the language and the source off the code child", () => {

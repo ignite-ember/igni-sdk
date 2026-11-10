@@ -14,15 +14,15 @@
  * app around it and used to get by being inside it.
  */
 
-import { HostChannel } from "./channel";
-import type { Bridge } from "./contract";
-import { DEFAULT_TIMEOUT_MS, GuestBridge } from "./guestBridge";
+import { HostChannel } from "./channel.js";
+import type { Bridge } from "./contract.js";
+import { DEFAULT_TIMEOUT_MS, GuestBridge } from "./guestBridge.js";
 import {
   type ExtensionSettings,
   type LaunchParams,
   type RpcArgs,
   isHostMessage,
-} from "./protocol";
+} from "./protocol.js";
 
 /**
  * Wait for the host's `hello`, then hand back the bridge.

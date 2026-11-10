@@ -21,12 +21,12 @@ import {
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SortableTh, Status } from "./DataTable";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { LiveRegion, useAnnounce } from "./LiveRegion";
-import { AppShell, Scroll } from "./Shell";
-import { TabPanel, Tabs } from "./primitives";
-import { Banner, ToastHost, useToast } from "./Toast";
+import { SortableTh, Status } from "./DataTable.js";
+import { ErrorBoundary } from "./ErrorBoundary.js";
+import { LiveRegion, useAnnounce } from "./LiveRegion.js";
+import { AppShell, Scroll } from "./Shell.js";
+import { TabPanel, Tabs } from "./primitives.js";
+import { Banner, ToastHost, useToast } from "./Toast.js";
 
 afterEach(cleanup);
 

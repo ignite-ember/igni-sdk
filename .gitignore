@@ -232,6 +232,10 @@ evals/results/
 # Node deps (web)
 node_modules/
 
+# The scratch consumer scripts/check_npm_consumers.py builds: the packed
+# tarballs and the program that installs them.
+.tmp/
+
 # Playwright e2e artifacts
 clients/web/test-results/
 clients/web/playwright-report/

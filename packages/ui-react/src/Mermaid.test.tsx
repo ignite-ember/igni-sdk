@@ -18,7 +18,7 @@ const mermaid = vi.hoisted(() => ({
 
 vi.mock("mermaid", () => ({ default: mermaid }));
 
-import { loadMermaid, MermaidBlock } from "./Mermaid";
+import { loadMermaid, MermaidBlock } from "./Mermaid.js";
 
 beforeEach(() => {
   mermaid.initialize.mockReset();

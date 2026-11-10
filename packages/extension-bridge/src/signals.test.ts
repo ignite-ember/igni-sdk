@@ -7,9 +7,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HostError, Signal } from "./hostModel";
-import { BRIDGE_VERSION, type HostSignalMessage } from "./protocol";
-import { SignalSubscriptions } from "./signals";
+import { HostError, Signal } from "./hostModel.js";
+import { BRIDGE_VERSION, type HostSignalMessage } from "./protocol.js";
+import { SignalSubscriptions } from "./signals.js";
 
 function stubHost() {
   const asked: {

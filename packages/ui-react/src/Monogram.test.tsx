@@ -12,7 +12,7 @@
  * "maya" and "acme".
  */
 import { describe, expect, it } from "vitest";
-import { hexOf, hueOf, initialsOf } from "./Monogram";
+import { hexOf, hueOf, initialsOf } from "./Monogram.js";
 
 describe("hexOf", () => {
   it("answers a six-digit hex, which is all the caret accepts", () => {

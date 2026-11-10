@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { MenuIcon, type MenuIconName } from "./MenuIcon";
+import { MenuIcon, type MenuIconName } from "./MenuIcon.js";
 
 /**
  * A row of actions collapsed behind one button.

@@ -6,13 +6,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { HostChannel } from "./channel";
-import { GuestBridge } from "./guestBridge";
+import { HostChannel } from "./channel.js";
+import { GuestBridge } from "./guestBridge.js";
 import {
   BRIDGE_VERSION,
   type HelloMessage,
   type HostMessage,
-} from "./protocol";
+} from "./protocol.js";
 
 function made(over: Partial<HelloMessage> = {}) {
   const posted: { kind: string; id?: string }[] = [];

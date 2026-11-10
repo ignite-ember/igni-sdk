@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import * as floor from "./index";
+import * as floor from "./index.js";
 
 const PUBLISHED = [
   "Actions",

@@ -11,7 +11,7 @@
  */
 import { useState } from "react";
 
-import { MenuIcon } from "./MenuIcon";
+import { MenuIcon } from "./MenuIcon.js";
 
 type CopyState = "idle" | "copied" | "failed";
 

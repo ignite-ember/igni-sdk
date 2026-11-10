@@ -114,17 +114,17 @@ export {
   type TextareaProps,
   type Tone,
   Toolbar,
-} from "./primitives";
+} from "./primitives.js";
 
-export { AppShell, type AppShellProps, Scroll, type ScrollProps } from "./Shell";
+export { AppShell, type AppShellProps, Scroll, type ScrollProps } from "./Shell.js";
 export {
   SortableTh,
   type SortableThProps,
   type SortDirection,
   Status,
   type StatusProps,
-} from "./DataTable";
-export { ErrorBoundary, type ErrorBoundaryProps } from "./ErrorBoundary";
+} from "./DataTable.js";
+export { ErrorBoundary, type ErrorBoundaryProps } from "./ErrorBoundary.js";
 export {
   Banner,
   type BannerProps,
@@ -133,21 +133,21 @@ export {
   ToastHost,
   type ToastOptions,
   useToast,
-} from "./Toast";
+} from "./Toast.js";
 export {
   type Announcer,
   LiveRegion,
   type LiveRegionProps,
   useAnnounce,
   type Urgency,
-} from "./LiveRegion";
-export { Markdown, type MarkdownProps } from "./Markdown";
-export { MarkdownInline } from "./MarkdownInline";
-export { Split, type SplitProps } from "./Split";
-export { MenuIcon, type MenuIconName, type MenuIconProps } from "./MenuIcon";
-export { Monogram } from "./Monogram";
-export { OverflowMenu, type OverflowAction } from "./OverflowMenu";
-export { fenceInfo } from "./fenceInfo";
-export { MermaidBlock, loadMermaid } from "./Mermaid";
-export { Skeleton } from "./Skeleton";
-export { Tooltip, type TooltipProps } from "./Tooltip";
+} from "./LiveRegion.js";
+export { Markdown, type MarkdownProps } from "./Markdown.js";
+export { MarkdownInline } from "./MarkdownInline.js";
+export { Split, type SplitProps } from "./Split.js";
+export { MenuIcon, type MenuIconName, type MenuIconProps } from "./MenuIcon.js";
+export { Monogram } from "./Monogram.js";
+export { OverflowMenu, type OverflowAction } from "./OverflowMenu.js";
+export { fenceInfo } from "./fenceInfo.js";
+export { MermaidBlock, loadMermaid } from "./Mermaid.js";
+export { Skeleton } from "./Skeleton.js";
+export { Tooltip, type TooltipProps } from "./Tooltip.js";

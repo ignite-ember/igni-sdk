@@ -378,7 +378,9 @@ class TypeScriptGenerator:
             "// `bridge.host` as an extension's page sees it. Read",
             "// `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.",
             "",
-            'import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";',
+            # The `.js` extension is what Node resolves: the package is ESM, and
+            # a compiled `dist/` has to find its neighbours by their file names.
+            'import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel.js";',
             "",
             "/**",
             " * The version of igni's host schema this file was generated from.",

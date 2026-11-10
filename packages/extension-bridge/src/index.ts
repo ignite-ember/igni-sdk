@@ -4,8 +4,8 @@
  * design tokens (`tokens`) are subpaths, because the host imports them
  * too and an extension rarely needs them directly.
  */
-export * from "./bridge";
-export * from "./contract";
-export * from "./hostModel";
-export * from "./hostModel.generated";
-export * from "./service";
+export * from "./bridge.js";
+export * from "./contract.js";
+export * from "./hostModel.js";
+export * from "./hostModel.generated.js";
+export * from "./service.js";

@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { Watchers } from "./watchers";
+import { Watchers } from "./watchers.js";
 
 describe("Watchers", () => {
   it("tells every watcher, in the order they started watching", () => {

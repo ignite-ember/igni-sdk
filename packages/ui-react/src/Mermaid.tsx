@@ -28,7 +28,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { CopySource } from "./CopySource";
+import { CopySource } from "./CopySource.js";
 
 type MermaidTheme = "default" | "dark";
 

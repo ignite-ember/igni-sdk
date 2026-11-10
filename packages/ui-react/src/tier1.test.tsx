@@ -16,8 +16,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Markdown } from "./Markdown";
-import { Split } from "./Split";
+import { Markdown } from "./Markdown.js";
+import { Split } from "./Split.js";
 
 afterEach(cleanup);
 

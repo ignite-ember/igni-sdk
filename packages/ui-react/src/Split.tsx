@@ -39,7 +39,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { cx } from "./cx";
+import { cx } from "./cx.js";
 
 /** Keyboard step, and the larger one with Shift held. */
 const STEP = 12;

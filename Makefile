@@ -1,4 +1,4 @@
-.PHONY: help install check test npm-test npm-typecheck packages-check contracts contracts-check host-sdks client-api sdk-docs clean
+.PHONY: help install check test npm-test npm-typecheck npm-build npm-consumers packages-check contracts contracts-check host-sdks client-api sdk-docs clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -17,7 +17,7 @@ install: ## Make the root environment and install the npm workspaces
 	uv sync
 	npm ci
 
-check: test packages-check npm-typecheck npm-test ## Everything CI runs
+check: test packages-check npm-typecheck npm-test npm-consumers ## Everything CI runs
 
 test: ## The repository's own tests: generated SDKs, contracts, docs, lint rules
 	uv run ruff check tests tools scripts
@@ -27,8 +27,14 @@ test: ## The repository's own tests: generated SDKs, contracts, docs, lint rules
 npm-test: ## The npm SDKs' tests
 	npx vitest run
 
-npm-typecheck: ## Type-check the npm SDKs
+npm-build: ## Compile the npm SDKs: the JavaScript Node runs, the types it reads
+	npm run build
+
+npm-typecheck: npm-build ## Type-check the npm SDKs, against the build they publish
 	npx tsc --noEmit -p .
+
+npm-consumers: npm-build ## Check the npm SDKs as a consumer outside a bundler sees them
+	uv run python scripts/check_npm_consumers.py
 
 # The contracts this repository builds against are igni-core's: it publishes
 # them, contracts/ holds copies (scripts/sync_contracts.py).
@@ -133,7 +139,7 @@ sdk-version: ## Set the six SDK packages' version: make sdk-version VERSION=0.2.
 	done
 	@$(MAKE) --no-print-directory sdk-version-check VERSION="$(VERSION)"
 
-sdk-build: sdk-version-check ## Build the six SDK packages into dist/sdk/ (wheels, sdists, npm tarballs)
+sdk-build: sdk-version-check npm-build ## Build the six SDK packages into dist/sdk/ (wheels, sdists, npm tarballs)
 	rm -rf $(SDK_DIST)
 	@for pkg in $(SDK_PY_PACKAGES); do \
 		uv build --no-sources --out-dir $(SDK_DIST)/python $$pkg || exit 1; \

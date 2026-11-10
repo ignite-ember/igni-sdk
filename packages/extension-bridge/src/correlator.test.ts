@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Correlator } from "./correlator";
+import { Correlator } from "./correlator.js";
 
 function counter() {
   let n = 0;

@@ -3,7 +3,7 @@
 // `bridge.host` as an extension's page sees it. Read
 // `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
 
-import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";
+import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel.js";
 
 /**
  * The version of igni's host schema this file was generated from.

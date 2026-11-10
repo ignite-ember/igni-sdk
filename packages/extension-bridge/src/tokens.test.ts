@@ -20,7 +20,7 @@ import {
   TOKEN_NAMES,
   applyThemeTokens,
   readThemeTokens,
-} from "./tokens";
+} from "./tokens.js";
 
 afterEach(() => {
   document.documentElement.removeAttribute("style");

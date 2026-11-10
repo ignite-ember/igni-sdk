@@ -3,7 +3,7 @@
  * and the nonce every message to it must carry.
  */
 
-import { BRIDGE_VERSION, type GuestMessage } from "./protocol";
+import { BRIDGE_VERSION, type GuestMessage } from "./protocol.js";
 
 /** A guest message without the envelope `HostChannel` adds. */
 export type GuestBody = {
