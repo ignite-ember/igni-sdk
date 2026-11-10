@@ -4,20 +4,36 @@ Each pinned requirement is downloaded with `pip download
 --only-binary=:all: --platform …`, hashes required. A requirement with
 no usable wheel is answered back to the caller, which decides whether it
 may be built from its sdist; one that is must come out pure Python.
+
+A requirement the find-links directories already hold is taken from
+there rather than downloaded: the file the resolution pinned is the one
+the bundle must carry, and pip, left to itself, fetches the same-named
+file from the index instead — a different build of the same version —
+which the hash check then refuses.
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import sys
 from pathlib import Path
 
 from igni_service.bundle.platforms import PYTHON_VERSION, Platform
-from igni_service.bundle.requirements import Requirement
+from igni_service.bundle.requirements import HashedRequirements, Requirement
 from igni_service.bundle.runner import CommandRunner
 from igni_service.bundle.sources import PackageSources
 from igni_service.errors import BundleError
+
+
+def _sha256(path: Path) -> str:
+    """The digest of a file's bytes."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class PipDownloader:
@@ -44,6 +60,7 @@ class PipDownloader:
         """
         remaining = list(requirements)
         missing: list[str] = []
+        self._take_local_wheels(remaining, into)
         while remaining:
             listed = into.parent / f"want-{platform.uv}.txt"
             listed.write_text("\n".join(remaining) + "\n")
@@ -59,6 +76,37 @@ class PipDownloader:
             missing.append(culprit)
             remaining.remove(culprit)
         return missing
+
+    def _take_local_wheels(self, requirements: list[str], into: Path) -> None:
+        """Take the wheels the find-links directories already hold.
+
+        The resolution pins every dependency by hash, and the file it
+        chose is often right here: the SDKs' wheels, built from a
+        checkout or taken from a release. pip, left to itself, fetches
+        the same-named file from the index instead — a different build of
+        the same version — and the hash check then stops the build. The
+        local file is taken when its bytes are the ones the resolution
+        pinned, so the bundle carries what was resolved.
+        """
+        local = self._local_wheels()
+        for requirement in list(requirements):
+            for digest in HashedRequirements.hashes_of(requirement):
+                path = local.get(digest)
+                if path is None:
+                    continue
+                shutil.copy2(path, into / path.name)
+                requirements.remove(requirement)
+                break
+
+    def _local_wheels(self) -> dict[str, Path]:
+        """Every wheel in the find-links directories, by the digest of its bytes."""
+        found: dict[str, Path] = {}
+        for directory in self._sources.find_links:
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.glob("*.whl")):
+                found.setdefault(_sha256(path), path)
+        return found
 
     def wheel_from_sdist(self, requirement: str, into: Path, scratch: Path) -> Path:
         """Build `requirement` from its sdist into `into`; it must come out pure Python."""
