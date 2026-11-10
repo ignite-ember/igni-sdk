@@ -1,4 +1,4 @@
-"""GENERATED from the igni host schema 1.12.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
+"""GENERATED from the igni host schema 1.13.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 
 `ext.host` as an extension's process sees it. Read
 `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
@@ -22,7 +22,7 @@ from igni_extension.members import (
 )
 from igni_extension.notifications import LocalNotification, Target
 
-SCHEMA_VERSION = "1.12.0"
+SCHEMA_VERSION = "1.13.0"
 """The version of igni's host object model this SDK was generated from."""
 
 NotificationTarget = Target
@@ -707,7 +707,8 @@ class Plan(BaseModel):
 
     latest: str
     history: list[str]
-    tasks: list[JsonValue]
+    tasks: list[TodoItem]
+    """The todo list the plan carries."""
     state: str
     """`pending`, or empty when there is none."""
 
@@ -760,7 +761,7 @@ class Todos(BaseModel):
     model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
-    todos: list[JsonValue]
+    todos: list[TodoItem]
 
 
 class LoopStatus(BaseModel):
@@ -774,6 +775,8 @@ class LoopStatus(BaseModel):
     iteration_index: int
     iterations_remaining: int
     cap_explicit: bool
+    announced_total: int | None
+    """How many iterations were announced, when it is known."""
 
 
 class CommandOutcome(BaseModel):
@@ -904,7 +907,8 @@ class PermissionModeChange(BaseModel):
     model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     mode: str
-    previous: str
+    previous: str | None = None
+    """The mode before this one; `None` when the push named none."""
 
 
 class Account(BaseModel):
@@ -997,6 +1001,520 @@ class Decision(BaseModel):
     """By question id."""
     model: str
     """The Laya checkpoint that answered: `english` or `multilingual`."""
+
+
+class ModelRegistry(BaseModel):
+    """Every model igni knows: the default, the ceiling, and the rows."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    default: str
+    """The model used unless another is chosen."""
+    max_context_window: int
+    """The largest context window any model has."""
+    registry: dict[str, ModelEntry]
+    """The rows, by model id."""
+
+
+class ModelEntry(BaseModel):
+    """One model in the registry — and never its credential: only whether it has a key."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    model_id: str
+    provider: str
+    url: str | None
+    """The endpoint, when the provider names one."""
+    has_api_key: bool
+    """Whether the entry says where its key comes from. Never the key, never the environment variable, never the command."""
+    temperature: float | None
+    max_tokens: int | None
+    timeout: int
+    """Seconds before a request to it is given up on."""
+    vision: bool
+    """Whether it reads images."""
+    context_window: int | None
+    thinking: dict[str, JsonValue] | None
+    """How it is asked to think."""
+    effort: str | None
+    prompt_caching: bool
+    source: str
+    """Where the entry came from: `cloud` or the local configuration."""
+
+
+class McpServer(BaseModel):
+    """One MCP server: its name, and whether it is connected."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    connected: bool
+
+
+class McpServerDetails(BaseModel):
+    """One MCP server and what it carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    connected: bool
+    transport: str
+    tool_names: list[str]
+    """The tools it offers."""
+    tool_descriptions: dict[str, str]
+    """What each tool says it does."""
+    tools_disabled: list[str]
+    """The tools withheld from the agent."""
+    resources: list[McpResource]
+    """The resources it offers."""
+    prompts: list[McpPrompt]
+    """The prompts it offers."""
+    error: str
+    """Why it is not working, when it is not."""
+    policy_blocked: bool
+    """Whether the group's policy forbade it."""
+
+
+class McpResource(BaseModel):
+    """One resource an MCP server offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    uri: str
+    name: str
+    description: str
+    mime_type: str
+
+
+class McpPrompt(BaseModel):
+    """One prompt an MCP server offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    arguments: list[str]
+    """The arguments it takes."""
+
+
+class McpInit(BaseModel):
+    """What starting the MCP servers did."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    connected: list[str]
+    """The servers that are now connected."""
+    failed: dict[str, str]
+    """The servers that did not, and why."""
+    rebuilt: bool
+    """Whether the clients were rebuilt."""
+    skipped_reason: str | None
+    """Why nothing was started, when nothing was: `already_initialized`, `no_configured_servers` or `no_clients_connected`."""
+
+
+class McpToolToggle(BaseModel):
+    """One tool of one server, offered or withheld."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    server: str
+    tool: str
+    enabled: bool
+
+
+class PluginInfo(BaseModel):
+    """One installed plugin."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    version: str
+    description: str
+    source_root: str
+    """Where it was installed from."""
+    path: str
+    """Where it lives on this machine."""
+    enabled: bool
+    has_skills: bool
+    has_agents: bool
+    has_hooks: bool
+    has_mcp: bool
+    has_tools: bool
+    has_lsp: bool
+    has_monitors: bool
+    managed: bool
+    """Whether igni keeps it up to date itself."""
+    pin: str
+    """The version it is pinned to, when it is."""
+
+
+class Marketplace(BaseModel):
+    """One marketplace of plugins."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    url: str
+    last_fetched: str
+    """When it was last read."""
+    plugins: list[MarketplacePlugin]
+    """The plugins it offers."""
+
+
+class MarketplacePlugin(BaseModel):
+    """One plugin a marketplace offers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    source: str
+    description: str
+    version: str
+    branch: str
+
+
+class PluginContents(BaseModel):
+    """What a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    root_path: str
+    """Where it lives on this machine."""
+    skills: list[PluginSkill]
+    agents: list[PluginAgent]
+    hooks: list[PluginHook]
+    mcp_servers: list[PluginMcpServer]
+    tools: list[PluginTool]
+    readme: str
+    error: str
+    """Why it could not be read, when it could not."""
+    preview_source: PluginPreviewSource | None
+    """Where it would come from."""
+
+
+class PluginSkill(BaseModel):
+    """One skill a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+
+
+class PluginAgent(BaseModel):
+    """One agent a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+
+
+class PluginHook(BaseModel):
+    """One hook a plugin carries: the event, and how many it registers."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    event: str
+    count: int
+
+
+class PluginMcpServer(BaseModel):
+    """One MCP server a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    transport: str
+    command: str
+
+
+class PluginTool(BaseModel):
+    """One tool a plugin carries."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+
+
+class PluginPreviewSource(BaseModel):
+    """Where a plugin would come from."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    url: str
+    subdir: str
+
+
+class HookEntry(BaseModel):
+    """One hook igni has."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    event: str
+    type: str
+    """How it runs: `command`, `url` or another."""
+    command: str
+    url: str
+    matcher: str
+    """What it matches, when it matches something."""
+    timeout_ms: int
+    background: bool
+    header_names: list[str]
+    """The names of the headers an `http` hook sends. Never their values, which may be credentials."""
+
+
+class PolicyPack(BaseModel):
+    """The group's policy pack."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    group_id: str | None
+    group_name: str | None
+    fetched_at: str | None
+    entry_count: int
+    """How many rules it holds."""
+    default_model: str | None
+    """The model it points every group at."""
+
+
+class PlanDecision(BaseModel):
+    """What was decided about a plan."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    run_id: str
+    """The run the plan belonged to."""
+    decision: str
+    """`approved` or `dismissed`."""
+    mode_status: str
+    """What the plan mode says now."""
+    ok: bool
+    error: str | None
+    """Why it went wrong, when it did."""
+
+
+class TodoItem(BaseModel):
+    """One item of the agent's todo list."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    content: str
+    """What is to be done, as an imperative."""
+    status: str
+    """`pending`, `in_progress` or `completed`."""
+    activeForm: str
+    """What is shown while it is in progress — the gerund, e.g. `Running tests`."""
+
+
+class LoopAdvance(BaseModel):
+    """One iteration of a loop, taken."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    kind: str
+    """`completed`, `safety_paused` or `step`."""
+    completed: bool
+    total_iterations: int
+    safety_cap_paused: bool
+    prompt: str
+    display_prompt: str
+    iteration: int
+    remaining: int
+    cap_explicit: bool
+    """Whether the cap was asked for."""
+    auto_extended: bool
+    """Whether the cap was extended by itself."""
+
+
+class SlashCommand(BaseModel):
+    """One slash command."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    source: str
+    """`builtin`, `markdown`, `skill` or `extension`."""
+    name: str
+    """With its slash: `/ctx`."""
+    description: str
+    argument_hint: str
+    """What it takes, as a hint."""
+    owner: str | None = None
+    """The extension that answers it, when an extension does."""
+
+
+class SkillDefinition(BaseModel):
+    """One skill, as the agent is given it."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    prompt: str
+    """Its body: what the agent is told to do."""
+
+
+class SkillDetails(BaseModel):
+    """One skill, as the person sees it."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    version: str
+    category: str
+    argument_hint: str
+    context: str
+    agent: str
+    user_invocable: bool
+    """Whether the person may invoke it as `/name`."""
+    body: str
+    source_dir: str
+    """Where it lives on this machine."""
+
+
+class AgentInfo(BaseModel):
+    """One agent."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    tools: list[str]
+    """The tools it may use."""
+    model: str
+    color: str
+    can_orchestrate: bool
+    """Whether it may run other agents."""
+    mcp_servers: list[str]
+    """The MCP servers it is given."""
+    tags: list[str]
+    system_prompt: str
+    source_path: str
+    """Where it lives on this machine."""
+    is_ephemeral: bool
+    """Whether it was made for one task only."""
+    unknown_tools: list[str]
+    """The tools it names that do not exist."""
+
+
+class PromoteResult(BaseModel):
+    """What became of an agent made for one task."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    ok: bool
+    name: str
+    dest: str
+    """Where it was kept, when it was."""
+    reason: str
+    """Why it was not, when it was not."""
+
+
+class DiscardResult(BaseModel):
+    """What became of an agent made for one task, dropped."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    ok: bool
+    name: str
+    reason: str
+    """Why it was not, when it was not."""
+
+
+class Workflow(BaseModel):
+    """One workflow."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    name: str
+    description: str
+    whenToUse: str
+    """When the agent should reach for it."""
+    phases: list[WorkflowPhase]
+    """The phases it runs through."""
+    path: str
+    """Where it lives on this machine."""
+
+
+class WorkflowPhase(BaseModel):
+    """One phase of a workflow."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    title: str
+    detail: str
+
+
+class ScheduledTask(BaseModel):
+    """One scheduled task."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    id: str
+    description: str
+    """What the agent is asked to do."""
+    scheduled_at: str
+    """ISO 8601, when it is next due."""
+    created_at: str
+    """ISO 8601, when it was made."""
+    status: str
+    """`pending`, `running`, `completed`, `failed` or `cancelled`."""
+    result: str
+    """What it left behind, when it has run."""
+    error: str
+    """Why it failed, when it did."""
+    recurrence: str
+    """How it repeats, when it does."""
+
+
+class ProcessRow(BaseModel):
+    """One background shell."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    cmd: str
+    elapsed_seconds: float
+    is_running: bool
+    exit_code: int | None
+    """How it ended, when it has."""
+
+
+class ProcessTail(BaseModel):
+    """A background shell's last lines."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    output: str
+    is_running: bool
+    exit_code: int | None
+    """How it ended, when it has."""
+
+
+class ProcessStop(BaseModel):
+    """What stopping a background shell did."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    pid: int
+    killed: bool
+    message: str
+
+
+class ShellResult(BaseModel):
+    """What a command in the project printed."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    output: str
+    exit_code: int
+    pid: int | None
+    """The process's id, once it started; `null` when it could not."""
+    backgrounded: bool
+    """`true` when the command is still running, in the background."""
 
 
 class HostAppState(HostObject):
@@ -1426,13 +1944,13 @@ class HostPlan(HostObject):
         self.changed: Signal[PlanChange] = Signal("plan.changed", PlanChange)
         """A plan was submitted or decided."""
 
-    async def approve(self, run_id: str | None = None) -> JsonValue:
+    async def approve(self, run_id: str | None = None) -> PlanDecision:
         """Approve the plan."""
-        return cast(JsonValue, await self._call("approve", {"run_id": run_id}, JsonValue))
+        return cast(PlanDecision, await self._call("approve", {"run_id": run_id}, PlanDecision))
 
-    async def dismiss(self, run_id: str | None = None) -> JsonValue:
+    async def dismiss(self, run_id: str | None = None) -> PlanDecision:
         """Send the plan back."""
-        return cast(JsonValue, await self._call("dismiss", {"run_id": run_id}, JsonValue))
+        return cast(PlanDecision, await self._call("dismiss", {"run_id": run_id}, PlanDecision))
 
 class HostTasks(HostObject):
     """The agent's todo list and its sub-agent tasks."""
@@ -1444,7 +1962,7 @@ class HostTasks(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.todos: Property[list[JsonValue]] = Property(self, "todos", list[JsonValue], writable=False)
+        self.todos: Property[list[TodoItem]] = Property(self, "todos", list[TodoItem], writable=False)
         """The todo list."""
         self.created: Signal[TaskEvent] = Signal("tasks.created", TaskEvent)
         """A task was created."""
@@ -1484,9 +2002,9 @@ class HostLoop(HostObject):
         """Stop the loop."""
         return cast(bool, await self._call("cancel_pending", {}, bool))
 
-    async def pop_pending(self) -> JsonValue:
+    async def pop_pending(self) -> LoopAdvance | None:
         """Take the next iteration."""
-        return cast(JsonValue, await self._call("pop_pending", {}, JsonValue))
+        return cast(LoopAdvance | None, await self._call("pop_pending", {}, LoopAdvance | None))
 
 class HostCommands(HostObject):
     """Slash commands and skills."""
@@ -1498,13 +2016,13 @@ class HostCommands(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[SlashCommand]] = Property(self, "list", list[SlashCommand], writable=False)
         """Every slash command."""
         self.skills: Property[list[str]] = Property(self, "skills", list[str], writable=False)
         """Skill names."""
-        self.skill_definitions: Property[list[JsonValue]] = Property(self, "skill_definitions", list[JsonValue], writable=False)
+        self.skill_definitions: Property[list[SkillDefinition]] = Property(self, "skill_definitions", list[SkillDefinition], writable=False)
         """Each skill's description and prompt."""
-        self.skill_details: Property[list[JsonValue]] = Property(self, "skill_details", list[JsonValue], writable=False)
+        self.skill_details: Property[list[SkillDetails]] = Property(self, "skill_details", list[SkillDetails], writable=False)
         """Each skill's details."""
 
     async def run(self, command: str) -> CommandOutcome:
@@ -1521,18 +2039,18 @@ class HostAgents(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[AgentInfo]] = Property(self, "details", list[AgentInfo], writable=False)
         """Every agent."""
         self.changed: Signal[CollectionChange] = Signal("agents.changed", CollectionChange)
         """An agent was promoted or discarded."""
 
-    async def promote_ephemeral(self, name: str, target: str | None = None) -> JsonValue:
+    async def promote_ephemeral(self, name: str, target: str | None = None) -> PromoteResult:
         """Keep an agent made for one task, as `/agents promote` does."""
-        return cast(JsonValue, await self._call("promote_ephemeral", {"name": name, "target": target}, JsonValue))
+        return cast(PromoteResult, await self._call("promote_ephemeral", {"name": name, "target": target}, PromoteResult))
 
-    async def discard_ephemeral(self, name: str) -> JsonValue:
+    async def discard_ephemeral(self, name: str) -> DiscardResult:
         """Drop an agent made for one task."""
-        return cast(JsonValue, await self._call("discard_ephemeral", {"name": name}, JsonValue))
+        return cast(DiscardResult, await self._call("discard_ephemeral", {"name": name}, DiscardResult))
 
 class HostWorkflows(HostObject):
     """Workflows: scripted runs."""
@@ -1544,7 +2062,7 @@ class HostWorkflows(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[Workflow]] = Property(self, "list", list[Workflow], writable=False)
         """Every workflow."""
         self.changed: Signal[CollectionChange] = Signal("workflows.changed", CollectionChange)
         """A workflow run moved on."""
@@ -1567,7 +2085,7 @@ class HostScheduler(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.tasks: Property[list[JsonValue]] = Property(self, "tasks", list[JsonValue], writable=False)
+        self.tasks: Property[list[ScheduledTask]] = Property(self, "tasks", list[ScheduledTask], writable=False)
         """Every scheduled task."""
         self.event: Signal[SchedulerEvent] = Signal("scheduler.event", SchedulerEvent)
         """A task started, finished or changed."""
@@ -1594,22 +2112,22 @@ class HostProcesses(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.list: Property[list[JsonValue]] = Property(self, "list", list[JsonValue], writable=False)
+        self.list: Property[list[ProcessRow]] = Property(self, "list", list[ProcessRow], writable=False)
         """Every background shell."""
         self.changed: Signal[ProcessEvent] = Signal("processes.changed", ProcessEvent)
         """A shell started, printed or exited."""
 
-    async def tail(self, pid: int, lines: int | None = None) -> JsonValue:
+    async def tail(self, pid: int, lines: int | None = None) -> ProcessTail:
         """A shell's last lines."""
-        return cast(JsonValue, await self._call("tail", {"pid": pid, "lines": lines}, JsonValue))
+        return cast(ProcessTail, await self._call("tail", {"pid": pid, "lines": lines}, ProcessTail))
 
-    async def stop(self, pid: int) -> JsonValue:
+    async def stop(self, pid: int) -> ProcessStop:
         """Stop a shell."""
-        return cast(JsonValue, await self._call("stop", {"pid": pid}, JsonValue))
+        return cast(ProcessStop, await self._call("stop", {"pid": pid}, ProcessStop))
 
-    async def run(self, command: str) -> JsonValue:
+    async def run(self, command: str) -> ShellResult:
         """Run a command in the project and wait for it."""
-        return cast(JsonValue, await self._call("run", {"command": command}, JsonValue))
+        return cast(ShellResult, await self._call("run", {"command": command}, ShellResult))
 
 class HostWorkspace(HostObject):
     """The project, as far as the extension's workspace grant reaches."""
@@ -1664,7 +2182,7 @@ class HostModels(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.registry: Property[JsonValue] = Property(self, "registry", JsonValue, writable=False)
+        self.registry: Property[ModelRegistry] = Property(self, "registry", ModelRegistry, writable=False)
         """Every model igni knows."""
         self.current: Property[str] = Property(self, "current", str, writable=True)
         """The model in use. Writable: setting it switches."""
@@ -1681,11 +2199,11 @@ class HostMcp(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.servers: Property[list[JsonValue]] = Property(self, "servers", list[JsonValue], writable=False)
+        self.servers: Property[list[McpServer]] = Property(self, "servers", list[McpServer], writable=False)
         """Every server."""
-        self.status: Property[list[JsonValue]] = Property(self, "status", list[JsonValue], writable=False)
+        self.status: Property[list[McpServer]] = Property(self, "status", list[McpServer], writable=False)
         """Each server's status."""
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[McpServerDetails]] = Property(self, "details", list[McpServerDetails], writable=False)
         """Each server's tools and details."""
         self.changed: Signal[CollectionChange] = Signal("mcp.changed", CollectionChange)
         """A server connected, disconnected or changed tools."""
@@ -1698,13 +2216,13 @@ class HostMcp(HostObject):
         """Disconnect a server."""
         await self._call("disconnect", {"name": name}, NO_RESULT)
 
-    async def ensure(self) -> JsonValue:
+    async def ensure(self) -> McpInit:
         """Start the servers that should be running."""
-        return cast(JsonValue, await self._call("ensure", {}, JsonValue))
+        return cast(McpInit, await self._call("ensure", {}, McpInit))
 
-    async def set_tool_enabled(self, server: str, tool: str, on: bool) -> JsonValue:
+    async def set_tool_enabled(self, server: str, tool: str, on: bool) -> McpToolToggle:
         """Offer or withhold one tool."""
-        return cast(JsonValue, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, JsonValue))
+        return cast(McpToolToggle, await self._call("set_tool_enabled", {"server": server, "tool": tool, "on": on}, McpToolToggle))
 
 class HostPlugins(HostObject):
     """Plugins and marketplaces."""
@@ -1716,20 +2234,20 @@ class HostPlugins(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.installed: Property[list[JsonValue]] = Property(self, "installed", list[JsonValue], writable=False)
+        self.installed: Property[list[PluginInfo]] = Property(self, "installed", list[PluginInfo], writable=False)
         """Every installed plugin."""
-        self.marketplaces: Property[list[JsonValue]] = Property(self, "marketplaces", list[JsonValue], writable=False)
+        self.marketplaces: Property[list[Marketplace]] = Property(self, "marketplaces", list[Marketplace], writable=False)
         """Every marketplace."""
         self.changed: Signal[CollectionChange] = Signal("plugins.changed", CollectionChange)
         """A plugin or marketplace changed."""
 
-    async def contents(self, name: str) -> JsonValue:
+    async def contents(self, name: str) -> PluginContents:
         """What a plugin carries."""
-        return cast(JsonValue, await self._call("contents", {"name": name}, JsonValue))
+        return cast(PluginContents, await self._call("contents", {"name": name}, PluginContents))
 
-    async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> JsonValue:
+    async def preview(self, source: str, branch: str | None = None, subdir: str | None = None) -> PluginContents:
         """What a plugin would install."""
-        return cast(JsonValue, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, JsonValue))
+        return cast(PluginContents, await self._call("preview", {"source": source, "branch": branch, "subdir": subdir}, PluginContents))
 
     async def install(self, ref: str, install_ref: str | None = None) -> None:
         """Install a plugin."""
@@ -1788,7 +2306,7 @@ class HostHooks(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.details: Property[list[JsonValue]] = Property(self, "details", list[JsonValue], writable=False)
+        self.details: Property[list[HookEntry]] = Property(self, "details", list[HookEntry], writable=False)
         """Every hook."""
         self.changed: Signal[CollectionChange] = Signal("hooks.changed", CollectionChange)
         """Hooks were reloaded."""
@@ -1816,9 +2334,9 @@ class HostPermissions(HostObject):
         self.mode_changed: Signal[PermissionModeChange] = Signal("permissions.mode_changed", PermissionModeChange)
         """The mode changed."""
 
-    async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> JsonValue:
-        """Would this tool call be allowed, asked or denied?"""
-        return cast(JsonValue, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, JsonValue))
+    async def check(self, tool_name: str, func_name: str, tool_args: dict[str, JsonValue] | None = None) -> str:
+        """Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`."""
+        return cast(str, await self._call("check", {"tool_name": tool_name, "func_name": func_name, "tool_args": tool_args}, str))
 
     async def save_rule(self, rule: str, level: str) -> None:
         """Save a permission rule."""
@@ -1834,7 +2352,7 @@ class HostPolicy(HostObject):
         self, link: HostLink, window: str | None = None, session: str | None = None
     ) -> None:
         super().__init__(link, window, session)
-        self.pack: Property[JsonValue] = Property(self, "pack", JsonValue, writable=False)
+        self.pack: Property[PolicyPack] = Property(self, "pack", PolicyPack, writable=False)
         """The group's policy pack."""
 
 class HostAccount(HostObject):
@@ -1989,6 +2507,7 @@ __all__ = [
     "Account",
     "Activity",
     "AgentEvent",
+    "AgentInfo",
     "Approval",
     "ApprovalAnswer",
     "ApprovalChange",
@@ -2009,6 +2528,7 @@ __all__ = [
     "DecisionQuestion",
     "Dialog",
     "DialogChange",
+    "DiscardResult",
     "Display",
     "ExtensionInfo",
     "ExtensionStateChange",
@@ -2016,6 +2536,7 @@ __all__ = [
     "FilesChanged",
     "Head",
     "HistoryChange",
+    "HookEntry",
     "Host",
     "HostAccount",
     "HostAgents",
@@ -2045,8 +2566,19 @@ __all__ = [
     "HostWorkflows",
     "HostWorkspace",
     "LocalNotification",
+    "LoopAdvance",
     "LoopStatus",
+    "Marketplace",
+    "MarketplacePlugin",
+    "McpInit",
+    "McpPrompt",
+    "McpResource",
+    "McpServer",
+    "McpServerDetails",
+    "McpToolToggle",
     "ModelChange",
+    "ModelEntry",
+    "ModelRegistry",
     "ModelUsage",
     "Notice",
     "NotificationCounts",
@@ -2058,9 +2590,23 @@ __all__ = [
     "PermissionModeChange",
     "Plan",
     "PlanChange",
+    "PlanDecision",
+    "PluginAgent",
+    "PluginContents",
+    "PluginHook",
+    "PluginInfo",
+    "PluginMcpServer",
+    "PluginPreviewSource",
+    "PluginSkill",
+    "PluginTool",
+    "PolicyPack",
     "Preview",
     "PreviewChange",
     "ProcessEvent",
+    "ProcessRow",
+    "ProcessStop",
+    "ProcessTail",
+    "PromoteResult",
     "Retry",
     "Route",
     "Run",
@@ -2069,6 +2615,7 @@ __all__ = [
     "RunRef",
     "RunStart",
     "SCHEMA_VERSION",
+    "ScheduledTask",
     "SchedulerEvent",
     "Scroll",
     "SelectionChange",
@@ -2081,8 +2628,12 @@ __all__ = [
     "SessionList",
     "SessionNamed",
     "SettingsChange",
+    "ShellResult",
     "Sidebar",
     "SidebarChange",
+    "SkillDefinition",
+    "SkillDetails",
+    "SlashCommand",
     "StateChange",
     "Status",
     "TaskEvent",
@@ -2090,6 +2641,7 @@ __all__ = [
     "TaskSnapshot",
     "Toast",
     "ToastChange",
+    "TodoItem",
     "Todos",
     "ToolCall",
     "ToolFailure",
@@ -2100,5 +2652,7 @@ __all__ = [
     "ViewAction",
     "WindowInfo",
     "Withheld",
+    "Workflow",
+    "WorkflowPhase",
     "WorkflowRun",
 ]

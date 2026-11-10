@@ -398,7 +398,14 @@ async def test_promote_takes_the_target_the_slash_command_does() -> None:
     """`/agents promote --project | --personal`: the same choice, and none means project."""
     fake = FakeHost(
         granted=("agents",),
-        answers={"agents.promote_ephemeral": {"ok": True, "name": "helper", "dest": "x"}},
+        answers={
+            "agents.promote_ephemeral": {
+                "ok": True,
+                "name": "helper",
+                "dest": "x",
+                "reason": "",
+            }
+        },
     )
     async with fake:
         ext = IgniExtension("acme.example", environ=fake.environment())

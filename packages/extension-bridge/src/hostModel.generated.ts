@@ -1,11 +1,11 @@
-// GENERATED from the igni host schema 1.12.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
+// GENERATED from the igni host schema 1.13.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 //
 // `bridge.host` as an extension's page sees it. Read
 // `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
 
 import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel";
 
-export const SCHEMA_VERSION = "1.12.0";
+export const SCHEMA_VERSION = "1.13.0";
 
 /** One change anywhere in the model, as `host.changed` reports it. */
 export interface Change {
@@ -510,7 +510,8 @@ export interface ViewAction {
 export interface Plan {
   latest: string;
   history: string[];
-  tasks: JsonValue[];
+  /** The todo list the plan carries. */
+  tasks: TodoItem[];
   /** `pending`, or empty when there is none. */
   state: string;
 }
@@ -548,7 +549,7 @@ export interface TaskSnapshot {
 /** The agent's todo list. */
 export interface Todos {
   session_id: string;
-  todos: JsonValue[];
+  todos: TodoItem[];
 }
 
 /** `/loop`, as it stands. */
@@ -559,6 +560,8 @@ export interface LoopStatus {
   iteration_index: number;
   iterations_remaining: number;
   cap_explicit: boolean;
+  /** How many iterations were announced, when it is known. */
+  announced_total: number | null;
 }
 
 /** What a slash command answered. */
@@ -653,7 +656,8 @@ export interface ExtensionStateChange {
 /** The session's permission mode changed. */
 export interface PermissionModeChange {
   mode: string;
-  previous: string;
+  /** The mode before this one; `None` when the push named none. */
+  previous?: string | null;
 }
 
 /** Who is signed in to igni, without any credential. */
@@ -744,6 +748,412 @@ export interface Decision {
   answers: Record<string, DecisionAnswer>;
   /** The Laya checkpoint that answered: `english` or `multilingual`. */
   model: string;
+}
+
+/** Every model igni knows: the default, the ceiling, and the rows. */
+export interface ModelRegistry {
+  /** The model used unless another is chosen. */
+  default: string;
+  /** The largest context window any model has. */
+  max_context_window: number;
+  /** The rows, by model id. */
+  registry: Record<string, ModelEntry>;
+}
+
+/** One model in the registry — and never its credential: only whether it has a key. */
+export interface ModelEntry {
+  model_id: string;
+  provider: string;
+  /** The endpoint, when the provider names one. */
+  url: string | null;
+  /** Whether the entry says where its key comes from. Never the key, never the environment variable, never the command. */
+  has_api_key: boolean;
+  temperature: number | null;
+  max_tokens: number | null;
+  /** Seconds before a request to it is given up on. */
+  timeout: number;
+  /** Whether it reads images. */
+  vision: boolean;
+  context_window: number | null;
+  /** How it is asked to think. */
+  thinking: Record<string, JsonValue> | null;
+  effort: string | null;
+  prompt_caching: boolean;
+  /** Where the entry came from: `cloud` or the local configuration. */
+  source: string;
+}
+
+/** One MCP server: its name, and whether it is connected. */
+export interface McpServer {
+  name: string;
+  connected: boolean;
+}
+
+/** One MCP server and what it carries. */
+export interface McpServerDetails {
+  name: string;
+  connected: boolean;
+  transport: string;
+  /** The tools it offers. */
+  tool_names: string[];
+  /** What each tool says it does. */
+  tool_descriptions: Record<string, string>;
+  /** The tools withheld from the agent. */
+  tools_disabled: string[];
+  /** The resources it offers. */
+  resources: McpResource[];
+  /** The prompts it offers. */
+  prompts: McpPrompt[];
+  /** Why it is not working, when it is not. */
+  error: string;
+  /** Whether the group's policy forbade it. */
+  policy_blocked: boolean;
+}
+
+/** One resource an MCP server offers. */
+export interface McpResource {
+  uri: string;
+  name: string;
+  description: string;
+  mime_type: string;
+}
+
+/** One prompt an MCP server offers. */
+export interface McpPrompt {
+  name: string;
+  description: string;
+  /** The arguments it takes. */
+  arguments: string[];
+}
+
+/** What starting the MCP servers did. */
+export interface McpInit {
+  /** The servers that are now connected. */
+  connected: string[];
+  /** The servers that did not, and why. */
+  failed: Record<string, string>;
+  /** Whether the clients were rebuilt. */
+  rebuilt: boolean;
+  /** Why nothing was started, when nothing was: `already_initialized`, `no_configured_servers` or `no_clients_connected`. */
+  skipped_reason: string | null;
+}
+
+/** One tool of one server, offered or withheld. */
+export interface McpToolToggle {
+  server: string;
+  tool: string;
+  enabled: boolean;
+}
+
+/** One installed plugin. */
+export interface PluginInfo {
+  name: string;
+  version: string;
+  description: string;
+  /** Where it was installed from. */
+  source_root: string;
+  /** Where it lives on this machine. */
+  path: string;
+  enabled: boolean;
+  has_skills: boolean;
+  has_agents: boolean;
+  has_hooks: boolean;
+  has_mcp: boolean;
+  has_tools: boolean;
+  has_lsp: boolean;
+  has_monitors: boolean;
+  /** Whether igni keeps it up to date itself. */
+  managed: boolean;
+  /** The version it is pinned to, when it is. */
+  pin: string;
+}
+
+/** One marketplace of plugins. */
+export interface Marketplace {
+  name: string;
+  url: string;
+  /** When it was last read. */
+  last_fetched: string;
+  /** The plugins it offers. */
+  plugins: MarketplacePlugin[];
+}
+
+/** One plugin a marketplace offers. */
+export interface MarketplacePlugin {
+  name: string;
+  source: string;
+  description: string;
+  version: string;
+  branch: string;
+}
+
+/** What a plugin carries. */
+export interface PluginContents {
+  name: string;
+  /** Where it lives on this machine. */
+  root_path: string;
+  skills: PluginSkill[];
+  agents: PluginAgent[];
+  hooks: PluginHook[];
+  mcp_servers: PluginMcpServer[];
+  tools: PluginTool[];
+  readme: string;
+  /** Why it could not be read, when it could not. */
+  error: string;
+  /** Where it would come from. */
+  preview_source: PluginPreviewSource | null;
+}
+
+/** One skill a plugin carries. */
+export interface PluginSkill {
+  name: string;
+  description: string;
+}
+
+/** One agent a plugin carries. */
+export interface PluginAgent {
+  name: string;
+  description: string;
+}
+
+/** One hook a plugin carries: the event, and how many it registers. */
+export interface PluginHook {
+  event: string;
+  count: number;
+}
+
+/** One MCP server a plugin carries. */
+export interface PluginMcpServer {
+  name: string;
+  transport: string;
+  command: string;
+}
+
+/** One tool a plugin carries. */
+export interface PluginTool {
+  name: string;
+}
+
+/** Where a plugin would come from. */
+export interface PluginPreviewSource {
+  url: string;
+  subdir: string;
+}
+
+/** One hook igni has. */
+export interface HookEntry {
+  event: string;
+  /** How it runs: `command`, `url` or another. */
+  type: string;
+  command: string;
+  url: string;
+  /** What it matches, when it matches something. */
+  matcher: string;
+  timeout_ms: number;
+  background: boolean;
+  /** The names of the headers an `http` hook sends. Never their values, which may be credentials. */
+  header_names: string[];
+}
+
+/** The group's policy pack. */
+export interface PolicyPack {
+  group_id: string | null;
+  group_name: string | null;
+  fetched_at: string | null;
+  /** How many rules it holds. */
+  entry_count: number;
+  /** The model it points every group at. */
+  default_model: string | null;
+}
+
+/** What was decided about a plan. */
+export interface PlanDecision {
+  /** The run the plan belonged to. */
+  run_id: string;
+  /** `approved` or `dismissed`. */
+  decision: string;
+  /** What the plan mode says now. */
+  mode_status: string;
+  ok: boolean;
+  /** Why it went wrong, when it did. */
+  error: string | null;
+}
+
+/** One item of the agent's todo list. */
+export interface TodoItem {
+  /** What is to be done, as an imperative. */
+  content: string;
+  /** `pending`, `in_progress` or `completed`. */
+  status: string;
+  /** What is shown while it is in progress — the gerund, e.g. `Running tests`. */
+  activeForm: string;
+}
+
+/** One iteration of a loop, taken. */
+export interface LoopAdvance {
+  /** `completed`, `safety_paused` or `step`. */
+  kind: string;
+  completed: boolean;
+  total_iterations: number;
+  safety_cap_paused: boolean;
+  prompt: string;
+  display_prompt: string;
+  iteration: number;
+  remaining: number;
+  /** Whether the cap was asked for. */
+  cap_explicit: boolean;
+  /** Whether the cap was extended by itself. */
+  auto_extended: boolean;
+}
+
+/** One slash command. */
+export interface SlashCommand {
+  /** `builtin`, `markdown`, `skill` or `extension`. */
+  source: string;
+  /** With its slash: `/ctx`. */
+  name: string;
+  description: string;
+  /** What it takes, as a hint. */
+  argument_hint: string;
+  /** The extension that answers it, when an extension does. */
+  owner?: string | null;
+}
+
+/** One skill, as the agent is given it. */
+export interface SkillDefinition {
+  name: string;
+  description: string;
+  /** Its body: what the agent is told to do. */
+  prompt: string;
+}
+
+/** One skill, as the person sees it. */
+export interface SkillDetails {
+  name: string;
+  description: string;
+  version: string;
+  category: string;
+  argument_hint: string;
+  context: string;
+  agent: string;
+  /** Whether the person may invoke it as `/name`. */
+  user_invocable: boolean;
+  body: string;
+  /** Where it lives on this machine. */
+  source_dir: string;
+}
+
+/** One agent. */
+export interface AgentInfo {
+  name: string;
+  description: string;
+  /** The tools it may use. */
+  tools: string[];
+  model: string;
+  color: string;
+  /** Whether it may run other agents. */
+  can_orchestrate: boolean;
+  /** The MCP servers it is given. */
+  mcp_servers: string[];
+  tags: string[];
+  system_prompt: string;
+  /** Where it lives on this machine. */
+  source_path: string;
+  /** Whether it was made for one task only. */
+  is_ephemeral: boolean;
+  /** The tools it names that do not exist. */
+  unknown_tools: string[];
+}
+
+/** What became of an agent made for one task. */
+export interface PromoteResult {
+  ok: boolean;
+  name: string;
+  /** Where it was kept, when it was. */
+  dest: string;
+  /** Why it was not, when it was not. */
+  reason: string;
+}
+
+/** What became of an agent made for one task, dropped. */
+export interface DiscardResult {
+  ok: boolean;
+  name: string;
+  /** Why it was not, when it was not. */
+  reason: string;
+}
+
+/** One workflow. */
+export interface Workflow {
+  name: string;
+  description: string;
+  /** When the agent should reach for it. */
+  whenToUse: string;
+  /** The phases it runs through. */
+  phases: WorkflowPhase[];
+  /** Where it lives on this machine. */
+  path: string;
+}
+
+/** One phase of a workflow. */
+export interface WorkflowPhase {
+  title: string;
+  detail: string;
+}
+
+/** One scheduled task. */
+export interface ScheduledTask {
+  id: string;
+  /** What the agent is asked to do. */
+  description: string;
+  /** ISO 8601, when it is next due. */
+  scheduled_at: string;
+  /** ISO 8601, when it was made. */
+  created_at: string;
+  /** `pending`, `running`, `completed`, `failed` or `cancelled`. */
+  status: string;
+  /** What it left behind, when it has run. */
+  result: string;
+  /** Why it failed, when it did. */
+  error: string;
+  /** How it repeats, when it does. */
+  recurrence: string;
+}
+
+/** One background shell. */
+export interface ProcessRow {
+  pid: number;
+  cmd: string;
+  elapsed_seconds: number;
+  is_running: boolean;
+  /** How it ended, when it has. */
+  exit_code: number | null;
+}
+
+/** A background shell's last lines. */
+export interface ProcessTail {
+  pid: number;
+  output: string;
+  is_running: boolean;
+  /** How it ended, when it has. */
+  exit_code: number | null;
+}
+
+/** What stopping a background shell did. */
+export interface ProcessStop {
+  pid: number;
+  killed: boolean;
+  message: string;
+}
+
+/** What a command in the project printed. */
+export interface ShellResult {
+  output: string;
+  exit_code: number;
+  /** The process's id, once it started; `null` when it could not. */
+  pid: number | null;
+  /** `true` when the command is still running, in the background. */
+  backgrounded: boolean;
 }
 
 /** Key–value state of the extension's own, kept by the host across restarts. An extension sees only its own keys. */
@@ -1309,13 +1719,13 @@ export class HostPlan extends HostObject {
   }
 
   /** Approve the plan. */
-  approve(run_id?: string): Promise<JsonValue> {
-    return this.call<JsonValue>("approve", { run_id });
+  approve(run_id?: string): Promise<PlanDecision> {
+    return this.call<PlanDecision>("approve", { run_id });
   }
 
   /** Send the plan back. */
-  dismiss(run_id?: string): Promise<JsonValue> {
-    return this.call<JsonValue>("dismiss", { run_id });
+  dismiss(run_id?: string): Promise<PlanDecision> {
+    return this.call<PlanDecision>("dismiss", { run_id });
   }
 }
 
@@ -1323,7 +1733,7 @@ export class HostPlan extends HostObject {
 export class HostTasks extends HostObject {
   static readonly PATH = "tasks";
   /** The todo list. */
-  readonly todos: Property<JsonValue[]>;
+  readonly todos: Property<TodoItem[]>;
   /** A task was created. */
   readonly created: Signal<TaskEvent>;
   /** A task changed. */
@@ -1384,8 +1794,8 @@ export class HostLoop extends HostObject {
   }
 
   /** Take the next iteration. */
-  pop_pending(): Promise<JsonValue> {
-    return this.call<JsonValue>("pop_pending", {});
+  pop_pending(): Promise<LoopAdvance | null> {
+    return this.call<LoopAdvance | null>("pop_pending", {});
   }
 }
 
@@ -1393,13 +1803,13 @@ export class HostLoop extends HostObject {
 export class HostCommands extends HostObject {
   static readonly PATH = "commands";
   /** Every slash command. */
-  readonly list: Property<JsonValue[]>;
+  readonly list: Property<SlashCommand[]>;
   /** Skill names. */
   readonly skills: Property<string[]>;
   /** Each skill's description and prompt. */
-  readonly skill_definitions: Property<JsonValue[]>;
+  readonly skill_definitions: Property<SkillDefinition[]>;
   /** Each skill's details. */
-  readonly skill_details: Property<JsonValue[]>;
+  readonly skill_details: Property<SkillDetails[]>;
 
   constructor(
     link: HostLink,
@@ -1423,7 +1833,7 @@ export class HostCommands extends HostObject {
 export class HostAgents extends HostObject {
   static readonly PATH = "agents";
   /** Every agent. */
-  readonly details: Property<JsonValue[]>;
+  readonly details: Property<AgentInfo[]>;
   /** An agent was promoted or discarded. */
   readonly changed: Signal<CollectionChange>;
 
@@ -1438,13 +1848,13 @@ export class HostAgents extends HostObject {
   }
 
   /** Keep an agent made for one task, as `/agents promote` does. */
-  promote_ephemeral(name: string, target?: string): Promise<JsonValue> {
-    return this.call<JsonValue>("promote_ephemeral", { name, target });
+  promote_ephemeral(name: string, target?: string): Promise<PromoteResult> {
+    return this.call<PromoteResult>("promote_ephemeral", { name, target });
   }
 
   /** Drop an agent made for one task. */
-  discard_ephemeral(name: string): Promise<JsonValue> {
-    return this.call<JsonValue>("discard_ephemeral", { name });
+  discard_ephemeral(name: string): Promise<DiscardResult> {
+    return this.call<DiscardResult>("discard_ephemeral", { name });
   }
 }
 
@@ -1452,7 +1862,7 @@ export class HostAgents extends HostObject {
 export class HostWorkflows extends HostObject {
   static readonly PATH = "workflows";
   /** Every workflow. */
-  readonly list: Property<JsonValue[]>;
+  readonly list: Property<Workflow[]>;
   /** A workflow run moved on. */
   readonly changed: Signal<CollectionChange>;
 
@@ -1481,7 +1891,7 @@ export class HostWorkflows extends HostObject {
 export class HostScheduler extends HostObject {
   static readonly PATH = "scheduler";
   /** Every scheduled task. */
-  readonly tasks: Property<JsonValue[]>;
+  readonly tasks: Property<ScheduledTask[]>;
   /** A task started, finished or changed. */
   readonly event: Signal<SchedulerEvent>;
 
@@ -1515,7 +1925,7 @@ export class HostScheduler extends HostObject {
 export class HostProcesses extends HostObject {
   static readonly PATH = "processes";
   /** Every background shell. */
-  readonly list: Property<JsonValue[]>;
+  readonly list: Property<ProcessRow[]>;
   /** A shell started, printed or exited. */
   readonly changed: Signal<ProcessEvent>;
 
@@ -1530,18 +1940,18 @@ export class HostProcesses extends HostObject {
   }
 
   /** A shell's last lines. */
-  tail(pid: number, lines?: number): Promise<JsonValue> {
-    return this.call<JsonValue>("tail", { pid, lines });
+  tail(pid: number, lines?: number): Promise<ProcessTail> {
+    return this.call<ProcessTail>("tail", { pid, lines });
   }
 
   /** Stop a shell. */
-  stop(pid: number): Promise<JsonValue> {
-    return this.call<JsonValue>("stop", { pid });
+  stop(pid: number): Promise<ProcessStop> {
+    return this.call<ProcessStop>("stop", { pid });
   }
 
   /** Run a command in the project and wait for it. */
-  run(command: string): Promise<JsonValue> {
-    return this.call<JsonValue>("run", { command });
+  run(command: string): Promise<ShellResult> {
+    return this.call<ShellResult>("run", { command });
   }
 }
 
@@ -1604,7 +2014,7 @@ export class HostWorkspace extends HostObject {
 export class HostModels extends HostObject {
   static readonly PATH = "models";
   /** Every model igni knows. */
-  readonly registry: Property<JsonValue>;
+  readonly registry: Property<ModelRegistry>;
   /** The model in use. Writable: setting it switches. */
   readonly current: Property<string>;
   /** The model in use changed. */
@@ -1626,11 +2036,11 @@ export class HostModels extends HostObject {
 export class HostMcp extends HostObject {
   static readonly PATH = "mcp";
   /** Every server. */
-  readonly servers: Property<JsonValue[]>;
+  readonly servers: Property<McpServer[]>;
   /** Each server's status. */
-  readonly status: Property<JsonValue[]>;
+  readonly status: Property<McpServer[]>;
   /** Each server's tools and details. */
-  readonly details: Property<JsonValue[]>;
+  readonly details: Property<McpServerDetails[]>;
   /** A server connected, disconnected or changed tools. */
   readonly changed: Signal<CollectionChange>;
 
@@ -1657,13 +2067,13 @@ export class HostMcp extends HostObject {
   }
 
   /** Start the servers that should be running. */
-  ensure(): Promise<JsonValue> {
-    return this.call<JsonValue>("ensure", {});
+  ensure(): Promise<McpInit> {
+    return this.call<McpInit>("ensure", {});
   }
 
   /** Offer or withhold one tool. */
-  set_tool_enabled(server: string, tool: string, on: boolean): Promise<JsonValue> {
-    return this.call<JsonValue>("set_tool_enabled", { server, tool, on });
+  set_tool_enabled(server: string, tool: string, on: boolean): Promise<McpToolToggle> {
+    return this.call<McpToolToggle>("set_tool_enabled", { server, tool, on });
   }
 }
 
@@ -1671,9 +2081,9 @@ export class HostMcp extends HostObject {
 export class HostPlugins extends HostObject {
   static readonly PATH = "plugins";
   /** Every installed plugin. */
-  readonly installed: Property<JsonValue[]>;
+  readonly installed: Property<PluginInfo[]>;
   /** Every marketplace. */
-  readonly marketplaces: Property<JsonValue[]>;
+  readonly marketplaces: Property<Marketplace[]>;
   /** A plugin or marketplace changed. */
   readonly changed: Signal<CollectionChange>;
 
@@ -1689,13 +2099,13 @@ export class HostPlugins extends HostObject {
   }
 
   /** What a plugin carries. */
-  contents(name: string): Promise<JsonValue> {
-    return this.call<JsonValue>("contents", { name });
+  contents(name: string): Promise<PluginContents> {
+    return this.call<PluginContents>("contents", { name });
   }
 
   /** What a plugin would install. */
-  preview(source: string, branch?: string, subdir?: string): Promise<JsonValue> {
-    return this.call<JsonValue>("preview", { source, branch, subdir });
+  preview(source: string, branch?: string, subdir?: string): Promise<PluginContents> {
+    return this.call<PluginContents>("preview", { source, branch, subdir });
   }
 
   /** Install a plugin. */
@@ -1762,7 +2172,7 @@ export class HostExtensions extends HostObject {
 export class HostHooks extends HostObject {
   static readonly PATH = "hooks";
   /** Every hook. */
-  readonly details: Property<JsonValue[]>;
+  readonly details: Property<HookEntry[]>;
   /** Hooks were reloaded. */
   readonly changed: Signal<CollectionChange>;
 
@@ -1805,9 +2215,9 @@ export class HostPermissions extends HostObject {
     this.mode_changed = new Signal("permissions.mode_changed");
   }
 
-  /** Would this tool call be allowed, asked or denied? */
-  check(tool_name: string, func_name: string, tool_args?: Record<string, JsonValue>): Promise<JsonValue> {
-    return this.call<JsonValue>("check", { tool_name, func_name, tool_args });
+  /** Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`. */
+  check(tool_name: string, func_name: string, tool_args?: Record<string, JsonValue>): Promise<string> {
+    return this.call<string>("check", { tool_name, func_name, tool_args });
   }
 
   /** Save a permission rule. */
@@ -1820,7 +2230,7 @@ export class HostPermissions extends HostObject {
 export class HostPolicy extends HostObject {
   static readonly PATH = "policy";
   /** The group's policy pack. */
-  readonly pack: Property<JsonValue>;
+  readonly pack: Property<PolicyPack>;
 
   constructor(
     link: HostLink,

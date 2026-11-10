@@ -132,7 +132,7 @@ Write it, as the person's UI would. Refused where theirs would be.
 ## SCHEMA_VERSION
 
 ```python
-SCHEMA_VERSION: str = '1.12.0'
+SCHEMA_VERSION: str = '1.13.0'
 ```
 
 ## Signal
