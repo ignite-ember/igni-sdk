@@ -12,7 +12,7 @@ bridge.onParams((params) => render(params));
 const found = await bridge.rpc("ext.example.teamnotes.search", { query: "" });
 ```
 
-Writing a page for the first time? [Your first extension](../../docs/YOUR_FIRST_EXTENSION.md)
+Writing a page for the first time? [Your first extension](https://github.com/ignite-ember/igni-sdk/blob/main/docs/YOUR_FIRST_EXTENSION.md)
 builds one end to end. A page needs no build step at all to start: it can
 post the wire messages itself (`igni ext init` writes one that does);
 this package is that, with types.

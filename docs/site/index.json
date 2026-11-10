@@ -3951,7 +3951,7 @@
       "package": "igni-service",
       "slug": "changes-since-0-1-0",
       "title": "Changes since 0.1.0",
-      "description": "Changed on purpose, in igni_service.testing:",
+      "description": "Changed on purpose, in igni_service.testing.",
       "category": "guide",
       "order": 7,
       "file": "igni-service/changes-since-0-1-0.md",
