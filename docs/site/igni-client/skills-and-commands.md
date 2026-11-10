@@ -33,6 +33,9 @@ Takes no arguments.
 
 **Returns** `list[`[`SkillDefinition`](/docs/sdk/igni-client/models-reference#skilldefinition)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -62,6 +65,9 @@ Takes no arguments.
 
 **Returns** `list[`[`SkillInfo`](/docs/sdk/igni-client/models-reference#skillinfo)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -88,6 +94,9 @@ Takes no arguments. Returns the names, each usable as `/<name>`.
 Takes no arguments.
 
 **Returns** `list[str]`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -147,6 +156,9 @@ Takes no arguments.
 
 **Returns** `list[`[`SlashCommand`](/docs/sdk/igni-client/models-reference#slashcommand)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -173,6 +185,9 @@ none) and every style's `name` and `description`.
 Takes no arguments.
 
 **Returns** [`OutputStylesResult`](/docs/sdk/igni-client/models-reference#outputstylesresult).
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

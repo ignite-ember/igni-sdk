@@ -34,6 +34,9 @@ Takes no arguments.
 
 **Returns** [`ApproverTokenMinted`](/docs/sdk/igni-client/models-reference#approvertokenminted).
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -64,6 +67,9 @@ approver standing.
 Takes no arguments.
 
 **Returns** [`ApproverTokensRevoked`](/docs/sdk/igni-client/models-reference#approvertokensrevoked).
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 

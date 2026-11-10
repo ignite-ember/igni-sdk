@@ -40,6 +40,11 @@ mode change, and `ok`; `ok: false` with `error` when
 
 **How they are told apart** `async with` the call to follow it: it yields the `plan_decided` push whose `run_id` is this call's, and ends with it, or with the answer when `ok` is false. A change of permission mode is in the answer's `mode_status`.
 
+**Told apart by** the message's `run_id` is the `run_id` the call was given — igni's contract says so.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`approver`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop, a program needs an approver token the window minted (`Local(approver_token=...)`); with the lockfile's token it gets `AccessRefused`.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `approver` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -82,6 +87,11 @@ false` with `error` when `run_id` is empty.
 
 **How they are told apart** `async with` the call to follow it: it yields the `plan_decided` push whose `run_id` is this call's, and ends with it, or with the answer when `ok` is false.
 
+**Told apart by** the message's `run_id` is the `run_id` the call was given — igni's contract says so.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -112,6 +122,9 @@ when none was submitted.
 Takes no arguments.
 
 **Returns** [`LatestPlanResult`](/docs/sdk/igni-client/models-reference#latestplanresult).
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

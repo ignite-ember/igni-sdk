@@ -29,6 +29,9 @@ Takes no arguments.
 
 **Returns** [`ModelRegistryResult`](/docs/sdk/igni-client/models-reference#modelregistryresult).
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -62,6 +65,9 @@ not in the registry.
 | `model_name` | `str` | required | A model name from the model registry (see `get_model_registry`). |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

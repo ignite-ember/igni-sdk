@@ -38,6 +38,9 @@ reason is also `get_mcp_server_details`'s `error` for it.
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -68,6 +71,9 @@ whether or not the server was connected.
 | `server_name` | `str` | required | The server's name in the MCP configuration. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -101,6 +107,9 @@ Takes no arguments.
 
 **Returns** [`McpInitResult`](/docs/sdk/igni-client/models-reference#mcpinitresult).
 
+**How long** `long` — Runs something that takes as long as it takes: a git clone, the agent, a shell command, a model summarising.
+The client waits up to 600 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -132,6 +141,9 @@ Takes no arguments.
 
 **Returns** `list[`[`McpServerSnapshot`](/docs/sdk/igni-client/models-reference#mcpserversnapshot)`]`.
 
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -159,6 +171,9 @@ server.
 Takes no arguments.
 
 **Returns** `list[`[`McpServerSummary`](/docs/sdk/igni-client/models-reference#mcpserversummary)`]`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -201,6 +216,9 @@ cannot be written.
 
 **Returns** [`McpToolToggleResult`](/docs/sdk/igni-client/models-reference#mcptooltoggleresult).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -228,6 +246,9 @@ server, in no particular order.
 Takes no arguments.
 
 **Returns** `list[`[`McpServerStatus`](/docs/sdk/igni-client/models-reference#mcpserverstatus)`]`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

@@ -43,6 +43,11 @@ process — `process_started`, a `process_line` per line,
 
 **How they are told apart** `async with` the call to follow it: a command that finishes inside the wait pushes nothing, and the answer is its output. A command that outlives the wait moves to the background: the answer names the pid, and the `process_started`, `process_line`, `process_exited` and `background_process_done` pushes of that pid follow, ending with the last of them.
 
+**Told apart by** the message's `pid` is the `pid` the call was answered with — igni's contract says so.
+
+**How long** `long` — Runs something that takes as long as it takes: a git clone, the agent, a shell command, a model summarising.
+The client waits up to 600 seconds.
+
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -79,6 +84,9 @@ Takes no arguments.
 
 **Returns** `list[`[`ProcessRow`](/docs/sdk/igni-client/models-reference#processrow)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -114,6 +122,11 @@ stop — its last lines, `process_exited` and
 **Events** `StopBackgroundProcessEvent` is any of [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush) (igni streams `background_process_done`, `process_exited`, `process_line`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `process_line`, `process_exited` and `background_process_done` pushes of `pid` and ends with `background_process_done`, or with the answer when `killed` is false.
+
+**Told apart by** the message's `pid` is the `pid` the call was given — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -155,6 +168,9 @@ output, not running.
 | `tail` | `int` | `200` | How many of the last lines to return (at least 1). |
 
 **Returns** [`ProcessTailResult`](/docs/sdk/igni-client/models-reference#processtailresult).
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

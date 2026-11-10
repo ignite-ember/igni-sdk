@@ -36,6 +36,9 @@ completed, failed or was cancelled, whose record is left as it is.
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -82,6 +85,15 @@ or the run fails.
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`ScheduledTaskRunResult`](/docs/sdk/igni-client/models-reference#scheduledtaskrunresult), or `async with` it to follow its events too.
 
+**While it runs** it may also cause these pushes: `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `plan_submitted`, `process_exited`, `process_line`, `process_started`, `todos_updated`.
+
+**How they are told apart** `async with` the call to follow it: it yields the pushes of the run it starts — what its tools do while it works — as they come, and ends with the answer, which is the agent's own words. The run's id is the one given; igni-client makes one when the caller does not, so the pushes can be told from another run's.
+
+**Told apart by** the run the message is of is the `run_id` the call was answered with — igni's contract says so.
+
+**How long** `long` — Runs something that takes as long as it takes: a git clone, the agent, a shell command, a model summarising.
+The client waits up to 600 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -117,6 +129,9 @@ created, its `status`, its `result` or `error`, and its
 
 **Returns** `list[`[`ScheduledTask`](/docs/sdk/igni-client/models-reference#scheduledtask)`]`.
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -147,9 +162,16 @@ Takes no arguments.
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, `None`, or `async with` it to follow its events too.
 
-**Events** `StartSchedulerEvent` is any of [`SchedulerCompletedPush`](/docs/sdk/igni-client/events-reference#schedulercompletedpush), [`SchedulerStartedPush`](/docs/sdk/igni-client/events-reference#schedulerstartedpush) (igni streams `scheduler_completed`, `scheduler_started`).
+**Events** `StartSchedulerEvent` is any of [`SchedulerCompletedPush`](/docs/sdk/igni-client/events-reference#schedulercompletedpush), [`SchedulerStartedPush`](/docs/sdk/igni-client/events-reference#schedulerstartedpush), [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`FileEditedPush`](/docs/sdk/igni-client/events-reference#fileeditedpush), [`HttpRetryAttemptPush`](/docs/sdk/igni-client/events-reference#httpretryattemptpush), [`HttpRetrySucceededPush`](/docs/sdk/igni-client/events-reference#httpretrysucceededpush), [`OrchestrateEventPush`](/docs/sdk/igni-client/events-reference#orchestrateeventpush), [`PermissionModeChangedPush`](/docs/sdk/igni-client/events-reference#permissionmodechangedpush), [`PlanSubmittedPush`](/docs/sdk/igni-client/events-reference#plansubmittedpush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush), [`TodosUpdatedPush`](/docs/sdk/igni-client/events-reference#todosupdatedpush) (igni streams `scheduler_completed`, `scheduler_started`).
+
+**While it runs** it may also cause these pushes: `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `plan_submitted`, `process_exited`, `process_line`, `process_started`, `todos_updated`.
 
 **How they are told apart** `async with` the call to follow it: it yields this session's `scheduler_started` and `scheduler_completed` pushes for as long as the block runs. What a task's tools push meanwhile carries nothing that says which run it came from, so it is not yielded; read it from `igni.events()`.
+
+**Told apart by** the channel the message is on, and by what the call causes.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

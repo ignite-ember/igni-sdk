@@ -63,6 +63,9 @@ was found both are empty and `reason` says why.
 
 **Returns** [`ServerFound`](/docs/sdk/igni-client/models-reference#serverfound).
 
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -103,6 +106,11 @@ Takes no arguments.
 **Events** `LoginEvent` is any of [`LoginResultPush`](/docs/sdk/igni-client/events-reference#loginresultpush), [`LoginStatusPush`](/docs/sdk/igni-client/events-reference#loginstatuspush), [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `login_result`, `login_status`, `notifications_changed`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `login_status` pushes and ends with the `login_result` one. igni signs in one way at a time — a new `login` cancels the one going — so these are the sign-in igni is doing.
+
+**Told apart by** the message's `flow_id` is the `flow_id` the call was answered with — igni's contract says so.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -145,6 +153,9 @@ written.
 
 **Returns** [`ServerChoice`](/docs/sdk/igni-client/models-reference#serverchoice).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when this connection does not stand as `window` · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -177,6 +188,9 @@ Takes no arguments.
 
 **Returns** [`CloudPlan`](/docs/sdk/igni-client/models-reference#cloudplan)` | None`.
 
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -207,6 +221,9 @@ a `status_update` message, sent in place of an `rpc_response`.
 Takes no arguments.
 
 **Returns** [`StatusUpdate`](/docs/sdk/igni-client/events-reference#statusupdate).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -242,6 +259,11 @@ Takes no arguments.
 **Events** `ClearCloudCredentialsEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the person signed out, and ends with the answer — the session's status.
+
+**Told apart by** the message's `cause` is `signed_out` — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 

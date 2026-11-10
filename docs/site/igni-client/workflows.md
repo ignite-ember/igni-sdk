@@ -42,6 +42,11 @@ there was no such run or it had already ended, with the
 
 **How they are told apart** `async with` the call to follow it: it yields the `workflow_event` pushes of `workflow_run_id` and ends with the run's last, or with the answer when `cancelled` is false.
 
+**Told apart by** the message's `workflow_run_id` is the `workflow_run_id` the call was given — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -72,6 +77,9 @@ be read is left out.
 Takes no arguments.
 
 **Returns** `list[`[`WorkflowListItem`](/docs/sdk/igni-client/models-reference#workflowlistitem)`]`.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -117,6 +125,11 @@ workflow runtime is missing.
 **Events** `RunWorkflowEvent` is any of [`WorkflowEventPush`](/docs/sdk/igni-client/events-reference#workfloweventpush) (igni streams `workflow_event`).
 
 **How they are told apart** `async with` the call to follow it: it yields every `workflow_event` push carrying the `workflow_run_id` igni answered with — those that came before the answer too — and ends with the run's `workflow_completed` or `workflow_failed`.
+
+**Told apart by** the message's `workflow_run_id` is the `workflow_run_id` the call was answered with — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

@@ -2387,6 +2387,11 @@
       "sections": [
         {
           "level": 2,
+          "id": "what-igni-answers-with",
+          "title": "What igni answers with"
+        },
+        {
+          "level": 2,
           "id": "igniclienterror",
           "title": "IgniClientError"
         },

@@ -32,6 +32,9 @@ Takes no arguments.
 
 **Returns** `list[`[`HookEntryView`](/docs/sdk/igni-client/models-reference#hookentryview)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -59,6 +62,9 @@ Takes no arguments. Returns an `info` message, sent in place of an
 Takes no arguments.
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -88,6 +94,9 @@ their failures are logged, not raised.
 Takes no arguments.
 
 **Returns** `None`.
+
+**How long** `long` — Runs something that takes as long as it takes: a git clone, the agent, a shell command, a model summarising.
+The client waits up to 600 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

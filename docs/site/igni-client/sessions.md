@@ -67,9 +67,16 @@ to another project folder — an attach never moves a session.
 
 **Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`AttachSessionResult`](/docs/sdk/igni-client/models-reference#attachsessionresult), or `async with` it to follow its events too.
 
-**Events** `AttachSessionEvent` is any of [`ContentDelta`](/docs/sdk/igni-client/events-reference#contentdelta), [`ErrorMessage`](/docs/sdk/igni-client/events-reference#errormessage), [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`ModelCompleted`](/docs/sdk/igni-client/events-reference#modelcompleted), [`ReasoningStarted`](/docs/sdk/igni-client/events-reference#reasoningstarted), [`RequirementDetails`](/docs/sdk/igni-client/events-reference#requirementdetails), [`RunCompleted`](/docs/sdk/igni-client/events-reference#runcompleted), [`RunError`](/docs/sdk/igni-client/events-reference#runerror), [`RunPaused`](/docs/sdk/igni-client/events-reference#runpaused), [`RunStarted`](/docs/sdk/igni-client/events-reference#runstarted), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend), [`StreamingDone`](/docs/sdk/igni-client/events-reference#streamingdone), [`TaskCreated`](/docs/sdk/igni-client/events-reference#taskcreated), [`TaskIteration`](/docs/sdk/igni-client/events-reference#taskiteration), [`TaskStateUpdated`](/docs/sdk/igni-client/events-reference#taskstateupdated), [`TaskUpdated`](/docs/sdk/igni-client/events-reference#taskupdated), [`ToolCompleted`](/docs/sdk/igni-client/events-reference#toolcompleted), [`ToolError`](/docs/sdk/igni-client/events-reference#toolerror), [`ToolStarted`](/docs/sdk/igni-client/events-reference#toolstarted) (igni streams `content_delta`, `error`, `info`, `model_completed`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started`).
+**Events** `AttachSessionEvent` is any of [`ContentDelta`](/docs/sdk/igni-client/events-reference#contentdelta), [`ErrorMessage`](/docs/sdk/igni-client/events-reference#errormessage), [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`ModelCompleted`](/docs/sdk/igni-client/events-reference#modelcompleted), [`ReasoningStarted`](/docs/sdk/igni-client/events-reference#reasoningstarted), [`RequirementDetails`](/docs/sdk/igni-client/events-reference#requirementdetails), [`RunCompleted`](/docs/sdk/igni-client/events-reference#runcompleted), [`RunError`](/docs/sdk/igni-client/events-reference#runerror), [`RunPaused`](/docs/sdk/igni-client/events-reference#runpaused), [`RunStarted`](/docs/sdk/igni-client/events-reference#runstarted), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend), [`StreamingDone`](/docs/sdk/igni-client/events-reference#streamingdone), [`TaskCreated`](/docs/sdk/igni-client/events-reference#taskcreated), [`TaskIteration`](/docs/sdk/igni-client/events-reference#taskiteration), [`TaskStateUpdated`](/docs/sdk/igni-client/events-reference#taskstateupdated), [`TaskUpdated`](/docs/sdk/igni-client/events-reference#taskupdated), [`ToolCompleted`](/docs/sdk/igni-client/events-reference#toolcompleted), [`ToolError`](/docs/sdk/igni-client/events-reference#toolerror), [`ToolStarted`](/docs/sdk/igni-client/events-reference#toolstarted), [`BackgroundProcessDonePush`](/docs/sdk/igni-client/events-reference#backgroundprocessdonepush), [`FileEditedPush`](/docs/sdk/igni-client/events-reference#fileeditedpush), [`HttpRetryAttemptPush`](/docs/sdk/igni-client/events-reference#httpretryattemptpush), [`HttpRetrySucceededPush`](/docs/sdk/igni-client/events-reference#httpretrysucceededpush), [`OrchestrateEventPush`](/docs/sdk/igni-client/events-reference#orchestrateeventpush), [`PermissionModeChangedPush`](/docs/sdk/igni-client/events-reference#permissionmodechangedpush), [`PlanSubmittedPush`](/docs/sdk/igni-client/events-reference#plansubmittedpush), [`ProcessExitedPush`](/docs/sdk/igni-client/events-reference#processexitedpush), [`ProcessLinePush`](/docs/sdk/igni-client/events-reference#processlinepush), [`ProcessStartedPush`](/docs/sdk/igni-client/events-reference#processstartedpush), [`TodosUpdatedPush`](/docs/sdk/igni-client/events-reference#todosupdatedpush) (igni streams `content_delta`, `error`, `info`, `model_completed`, `reasoning_started`, `requirement_details`, `run_completed`, `run_error`, `run_paused`, `run_started`, `stream_end`, `streaming_done`, `task_created`, `task_iteration`, `task_state_updated`, `task_updated`, `tool_completed`, `tool_error`, `tool_started`).
+
+**While it runs** it may also cause these pushes: `background_process_done`, `file_edited`, `http_retry_attempt`, `http_retry_succeeded`, `orchestrate_event`, `permission_mode_changed`, `plan_submitted`, `process_exited`, `process_line`, `process_started`, `todos_updated`.
 
 **How they are told apart** `async with` the call to follow it: it yields the approvals the session is still waiting for and the run it continues again — every message of them carries the attach's own request id — and ends with the `stream_end` that closes them.
+
+**Told apart by** the message's own id is the id the call was sent as — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -104,6 +111,9 @@ Takes no arguments.
 
 **Returns** [`StatusUpdate`](/docs/sdk/igni-client/events-reference#statusupdate).
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -133,6 +143,9 @@ Takes no arguments.
 
 **Returns** `str`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -159,6 +172,9 @@ shell commands work in.
 Takes no arguments.
 
 **Returns** `str`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -187,6 +203,9 @@ Takes no arguments.
 
 **Returns** `bool`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -213,6 +232,9 @@ does not stop a run at it, the client decides what to do.
 Takes no arguments.
 
 **Returns** `int`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -242,6 +264,9 @@ the agent it runs. A storage failure answers an empty list.
 Takes no arguments.
 
 **Returns** [`SessionListResult`](/docs/sdk/igni-client/events-reference#sessionlistresult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -275,6 +300,9 @@ an empty session under that id.
 | `session_id` | `str` | required | Id of the session to act on. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -311,6 +339,11 @@ Takes no arguments.
 
 **How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
 
+**Told apart by** the session the message is for is the session the call was for — igni's contract says so.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -345,6 +378,9 @@ logged, not raised. Only igni's window may call it.
 Takes no arguments.
 
 **Returns** `None`.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`window`](/docs/sdk/igni-client/access) — Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
@@ -414,6 +450,9 @@ Fails when the file cannot be stored.
 
 **Returns** [`UploadAttachmentResult`](/docs/sdk/igni-client/models-reference#uploadattachmentresult).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -448,6 +487,9 @@ Takes no arguments.
 
 **Returns** `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]`.
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -477,6 +519,9 @@ Takes no arguments.
 
 **Returns** [`DisplayConfig`](/docs/sdk/igni-client/models-reference#displayconfig).
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -504,6 +549,9 @@ now shown. Not saved; the session's next settings reload resets it.
 Takes no arguments.
 
 **Returns** `bool`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -536,6 +584,9 @@ later sessions, and a failure is only logged.
 | `user_msg` | `str` | required | The user's message in the turn. |
 
 **Returns** `None`.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -580,6 +631,11 @@ Returns the action and params as recorded, with `ok`.
 **Events** `DispatchVisualizationActionEvent` is any of [`VisualizationActionDispatchedPush`](/docs/sdk/igni-client/events-reference#visualizationactiondispatchedpush) (igni streams `visualization_action_dispatched`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `visualization_action_dispatched` push of this session carrying this `action` and `params`, and ends with it.
+
+**Told apart by** the message's `action` is the `action` the call was given — igni's contract says so.
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

@@ -31,6 +31,9 @@ Takes no arguments.
 
 **Returns** [`UpdateAvailable`](/docs/sdk/igni-client/models-reference#updateavailable)` | None`.
 
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -60,6 +63,9 @@ model it sets; nulls and zero when igni follows no group.
 Takes no arguments.
 
 **Returns** [`GroupPolicyPackResult`](/docs/sdk/igni-client/models-reference#grouppolicypackresult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

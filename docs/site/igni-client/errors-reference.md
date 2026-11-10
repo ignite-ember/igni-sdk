@@ -21,6 +21,21 @@ IgniClientError
     ApprovalRequired
 ```
 
+## What igni answers with
+
+igni names its refusals and failures with a code, and says what each means; igni-client raises `MethodFailed` with igni's own sentence, and these are the codes igni's contract defines.
+
+| Code | What it means |
+|---|---|
+| `cancelled` | The work the call started was cancelled before it finished. |
+| `failed` | It was allowed and it went wrong. The sentence says what happened. |
+| `forbidden` | This connection may not make the call: its standing, or the extension it speaks for, does not reach it. |
+| `invalid` | The arguments do not fit the method: one is missing, unknown, or of the wrong type. |
+| `not_found` | What the call names does not exist: a file, a task, a run. |
+| `refused` | The call was understood and not done: a rule, a policy or the state of things said no. Nothing changed. |
+| `unavailable` | Nothing in this igni answers the call: the feature is not set up here (no extension support, not a cloud VM, no token). |
+| `unknown_method` | No method of that name: a typo, or a newer method than this igni. |
+
 ## IgniClientError
 
 ```python

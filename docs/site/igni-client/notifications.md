@@ -29,6 +29,9 @@ Takes no arguments.
 
 **Returns** [`NotificationCounts`](/docs/sdk/igni-client/models-reference#notificationcounts).
 
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -64,6 +67,11 @@ Takes no arguments.
 **Events** `NotificationsListEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the list was read, and ends with the answer.
+
+**Told apart by** the message's `cause` is `listed` — igni's contract says so.
+
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -110,6 +118,11 @@ could not be told.
 **Events** `NotificationsMarkReadEvent` is any of [`NotificationsChangedPush`](/docs/sdk/igni-client/events-reference#notificationschangedpush) (igni streams `notifications_changed`).
 
 **How they are told apart** `async with` the call to follow it: it yields the `notifications_changed` push that says the notifications were marked read, and ends with the answer.
+
+**Told apart by** the message's `cause` is `marked_read` — igni's contract says so.
+
+**How long** `network` — Asks a server — igni server, an MCP server, PyPI — and waits for its answer.
+The client waits up to 60 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 

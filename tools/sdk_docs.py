@@ -91,6 +91,40 @@ BASE = "/docs/sdk"
 GUIDE = "guide"
 REFERENCE = "reference"
 
+#: How the contract's places are said in the docs: where in a message the
+#: value a call is told apart by is, and where in the call it comes from.
+_PLACE_TEXT = {
+    "id": "the message's own id",
+    "session_id": "the session the message is for",
+    "run_id": "the run the message is of",
+    "channel": "the channel the message is on",
+}
+
+_SOURCE_TEXT = {
+    "request.id": "the id the call was sent as",
+    "request.session_id": "the session the call was for",
+}
+
+
+def _place_text(by: str) -> str:
+    """How the contract's place in a message is said."""
+    if by in _PLACE_TEXT:
+        return _PLACE_TEXT[by]
+    if by.startswith("payload."):
+        return f"the message's `{by.split('.', 1)[1]}`"
+    return f"the message's `{by}`"
+
+
+def _source_text(source: str) -> str:
+    """How the contract's place in a call is said."""
+    if source in _SOURCE_TEXT:
+        return _SOURCE_TEXT[source]
+    if source.startswith("args."):
+        return f"the `{source.split('.', 1)[1]}` the call was given"
+    if source.startswith("result."):
+        return f"the `{source.split('.', 1)[1]}` the call was answered with"
+    return f"the call's `{source}`"
+
 
 class DocsError(ValueError):
     """The SDK docs cannot be generated as the sources are."""
@@ -496,6 +530,7 @@ class ClientReference:
         else:
             out += [f"**Returns** {self.type_md(result)}.", ""]
         out += self._streams(wire)
+        out += self._duration(wire)
         out += self._access(method.access)
         out += self._raises(wire, method.access, followed, sends_only=False)
         out += [
@@ -508,26 +543,69 @@ class ClientReference:
 
     def _streams(self, wire: str) -> list[str]:
         method = self.contract.methods.get(wire)
-        if method is None or not method.streams:
+        if method is None:
             return []
-        classes = self.plan.stream_classes(wire)
+        classes = self.plan.event_classes(wire)
         linked = ", ".join(self.type_md(c) for c in classes)
         channels = ", ".join(f"`{s.removeprefix(PUSH_PREFIX)}`" for s in method.streams)
         out: list[str] = []
+        if method.streams:
+            if wire in FOLLOWED:
+                out += [
+                    f"**Events** `{self.api.event_alias(wire)}` is any of {linked} "
+                    f"(igni streams {channels}).",
+                    "",
+                ]
+            else:
+                out += [
+                    f"**Events** while it runs igni also streams {channels} ({linked}). "
+                    f"This call does not follow them: {rst(UNFOLLOWED[wire])}",
+                    "",
+                ]
+        if method.may_stream:
+            may = ", ".join(f"`{s.removeprefix(PUSH_PREFIX)}`" for s in method.may_stream)
+            out += [
+                f"**While it runs** it may also cause these pushes: {may}.",
+                "",
+            ]
         if wire in FOLLOWED:
             out += [
-                f"**Events** `{self.api.event_alias(wire)}` is any of {linked} "
-                f"(igni streams {channels}).",
-                "",
                 f"**How they are told apart** {rst(FOLLOWED[wire])}",
                 "",
             ]
-        else:
-            out += [
-                f"**Events** while it runs igni also streams {channels} ({linked}). "
-                f"This call does not follow them: {rst(UNFOLLOWED[wire])}",
+        out += self._told_apart(wire)
+        return out
+
+    def _told_apart(self, wire: str) -> list[str]:
+        """How the contract says the call's own events are told from every other call's."""
+        method = self.contract.methods.get(wire)
+        correlate = method.correlate if method is not None else None
+        if correlate is None:
+            return []
+        place = _PLACE_TEXT.get(correlate.by) or _place_text(correlate.by)
+        if correlate.equals:
+            return [
+                f"**Told apart by** {place} is `{correlate.equals}` — igni's contract says so.",
                 "",
             ]
+        if correlate.source:
+            source = _SOURCE_TEXT.get(correlate.source) or _source_text(correlate.source)
+            return [f"**Told apart by** {place} is {source} — igni's contract says so.", ""]
+        return [f"**Told apart by** {place}, and by what the call causes.", ""]
+
+    def _duration(self, wire: str) -> list[str]:
+        """How long the call takes, and how long the client waits for it."""
+        method = self.contract.methods.get(wire)
+        if method is None or not method.duration:
+            return []
+        duration = self.contract.durations.get(method.duration)
+        what = rst(duration.doc) if duration is not None else f"`{method.duration}`"
+        out = [f"**How long** `{method.duration}` — {what}"]
+        if method.timeout_seconds is None:
+            out.append("The client waits as long as it takes.")
+        else:
+            out.append(f"The client waits up to {method.timeout_seconds} seconds.")
+        out.append("")
         return out
 
     def _access(self, access: str) -> list[str]:
@@ -1118,6 +1196,20 @@ class ClientReference:
         for root in children.get("Exception", []):
             tree(root, 0)
         body += ["```", ""]
+        if self.contract.errors:
+            body += [
+                "## What igni answers with",
+                "",
+                "igni names its refusals and failures with a code, and says what each "
+                "means; igni-client raises `MethodFailed` with igni's own sentence, and "
+                "these are the codes igni's contract defines.",
+                "",
+                "| Code | What it means |",
+                "|---|---|",
+            ]
+            for code, meaning in self.contract.errors.items():
+                body.append(f"| `{code}` | {cell(meaning)} |")
+            body.append("")
         for name in self.error_order:
             error = self.errors[name]
             body += [

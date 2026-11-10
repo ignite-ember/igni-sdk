@@ -38,6 +38,9 @@ per session.
 
 **Returns** [`FileCompletion`](/docs/sdk/igni-client/models-reference#filecompletion).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -70,6 +73,9 @@ give the call a long timeout. Returns the chosen `path`, or
 | `start` | `str \| None` | `None` | Folder the picker opens in; the session's project folder when absent or empty. |
 
 **Returns** [`PickDirResult`](/docs/sdk/igni-client/models-reference#pickdirresult).
+
+**How long** `person` — Waits for the person, who may take their time.
+The client waits as long as it takes.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -106,6 +112,9 @@ client read.
 
 **Returns** [`ReadFileResult`](/docs/sdk/igni-client/models-reference#readfileresult).
 
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
@@ -137,6 +146,9 @@ the search timed out, and `error` when it failed.
 | `query` | `str` | required | The snippet, matched exactly; shorter than 5 characters finds nothing. |
 
 **Returns** [`SearchCodeResult`](/docs/sdk/igni-client/models-reference#searchcoderesult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
@@ -177,6 +189,9 @@ and `error` when it could not be read.
 | `show_hidden` | `bool` | `False` | Include folders whose names start with a dot. |
 
 **Returns** [`DirListResult`](/docs/sdk/igni-client/models-reference#dirlistresult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
 
 **Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
 
