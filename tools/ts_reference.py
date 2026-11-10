@@ -864,11 +864,20 @@ class TsReference:
                     pending.append(target)
 
     def target(self, module_name: str, specifier: str) -> str:
-        """The file a ``from "./x"`` names, relative to the package's ``src``."""
+        """The file a ``from "./x"`` names, relative to the package's ``src``.
+
+        The source names its own neighbours the way Node will find them
+        after the build — ``./bridge.js`` for ``bridge.ts`` — because the
+        emitted JavaScript has to find its neighbours by name. The
+        declarations are in the TypeScript, so that is what is looked
+        for.
+        """
         if not specifier.startswith("."):
             return ""
         base = Path(module_name).parent
         stem = (base / specifier[2:]).as_posix()
+        if stem.endswith((".js", ".jsx")):
+            stem = stem.rsplit(".", 1)[0]
         for candidate in (
             stem + ".ts",
             stem + ".tsx",

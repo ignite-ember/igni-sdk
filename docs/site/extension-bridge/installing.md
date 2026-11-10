@@ -12,8 +12,9 @@
 > npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
 > ```
 >
-> (`mkdir sdk-packages` first.) It ships TypeScript source (*Source, not a
-> build*, below), so the tarball is all there is.
+> (`mkdir sdk-packages` first.) It ships TypeScript source and a compiled
+> build beside it (*The source, and a build beside it*, below), so the
+> tarball is all there is.
 
 Once published, from npm:
 

@@ -58,36 +58,66 @@ disagree, or disagree with `VERSION=` when it is given.
 because there is one version; `sdk-` because `v*` tags already release igni
 itself (`release.yml`), and the two must never trigger each other.
 
-## TypeScript ships as source
+## TypeScript ships as source, and as a build
 
-`@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` are published as their
-TypeScript source — `main`, `types` and `exports` name `.ts` files — not as
-compiled JavaScript. It is the decision `@ignite-ember/ui-react`'s README already
-records ("Source, not a build"): an extension bundles its own React and runs
-its own build, so a compiled copy would pin a JSX runtime and a target the
-extension may not share.
+`@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` ship their
+TypeScript source — and a compiled build beside it.
 
-It was checked against the consumer that exists, the extension starter, with
-the packages installed into `node_modules` the way a registry install puts
-them there and every alias and `paths` entry removed: `tsc --noEmit`, `vite
-build` and `vitest run` all pass unchanged. Vite compiles TypeScript in
+The source is what a bundler takes. An extension bundles its own React
+and runs its own build, so a compiled copy would pin a JSX runtime and a
+target the extension may not share, and it would put a second copy of
+these components in the bundle next to the one the extension's own
+bundler already tree-shook. It was checked against the consumer that
+exists, the extension starter, with the packages installed into
+`node_modules` the way a registry install puts them there and every
+alias and `paths` entry removed: `tsc --noEmit`, `vite build` and
+`vitest run` all pass unchanged. Vite compiles TypeScript in
 `node_modules` like the page's own, and the packages' peers (`react`,
-`react-markdown`, …) resolve from the consumer's `node_modules` without the
-alias table the source checkout needed.
+`react-markdown`, …) resolve from the consumer's `node_modules` without
+the alias table the source checkout needed.
+
+The build is what everybody else takes. A second kind of consumer did
+turn up — one that does not compile `node_modules` at all: Node itself,
+a test runner that is not told to transform it, a tool that reads the
+types. Under `moduleResolution: node16` the packages' extensionless
+imports could not be resolved, `connect` was not exported, and the
+consumer's own type-check failed with `TS2305`.
+
+So each package now has a `dist/`: ES2022 modules, with declarations and
+source maps, built by `npm run build` (`tsconfig.build.json` beside the
+package's source). `exports` points at it under the `node` condition, and
+the `types` condition points at its declarations for everyone:
+
+```json
+"exports": {
+  ".": {
+    "types": "./dist/index.d.ts",
+    "node": "./dist/index.js",
+    "default": "./src/index.ts"
+  }
+}
+```
+
+A bundler takes the `default` — the source. Node takes the `node` — the
+build. `tsc` takes the `types` — the declarations. The relative imports
+in the packages' own source carry their `.js` extension, so the emitted
+JavaScript finds its neighbours by name, and the declarations do too.
+
+`scripts/check_npm_consumers.py` holds this to it: it packs the packages
+the way npm publishes them, installs the tarballs into a scratch
+consumer that resolves the way Node does, and type-checks and runs a
+program against them. A consumer that cannot use the packages fails
+there, before anything is published.
 
 What it asks of a consumer:
 
 - A bundler that compiles TypeScript — Vite, esbuild, Rollup with a TS
   plugin. Next.js needs `transpilePackages: ["@ignite-ember/ui-react",
   "@ignite-ember/extension-bridge"]`; Jest a `transformIgnorePatterns` exception.
-- `tsc` type-checks the packages' source under the consumer's own
-  `compilerOptions` (`skipLibCheck` covers `.d.ts` only). The source is
-  written to `strict`; a consumer with stricter flags than that
-  (`exactOptionalPropertyTypes`, say) may see errors in it.
-
-If a second kind of consumer turns up that cannot compile TypeScript, the
-answer is to add a compiled `dist/` beside `src/` and point `exports` at it —
-not to stop shipping the source.
+- `tsc` type-checks the packages' declarations under the consumer's own
+  `compilerOptions`. The declarations are written to `strict`; a consumer
+  with stricter flags than that (`exactOptionalPropertyTypes`, say) may
+  see errors in them.
 
 ## Building locally
 
@@ -95,7 +125,8 @@ not to stop shipping the source.
 make sdk-build
 ```
 
-Checks the versions agree, then writes to `dist/sdk/`:
+Checks the versions agree, compiles the npm packages' `dist/`, then writes
+to `dist/sdk/`:
 
 ```
 dist/sdk/python/igni_service-<v>-py3-none-any.whl  igni_service-<v>.tar.gz
@@ -106,8 +137,9 @@ dist/sdk/npm/ignite-ember-extension-bridge-<v>.tgz  ignite-ember-ui-react-<v>.tg
 
 Python with `uv build --no-sources` (proving the packages build with no
 checkout around them), npm with `npm pack` (each package's `files` list
-leaves its tests out). Every package carries `LICENSE` and `NOTICE`. To check
-what the registries would see:
+leaves its tests out). Every package carries `LICENSE` and `NOTICE`; the
+two with TypeScript carry their `dist/` too, which is what a consumer
+outside a bundler runs. To check what the registries would see:
 
 ```bash
 uvx twine check --strict dist/sdk/python/*                 # PyPI's metadata and README checks

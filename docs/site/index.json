@@ -5395,12 +5395,12 @@
     },
     {
       "package": "extension-bridge",
-      "slug": "source-not-a-build",
-      "title": "Source, not a build",
-      "description": "Like @ignite-ember/ui-react, this package ships its TypeScript source. A bundler that compiles TypeScript (Vite, esbuild, Rollup with a TS plugin) consumes it as is;",
+      "slug": "the-source-and-a-build-beside-it",
+      "title": "The source, and a build beside it",
+      "description": "This package ships its TypeScript source, and a compiled build beside it.",
       "category": "guide",
       "order": 11,
-      "file": "extension-bridge/source-not-a-build.md",
+      "file": "extension-bridge/the-source-and-a-build-beside-it.md",
       "sections": []
     },
     {
@@ -6526,12 +6526,12 @@
     },
     {
       "package": "ui-react",
-      "slug": "source-not-a-build",
-      "title": "Source, not a build",
-      "description": "This package ships TypeScript source. An extension bundles its own React and runs its own build, so shipping a pre-compiled artifact would mean pinning a JSX runtime and a target you may not share — and it would put a…",
+      "slug": "the-source-and-a-build-beside-it",
+      "title": "The source, and a build beside it",
+      "description": "This package ships TypeScript source, and a compiled build beside it.",
       "category": "guide",
       "order": 8,
-      "file": "ui-react/source-not-a-build.md",
+      "file": "ui-react/the-source-and-a-build-beside-it.md",
       "sections": []
     },
     {

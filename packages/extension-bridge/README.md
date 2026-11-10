@@ -272,8 +272,9 @@ reachable from `bridge.host`, and the page simply does not use it.
 > npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
 > ```
 >
-> (`mkdir sdk-packages` first.) It ships TypeScript source (*Source, not a
-> build*, below), so the tarball is all there is.
+> (`mkdir sdk-packages` first.) It ships TypeScript source and a compiled
+> build beside it (*The source, and a build beside it*, below), so the
+> tarball is all there is.
 
 Once published, from npm:
 
@@ -285,9 +286,19 @@ Each release's tarballs are also attached to igni-sdk's GitHub release
 (`sdk-v<version>`), for a build that cannot reach npmjs. Versions are in
 igni-sdk's `docs/PUBLISHING_THE_SDKS.md`.
 
-## Source, not a build
+## The source, and a build beside it
 
-Like `@ignite-ember/ui-react`, this package ships its TypeScript source. A bundler
-that compiles TypeScript (Vite, esbuild, Rollup with a TS plugin) consumes
-it as is; one that does not compile `node_modules` (Next.js, Jest) needs
-it listed for transpilation (`transpilePackages`, `transformIgnorePatterns`).
+This package ships its TypeScript source, and a compiled build beside it.
+
+A bundler that compiles TypeScript (Vite, esbuild, Rollup with a TS
+plugin) takes the source and compiles it as it compiles the rest of
+your extension. A consumer that does not compile `node_modules` — Node
+itself, a test runner that is not told to transform it, a tool that
+reads the types — takes the build: plain JavaScript, and the
+declarations that go with it.
+
+The build is ES2022 modules, with source maps back to the TypeScript.
+`exports` points at it for `node`, and the `types` condition points at
+its declarations for everyone, so `import { connect } from
+"@ignite-ember/extension-bridge"` names the same things in a bundler
+and in Node, and `tsc` finds them under `moduleResolution: node16`.
