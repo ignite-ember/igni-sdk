@@ -8,14 +8,19 @@ environment), so these tests run offline and still go through the real
 
 from __future__ import annotations
 
+import hashlib
+import http.server
 import io
 import json
+import socketserver
 import subprocess
 import sys
 import tarfile
 import textwrap
+import threading
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,12 +28,14 @@ from igni_service import BundleError
 from igni_service.bundle.builder import BundleBuilder
 from igni_service.bundle.code_tools import CodeTools, CodeToolsRead
 from igni_service.bundle.command import BundleCommand
+from igni_service.bundle.downloads import PipDownloader
 from igni_service.bundle.manifest import AgentTool, BundleManifest
 from igni_service.bundle.permissions_tools import PermissionsTools
 from igni_service.bundle.platforms import PLATFORMS
 from igni_service.bundle.project import ExtensionProject
 from igni_service.bundle.requirements import HashedRequirements
 from igni_service.bundle.runner import CommandRunner
+from igni_service.bundle.sources import PackageSources
 from igni_service.registration import ExtensionBundle
 
 PLATFORM_NAMES = ("macOS arm64", "Linux x86_64", "Windows x86_64")
@@ -731,3 +738,187 @@ class TestReadingTheCodesTools:
 
         assert read.tools is None
         assert read.problem.startswith("igni_extension.manifest answered something else")
+
+
+def digest_of(path: Path) -> str:
+    """The digest of a file's bytes, as a requirement pins them."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class TestAFileTheResolutionPinnedIsTakenFromWhereItLies:
+    """The wheel the resolution pinned is taken from the find-links directory.
+
+    pip, left to itself, fetches the same-named file from the index — a
+    different build of the same version — and the hash check then refuses
+    it. The bytes are what is compared, so a file is taken only when they
+    are the ones the resolution named.
+    """
+
+    @staticmethod
+    def downloader(index: Path, runner: CommandRunner) -> PipDownloader:
+        return PipDownloader(["pip"], PackageSources(find_links=(index,)), runner)
+
+    def test_a_wheel_the_directory_already_holds_is_copied_and_pip_is_not_asked(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        wheel = next(index.glob("tinydep-*.whl"))
+        requirement = f"tinydep==1.0.0 --hash=sha256:{digest_of(wheel)}"
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner()
+
+        assert self.downloader(index, runner).download([requirement], PLATFORMS[0], into) == []
+
+        assert (into / wheel.name).read_bytes() == wheel.read_bytes()
+        assert runner.commands == []
+
+    def test_the_wheel_is_taken_when_any_of_the_pinned_hashes_is_its_digest(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        wheel = next(index.glob("tinydep-*.whl"))
+        requirement = f"tinydep==1.0.0 --hash=sha256:{'0' * 64} --hash=sha256:{digest_of(wheel)}"
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner()
+
+        assert self.downloader(index, runner).download([requirement], PLATFORMS[0], into) == []
+
+        assert (into / wheel.name).is_file()
+        assert runner.commands == []
+
+    def test_a_requirement_no_local_file_matches_is_left_to_pip(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        requirement = f"otherdep==1.0.0 --hash=sha256:{'0' * 64}"
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner()
+
+        assert self.downloader(index, runner).download([requirement], PLATFORMS[0], into) == []
+
+        [command] = runner.commands
+        assert "download" in command
+        assert not list(into.glob("*.whl"))
+
+    def test_a_local_file_whose_bytes_are_not_the_pinned_ones_is_not_taken(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        """The same name is not enough: the bytes must be the pinned ones."""
+        wheel = next(index.glob("tinydep-*.whl"))
+        requirement = f"tinydep==1.0.0 --hash=sha256:{digest_of(wheel)}"
+        wheel.write_bytes(wheel.read_bytes() + b"another build of the same version")
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner()
+
+        assert self.downloader(index, runner).download([requirement], PLATFORMS[0], into) == []
+
+        assert runner.commands
+        assert not list(into.glob("*.whl"))
+
+    def test_an_sdist_the_directory_holds_is_not_taken_into_the_wheelhouse(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        sdist = next(index.glob("sdistonly-*.tar.gz"))
+        requirement = f"sdistonly==1.0.0 --hash=sha256:{digest_of(sdist)}"
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner(
+            returncode=1, stderr="No matching distribution found for sdistonly==1.0.0"
+        )
+
+        missing = self.downloader(index, runner).download([requirement], PLATFORMS[0], into)
+
+        assert missing == [requirement]
+        assert not list(into.glob("*.whl"))
+
+    def test_a_find_links_directory_that_is_not_there_is_skipped(
+        self, tmp_path: Path, index: Path
+    ) -> None:
+        requirement = f"tinydep==1.0.0 --hash=sha256:{'0' * 64}"
+        into = tmp_path / "wheels"
+        into.mkdir()
+        runner = ScriptedRunner()
+        downloader = PipDownloader(
+            ["pip"], PackageSources(find_links=(tmp_path / "nowhere",)), runner
+        )
+
+        assert downloader.download([requirement], PLATFORMS[0], into) == []
+
+        assert runner.commands
+        assert not list(into.glob("*.whl"))
+
+
+class TestAnIndexsOwnBuildOfTheSameVersionCannotEnterABundle:
+    """What CI did: the index serves another build of the same version.
+
+    The resolution pins the file the find-links directory holds — the one a
+    checkout built — and pip, left to itself, fetches the index's file
+    instead, which the hash check then refuses. The bundle must build, and
+    must carry the pinned bytes.
+    """
+
+    @staticmethod
+    def serving(directory: Path) -> tuple[socketserver.TCPServer, str]:
+        """A PEP 503 index over `directory`, which holds `simple/<name>/index.html`."""
+
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                super().__init__(*args, directory=str(directory), **kwargs)
+
+            def log_message(self, *args: Any) -> None:
+                pass
+
+        httpd = socketserver.TCPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        return httpd, f"http://127.0.0.1:{httpd.server_address[1]}/simple/"
+
+    @staticmethod
+    def build_of(name: str, root: Path, body: str) -> Path:
+        """A wheel of `name`, whose bytes say `body`."""
+        write_package(root, name, dependencies=[])
+        (root / "src" / name.replace("-", "_") / "__init__.py").write_text(body)
+        return root
+
+    def test_the_bundle_carries_the_build_the_resolution_pinned(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        local = tmp_path / "sdk-wheels"
+        build_dist(self.build_of("tinydep", tmp_path / "checkout", "A = 1\n"), local, "--wheel")
+        [checkout_wheel] = local.glob("tinydep-*.whl")
+
+        served = tmp_path / "index" / "simple" / "tinydep"
+        served.mkdir(parents=True)
+        build_dist(self.build_of("tinydep", tmp_path / "published", "A = 2\n"), served, "--wheel")
+        [index_wheel] = served.glob("tinydep-*.whl")
+        assert index_wheel.name == checkout_wheel.name
+        assert index_wheel.read_bytes() != checkout_wheel.read_bytes()
+        (served / "index.html").write_text(f'<a href="{index_wheel.name}">{index_wheel.name}</a>')
+
+        httpd, url = self.serving(tmp_path / "index")
+        monkeypatch.setenv("PIP_INDEX_URL", url)
+        monkeypatch.setenv("UV_INDEX_URL", url)
+        monkeypatch.setenv("UV_DEFAULT_INDEX", url)
+        try:
+            extension = write_extension(tmp_path / "extension", dependencies=["tinydep==1.0.0"])
+            status = BundleCommand.main(
+                [
+                    "--extension",
+                    str(extension),
+                    "--out",
+                    str(tmp_path / "bundle.tar.gz"),
+                    "--find-links",
+                    str(local),
+                    "--no-build-isolation",
+                ]
+            )
+        finally:
+            httpd.shutdown()
+
+        assert status == 0
+        with tarfile.open(
+            fileobj=io.BytesIO((tmp_path / "bundle.tar.gz").read_bytes()), mode="r:gz"
+        ) as tar:
+            carried = tar.extractfile(f"wheels/{checkout_wheel.name}")
+            assert carried is not None
+            assert carried.read() == checkout_wheel.read_bytes()

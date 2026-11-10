@@ -118,7 +118,11 @@ wheelhouse (`wheels/` unless the manifest's `python.wheels` says
 otherwise) with the extension's wheel and every dependency's, for CPython
 3.12 on macOS 26 and later (arm64), Linux x86_64 and Windows x86_64.
 Every dependency is pinned by hash, so a same-named package published
-elsewhere cannot slip in. Tests and caches are left out.
+elsewhere cannot slip in. A wheel a `--find-links` directory already holds
+is taken from there, when its bytes are the ones the resolution pinned: an
+index serving another build of the same version is then not consulted for
+it, and the build does not stop on the two not matching. Tests and caches
+are left out.
 
 The build stops (exit 1) when:
 

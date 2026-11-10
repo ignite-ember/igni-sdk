@@ -49,3 +49,8 @@ class HashedRequirements:
     def bare(requirement: str) -> str:
         """The requirement without its hashes, for a command line."""
         return requirement.split(" --hash=", 1)[0]
+
+    @staticmethod
+    def hashes_of(requirement: str) -> list[str]:
+        """The digests a requirement line pins, in the order it names them."""
+        return [part.split(":", 1)[1] for part in requirement.split(" --hash=")[1:] if ":" in part]
