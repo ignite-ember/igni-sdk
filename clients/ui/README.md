@@ -1,6 +1,14 @@
 # igni-ui
 
+**Full documentation:** [ignite-ember.sh/docs/sdk/ui-css](https://ignite-ember.sh/docs/sdk/ui-css) — guides and the complete API reference, a page per topic.
+
 The controls an extension draws with, so a surface built outside igni looks like one built inside it.
+
+This is the CSS-only package, `@ignite-ember/ui-css`. The React
+components that draw with it are `@ignite-ember/ui-react`; the bridge
+that themes it is `@ignite-ember/extension-bridge`. You need this
+stylesheet whichever of the other two you use — a component without it
+renders unstyled, and an unstyled button is not a subtle difference.
 
 ## Using it
 
@@ -35,6 +43,36 @@ Inside igni, the bridge pushes the **live computed values** at handshake and aga
 Values are pushed rather than baked in, on purpose. `theme.css` defines these across forty-five blocks — a `:root`, a light override, and a `prefers-color-scheme` block per feature. Any second copy of that is wrong within a release.
 
 The published token list is in `packages/extension-bridge/src/tokens.ts`, and it is **under the compatibility floor**: removing or repurposing one of those is a breaking change. Tokens not on that list — `--rail-width`, `--sidebar-w`, `--crumb-row-h` — describe igni's own chrome and are ours to change. An extension positioning itself against those would break the first time we moved something.
+
+## The floor
+
+Some of this file is promised, and the rest is not. Knowing which is
+which is the difference between a stylesheet you can build on and one
+you have to read every release.
+
+**The promised part is the token list.** The tokens published in
+`packages/extension-bridge/src/tokens.ts` are under igni's compatibility
+floor: removing one, renaming it, or giving it a different meaning is
+a breaking change under `docs/EXTENSIBILITY.md` §8. `npm install
+@ignite-ember/extension-bridge` and read that list — it is the
+authoritative one, and the fallbacks in this file are checked against it
+and against `theme.css` by a test.
+
+**The promised part is also the class names** the published React
+components render. `btn`, `btn-primary`, `ui-row`, `ui-card` and the
+rest are what a component's `className` is, so a page built out of the
+components and a page built out of the classes by hand look the same.
+
+**Everything else is ours to change.** A token that is not on the list
+— `--rail-width`, `--sidebar-w`, `--crumb-row-h` — describes igni's
+own chrome and describes the app's layout, not a control. A class that
+no published component renders is a candidate for removal. An
+extension that positioned itself against either would break the first
+time we moved something, and we would not have warned you, because we
+did not promise it.
+
+So: build against the published tokens and the published classes. For
+anything else, the stylesheet is a starting point, not a contract.
 
 ## What is here
 
@@ -92,6 +130,43 @@ So where the existing uses agreed, the agreement became the value. Where they sp
 There is deliberately **no `ui-title`**. Titles varied across four type steps, and that variation is the design — a heading level, not drift. Use the type scale and a weight.
 
 **Remaining:** igni's own 231 feature classes still carry their own copies. The primitives exist and are what an extension builds against; migrating the app onto them moves pixels in 64 files, and is worth doing behind the visual suite rather than blind.
+
+## Writing your own CSS
+
+The stylesheet is the vocabulary, not the layout. It has no page shell,
+no split pane, no scroll container — those are shapes, and a shape is
+cheap to write and expensive to promise.
+
+Write your own on top, in your own file, against the tokens:
+
+```css
+.notes {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+```
+
+Three rules that follow from the way this file is built:
+
+- **Write against tokens, never against colours.** `var(--fg-muted)`,
+  not `#b8b5ad`. A literal colour is a value that does not follow dark
+  mode, light mode, or a group's branding — and it is a value the
+  bridge cannot push over.
+- **Do not edit the published stylesheet.** It is a published artifact;
+  your edit is lost the next time you install. Layer yours after it.
+- **Do not redefine a token to mean something else.** Overriding
+  `--space-4` to `3px` changes every gap in the app's vocabulary, in
+  your page, at once. If you need a different value, use your own
+  variable and point the class at it.
+
+The reference pages on the site list every token this file defines and
+every class it names, with where each is used — so before you write a
+rule, it is worth checking that the class you were about to invent
+already exists.
 
 ## Installing
 

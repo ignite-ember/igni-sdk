@@ -11,7 +11,8 @@
   ],
   "license": "Apache-2.0",
   "author": "Ignite Ember (https://ignite-ember.sh/)",
-  "homepage": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/extension-bridge#readme",
+  "homepage": "https://ignite-ember.sh/docs/sdk/extension-bridge",
+  "documentation": "https://ignite-ember.sh/docs/sdk/extension-bridge",
   "bugs": {
     "url": "https://github.com/ignite-ember/igni-sdk/issues"
   },

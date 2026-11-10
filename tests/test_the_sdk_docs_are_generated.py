@@ -10,9 +10,11 @@ the contract or an example and forget ``make sdk-docs``, and this fails.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -41,7 +43,7 @@ def test_the_index_lists_every_page_once() -> None:
     on_disk = {str(p.relative_to(ROOT / OUTPUT)) for p in (ROOT / OUTPUT).rglob("*.md")}
     assert files == on_disk
     assert len(files) == len(index["pages"])
-    assert [p["name"] for p in index["packages"]] == [p.name for p in PACKAGES]
+    assert [p["name"] for p in index["packages"]] == [p.site for p in PACKAGES]
     for page in index["pages"]:
         assert set(page) == {
             "package",
@@ -142,16 +144,21 @@ def test_github_and_the_site_name_headings_as_they_do() -> None:
 
 
 @pytest.mark.parametrize("package", PACKAGES, ids=lambda p: p.name)
-def test_each_package_links_pypi_to_its_pages(package) -> None:  # type: ignore[no-untyped-def]
-    import tomllib
-
-    project = tomllib.loads((ROOT / package.path / "pyproject.toml").read_text())["project"]
-    assert project["urls"]["Documentation"] == docs_url(package.name)
-    assert {"Homepage", "Source", "Issues"} <= set(project["urls"])
+def test_each_package_links_its_registry_to_its_pages(package) -> None:  # type: ignore[no-untyped-def]
     readme = (ROOT / package.path / "README.md").read_text()
     head = readme.split("\n## ", 1)[0]
-    assert f"]({docs_url(package.name)})" in head
-    assert ReadmePages(readme, package.path).title == package.name
+    assert f"]({docs_url(package.site)})" in head
+    assert ReadmePages(readme, package.path).title == (package.readme_title or package.name)
+    if package.kind == "python":
+        import tomllib
+
+        project = tomllib.loads((ROOT / package.path / "pyproject.toml").read_text())["project"]
+        assert project["urls"]["Documentation"] == docs_url(package.site)
+        assert {"Homepage", "Source", "Issues"} <= set(project["urls"])
+    else:
+        data = json.loads((ROOT / package.path / "package.json").read_text())
+        assert data["documentation"] == docs_url(package.site)
+        assert data["homepage"] == docs_url(package.site)
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv to type-check in igni-client")
@@ -212,10 +219,60 @@ def test_a_long_signature_is_one_parameter_a_line_as_black_writes_it() -> None:
     assert all(len(line) <= 88 for line in long.split("\n"))
 
 
-def test_the_index_carries_each_package_version_from_its_pyproject() -> None:
-    import tomllib
-
+def test_the_index_carries_each_package_version_from_its_manifest() -> None:
     index = json.loads((ROOT / INDEX).read_text(encoding="utf-8"))
     for entry, package in zip(index["packages"], PACKAGES, strict=True):
-        project = tomllib.loads((ROOT / package.path / "pyproject.toml").read_text())["project"]
-        assert entry["version"] == project["version"], package.name
+        if package.kind == "python":
+            import tomllib
+
+            project = tomllib.loads((ROOT / package.path / "pyproject.toml").read_text())["project"]
+            assert entry["version"] == project["version"], package.name
+        else:
+            data = json.loads((ROOT / package.path / "package.json").read_text())
+            assert entry["version"] == data["version"], package.name
+
+
+def test_the_index_names_each_package_the_way_the_site_routes_it() -> None:
+    """A package's name on the registry carries a ``/``; the site routes on a slug."""
+    index = json.loads((ROOT / INDEX).read_text(encoding="utf-8"))
+    for entry, package in zip(index["packages"], PACKAGES, strict=True):
+        assert entry["name"] == package.site, package.name
+        assert entry["registryName"] == package.name
+        assert entry["registry"] == package.registry
+        assert entry["registryUrl"] == package.registry_url
+        assert entry["install"] == package.install
+        assert entry["importName"] == package.module
+        assert "/" not in entry["name"], package.name
+        if package.kind == "python":
+            assert entry["pypi"] == package.registry_url
+        else:
+            assert "pypi" not in entry
+
+
+def test_the_pages_are_the_same_whatever_the_hash_seed_is() -> None:
+    """The generator writes the same pages every run.
+
+    Python randomises the hash of a string per process, so a set of
+    strings iterates in a different order in each one. A page built
+    from such a set would differ between ``make sdk-docs`` and the
+    staleness test — both correct, and neither the other.
+    """
+    outputs = []
+    for seed in ("0", "1", "424242"):
+        done = subprocess.run(  # noqa: S603 — python, on our own generator
+            [sys.executable, "-m", "tools.sdk_docs"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+            env={**os.environ, "PYTHONHASHSEED": seed},
+        )
+        assert done.returncode == 0, done.stderr
+        outputs.append(
+            {
+                str(path.relative_to(ROOT)): path.read_text(encoding="utf-8")
+                for path in sorted((ROOT / OUTPUT).rglob("*.md"))
+            }
+            | {INDEX: (ROOT / INDEX).read_text(encoding="utf-8")}
+        )
+    assert outputs[0] == outputs[1] == outputs[2]

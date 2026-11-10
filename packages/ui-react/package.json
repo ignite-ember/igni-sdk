@@ -11,7 +11,8 @@
   ],
   "license": "Apache-2.0",
   "author": "Ignite Ember (https://ignite-ember.sh/)",
-  "homepage": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/ui-react#readme",
+  "homepage": "https://ignite-ember.sh/docs/sdk/ui-react",
+  "documentation": "https://ignite-ember.sh/docs/sdk/ui-react",
   "bugs": {
     "url": "https://github.com/ignite-ember/igni-sdk/issues"
   },

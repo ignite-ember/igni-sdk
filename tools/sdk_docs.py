@@ -1,9 +1,9 @@
 """The SDKs' documentation for igni's site, generated: ``make sdk-docs``.
 
-PyPI shows one README per package. The site (ignite-ember.sh, the
-``igni-site`` repository) shows the same documentation as many pages, under
-``/docs/sdk/<package>/<page>``, and copies them from here
-(``scripts/sync-sdk-docs.mjs`` there). This writes ``docs/site/``:
+PyPI shows one README per package, npm one page per package. The site
+(ignite-ember.sh, the ``igni-site`` repository) shows the same documentation
+as many pages, under ``/docs/sdk/<package>/<page>``, and copies them from
+here (``scripts/sync-sdk-docs.mjs`` there). This writes ``docs/site/``:
 
 * ``<package>/<slug>.md`` — one page each:
 
@@ -18,9 +18,14 @@ PyPI shows one README per package. The site (ignite-ember.sh, the
     errors;
   - igni-service's and igni-extension's public names, a page per area, read
     from the code (``tools/py_reference.py``);
+  - the npm packages' public names, a page per area, read from their
+    TypeScript (``tools/ts_reference.py``) — the bridge's wire and host
+    model, the React floor's components — and the stylesheet's tokens and
+    classes, read from the CSS itself (``tools/css_reference.py``);
 
 * ``index.json`` — every page's slug, title, description, category,
-  package, order and file, and each package's name, version and summary.
+  package, order and file, and each package's name, version, summary, and
+  where it is published.
 
 Nothing here is written by hand except which page a thing is on and the
 examples. ``tests/test_the_sdk_docs_are_generated.py`` regenerates it all in
@@ -66,6 +71,7 @@ from tools.client_names import (
     REFERENCE_PAGES,
     UNFOLLOWED,
 )
+from tools.css_reference import CssReference
 from tools.markdown_pages import (
     PageError,
     ReadmePages,
@@ -78,7 +84,9 @@ from tools.markdown_pages import (
     site_id,
     tidy,
 )
-from tools.py_reference import Area, PythonReference
+from tools.py_reference import PythonReference
+from tools.reference_area import Area
+from tools.ts_reference import TsReference
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = Path("docs/site")
@@ -172,27 +180,90 @@ class Page:
 
 @dataclass(frozen=True)
 class Package:
+    #: The name the registry knows the package by.
     name: str
-    #: The import name: ``igni_client``.
+    #: The name it is imported by: ``igni_client`` for Python, the package's
+    #: own name for npm.
     module: str
+    #: Where the package lives in this repository.
     path: str
+    #: ``python`` or ``npm``.
+    kind: str = "python"
+    #: The segment the site routes the package's pages on: the name for
+    #: Python, a short slug for npm — a package's name carries a ``/``,
+    #: which a path cannot.
+    slug: str = ""
+    #: The registry the package is published on.
+    registry: str = "PyPI"
+    #: The title its README opens with, when it is not the package's name.
+    readme_title: str = ""
+
+    @property
+    def site(self) -> str:
+        """The name the site routes the package's pages on."""
+        return self.slug or self.name
+
+    @property
+    def install(self) -> str:
+        """The line that installs the package."""
+        if self.kind == "python":
+            return f"pip install {self.name}"
+        return f"npm install {self.name}"
+
+    @property
+    def registry_url(self) -> str:
+        """The registry's own page for the package."""
+        if self.kind == "python":
+            return f"https://pypi.org/project/{self.name}/"
+        return f"https://www.npmjs.com/package/{self.name}"
 
 
 PACKAGES = (
     Package("igni-client", "igni_client", "packages/igni-client"),
     Package("igni-extension", "igni_extension", "packages/igni-extension"),
     Package("igni-service", "igni_service", "packages/igni-service"),
+    Package(
+        "@ignite-ember/extension-bridge",
+        "@ignite-ember/extension-bridge",
+        "packages/extension-bridge",
+        kind="npm",
+        slug="extension-bridge",
+        registry="npm",
+        readme_title="`@ignite-ember/extension-bridge`",
+    ),
+    Package(
+        "@ignite-ember/ui-react",
+        "@ignite-ember/ui-react",
+        "packages/ui-react",
+        kind="npm",
+        slug="ui-react",
+        registry="npm",
+        readme_title="`@ignite-ember/ui-react`",
+    ),
+    Package(
+        "@ignite-ember/ui-css",
+        "@ignite-ember/ui-css",
+        "clients/ui",
+        kind="npm",
+        slug="ui-css",
+        registry="npm",
+        readme_title="igni-ui",
+    ),
 )
 
 
 def url(package: str, slug: str = "", anchor: str = "") -> str:
-    """A page's path on the site; the overview is the package's own path."""
+    """A page's path on the site; the overview is the package's own path.
+
+    ``package`` is the name the site routes the package on
+    (``Package.site``), not the name the registry knows it by.
+    """
     path = f"{BASE}/{package}" + (f"/{slug}" if slug and slug != "overview" else "")
     return path + (f"#{anchor}" if anchor else "")
 
 
 def docs_url(package: str) -> str:
-    """The package's documentation, absolute: what its README and PyPI link to."""
+    """The package's documentation, absolute: what its README and registry page link to."""
     return SITE + url(package)
 
 
@@ -205,6 +276,16 @@ def rst(text: str) -> str:
 def cell(text: str) -> str:
     """``text`` fit for one cell of a Markdown table."""
     return " ".join(text.split()).replace("|", "\\|")
+
+
+def _npm_source(data: dict[str, Any]) -> str:
+    """The repository an npm package's source is in, as a URL."""
+    url = data.get("repository", {}).get("url", "")
+    if url.startswith("git+"):
+        url = url[len("git+") :]
+    if url.endswith(".git"):
+        url = url[: -len(".git")]
+    return url
 
 
 # ── The READMEs ─────────────────────────────────────────────────────────
@@ -253,10 +334,10 @@ class ReadmeSite:
             raise PageError(f"{self.readme.path} links to #{anchor}, which it has no heading for")
         if slug == current:
             return f"#{target}" if target else "#"
-        return url(self.package.name, slug, target)
+        return url(self.package.site, slug, target)
 
     def pages(self, start: int = 0) -> list[Page]:
-        name = self.package.name
+        name = self.package.site
         pages: list[Page] = []
         intro = [
             line
@@ -1463,7 +1544,7 @@ def python_pages(package: Package, start: int, report: dict[str, Any]) -> list[P
         if name not in anchors:
             return None
         slug, anchor = anchors[name]
-        return url(package.name, f"reference-{slug}", anchor)
+        return url(package.site, f"reference-{slug}", anchor)
 
     reference = PythonReference(
         package.module, (package.module, f"{package.module}.testing"), areas, link
@@ -1479,7 +1560,7 @@ def python_pages(package: Package, start: int, report: dict[str, Any]) -> list[P
         more = "…" if len(reference.placed[area.slug]) > 6 else ""
         pages.append(
             Page(
-                package.name,
+                package.site,
                 f"reference-{area.slug}",
                 area.title,
                 f"Reference: {names}{more} — signatures and docstrings, read from the code.",
@@ -1490,6 +1571,195 @@ def python_pages(package: Package, start: int, report: dict[str, Any]) -> list[P
             )
         )
     report[package.name] = {"undocumented": undocumented}
+    return pages
+
+
+# ── The npm packages' reference ─────────────────────────────────────────
+
+#: The npm packages' entry points: the files whose exports are the
+#: package's published surface — the main one, and any subpath it publishes.
+NPM_ENTRIES: dict[str, tuple[str, ...]] = {
+    "extension-bridge": ("index.ts", "protocol.ts", "tokens.ts"),
+    "ui-react": ("index.ts",),
+}
+
+#: The npm packages' reference pages: an area each, and the TypeScript
+#: files the names come from. A public name no area takes is an error.
+NPM_AREAS: dict[str, list[Area]] = {
+    "extension-bridge": [
+        Area(
+            "the-bridge",
+            "The bridge",
+            ("bridge.ts",),
+            "`connect()` is the whole entry point: it waits for igni's "
+            "hello, applies the theme and hands the page its bridge.",
+        ),
+        Area(
+            "what-a-page-is-handed",
+            "What a page is handed",
+            ("contract.ts",),
+            "The `Bridge` interface `connect()` resolves to: the launch "
+            "params, the settings, the host, the service, and the methods "
+            "that act on them.",
+        ),
+        Area(
+            "the-host-object-model",
+            "The host object model",
+            ("hostModel.ts", "hostModel.generated.ts"),
+            "How igni appears to a page: the objects, their properties and "
+            "their signals. The generated half comes from igni's own host "
+            "schema, and `SCHEMA_VERSION` says which version of it.",
+        ),
+        Area(
+            "the-extensions-service",
+            "The extension's service",
+            ("service.ts",),
+            "Reaching the extension's own backend service, as the person signed in to igni.",
+        ),
+        Area(
+            "the-wire",
+            "The wire",
+            ("protocol.ts",),
+            "The messages the host and the page exchange. The host imports "
+            "this too, so there is one description of the wire.",
+        ),
+        Area(
+            "the-design-tokens",
+            "The design tokens",
+            ("tokens.ts",),
+            "The tokens under the compatibility floor: the ones an "
+            "extension may rely on, and the ones that may be read live.",
+        ),
+    ],
+    "ui-react": [
+        Area(
+            "the-primitives",
+            "The primitives",
+            ("primitives.tsx",),
+            "Thin typed wrappers over the classes igni's own app uses: "
+            "buttons, fields, rows, items, chips, dialogs.",
+        ),
+        Area(
+            "the-shell",
+            "The shell",
+            ("Shell.tsx",),
+            "The frame an extension's page is drawn in: the app shell and "
+            "the scroll area inside it.",
+        ),
+        Area(
+            "the-table",
+            "The table",
+            ("DataTable.tsx",),
+            "A table with a sortable header and a status cell.",
+        ),
+        Area(
+            "feedback",
+            "Feedback",
+            ("ErrorBoundary.tsx", "Toast.tsx", "LiveRegion.tsx"),
+            "What a page says when something goes wrong, what it says "
+            "while it works, and what it announces to a screen reader.",
+        ),
+        Area(
+            "content",
+            "Content",
+            ("Markdown.tsx", "MarkdownInline.tsx", "Mermaid.tsx", "fenceInfo.ts"),
+            "Reading what igni said: Markdown, a diagram, and the "
+            "information a fenced block carries.",
+        ),
+        Area(
+            "utilities",
+            "Utilities",
+            (
+                "Split.tsx",
+                "MenuIcon.tsx",
+                "Monogram.tsx",
+                "OverflowMenu.tsx",
+                "Skeleton.tsx",
+                "Tooltip.tsx",
+            ),
+            "The small pieces: a split pane, an icon, a monogram, an "
+            "overflow menu, a placeholder and a tooltip.",
+        ),
+    ],
+}
+
+
+def npm_pages(package: Package, start: int, report: dict[str, Any], root: Path) -> list[Page]:
+    """An npm package's reference pages: its names, read from its source."""
+    if package.site == "ui-css":
+        return css_pages(package, start, report, root)
+    areas = NPM_AREAS[package.site]
+    reference = TsReference(
+        package.name,
+        root / package.path / "src",
+        areas,
+        entries=NPM_ENTRIES[package.site],
+    )
+    reference.place()
+
+    def link(name: str) -> str | None:
+        anchors = reference.anchors()
+        if name not in anchors:
+            return None
+        slug, anchor = anchors[name]
+        return url(package.site, f"reference-{slug}", anchor)
+
+    reference.link = link
+    pages: list[Page] = []
+    undocumented = 0
+    for index, area in enumerate(areas):
+        body, missing = reference.page(area)
+        undocumented += missing
+        entries = reference.placed[area.slug]
+        names = ", ".join(e.name for e in entries[:6])
+        more = "…" if len(entries) > 6 else ""
+        pages.append(
+            Page(
+                package.site,
+                f"reference-{area.slug}",
+                area.title,
+                f"Reference: {names}{more} — signatures and JSDoc, read from the source.",
+                REFERENCE,
+                start + index,
+                tidy(body.split("\n")),
+                source=f"{package.path}/src/{area.sources[0]}",
+            )
+        )
+    report[package.name] = {"undocumented": undocumented}
+    return pages
+
+
+def css_pages(package: Package, start: int, report: dict[str, Any], root: Path) -> list[Page]:
+    """The stylesheet's reference: the tokens it defines and the classes it styles."""
+    path = root / package.path / "igni-ui.css"
+    reference = CssReference(package.name, f"{package.path}/igni-ui.css", path.read_text("utf-8"))
+    tokens, token_count = reference.tokens_page()
+    classes, class_count = reference.classes_page()
+    pages = [
+        Page(
+            package.site,
+            "reference-tokens",
+            "Design tokens",
+            "Every custom property the stylesheet defines, its fallback, and the "
+            "classes that use it.",
+            REFERENCE,
+            start,
+            tidy(tokens.split("\n")),
+            source=f"{package.path}/igni-ui.css",
+        ),
+        Page(
+            package.site,
+            "reference-classes",
+            "Classes",
+            "Every class the stylesheet defines, in the sections the stylesheet "
+            "itself uses, and what each one sets.",
+            REFERENCE,
+            start + 1,
+            tidy(classes.split("\n")),
+            source=f"{package.path}/igni-ui.css",
+        ),
+    ]
+    report[package.name] = {"tokens": token_count, "classes": class_count}
     return pages
 
 
@@ -1511,11 +1781,25 @@ class SdkDocs:
         return (self.root / package.path / "README.md").read_text(encoding="utf-8")
 
     def _project(self, package: Package) -> dict[str, Any]:
+        """What a package says of itself: its version, its summary, its source."""
+        if package.kind == "npm":
+            data = json.loads(
+                (self.root / package.path / "package.json").read_text(encoding="utf-8")
+            )
+            return {
+                "version": data["version"],
+                "description": data["description"],
+                "source": _npm_source(data),
+            }
         data = tomllib.loads(
             (self.root / package.path / "pyproject.toml").read_text(encoding="utf-8")
         )
         project: dict[str, Any] = data["project"]
-        return project
+        return {
+            "version": project["version"],
+            "description": project["description"],
+            "source": project.get("urls", {}).get("Source", ""),
+        }
 
     def pages(self) -> list[Page]:
         contract = RpcContract.read(self.root / CONTRACT_FILE.relative_to(ROOT))
@@ -1523,6 +1807,12 @@ class SdkDocs:
         for package in PACKAGES:
             project = self._project(package)
             text = self._readme(package)
+            if package.kind == "npm":
+                site = ReadmeSite(package, text, description=project["description"])
+                guide = site.pages()
+                out += guide
+                out += npm_pages(package, len(guide), self.report, self.root)
+                continue
             if package.name == "igni-client":
                 readme = ReadmePages(text, f"{package.path}/README.md")
                 errors = read_errors(self.root / package.path / "src/igni_client/errors.py")
@@ -1570,16 +1860,20 @@ class SdkDocs:
         packages = []
         for package in PACKAGES:
             project = self._project(package)
-            packages.append(
-                {
-                    "name": package.name,
-                    "module": package.module,
-                    "version": project["version"],
-                    "description": project["description"],
-                    "pypi": f"https://pypi.org/project/{package.name}/",
-                    "source": project.get("urls", {}).get("Source", ""),
-                }
-            )
+            entry: dict[str, Any] = {
+                "name": package.site,
+                "registry": package.registry,
+                "registryName": package.name,
+                "registryUrl": package.registry_url,
+                "install": package.install,
+                "importName": package.module,
+                "version": project["version"],
+                "description": project["description"],
+                "source": project["source"],
+            }
+            if package.kind == "python":
+                entry["pypi"] = package.registry_url
+            packages.append(entry)
         data = {
             "generated_by": "igni-sdk tools/sdk_docs.py (make sdk-docs); do not edit",
             "packages": packages,
@@ -1648,12 +1942,17 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "NPM_AREAS",
+    "NPM_ENTRIES",
     "PACKAGES",
     "PYTHON_AREAS",
     "ClientReference",
     "DocsError",
+    "Package",
     "Page",
     "SdkDocs",
+    "css_pages",
     "docs_url",
+    "npm_pages",
     "url",
 ]

@@ -3,27 +3,72 @@
   "packages": [
     {
       "name": "igni-client",
-      "module": "igni_client",
+      "registry": "PyPI",
+      "registryName": "igni-client",
+      "registryUrl": "https://pypi.org/project/igni-client/",
+      "install": "pip install igni-client",
+      "importName": "igni_client",
       "version": "0.2.0",
       "description": "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there.",
-      "pypi": "https://pypi.org/project/igni-client/",
-      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-client"
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-client",
+      "pypi": "https://pypi.org/project/igni-client/"
     },
     {
       "name": "igni-extension",
-      "module": "igni_extension",
+      "registry": "PyPI",
+      "registryName": "igni-extension",
+      "registryUrl": "https://pypi.org/project/igni-extension/",
+      "install": "pip install igni-extension",
+      "importName": "igni_extension",
       "version": "0.2.0",
       "description": "What an igni extension's process needs: tools over MCP, its own service with the person's token, and the host's object model.",
-      "pypi": "https://pypi.org/project/igni-extension/",
-      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension"
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension",
+      "pypi": "https://pypi.org/project/igni-extension/"
     },
     {
       "name": "igni-service",
-      "module": "igni_service",
+      "registry": "PyPI",
+      "registryName": "igni-service",
+      "registryUrl": "https://pypi.org/project/igni-service/",
+      "install": "pip install igni-service",
+      "importName": "igni_service",
       "version": "0.2.0",
       "description": "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle.",
-      "pypi": "https://pypi.org/project/igni-service/",
-      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service"
+      "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service",
+      "pypi": "https://pypi.org/project/igni-service/"
+    },
+    {
+      "name": "extension-bridge",
+      "registry": "npm",
+      "registryName": "@ignite-ember/extension-bridge",
+      "registryUrl": "https://www.npmjs.com/package/@ignite-ember/extension-bridge",
+      "install": "npm install @ignite-ember/extension-bridge",
+      "importName": "@ignite-ember/extension-bridge",
+      "version": "0.2.0",
+      "description": "The guest half of the bridge between an igni extension's page and igni: connect(), RPC, navigation, theme. The host imports the same protocol, so there is one description of the wire.",
+      "source": "https://github.com/ignite-ember/igni-sdk"
+    },
+    {
+      "name": "ui-react",
+      "registry": "npm",
+      "registryName": "@ignite-ember/ui-react",
+      "registryUrl": "https://www.npmjs.com/package/@ignite-ember/ui-react",
+      "install": "npm install @ignite-ember/ui-react",
+      "importName": "@ignite-ember/ui-react",
+      "version": "0.2.0",
+      "description": "The React components an igni extension is allowed to build on. Everything exported here is under the compatibility floor.",
+      "source": "https://github.com/ignite-ember/igni-sdk"
+    },
+    {
+      "name": "ui-css",
+      "registry": "npm",
+      "registryName": "@ignite-ember/ui-css",
+      "registryUrl": "https://www.npmjs.com/package/@ignite-ember/ui-css",
+      "install": "npm install @ignite-ember/ui-css",
+      "importName": "@ignite-ember/ui-css",
+      "version": "0.2.0",
+      "description": "The stylesheet an igni extension bundles. Classes match igni's own, values are tokens the host pushes live.",
+      "source": "https://github.com/ignite-ember/igni-sdk"
     }
   ],
   "pages": [
@@ -5235,6 +5280,2285 @@
           "level": 3,
           "id": "vmprofilesubject-extension",
           "title": "VmProfileSubject.extension()"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "The guest half of the bridge between an igni extension's page and igni: connect(), RPC, navigation, theme. The host imports the same protocol, so there is one description of the wire.",
+      "category": "guide",
+      "order": 0,
+      "file": "extension-bridge/overview.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "quick-start",
+      "title": "Quick start",
+      "description": "A page is an ordinary web page that igni frames. It gets a bridge, and the bridge is the only thing it needs from igni.",
+      "category": "guide",
+      "order": 1,
+      "file": "extension-bridge/quick-start.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "the-life-of-a-page",
+      "title": "The life of a page",
+      "description": "Between the frame being created and the first paint, four things happen. Knowing which is which saves an afternoon.",
+      "category": "guide",
+      "order": 2,
+      "file": "extension-bridge/the-life-of-a-page.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "the-host-bridge-host",
+      "title": "The host: bridge.host",
+      "description": "bridge.host is igni as the page sees it — the host object model (docs/HOST_OBJECT_MODEL.md in igni), the same model the extension's process reaches as ext.host. Names are the schema's, as in Python.",
+      "category": "guide",
+      "order": 3,
+      "file": "extension-bridge/the-host-bridge-host.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "its-own-service-bridge-service",
+      "title": "Its own service: bridge.service",
+      "description": "The page talks to the service that shipped the extension directly, as the signed-in person.",
+      "category": "guide",
+      "order": 4,
+      "file": "extension-bridge/its-own-service-bridge-service.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "calling-your-extension-s-tools",
+      "title": "Calling your extension's tools",
+      "description": "bridge.rpc(method, args?, timeoutMs?) calls a method of the extension's own service — the same namespace the agent calls.",
+      "category": "guide",
+      "order": 5,
+      "file": "extension-bridge/calling-your-extension-s-tools.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "following-the-host",
+      "title": "Following the host",
+      "description": "A page watches; it does not poll. Three subscriptions, each returning an unsubscribe:",
+      "category": "guide",
+      "order": 6,
+      "file": "extension-bridge/following-the-host.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "where-the-page-is",
+      "title": "Where the page is",
+      "description": "bridge.setLocation(state) says where inside your extension the person now is.",
+      "category": "guide",
+      "order": 7,
+      "file": "extension-bridge/where-the-page-is.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "the-floor",
+      "title": "The floor",
+      "description": "Everything this package exports is under igni's compatibility floor: removing a name, renaming it, or changing the meaning of one of its members is a breaking change under docs/EXTENSIBILITY.md §8.",
+      "category": "guide",
+      "order": 8,
+      "file": "extension-bridge/the-floor.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "changed-since-0-1-0-on-purpose",
+      "title": "Changed since 0.1.0, on purpose",
+      "description": "params and settings as type arguments. Without them, params and settings are readonly records (LaunchParams, ExtensionSettings), so writing into one no longer compiles;",
+      "category": "guide",
+      "order": 9,
+      "file": "extension-bridge/changed-since-0-1-0-on-purpose.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "installing",
+      "title": "Installing",
+      "description": "Once published, from npm:",
+      "category": "guide",
+      "order": 10,
+      "file": "extension-bridge/installing.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "source-not-a-build",
+      "title": "Source, not a build",
+      "description": "Like @ignite-ember/ui-react, this package ships its TypeScript source. A bundler that compiles TypeScript (Vite, esbuild, Rollup with a TS plugin) consumes it as is;",
+      "category": "guide",
+      "order": 11,
+      "file": "extension-bridge/source-not-a-build.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-the-bridge",
+      "title": "The bridge",
+      "description": "Reference: connect — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 12,
+      "file": "extension-bridge/reference-the-bridge.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "connect",
+          "title": "connect"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-what-a-page-is-handed",
+      "title": "What a page is handed",
+      "description": "Reference: Bridge — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 13,
+      "file": "extension-bridge/reference-what-a-page-is-handed.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "bridge",
+          "title": "Bridge"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-the-host-object-model",
+      "title": "The host object model",
+      "description": "Reference: JsonValue, HostErrorCode, HostError, HostLink, HostObject, Property… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 14,
+      "file": "extension-bridge/reference-the-host-object-model.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "jsonvalue",
+          "title": "JsonValue"
+        },
+        {
+          "level": 2,
+          "id": "hosterrorcode",
+          "title": "HostErrorCode"
+        },
+        {
+          "level": 2,
+          "id": "hosterror",
+          "title": "HostError"
+        },
+        {
+          "level": 2,
+          "id": "hostlink",
+          "title": "HostLink"
+        },
+        {
+          "level": 2,
+          "id": "hostobject",
+          "title": "HostObject"
+        },
+        {
+          "level": 2,
+          "id": "property",
+          "title": "Property"
+        },
+        {
+          "level": 2,
+          "id": "signal",
+          "title": "Signal"
+        },
+        {
+          "level": 2,
+          "id": "schema-version",
+          "title": "SCHEMA_VERSION"
+        },
+        {
+          "level": 2,
+          "id": "change",
+          "title": "Change"
+        },
+        {
+          "level": 2,
+          "id": "display",
+          "title": "Display"
+        },
+        {
+          "level": 2,
+          "id": "connection",
+          "title": "Connection"
+        },
+        {
+          "level": 2,
+          "id": "updateinfo",
+          "title": "UpdateInfo"
+        },
+        {
+          "level": 2,
+          "id": "statechange",
+          "title": "StateChange"
+        },
+        {
+          "level": 2,
+          "id": "windowinfo",
+          "title": "WindowInfo"
+        },
+        {
+          "level": 2,
+          "id": "page",
+          "title": "Page"
+        },
+        {
+          "level": 2,
+          "id": "route",
+          "title": "Route"
+        },
+        {
+          "level": 2,
+          "id": "panel",
+          "title": "Panel"
+        },
+        {
+          "level": 2,
+          "id": "panelchange",
+          "title": "PanelChange"
+        },
+        {
+          "level": 2,
+          "id": "sidebar",
+          "title": "Sidebar"
+        },
+        {
+          "level": 2,
+          "id": "sidebarchange",
+          "title": "SidebarChange"
+        },
+        {
+          "level": 2,
+          "id": "preview",
+          "title": "Preview"
+        },
+        {
+          "level": 2,
+          "id": "previewchange",
+          "title": "PreviewChange"
+        },
+        {
+          "level": 2,
+          "id": "selectionstate",
+          "title": "SelectionState"
+        },
+        {
+          "level": 2,
+          "id": "selectionchange",
+          "title": "SelectionChange"
+        },
+        {
+          "level": 2,
+          "id": "composer",
+          "title": "Composer"
+        },
+        {
+          "level": 2,
+          "id": "composerchange",
+          "title": "ComposerChange"
+        },
+        {
+          "level": 2,
+          "id": "toast",
+          "title": "Toast"
+        },
+        {
+          "level": 2,
+          "id": "toastchange",
+          "title": "ToastChange"
+        },
+        {
+          "level": 2,
+          "id": "dialog",
+          "title": "Dialog"
+        },
+        {
+          "level": 2,
+          "id": "dialogchange",
+          "title": "DialogChange"
+        },
+        {
+          "level": 2,
+          "id": "scroll",
+          "title": "Scroll"
+        },
+        {
+          "level": 2,
+          "id": "sessioninfo",
+          "title": "SessionInfo"
+        },
+        {
+          "level": 2,
+          "id": "sessionchange",
+          "title": "SessionChange"
+        },
+        {
+          "level": 2,
+          "id": "sessionlist",
+          "title": "SessionList"
+        },
+        {
+          "level": 2,
+          "id": "sessioncleared",
+          "title": "SessionCleared"
+        },
+        {
+          "level": 2,
+          "id": "sessionnamed",
+          "title": "SessionNamed"
+        },
+        {
+          "level": 2,
+          "id": "sessionattached",
+          "title": "SessionAttached"
+        },
+        {
+          "level": 2,
+          "id": "chatmessage",
+          "title": "ChatMessage"
+        },
+        {
+          "level": 2,
+          "id": "historychange",
+          "title": "HistoryChange"
+        },
+        {
+          "level": 2,
+          "id": "contentdelta",
+          "title": "ContentDelta"
+        },
+        {
+          "level": 2,
+          "id": "runref",
+          "title": "RunRef"
+        },
+        {
+          "level": 2,
+          "id": "runstart",
+          "title": "RunStart"
+        },
+        {
+          "level": 2,
+          "id": "run",
+          "title": "Run"
+        },
+        {
+          "level": 2,
+          "id": "runfailure",
+          "title": "RunFailure"
+        },
+        {
+          "level": 2,
+          "id": "approval",
+          "title": "Approval"
+        },
+        {
+          "level": 2,
+          "id": "runpause",
+          "title": "RunPause"
+        },
+        {
+          "level": 2,
+          "id": "approvalresolved",
+          "title": "ApprovalResolved"
+        },
+        {
+          "level": 2,
+          "id": "approvalchange",
+          "title": "ApprovalChange"
+        },
+        {
+          "level": 2,
+          "id": "sessionactivity",
+          "title": "SessionActivity"
+        },
+        {
+          "level": 2,
+          "id": "activity",
+          "title": "Activity"
+        },
+        {
+          "level": 2,
+          "id": "busylease",
+          "title": "BusyLease"
+        },
+        {
+          "level": 2,
+          "id": "approvaldetails",
+          "title": "ApprovalDetails"
+        },
+        {
+          "level": 2,
+          "id": "approvalanswer",
+          "title": "ApprovalAnswer"
+        },
+        {
+          "level": 2,
+          "id": "toolcall",
+          "title": "ToolCall"
+        },
+        {
+          "level": 2,
+          "id": "toolresult",
+          "title": "ToolResult"
+        },
+        {
+          "level": 2,
+          "id": "toolfailure",
+          "title": "ToolFailure"
+        },
+        {
+          "level": 2,
+          "id": "modelusage",
+          "title": "ModelUsage"
+        },
+        {
+          "level": 2,
+          "id": "typing",
+          "title": "Typing"
+        },
+        {
+          "level": 2,
+          "id": "status",
+          "title": "Status"
+        },
+        {
+          "level": 2,
+          "id": "notice",
+          "title": "Notice"
+        },
+        {
+          "level": 2,
+          "id": "contextusage",
+          "title": "ContextUsage"
+        },
+        {
+          "level": 2,
+          "id": "fileedited",
+          "title": "FileEdited"
+        },
+        {
+          "level": 2,
+          "id": "agentevent",
+          "title": "AgentEvent"
+        },
+        {
+          "level": 2,
+          "id": "retry",
+          "title": "Retry"
+        },
+        {
+          "level": 2,
+          "id": "view",
+          "title": "View"
+        },
+        {
+          "level": 2,
+          "id": "viewaction",
+          "title": "ViewAction"
+        },
+        {
+          "level": 2,
+          "id": "plan",
+          "title": "Plan"
+        },
+        {
+          "level": 2,
+          "id": "planchange",
+          "title": "PlanChange"
+        },
+        {
+          "level": 2,
+          "id": "taskevent",
+          "title": "TaskEvent"
+        },
+        {
+          "level": 2,
+          "id": "taskiteration",
+          "title": "TaskIteration"
+        },
+        {
+          "level": 2,
+          "id": "tasksnapshot",
+          "title": "TaskSnapshot"
+        },
+        {
+          "level": 2,
+          "id": "todos",
+          "title": "Todos"
+        },
+        {
+          "level": 2,
+          "id": "loopstatus",
+          "title": "LoopStatus"
+        },
+        {
+          "level": 2,
+          "id": "commandoutcome",
+          "title": "CommandOutcome"
+        },
+        {
+          "level": 2,
+          "id": "collectionchange",
+          "title": "CollectionChange"
+        },
+        {
+          "level": 2,
+          "id": "workflowrun",
+          "title": "WorkflowRun"
+        },
+        {
+          "level": 2,
+          "id": "schedulerevent",
+          "title": "SchedulerEvent"
+        },
+        {
+          "level": 2,
+          "id": "processevent",
+          "title": "ProcessEvent"
+        },
+        {
+          "level": 2,
+          "id": "head",
+          "title": "Head"
+        },
+        {
+          "level": 2,
+          "id": "fileschanged",
+          "title": "FilesChanged"
+        },
+        {
+          "level": 2,
+          "id": "modelchange",
+          "title": "ModelChange"
+        },
+        {
+          "level": 2,
+          "id": "extensioninfo",
+          "title": "ExtensionInfo"
+        },
+        {
+          "level": 2,
+          "id": "withheld",
+          "title": "Withheld"
+        },
+        {
+          "level": 2,
+          "id": "extensionstatechange",
+          "title": "ExtensionStateChange"
+        },
+        {
+          "level": 2,
+          "id": "permissionmodechange",
+          "title": "PermissionModeChange"
+        },
+        {
+          "level": 2,
+          "id": "account",
+          "title": "Account"
+        },
+        {
+          "level": 2,
+          "id": "notificationtarget",
+          "title": "NotificationTarget"
+        },
+        {
+          "level": 2,
+          "id": "notificationentry",
+          "title": "NotificationEntry"
+        },
+        {
+          "level": 2,
+          "id": "notificationcounts",
+          "title": "NotificationCounts"
+        },
+        {
+          "level": 2,
+          "id": "localnotification",
+          "title": "LocalNotification"
+        },
+        {
+          "level": 2,
+          "id": "settingschange",
+          "title": "SettingsChange"
+        },
+        {
+          "level": 2,
+          "id": "decisionquestion",
+          "title": "DecisionQuestion"
+        },
+        {
+          "level": 2,
+          "id": "decisionanswer",
+          "title": "DecisionAnswer"
+        },
+        {
+          "level": 2,
+          "id": "decision",
+          "title": "Decision"
+        },
+        {
+          "level": 2,
+          "id": "modelregistry",
+          "title": "ModelRegistry"
+        },
+        {
+          "level": 2,
+          "id": "modelentry",
+          "title": "ModelEntry"
+        },
+        {
+          "level": 2,
+          "id": "mcpserver",
+          "title": "McpServer"
+        },
+        {
+          "level": 2,
+          "id": "mcpserverdetails",
+          "title": "McpServerDetails"
+        },
+        {
+          "level": 2,
+          "id": "mcpresource",
+          "title": "McpResource"
+        },
+        {
+          "level": 2,
+          "id": "mcpprompt",
+          "title": "McpPrompt"
+        },
+        {
+          "level": 2,
+          "id": "mcpinit",
+          "title": "McpInit"
+        },
+        {
+          "level": 2,
+          "id": "mcptooltoggle",
+          "title": "McpToolToggle"
+        },
+        {
+          "level": 2,
+          "id": "plugininfo",
+          "title": "PluginInfo"
+        },
+        {
+          "level": 2,
+          "id": "marketplace",
+          "title": "Marketplace"
+        },
+        {
+          "level": 2,
+          "id": "marketplaceplugin",
+          "title": "MarketplacePlugin"
+        },
+        {
+          "level": 2,
+          "id": "plugincontents",
+          "title": "PluginContents"
+        },
+        {
+          "level": 2,
+          "id": "pluginskill",
+          "title": "PluginSkill"
+        },
+        {
+          "level": 2,
+          "id": "pluginagent",
+          "title": "PluginAgent"
+        },
+        {
+          "level": 2,
+          "id": "pluginhook",
+          "title": "PluginHook"
+        },
+        {
+          "level": 2,
+          "id": "pluginmcpserver",
+          "title": "PluginMcpServer"
+        },
+        {
+          "level": 2,
+          "id": "plugintool",
+          "title": "PluginTool"
+        },
+        {
+          "level": 2,
+          "id": "pluginpreviewsource",
+          "title": "PluginPreviewSource"
+        },
+        {
+          "level": 2,
+          "id": "hookentry",
+          "title": "HookEntry"
+        },
+        {
+          "level": 2,
+          "id": "policypack",
+          "title": "PolicyPack"
+        },
+        {
+          "level": 2,
+          "id": "plandecision",
+          "title": "PlanDecision"
+        },
+        {
+          "level": 2,
+          "id": "todoitem",
+          "title": "TodoItem"
+        },
+        {
+          "level": 2,
+          "id": "loopadvance",
+          "title": "LoopAdvance"
+        },
+        {
+          "level": 2,
+          "id": "slashcommand",
+          "title": "SlashCommand"
+        },
+        {
+          "level": 2,
+          "id": "skilldefinition",
+          "title": "SkillDefinition"
+        },
+        {
+          "level": 2,
+          "id": "skilldetails",
+          "title": "SkillDetails"
+        },
+        {
+          "level": 2,
+          "id": "agentinfo",
+          "title": "AgentInfo"
+        },
+        {
+          "level": 2,
+          "id": "promoteresult",
+          "title": "PromoteResult"
+        },
+        {
+          "level": 2,
+          "id": "discardresult",
+          "title": "DiscardResult"
+        },
+        {
+          "level": 2,
+          "id": "workflow",
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "id": "workflowphase",
+          "title": "WorkflowPhase"
+        },
+        {
+          "level": 2,
+          "id": "scheduledtask",
+          "title": "ScheduledTask"
+        },
+        {
+          "level": 2,
+          "id": "processrow",
+          "title": "ProcessRow"
+        },
+        {
+          "level": 2,
+          "id": "processtail",
+          "title": "ProcessTail"
+        },
+        {
+          "level": 2,
+          "id": "processstop",
+          "title": "ProcessStop"
+        },
+        {
+          "level": 2,
+          "id": "shellresult",
+          "title": "ShellResult"
+        },
+        {
+          "level": 2,
+          "id": "hostappstate",
+          "title": "HostAppState"
+        },
+        {
+          "level": 2,
+          "id": "hostchatapprovals",
+          "title": "HostChatApprovals"
+        },
+        {
+          "level": 2,
+          "id": "hostchatviews",
+          "title": "HostChatViews"
+        },
+        {
+          "level": 2,
+          "id": "hostapp",
+          "title": "HostApp"
+        },
+        {
+          "level": 2,
+          "id": "hostwindows",
+          "title": "HostWindows"
+        },
+        {
+          "level": 2,
+          "id": "hostui",
+          "title": "HostUi"
+        },
+        {
+          "level": 2,
+          "id": "hostsessions",
+          "title": "HostSessions"
+        },
+        {
+          "level": 2,
+          "id": "hostchat",
+          "title": "HostChat"
+        },
+        {
+          "level": 2,
+          "id": "hostplan",
+          "title": "HostPlan"
+        },
+        {
+          "level": 2,
+          "id": "hosttasks",
+          "title": "HostTasks"
+        },
+        {
+          "level": 2,
+          "id": "hostloop",
+          "title": "HostLoop"
+        },
+        {
+          "level": 2,
+          "id": "hostcommands",
+          "title": "HostCommands"
+        },
+        {
+          "level": 2,
+          "id": "hostagents",
+          "title": "HostAgents"
+        },
+        {
+          "level": 2,
+          "id": "hostworkflows",
+          "title": "HostWorkflows"
+        },
+        {
+          "level": 2,
+          "id": "hostscheduler",
+          "title": "HostScheduler"
+        },
+        {
+          "level": 2,
+          "id": "hostprocesses",
+          "title": "HostProcesses"
+        },
+        {
+          "level": 2,
+          "id": "hostworkspace",
+          "title": "HostWorkspace"
+        },
+        {
+          "level": 2,
+          "id": "hostmodels",
+          "title": "HostModels"
+        },
+        {
+          "level": 2,
+          "id": "hostmcp",
+          "title": "HostMcp"
+        },
+        {
+          "level": 2,
+          "id": "hostplugins",
+          "title": "HostPlugins"
+        },
+        {
+          "level": 2,
+          "id": "hostextensions",
+          "title": "HostExtensions"
+        },
+        {
+          "level": 2,
+          "id": "hosthooks",
+          "title": "HostHooks"
+        },
+        {
+          "level": 2,
+          "id": "hostpermissions",
+          "title": "HostPermissions"
+        },
+        {
+          "level": 2,
+          "id": "hostpolicy",
+          "title": "HostPolicy"
+        },
+        {
+          "level": 2,
+          "id": "hostaccount",
+          "title": "HostAccount"
+        },
+        {
+          "level": 2,
+          "id": "hostnotifications",
+          "title": "HostNotifications"
+        },
+        {
+          "level": 2,
+          "id": "hostself",
+          "title": "HostSelf"
+        },
+        {
+          "level": 2,
+          "id": "host",
+          "title": "Host"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-the-extensions-service",
+      "title": "The extension's service",
+      "description": "Reference: ServiceError, IssuedToken, ServiceSocketOptions, ServiceBridge, RENEW_BEFORE_MS, authMessage… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 15,
+      "file": "extension-bridge/reference-the-extensions-service.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "serviceerror",
+          "title": "ServiceError"
+        },
+        {
+          "level": 2,
+          "id": "issuedtoken",
+          "title": "IssuedToken"
+        },
+        {
+          "level": 2,
+          "id": "servicesocketoptions",
+          "title": "ServiceSocketOptions"
+        },
+        {
+          "level": 2,
+          "id": "servicebridge",
+          "title": "ServiceBridge"
+        },
+        {
+          "level": 2,
+          "id": "renew-before-ms",
+          "title": "RENEW_BEFORE_MS"
+        },
+        {
+          "level": 2,
+          "id": "authmessage",
+          "title": "authMessage"
+        },
+        {
+          "level": 2,
+          "id": "servicelink",
+          "title": "ServiceLink"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-the-wire",
+      "title": "The wire",
+      "description": "Reference: BRIDGE_VERSION, LaunchParams, ExtensionSettings, RpcArgs, LocationState, HelloMessage… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 16,
+      "file": "extension-bridge/reference-the-wire.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "bridge-version",
+          "title": "BRIDGE_VERSION"
+        },
+        {
+          "level": 2,
+          "id": "launchparams",
+          "title": "LaunchParams"
+        },
+        {
+          "level": 2,
+          "id": "extensionsettings",
+          "title": "ExtensionSettings"
+        },
+        {
+          "level": 2,
+          "id": "rpcargs",
+          "title": "RpcArgs"
+        },
+        {
+          "level": 2,
+          "id": "locationstate",
+          "title": "LocationState"
+        },
+        {
+          "level": 2,
+          "id": "hellomessage",
+          "title": "HelloMessage"
+        },
+        {
+          "level": 2,
+          "id": "thememessage",
+          "title": "ThemeMessage"
+        },
+        {
+          "level": 2,
+          "id": "paramsmessage",
+          "title": "ParamsMessage"
+        },
+        {
+          "level": 2,
+          "id": "locationmessage",
+          "title": "LocationMessage"
+        },
+        {
+          "level": 2,
+          "id": "callmessage",
+          "title": "CallMessage"
+        },
+        {
+          "level": 2,
+          "id": "navigatemessage",
+          "title": "NavigateMessage"
+        },
+        {
+          "level": 2,
+          "id": "closemessage",
+          "title": "CloseMessage"
+        },
+        {
+          "level": 2,
+          "id": "resultmessage",
+          "title": "ResultMessage"
+        },
+        {
+          "level": 2,
+          "id": "hostrequestmessage",
+          "title": "HostRequestMessage"
+        },
+        {
+          "level": 2,
+          "id": "servicetokenmessage",
+          "title": "ServiceTokenMessage"
+        },
+        {
+          "level": 2,
+          "id": "servicetokenreplymessage",
+          "title": "ServiceTokenReplyMessage"
+        },
+        {
+          "level": 2,
+          "id": "hostreplymessage",
+          "title": "HostReplyMessage"
+        },
+        {
+          "level": 2,
+          "id": "hostsignalmessage",
+          "title": "HostSignalMessage"
+        },
+        {
+          "level": 2,
+          "id": "hostmessage",
+          "title": "HostMessage"
+        },
+        {
+          "level": 2,
+          "id": "guestmessage",
+          "title": "GuestMessage"
+        },
+        {
+          "level": 2,
+          "id": "isguestmessage",
+          "title": "isGuestMessage"
+        },
+        {
+          "level": 2,
+          "id": "ishostmessage",
+          "title": "isHostMessage"
+        },
+        {
+          "level": 2,
+          "id": "methodallowed",
+          "title": "methodAllowed"
+        }
+      ]
+    },
+    {
+      "package": "extension-bridge",
+      "slug": "reference-the-design-tokens",
+      "title": "The design tokens",
+      "description": "Reference: PUBLISHED_TOKENS, TOKEN_NAMES, ThemeTokens, readThemeTokens, applyThemeTokens — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 17,
+      "file": "extension-bridge/reference-the-design-tokens.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "published-tokens",
+          "title": "PUBLISHED_TOKENS"
+        },
+        {
+          "level": 2,
+          "id": "token-names",
+          "title": "TOKEN_NAMES"
+        },
+        {
+          "level": 2,
+          "id": "themetokens",
+          "title": "ThemeTokens"
+        },
+        {
+          "level": 2,
+          "id": "readthemetokens",
+          "title": "readThemeTokens"
+        },
+        {
+          "level": 2,
+          "id": "applythemetokens",
+          "title": "applyThemeTokens"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "The React components an igni extension is allowed to build on. Everything exported here is under the compatibility floor.",
+      "category": "guide",
+      "order": 0,
+      "file": "ui-react/overview.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "quick-start",
+      "title": "Quick start",
+      "description": "A page that fills its frame, with a toolbar, a scrolling list and a footer:",
+      "category": "guide",
+      "order": 1,
+      "file": "ui-react/quick-start.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "the-floor",
+      "title": "The floor",
+      "description": "\"Everything exported here is under the compatibility floor\" is a promise about *this* list, not about igni's app. Two rules follow from it, and they point in opposite directions:",
+      "category": "guide",
+      "order": 2,
+      "file": "ui-react/the-floor.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "choosing-a-component",
+      "title": "Choosing a component",
+      "description": "There are two kinds of thing in this package, and they answer different questions.",
+      "category": "guide",
+      "order": 3,
+      "file": "ui-react/choosing-a-component.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "styling",
+      "title": "Styling",
+      "description": "The components do not carry styles. They carry class names, and the stylesheet carries the styles — so the same CSS decides what your extension looks like and what igni's app looks like.",
+      "category": "guide",
+      "order": 4,
+      "file": "ui-react/styling.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "peer-dependencies",
+      "title": "Peer dependencies",
+      "description": "You already have react and react-dom. react-markdown and remark-gfm come with MarkdownInline.",
+      "category": "guide",
+      "order": 5,
+      "file": "ui-react/peer-dependencies.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "changed-since-0-1-0-on-purpose",
+      "title": "Changed since 0.1.0, on purpose",
+      "description": "force at that moment, so a diagram drawn after a light/dark switch is drawn in the new theme.",
+      "category": "guide",
+      "order": 6,
+      "file": "ui-react/changed-since-0-1-0-on-purpose.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "the-stylesheet-is-not-optional",
+      "title": "The stylesheet is not optional",
+      "description": "@ignite-ember/ui-css must be bundled into your extension, not linked from igni's origin.",
+      "category": "guide",
+      "order": 7,
+      "file": "ui-react/the-stylesheet-is-not-optional.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "source-not-a-build",
+      "title": "Source, not a build",
+      "description": "This package ships TypeScript source. An extension bundles its own React and runs its own build, so shipping a pre-compiled artifact would mean pinning a JSX runtime and a target you may not share — and it would put a…",
+      "category": "guide",
+      "order": 8,
+      "file": "ui-react/source-not-a-build.md",
+      "sections": []
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-the-primitives",
+      "title": "The primitives",
+      "description": "Reference: ButtonVariant, ButtonSize, ButtonProps, Button, InputProps, Input… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 9,
+      "file": "ui-react/reference-the-primitives.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "buttonvariant",
+          "title": "ButtonVariant"
+        },
+        {
+          "level": 2,
+          "id": "buttonsize",
+          "title": "ButtonSize"
+        },
+        {
+          "level": 2,
+          "id": "buttonprops",
+          "title": "ButtonProps"
+        },
+        {
+          "level": 2,
+          "id": "button",
+          "title": "Button"
+        },
+        {
+          "level": 2,
+          "id": "inputprops",
+          "title": "InputProps"
+        },
+        {
+          "level": 2,
+          "id": "input",
+          "title": "Input"
+        },
+        {
+          "level": 2,
+          "id": "tone",
+          "title": "Tone"
+        },
+        {
+          "level": 2,
+          "id": "chipprops",
+          "title": "ChipProps"
+        },
+        {
+          "level": 2,
+          "id": "chip",
+          "title": "Chip"
+        },
+        {
+          "level": 2,
+          "id": "badgeprops",
+          "title": "BadgeProps"
+        },
+        {
+          "level": 2,
+          "id": "badge",
+          "title": "Badge"
+        },
+        {
+          "level": 2,
+          "id": "row",
+          "title": "Row"
+        },
+        {
+          "level": 2,
+          "id": "actions",
+          "title": "Actions"
+        },
+        {
+          "level": 2,
+          "id": "list",
+          "title": "List"
+        },
+        {
+          "level": 2,
+          "id": "toolbar",
+          "title": "Toolbar"
+        },
+        {
+          "level": 2,
+          "id": "card",
+          "title": "Card"
+        },
+        {
+          "level": 2,
+          "id": "item",
+          "title": "Item"
+        },
+        {
+          "level": 2,
+          "id": "table",
+          "title": "Table"
+        },
+        {
+          "level": 2,
+          "id": "emptyprops",
+          "title": "EmptyProps"
+        },
+        {
+          "level": 2,
+          "id": "empty",
+          "title": "Empty"
+        },
+        {
+          "level": 2,
+          "id": "dialogprops",
+          "title": "DialogProps"
+        },
+        {
+          "level": 2,
+          "id": "dialog",
+          "title": "Dialog"
+        },
+        {
+          "level": 2,
+          "id": "selectprops",
+          "title": "SelectProps"
+        },
+        {
+          "level": 2,
+          "id": "select",
+          "title": "Select"
+        },
+        {
+          "level": 2,
+          "id": "textareaprops",
+          "title": "TextareaProps"
+        },
+        {
+          "level": 2,
+          "id": "textarea",
+          "title": "Textarea"
+        },
+        {
+          "level": 2,
+          "id": "checkboxprops",
+          "title": "CheckboxProps"
+        },
+        {
+          "level": 2,
+          "id": "checkbox",
+          "title": "Checkbox"
+        },
+        {
+          "level": 2,
+          "id": "radioprops",
+          "title": "RadioProps"
+        },
+        {
+          "level": 2,
+          "id": "radio",
+          "title": "Radio"
+        },
+        {
+          "level": 2,
+          "id": "switchprops",
+          "title": "SwitchProps"
+        },
+        {
+          "level": 2,
+          "id": "switch",
+          "title": "Switch"
+        },
+        {
+          "level": 2,
+          "id": "fieldprops",
+          "title": "FieldProps"
+        },
+        {
+          "level": 2,
+          "id": "field",
+          "title": "Field"
+        },
+        {
+          "level": 2,
+          "id": "spinnerprops",
+          "title": "SpinnerProps"
+        },
+        {
+          "level": 2,
+          "id": "spinner",
+          "title": "Spinner"
+        },
+        {
+          "level": 2,
+          "id": "progressprops",
+          "title": "ProgressProps"
+        },
+        {
+          "level": 2,
+          "id": "progress",
+          "title": "Progress"
+        },
+        {
+          "level": 2,
+          "id": "tabsprops",
+          "title": "TabsProps"
+        },
+        {
+          "level": 2,
+          "id": "tabs",
+          "title": "Tabs"
+        },
+        {
+          "level": 2,
+          "id": "tabpanelprops",
+          "title": "TabPanelProps"
+        },
+        {
+          "level": 2,
+          "id": "tabpanel",
+          "title": "TabPanel"
+        },
+        {
+          "level": 2,
+          "id": "divider",
+          "title": "Divider"
+        },
+        {
+          "level": 2,
+          "id": "headingprops",
+          "title": "HeadingProps"
+        },
+        {
+          "level": 2,
+          "id": "heading",
+          "title": "Heading"
+        },
+        {
+          "level": 2,
+          "id": "texttone",
+          "title": "TextTone"
+        },
+        {
+          "level": 2,
+          "id": "textprops",
+          "title": "TextProps"
+        },
+        {
+          "level": 2,
+          "id": "text",
+          "title": "Text"
+        },
+        {
+          "level": 2,
+          "id": "code",
+          "title": "Code"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-the-shell",
+      "title": "The shell",
+      "description": "Reference: AppShellProps, AppShell, ScrollProps, Scroll — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 10,
+      "file": "ui-react/reference-the-shell.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "appshellprops",
+          "title": "AppShellProps"
+        },
+        {
+          "level": 2,
+          "id": "appshell",
+          "title": "AppShell"
+        },
+        {
+          "level": 2,
+          "id": "scrollprops",
+          "title": "ScrollProps"
+        },
+        {
+          "level": 2,
+          "id": "scroll",
+          "title": "Scroll"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-the-table",
+      "title": "The table",
+      "description": "Reference: SortDirection, SortableThProps, SortableTh, StatusProps, Status — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 11,
+      "file": "ui-react/reference-the-table.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "sortdirection",
+          "title": "SortDirection"
+        },
+        {
+          "level": 2,
+          "id": "sortablethprops",
+          "title": "SortableThProps"
+        },
+        {
+          "level": 2,
+          "id": "sortableth",
+          "title": "SortableTh"
+        },
+        {
+          "level": 2,
+          "id": "statusprops",
+          "title": "StatusProps"
+        },
+        {
+          "level": 2,
+          "id": "status",
+          "title": "Status"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-feedback",
+      "title": "Feedback",
+      "description": "Reference: ErrorBoundaryProps, ErrorBoundary, ToastOptions, Toast, ToastApi, ToastHost… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 12,
+      "file": "ui-react/reference-feedback.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "errorboundaryprops",
+          "title": "ErrorBoundaryProps"
+        },
+        {
+          "level": 2,
+          "id": "errorboundary",
+          "title": "ErrorBoundary"
+        },
+        {
+          "level": 2,
+          "id": "toastoptions",
+          "title": "ToastOptions"
+        },
+        {
+          "level": 2,
+          "id": "toast",
+          "title": "Toast"
+        },
+        {
+          "level": 2,
+          "id": "toastapi",
+          "title": "ToastApi"
+        },
+        {
+          "level": 2,
+          "id": "toasthost",
+          "title": "ToastHost"
+        },
+        {
+          "level": 2,
+          "id": "usetoast",
+          "title": "useToast"
+        },
+        {
+          "level": 2,
+          "id": "bannerprops",
+          "title": "BannerProps"
+        },
+        {
+          "level": 2,
+          "id": "banner",
+          "title": "Banner"
+        },
+        {
+          "level": 2,
+          "id": "urgency",
+          "title": "Urgency"
+        },
+        {
+          "level": 2,
+          "id": "announcer",
+          "title": "Announcer"
+        },
+        {
+          "level": 2,
+          "id": "useannounce",
+          "title": "useAnnounce"
+        },
+        {
+          "level": 2,
+          "id": "liveregionprops",
+          "title": "LiveRegionProps"
+        },
+        {
+          "level": 2,
+          "id": "liveregion",
+          "title": "LiveRegion"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-content",
+      "title": "Content",
+      "description": "Reference: MarkdownProps, Markdown, MarkdownInline, loadMermaid, MermaidBlock, fenceInfo — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 13,
+      "file": "ui-react/reference-content.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "markdownprops",
+          "title": "MarkdownProps"
+        },
+        {
+          "level": 2,
+          "id": "markdown",
+          "title": "Markdown"
+        },
+        {
+          "level": 2,
+          "id": "markdowninline",
+          "title": "MarkdownInline"
+        },
+        {
+          "level": 2,
+          "id": "loadmermaid",
+          "title": "loadMermaid"
+        },
+        {
+          "level": 2,
+          "id": "mermaidblock",
+          "title": "MermaidBlock"
+        },
+        {
+          "level": 2,
+          "id": "fenceinfo",
+          "title": "fenceInfo"
+        }
+      ]
+    },
+    {
+      "package": "ui-react",
+      "slug": "reference-utilities",
+      "title": "Utilities",
+      "description": "Reference: SplitProps, Split, MenuIconName, MenuIconProps, MenuIcon, Monogram… — signatures and JSDoc, read from the source.",
+      "category": "reference",
+      "order": 14,
+      "file": "ui-react/reference-utilities.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "splitprops",
+          "title": "SplitProps"
+        },
+        {
+          "level": 2,
+          "id": "split",
+          "title": "Split"
+        },
+        {
+          "level": 2,
+          "id": "menuiconname",
+          "title": "MenuIconName"
+        },
+        {
+          "level": 2,
+          "id": "menuiconprops",
+          "title": "MenuIconProps"
+        },
+        {
+          "level": 2,
+          "id": "menuicon",
+          "title": "MenuIcon"
+        },
+        {
+          "level": 2,
+          "id": "monogram",
+          "title": "Monogram"
+        },
+        {
+          "level": 2,
+          "id": "overflowaction",
+          "title": "OverflowAction"
+        },
+        {
+          "level": 2,
+          "id": "overflowmenu",
+          "title": "OverflowMenu"
+        },
+        {
+          "level": 2,
+          "id": "skeleton",
+          "title": "Skeleton"
+        },
+        {
+          "level": 2,
+          "id": "tooltipprops",
+          "title": "TooltipProps"
+        },
+        {
+          "level": 2,
+          "id": "tooltip",
+          "title": "Tooltip"
+        }
+      ]
+    },
+    {
+      "package": "ui-css",
+      "slug": "overview",
+      "title": "Overview",
+      "description": "The stylesheet an igni extension bundles. Classes match igni's own, values are tokens the host pushes live.",
+      "category": "guide",
+      "order": 0,
+      "file": "ui-css/overview.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "using-it",
+      "title": "Using it",
+      "description": "Bundle igni-ui.css into your extension. Do not link it from igni's origin — your page runs under its own origin with default-src 'self', so a cross-origin stylesheet is refused, and that refusal is deliberate.",
+      "category": "guide",
+      "order": 1,
+      "file": "ui-css/using-it.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "how-theming-works",
+      "title": "How theming works",
+      "description": "Every value in the stylesheet is a token with a fallback.",
+      "category": "guide",
+      "order": 2,
+      "file": "ui-css/how-theming-works.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "the-floor",
+      "title": "The floor",
+      "description": "Some of this file is promised, and the rest is not. Knowing which is which is the difference between a stylesheet you can build on and one you have to read every release.",
+      "category": "guide",
+      "order": 3,
+      "file": "ui-css/the-floor.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "what-is-here",
+      "title": "What is here",
+      "description": "Buttons (btn, with -primary, -danger, -sm, -xs, -quiet), chips, panels, fields, dialogs and the overlay behind them.",
+      "category": "guide",
+      "order": 4,
+      "file": "ui-css/what-is-here.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "the-spacing-scale",
+      "title": "The spacing scale",
+      "description": "--space-1 through --space-16 — 2, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32.",
+      "category": "guide",
+      "order": 5,
+      "file": "ui-css/the-spacing-scale.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "the-type-scale",
+      "title": "The type scale",
+      "description": "--text-2xs through --text-4xl — 10, 11, 12, 13, 14, 17, 20, 30, 42.",
+      "category": "guide",
+      "order": 6,
+      "file": "ui-css/the-type-scale.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "shape",
+      "title": "Shape",
+      "description": "--radius-sm 6, --radius 10, --radius-lg 14, plus --radius-pill and --radius-circle for the two shapes that are not sizes.",
+      "category": "guide",
+      "order": 7,
+      "file": "ui-css/shape.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "primitives",
+      "title": "Primitives",
+      "description": "ui-row, ui-actions, ui-list, ui-toolbar, ui-card, ui-item, ui-badge, ui-empty, ui-table.",
+      "category": "guide",
+      "order": 8,
+      "file": "ui-css/primitives.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "writing-your-own-css",
+      "title": "Writing your own CSS",
+      "description": "The stylesheet is the vocabulary, not the layout. It has no page shell, no split pane, no scroll container — those are shapes, and a shape is cheap to write and expensive to promise.",
+      "category": "guide",
+      "order": 9,
+      "file": "ui-css/writing-your-own-css.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "installing",
+      "title": "Installing",
+      "description": "This stylesheet is @ignite-ember/ui-css on npm; the bridge and the React components are @ignite-ember/extension-bridge and @ignite-ember/ui-react:",
+      "category": "guide",
+      "order": 10,
+      "file": "ui-css/installing.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "what-an-extension-still-cannot-do",
+      "title": "What an extension still cannot do",
+      "description": "Worth knowing before you design around it:",
+      "category": "guide",
+      "order": 11,
+      "file": "ui-css/what-an-extension-still-cannot-do.md",
+      "sections": []
+    },
+    {
+      "package": "ui-css",
+      "slug": "reference-tokens",
+      "title": "Design tokens",
+      "description": "Every custom property the stylesheet defines, its fallback, and the classes that use it.",
+      "category": "reference",
+      "order": 12,
+      "file": "ui-css/reference-tokens.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "bg",
+          "title": "--bg"
+        },
+        {
+          "level": 2,
+          "id": "bg-inset",
+          "title": "--bg-inset"
+        },
+        {
+          "level": 2,
+          "id": "bg-surface",
+          "title": "--bg-surface"
+        },
+        {
+          "level": 2,
+          "id": "bg-raised",
+          "title": "--bg-raised"
+        },
+        {
+          "level": 2,
+          "id": "fg",
+          "title": "--fg"
+        },
+        {
+          "level": 2,
+          "id": "fg-muted",
+          "title": "--fg-muted"
+        },
+        {
+          "level": 2,
+          "id": "fg-faint",
+          "title": "--fg-faint"
+        },
+        {
+          "level": 2,
+          "id": "border",
+          "title": "--border"
+        },
+        {
+          "level": 2,
+          "id": "border-soft",
+          "title": "--border-soft"
+        },
+        {
+          "level": 2,
+          "id": "success",
+          "title": "--success"
+        },
+        {
+          "level": 2,
+          "id": "warning",
+          "title": "--warning"
+        },
+        {
+          "level": 2,
+          "id": "danger",
+          "title": "--danger"
+        },
+        {
+          "level": 2,
+          "id": "danger-text",
+          "title": "--danger-text"
+        },
+        {
+          "level": 2,
+          "id": "accent-blue",
+          "title": "--accent-blue"
+        },
+        {
+          "level": 2,
+          "id": "igni-orange",
+          "title": "--igni-orange"
+        },
+        {
+          "level": 2,
+          "id": "igni-red",
+          "title": "--igni-red"
+        },
+        {
+          "level": 2,
+          "id": "igni-gradient",
+          "title": "--igni-gradient"
+        },
+        {
+          "level": 2,
+          "id": "space-1",
+          "title": "--space-1"
+        },
+        {
+          "level": 2,
+          "id": "space-2",
+          "title": "--space-2"
+        },
+        {
+          "level": 2,
+          "id": "space-3",
+          "title": "--space-3"
+        },
+        {
+          "level": 2,
+          "id": "space-4",
+          "title": "--space-4"
+        },
+        {
+          "level": 2,
+          "id": "space-5",
+          "title": "--space-5"
+        },
+        {
+          "level": 2,
+          "id": "space-6",
+          "title": "--space-6"
+        },
+        {
+          "level": 2,
+          "id": "space-7",
+          "title": "--space-7"
+        },
+        {
+          "level": 2,
+          "id": "space-8",
+          "title": "--space-8"
+        },
+        {
+          "level": 2,
+          "id": "space-10",
+          "title": "--space-10"
+        },
+        {
+          "level": 2,
+          "id": "space-12",
+          "title": "--space-12"
+        },
+        {
+          "level": 2,
+          "id": "space-16",
+          "title": "--space-16"
+        },
+        {
+          "level": 2,
+          "id": "accent-blue-text",
+          "title": "--accent-blue-text"
+        },
+        {
+          "level": 2,
+          "id": "accent-green-text",
+          "title": "--accent-green-text"
+        },
+        {
+          "level": 2,
+          "id": "accent-orange-text",
+          "title": "--accent-orange-text"
+        },
+        {
+          "level": 2,
+          "id": "accent-red-text",
+          "title": "--accent-red-text"
+        },
+        {
+          "level": 2,
+          "id": "igni-orange-hover",
+          "title": "--igni-orange-hover"
+        },
+        {
+          "level": 2,
+          "id": "shadow-pop",
+          "title": "--shadow-pop"
+        },
+        {
+          "level": 2,
+          "id": "radius-sm",
+          "title": "--radius-sm"
+        },
+        {
+          "level": 2,
+          "id": "radius",
+          "title": "--radius"
+        },
+        {
+          "level": 2,
+          "id": "radius-lg",
+          "title": "--radius-lg"
+        },
+        {
+          "level": 2,
+          "id": "radius-pill",
+          "title": "--radius-pill"
+        },
+        {
+          "level": 2,
+          "id": "radius-circle",
+          "title": "--radius-circle"
+        },
+        {
+          "level": 2,
+          "id": "text-2xs",
+          "title": "--text-2xs"
+        },
+        {
+          "level": 2,
+          "id": "text-xs",
+          "title": "--text-xs"
+        },
+        {
+          "level": 2,
+          "id": "text-sm",
+          "title": "--text-sm"
+        },
+        {
+          "level": 2,
+          "id": "text-md",
+          "title": "--text-md"
+        },
+        {
+          "level": 2,
+          "id": "text-lg",
+          "title": "--text-lg"
+        },
+        {
+          "level": 2,
+          "id": "text-xl",
+          "title": "--text-xl"
+        },
+        {
+          "level": 2,
+          "id": "text-2xl",
+          "title": "--text-2xl"
+        },
+        {
+          "level": 2,
+          "id": "text-3xl",
+          "title": "--text-3xl"
+        },
+        {
+          "level": 2,
+          "id": "text-4xl",
+          "title": "--text-4xl"
+        },
+        {
+          "level": 2,
+          "id": "font-ui",
+          "title": "--font-ui"
+        },
+        {
+          "level": 2,
+          "id": "font-mono",
+          "title": "--font-mono"
+        }
+      ]
+    },
+    {
+      "package": "ui-css",
+      "slug": "reference-classes",
+      "title": "Classes",
+      "description": "Every class the stylesheet defines, in the sections the stylesheet itself uses, and what each one sets.",
+      "category": "reference",
+      "order": 13,
+      "file": "ui-css/reference-classes.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "the-page",
+          "title": "The page"
+        },
+        {
+          "level": 2,
+          "id": "primitives",
+          "title": "Primitives"
+        },
+        {
+          "level": 2,
+          "id": "buttons",
+          "title": "Buttons"
+        },
+        {
+          "level": 2,
+          "id": "form-controls",
+          "title": "Form controls"
+        },
+        {
+          "level": 2,
+          "id": "field",
+          "title": "Field"
+        },
+        {
+          "level": 2,
+          "id": "feedback",
+          "title": "Feedback"
+        },
+        {
+          "level": 2,
+          "id": "tabs",
+          "title": "Tabs"
+        },
+        {
+          "level": 2,
+          "id": "text",
+          "title": "Text"
+        },
+        {
+          "level": 2,
+          "id": "chips",
+          "title": "Chips"
+        },
+        {
+          "level": 2,
+          "id": "panels",
+          "title": "Panels"
+        },
+        {
+          "level": 2,
+          "id": "fields",
+          "title": "Fields"
+        },
+        {
+          "level": 2,
+          "id": "dialogs",
+          "title": "Dialogs"
+        },
+        {
+          "level": 2,
+          "id": "tooltip",
+          "title": "Tooltip"
+        },
+        {
+          "level": 2,
+          "id": "monogram",
+          "title": "Monogram"
+        },
+        {
+          "level": 2,
+          "id": "skeleton",
+          "title": "Skeleton"
+        },
+        {
+          "level": 2,
+          "id": "menuicon",
+          "title": "MenuIcon"
+        },
+        {
+          "level": 2,
+          "id": "overflowmenu",
+          "title": "OverflowMenu"
+        },
+        {
+          "level": 2,
+          "id": "markdowninline",
+          "title": "MarkdownInline"
+        },
+        {
+          "level": 2,
+          "id": "mermaidblock",
+          "title": "MermaidBlock"
+        },
+        {
+          "level": 2,
+          "id": "tier-0-the-page-itself",
+          "title": "Tier 0: the page itself"
+        },
+        {
+          "level": 2,
+          "id": "tier-0-selection",
+          "title": "Tier 0: selection"
+        },
+        {
+          "level": 2,
+          "id": "tier-0-table-internals",
+          "title": "Tier 0: table internals"
+        },
+        {
+          "level": 2,
+          "id": "tier-0-messages",
+          "title": "Tier 0: messages"
+        },
+        {
+          "level": 2,
+          "id": "split",
+          "title": "Split"
+        },
+        {
+          "level": 2,
+          "id": "prose",
+          "title": "Prose"
         }
       ]
     }
