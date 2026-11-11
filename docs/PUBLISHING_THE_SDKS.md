@@ -336,7 +336,7 @@ In order — the consumers cannot resolve the SDKs before they are published.
 5. **Consumers' lockfiles**, which do not hold the SDKs from PyPI yet:
 
    ```bash
-   # igni__code-index and igni__artifacts
+   # the CodeIndex and Artifacts checkouts
    make lock && make test && git add uv.lock && git commit
    # optionally, their pages' npm locks
    make extension-ui-lock && git add extension/page/package-lock.json
@@ -371,8 +371,8 @@ The consumers keep a local override, `IGNI_SDK=local`, for changing an SDK
 and its consumer together:
 
 ```bash
-make test IGNI_SDK=local                       # igni__artifacts, igni__code-index (IGNI=<checkout>, default the sibling)
-make install IGNI_SDK=local IGNI_REPO=<path>   # igni__extension-starter, then IGNI_SDK=local on every make
+make test IGNI_SDK=local                       # the Artifacts and CodeIndex checkouts (IGNI=<checkout>, default the sibling)
+make install IGNI_SDK=local IGNI_REPO=<path>   # the extension-starter checkout, then IGNI_SDK=local on every make
 ```
 
 It installs everything else from the committed lockfiles (`uv sync --frozen
