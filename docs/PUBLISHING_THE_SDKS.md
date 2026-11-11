@@ -256,10 +256,21 @@ uses a token, and the token is removed straight after.
    two-factor authentication and disallow tokens*. From then on the workflow
    publishes with its OIDC token alone, and nothing else can.
 
-(The alternative to step 3 is to publish `0.1.0` of each package by hand,
-from a laptop signed in with `npm login`, from the tarballs a rehearsal
-uploads — then configure step 4 before the first tagged release. The
-workflow skips a version that is already published.)
+(The alternative to step 3 is to publish by hand, from a laptop signed in
+with `npm login`: build the tarballs with `make sdk-build` and publish each
+of the three it writes under `dist/sdk/npm/` —
+
+```bash
+for t in dist/sdk/npm/*.tgz; do npm publish "$t" --access public; done
+```
+
+— then configure step 4 before the first tagged release. The workflow skips
+a version that is already published.
+
+Publish **the version the manifests carry** (0.2.0 now). The extension
+pages in the module repositories depend on `@ignite-ember/extension-bridge`,
+`@ignite-ember/ui-react` and `@ignite-ember/ui-css` at `^0.2.0`, so an
+older version does not satisfy them and the module images do not build.)
 
 ### 3. GitHub environments
 
@@ -327,8 +338,11 @@ a GitHub pre-release, and PyPI, where installers skip it unless asked.
 In order — the consumers cannot resolve the SDKs before they are published.
 
 1. **One-time setup**, above.
-2. **Rehearse** `0.1.0`, the version all six carry today.
-3. **Release** it: `git tag sdk-v0.1.0 && git push origin sdk-v0.1.0`.
+2. **Rehearse** `0.2.0`, the version all six carry today.
+3. **Release** it: `git tag sdk-v0.2.0 && git push origin sdk-v0.2.0` — that
+   publishes the three Python packages to PyPI as well, and the three npm
+   packages to npmjs. To publish only the npm side and leave PyPI for
+   later, publish the three tarballs by hand as §2 describes.
 4. **Trusted publishing**: on PyPI and TestPyPI add the publisher to the
    three projects and delete `PYPI_TOKEN` and `TEST_PYPI_TOKEN` (one-time
    setup, step 1.6); on npm configure the three packages and delete
