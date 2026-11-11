@@ -24,7 +24,7 @@ dependencies = [
     # and an app's spaces.
     "httpx>=0.28.1",
     # igni's own socket, locally and through the Fleet gateway.
-    "websockets>=15,<17",
+    "websockets>=15,<18",
     "pydantic>=2.11",
     # An app signs in as itself with a `private_key_jwt` assertion.
     "pyjwt[crypto]>=2.10",
