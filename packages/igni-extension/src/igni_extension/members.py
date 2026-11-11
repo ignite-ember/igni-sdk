@@ -97,7 +97,14 @@ class HostObject:
 
 
 class Property[T]:
-    """A value of a host object. `await prop` reads it; `set` writes it."""
+    """A value of a host object. `await prop` reads it; `set` writes it.
+
+    Args:
+        owner: The host object the property belongs to: `host.chat`.
+        name: The property's name on its object: `processing`.
+        annotation: The type its value is read as.
+        writable: Whether `set` may write it.
+    """
 
     def __init__(self, owner: HostObject, name: str, annotation: Any, *, writable: bool) -> None:
         self._owner = owner
@@ -123,7 +130,11 @@ class Property[T]:
         return parse(self.annotation, answer)  # type: ignore[no-any-return]
 
     async def set(self, value: T) -> None:
-        """Write it, as the person's UI would. Refused where theirs would be."""
+        """Write it, as the person's UI would. Refused where theirs would be.
+
+        Args:
+            value: The value to write, as the property's annotation describes it.
+        """
         if not self.writable:
             raise TypeError(f"host.{self.path} cannot be set")
         await self._owner._link.request(
@@ -147,6 +158,10 @@ class Signal[T]:
     `name` is its wire name — `chat.run_completed`, or for the four
     events that predate the model their topic strings
     (`session.switched`, `workspace.head-changed`, …).
+
+    Args:
+        name: The signal's wire name: `chat.run_completed`.
+        carries: The type of the value the signal carries.
     """
 
     def __init__(self, name: str, carries: Any) -> None:
@@ -156,7 +171,11 @@ class Signal[T]:
         """The type of the value it carries."""
 
     def parse(self, value: Any) -> T:
-        """The value the host sent, as `T`."""
+        """The value the host sent, as `T`.
+
+        Args:
+            value: The signal's value as the host sent it, before it was read as `T`.
+        """
         return parse(self.carries, value)  # type: ignore[no-any-return]
 
     def __repr__(self) -> str:

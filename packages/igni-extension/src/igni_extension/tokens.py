@@ -57,6 +57,9 @@ class SignedIn(BaseModel):
         """Who `token` names, read from its claims without checking its signature.
 
         Every field is empty for a token that is not a JWT.
+
+        Args:
+            token: The person's token for this extension's service, as the host handed it over.
         """
         try:
             payload = token.split(".")[1]

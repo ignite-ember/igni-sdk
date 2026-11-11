@@ -51,13 +51,32 @@ expect, and the default fallback shows the message on purpose.
 
 **Also** [`ErrorBoundaryProps`](/docs/sdk/ui-react/reference-feedback#errorboundaryprops).
 
-| Member | Kind | Type |
-|---|---|---|
-| `state` | field | `State` |
-| `getDerivedStateFromError` | method | `(error: Error) => State` |
-| `componentDidCatch` | method | `(error: Error, info: ErrorInfo) => void` |
-| `componentDidUpdate` | method | `(previous: ErrorBoundaryProps) => void` |
-| `render` | method | `() => ReactNode` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `state` | field | `State` | The error the subtree threw, or null while nothing has thrown. |
+| `getDerivedStateFromError` | method | `(error: Error) => State` | The state the boundary holds after a throw. |
+| `componentDidCatch` | method | `(error: Error, info: ErrorInfo) => void` | Reports the error to whoever asked for it. |
+| `componentDidUpdate` | method | `(previous: ErrorBoundaryProps) => void` | Clears the boundary when the reset keys change. |
+| `render` | method | `() => ReactNode` | The children, or the error page when the subtree threw. |
+
+### ErrorBoundary.getDerivedStateFromError()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `error` | `Error` | required | the error the subtree threw. |
+
+### ErrorBoundary.componentDidCatch()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `error` | `Error` | required | the error the subtree threw. |
+| `info` | `ErrorInfo` | required | React's account of where it was thrown: the component stack. |
+
+### ErrorBoundary.componentDidUpdate()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `previous` | `ErrorBoundaryProps` | required | the props from the previous render, whose `resetKeys` are compared with the new ones. |
 
 ## ToastOptions
 
@@ -108,6 +127,10 @@ How to raise and dismiss toasts.
 function ToastHost({ children }: { children: ReactNode })
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | — | optional | the part of the app that raises toasts. |
+
 Wrap the part of the app that raises toasts.
 
 Renders the stack itself, so there is nothing to place and no way
@@ -145,6 +168,14 @@ What a `Banner` takes.
 ```typescript
 function Banner({ tone = "neutral", onDismiss, children, className, ...rest }: BannerProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tone` | `Tone` | `"neutral"` | how loud it is: `neutral` for a state nothing is wrong with, and the three that mean something. |
+| `onDismiss` | `() => void` | optional | asked to dismiss the banner; the affordance appears when this is given. |
+| `children` | — | optional | the message the banner says. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
 
 A condition that is still true.
 
@@ -209,6 +240,11 @@ What a `LiveRegion` takes.
 ```typescript
 function LiveRegion({ children = "", urgency = "polite" }: LiveRegionProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | `string` | `""` | what to say; changing it announces, and clearing it says nothing. |
+| `urgency` | `Urgency` | `"polite"` | how insistently it is announced: politely, or assertively. |
 
 The declarative form, for a value that already lives in state.
 

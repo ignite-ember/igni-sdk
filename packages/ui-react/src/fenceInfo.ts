@@ -21,6 +21,9 @@ export interface Fence {
  *
  * Null when the child is not a code element, or carries no
  * `language-` class — an unfenced block, or a fence with no language.
+ *
+ * @param children — the `<pre>` a fenced block renders as; its `<code>`
+ *   child carries the language class.
  */
 export function fenceInfo(children: ReactNode): Fence | null {
   const only = Array.isArray(children) ? children[0] : children;

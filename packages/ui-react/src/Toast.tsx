@@ -86,6 +86,8 @@ let counter = 0;
  *
  * Renders the stack itself, so there is nothing to place and no way
  * to forget to place it.
+ *
+ * @param children — the part of the app that raises toasts.
  */
 export function ToastHost({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -227,6 +229,15 @@ export interface BannerProps extends HTMLAttributes<HTMLDivElement> {
  * Not a toast: a toast is about something that just happened and
  * goes away, a banner is about a state — offline, read-only, licence
  * expiring — and stays until the state does not.
+ *
+ * @param tone — how loud it is: `neutral` for a state nothing is wrong
+ *   with, and the three that mean something.
+ * @param onDismiss — asked to dismiss the banner; the affordance
+ *   appears when this is given.
+ * @param children — the message the banner says.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Banner({
   tone = "neutral",

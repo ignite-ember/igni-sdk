@@ -84,7 +84,15 @@ if TYPE_CHECKING:
 
 
 class FakeIgni:
-    """Every igni endpoint a service calls, composed of one collaborator per part of igni."""
+    """Every igni endpoint a service calls, composed of one collaborator per part of igni.
+
+    Args:
+        clock: The clock the fake signs and expires by; a ``ManualClock`` moves it in a test.
+        addresses: Where the fake is reached, the issuer its tokens name, and the
+            service under test's own URL.
+        require_approval: Whether a registration must be approved by a super admin
+            before it is given a token.
+    """
 
     BASE = BASE
     """Where the service reaches the fake."""
@@ -189,7 +197,17 @@ class FakeIgni:
         clock: Clock | None = None,
         accepted_callers: Collection[CallerKind] = PEOPLE_ONLY,
     ) -> IgniService:
-        """An `IgniService` wired to this fake: key in memory, retries without waiting."""
+        """An `IgniService` wired to this fake: key in memory, retries without waiting.
+
+        Args:
+            settings: The settings the service is made with; the fake's own, pointing
+                at it, by default.
+            key_store: Where the service keeps its signing key; in memory, by default.
+            clock: The clock the service reads the time from for its tokens' age and
+                expiry.
+            accepted_callers: Whose tokens the service's ``caller`` accepts: people
+                only, unless the service is told more.
+        """
         service = IgniService(
             settings or self.settings(),
             key_store=key_store or MemoryKeyStore(),
@@ -206,6 +224,11 @@ class FakeIgni:
 
         Its key is made now and its public half registered, as the admin's
         paste on the portal's Apps page does; approved by that act.
+
+        Args:
+            app_id: The id the app is known by at igni, as the portal shows it.
+            org_id: The organisation whose admin registered the app.
+            name: The app's display name, as the portal shows it.
         """
         self.directory.ensure(org_id)
         pair = RsaKeyPair.generate()
@@ -221,7 +244,12 @@ class FakeIgni:
         )
 
     def settings(self, overrides: SettingsOverrides | None = None) -> IgniSettings:
-        """Settings that reach this fake, with what `overrides` sets."""
+        """Settings that reach this fake, with what `overrides` sets.
+
+        Args:
+            overrides: What a test changes about the settings; only the fields it
+                sets are applied, and the rest are the fake's own.
+        """
         return (overrides or SettingsOverrides()).settings_for(self.addresses)
 
     async def upload(
@@ -235,6 +263,12 @@ class FakeIgni:
         reads. Answers what the fake now holds (or holds back, with
         `extensions.hold`). For a test that needs the extension on igni —
         its VM profile request, its pages — without a lifespan or a build.
+
+        Args:
+            bundle: The extension's bundle: a built archive, the extension's
+                directory, or the ``ExtensionBundle`` already built.
+            service: The service that ships the bundle, and whose registration the
+                upload is made under.
         """
         if not isinstance(bundle, ExtensionBundle):
             bundle = BundleSource(path=Path(bundle)).bundle()

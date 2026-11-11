@@ -183,6 +183,12 @@ export interface MenuIconProps {
  * one grammar. A name that is not in the set draws nothing, rather
  * than a broken box: the label says what the item does, and the icon
  * is only how it is found.
+ *
+ * @param name — one of igni's own icons.
+ * @param path — an SVG path, for an icon igni does not have; it is
+ *   drawn on the same 16×16 grid, stroked rather than filled.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
  */
 export function MenuIcon({ name, path, className }: MenuIconProps) {
   const d = path ?? (name ? PATHS[name] : undefined);

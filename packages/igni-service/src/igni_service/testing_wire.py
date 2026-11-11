@@ -71,7 +71,12 @@ class IgniAddresses(BaseModel):
         return f"{self.issuer}/authorize"
 
     def reaches(self, url: str) -> bool:
-        """Whether `url` is on the fake's own address."""
+        """Whether `url` is on the fake's own address.
+
+        Args:
+            url: The URL to test: its scheme and host are compared with the
+                fake's own address, and its path is not looked at.
+        """
         parts = urlsplit(url)
         return f"{parts.scheme}://{parts.netloc}" == self.base_url
 
@@ -184,7 +189,12 @@ class SeenRequest(BaseModel):
 
     @classmethod
     def of(cls, request: httpx.Request) -> SeenRequest:
-        """What `request` was, read whole."""
+        """What `request` was, read whole.
+
+        Args:
+            request: The request the fake was sent: its method, path,
+                headers, body and query are what is kept of it.
+        """
         url = urlsplit(str(request.url))
         return cls(
             method=request.method,
@@ -199,7 +209,12 @@ class SeenRequest(BaseModel):
         return json.loads(self.body)
 
     def json_model(self, model: type[Body]) -> Body | DetailError:
-        """The body as `model`, or the 422 igni answers a body it cannot read with."""
+        """The body as `model`, or the 422 igni answers a body it cannot read with.
+
+        Args:
+            model: The model the body is read as: what the body is expected
+                to hold.
+        """
         try:
             return model.model_validate_json(self.body)
         except ValidationError as exc:
@@ -214,7 +229,13 @@ class SeenRequest(BaseModel):
         return self.headers.get("authorization", "").removeprefix("Bearer ")
 
     def first(self, name: str, default: str = "") -> str:
-        """The first value of query parameter `name`, or `default`."""
+        """The first value of query parameter `name`, or `default`.
+
+        Args:
+            name: The name of the query parameter to read.
+            default: The value to answer with when the request carries no
+                such parameter.
+        """
         return (self.query.get(name) or [default])[0]
 
 
@@ -237,25 +258,48 @@ class RecordedTraffic:
         """Path prefix → status to answer instead, to play igni failing."""
 
     def record(self, request: httpx.Request) -> SeenRequest:
+        """Keep `request` as the fake was sent it, and read it as it was.
+
+        Args:
+            request: The request the fake was sent: its method, path,
+                headers, body and query are what is kept of it.
+        """
         seen = SeenRequest.of(request)
         self.seen.append(seen)
         return seen
 
     def failure_for(self, path: str) -> httpx.Response | None:
-        """The failure a test asked for on `path`, if it asked for one."""
+        """The failure a test asked for on `path`, if it asked for one.
+
+        Args:
+            path: The path of the request being answered: the first failing
+                prefix that covers it decides the answer.
+        """
         for prefix, status in self.failing.items():
             if path.startswith(prefix):
                 return DetailError(detail="failing on purpose", status=status).to_response()
         return None
 
     def fail(self, prefix: str, status: int) -> None:
-        """Answer every request under `prefix` with `status`, until `heal`."""
+        """Answer every request under `prefix` with `status`, until `heal`.
+
+        Args:
+            prefix: The path prefix to fail: every request whose path starts
+                with it is answered as told.
+            status: The HTTP status to answer those requests with.
+        """
         self.failing[prefix] = status
 
     def heal(self) -> None:
         self.failing.clear()
 
     def requests_to(self, path: str) -> list[SeenRequest]:
+        """Every request the fake was sent to `path`.
+
+        Args:
+            path: The path to look for: only the requests made to exactly
+                it are answered.
+        """
         return [seen for seen in self.seen if seen.path == path]
 
     def reset(self) -> None:

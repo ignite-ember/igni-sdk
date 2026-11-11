@@ -75,7 +75,12 @@ class UploadedManifest(BaseModel):
 
     @classmethod
     def from_archive(cls, archive: bytes) -> UploadedManifest | DetailError:
-        """The manifest, or igni's refusal: none it can read, or one that is not what was signed."""
+        """The manifest, or igni's refusal: none it can read, or one that is not what was signed.
+
+        Args:
+            archive: The bundle's bytes: the gzipped tar to read the
+                manifest out of.
+        """
         try:
             manifest = BundleArchive.read_manifest(archive)
         except BundleError:
@@ -115,7 +120,12 @@ class HeldExtension(BaseModel):
         return self.manifest.pages
 
     def published(self, reason: str | None = None) -> PublishedExtension:
-        """What igni answers about it; held for a super admin when there is a `reason`."""
+        """What igni answers about it; held for a super admin when there is a `reason`.
+
+        Args:
+            reason: Why the bundle is held for a super admin; no reason
+                publishes it.
+        """
         return PublishedExtension(
             extension_id=self.extension_id,
             version=self.version,

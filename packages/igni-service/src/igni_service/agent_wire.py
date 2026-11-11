@@ -46,13 +46,29 @@ class Attachment(BaseModel):
 
     @classmethod
     def from_bytes(cls, filename: str, data: bytes, content_type: str | None = None) -> Attachment:
-        """An attachment of `data`, its media type guessed from `filename` unless given."""
+        """An attachment of `data`, its media type guessed from `filename` unless given.
+
+        Args:
+            filename: The file's name, as people see it in the chat (1-200
+                characters); the media type is guessed from it unless one
+                is given.
+            data: The file's bytes: at least one, at most 5 MiB.
+            content_type: The media type, when it cannot be guessed from
+                the name or differs from it.
+        """
         guessed = content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
         return cls(filename=filename, content_type=guessed, data=data)
 
     @classmethod
     def from_path(cls, path: str | Path, content_type: str | None = None) -> Attachment:
-        """The file at `path`, read now, named by its file name."""
+        """The file at `path`, read now, named by its file name.
+
+        Args:
+            path: The file to read now: its name becomes the attachment's
+                name.
+            content_type: The media type, when it cannot be guessed from
+                the file's name or differs from it.
+        """
         source = Path(path)
         return cls.from_bytes(source.name, source.read_bytes(), content_type)
 
@@ -143,13 +159,28 @@ class ItemStatus(BaseModel):
 
 
 class AgentWire:
-    """The calls behind an `Agent`: uploads, items, statuses. One per service."""
+    """The calls behind an `Agent`: uploads, items, statuses. One per service.
+
+    Args:
+        tokens: The service's own tokens for igni: every call this wire
+            makes is made with them.
+        sender: The wire that posts items and events, and retries them
+            when igni could not take them.
+    """
 
     def __init__(self, tokens: ServiceTokens, sender: EventSender) -> None:
         self._tokens = tokens
         self._sender = sender
 
     async def upload(self, org_id: str, attachment: Attachment) -> AttachmentStored:
+        """Upload one file to igni, and read back what igni kept of it.
+
+        Args:
+            org_id: The organisation the file is uploaded for: the call
+                is made with that organisation's token.
+            attachment: The file to upload: its name, its media type and
+                its bytes.
+        """
         response = await self._tokens.request(
             "POST",
             IgniPaths.SERVICE_ATTACHMENTS,
@@ -168,15 +199,45 @@ class AgentWire:
         raise IgniUnavailable(f"igni answered the upload {response.status_code}")
 
     async def uploaded(self, org_id: str, attachments: list[Attachment]) -> list[str]:
+        """Upload every file, and give back the ids igni named them by.
+
+        Args:
+            org_id: The organisation the files are uploaded for: the calls
+                are made with that organisation's token.
+            attachments: The files to upload: at most ten.
+        """
         return [(await self.upload(org_id, a)).attachment_id for a in attachments]
 
     async def item(self, org_id: str, item: ServiceItemRequest) -> EventAccepted:
+        """Post one item to igni, and read back what igni stored of it.
+
+        Args:
+            org_id: The organisation the item goes into: the call is made
+                with that organisation's token.
+            item: The item to post: its kind, its producer and what it
+                carries.
+        """
         return await self._sender.post(org_id, IgniPaths.SERVICE_ITEMS, item, what=item.kind)
 
     async def event(self, org_id: str, event: ServiceEventRequest) -> EventAccepted:
+        """Send one event to igni, and read back what igni stored of it.
+
+        Args:
+            org_id: The organisation the event goes into: the call is made
+                with that organisation's token.
+            event: The event to send: its producer, its type and its
+                payload.
+        """
         return await self._sender.send(org_id, event)
 
     async def status(self, org_id: str, event_id: str) -> ItemStatus:
+        """Read where one item stands, as igni holds it now.
+
+        Args:
+            org_id: The organisation the item belongs to: the call is made
+                with that organisation's token.
+            event_id: The item's id, as ``EventAccepted.event_id`` gave it.
+        """
         response = await self._tokens.request(
             "GET", IgniPaths.service_event(event_id), org_id=org_id
         )

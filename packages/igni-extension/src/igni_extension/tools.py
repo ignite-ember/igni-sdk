@@ -47,7 +47,12 @@ class ToolNames(BaseModel):
 
     @classmethod
     def of(cls, extension_id: str, tool: str) -> ToolNames:
-        """Every name the tool `tool` of the extension `extension_id` goes by."""
+        """Every name the tool `tool` of the extension `extension_id` goes by.
+
+        Args:
+            extension_id: The extension's manifest id: `acme.example`.
+            tool: The tool's name in this code: `lookup_ticket`.
+        """
         return cls(
             tool=tool,
             manifest=f"{extension_id}.{tool}",

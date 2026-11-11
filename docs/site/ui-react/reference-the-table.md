@@ -43,6 +43,15 @@ What a `SortableTh` takes.
 function SortableTh({ children, direction, onSort, numeric = false, className, ...rest }: SortableThProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | `ReactNode` | required | the heading. |
+| `direction` | `SortDirection` | optional | how this column is currently sorted, or `undefined` when the table is sorted by another column. |
+| `onSort` | `(direction: SortDirection) => void` | required | asked to sort by this column; it gets the direction to go to. |
+| `numeric` | `boolean` | `false` | right-align the column and use tabular figures. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the `th`. |
+
 A column heading you can sort by.
 
 `aria-sort` goes on the `th` and nowhere else, which is what a
@@ -74,6 +83,11 @@ What a `Status` takes.
 ```typescript
 function Status({ state, children }: StatusProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `state` | `"READY" \| "PREPARING" \| "DISABLED" \| "FAILED"` | required | the four states the health contract defines. |
+| `children` | `ReactNode` | optional | what to show beside the dot; it defaults to the state itself. |
 
 A state, as a coloured dot and the word it stands for.
 

@@ -25,6 +25,12 @@ class BundleArchive:
 
         The same files make the same bytes every time: sorted, with no times,
         owners or modes of their own.
+
+        Args:
+            staging: The directory whose files make the archive; each file
+                lands in it at its own path under ``staging``.
+            out: The path the archive is written to; its directory is made
+                if it is not there.
         """
         buffer = io.BytesIO()
         with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as tar:
@@ -53,6 +59,10 @@ class BundleArchive:
         Left as the JSON object it is: each reader validates it into its
         own model. Raises `BundleError` when the archive is unreadable, has
         no manifest at its root, or its manifest is not a JSON object.
+
+        Args:
+            archive: The bundle's bytes: the gzipped tar to read the
+                manifest out of.
         """
         try:
             with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tar:

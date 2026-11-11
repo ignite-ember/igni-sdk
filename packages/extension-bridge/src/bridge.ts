@@ -35,6 +35,10 @@ import {
  * `P` and `S` name the extension's own launch parameters and settings;
  * the bridge passes on what the host sent without checking it against
  * them.
+ *
+ * @param options — how long to wait for the host's `hello` before
+ *   giving up: `timeoutMs`, in milliseconds, and thirty seconds by
+ *   default.
  */
 export function connect<
   P extends LaunchParams = LaunchParams,

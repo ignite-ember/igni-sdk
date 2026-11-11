@@ -44,6 +44,11 @@ A deterministic gzipped tar of a directory, manifest at its root.
 def write(staging: Path, out: Path) -> bytes
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `staging` | `Path` | required | The directory whose files make the archive; each file lands in it at its own path under ``staging``. |
+| `out` | `Path` | required | The path the archive is written to; its directory is made if it is not there. |
+
 Write `staging`'s files to `out` as a gzipped tar and answer its bytes.
 
 The same files make the same bytes every time: sorted, with no times,
@@ -55,6 +60,10 @@ owners or modes of their own.
 @staticmethod
 def read_manifest(archive: bytes) -> dict[str, object]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `archive` | `bytes` | required | The bundle's bytes: the gzipped tar to read the manifest out of. |
 
 The `manifest.json` at an archive's root, read without unpacking it.
 
@@ -85,6 +94,11 @@ class FakeAgents
 FakeAgents(*, is_member: Callable[[str, str], bool], clock: Callable[[], float])
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `is_member` | `Callable[[str, str], bool]` | required | Whether a person belongs to an organisation, as the directory answers it: called with the organisation's id and the person's id. |
+| `clock` | `Callable[[], float]` | required | The time now, in seconds since the epoch, as the fake's clock answers it. |
+
 igni's side of `host.agent(producer)`: the items, files and statuses a service sends.
 
 `fake.agents.items` is every item stored, `uploads` every file, and
@@ -105,6 +119,11 @@ Forget the items and files, and grant everything again.
 def settle(event_id: str, state: ItemState) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_id` | `str` | required | The id of the item to move, as igni gave it when it accepted it. |
+| `state` | `ItemState` | required | Where the item stands afterwards: `pending`, `delivered`, `not_handled`, `expired`, `dropped` or `failed`. |
+
 Play the producer's igni: the item is now `state`.
 
 ### FakeAgents.event()
@@ -113,6 +132,12 @@ Play the producer's igni: the item is now `state`.
 def event(body: bytes, client_id: str, org_id: str) -> httpx.Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `body` | `bytes` | required | The request's body: the JSON of a service event. |
+| `client_id` | `str` | required | The service that sent it. |
+| `org_id` | `str` | required | The organisation the service's token named. |
+
 Answer `POST /v1/service-events` as igni does. Called by the fake's router.
 
 ### FakeAgents.item()
@@ -120,6 +145,12 @@ Answer `POST /v1/service-events` as igni does. Called by the fake's router.
 ```python
 def item(body: bytes, client_id: str, org_id: str) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `body` | `bytes` | required | The request's body: the JSON of a service item. |
+| `client_id` | `str` | required | The service that sent it. |
+| `org_id` | `str` | required | The organisation the service's token named. |
 
 Answer `POST /v1/service-items` as igni does. Called by the fake's router.
 
@@ -135,6 +166,13 @@ def upload(
 ) -> httpx.Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `client_id` | `str` | required | The service uploading the file. |
+| `filename` | `str` | required | The name the file is kept under: a file name, not a path. |
+| `content_type` | `str` | required | The media type of the bytes, as the request's `Content-Type` header gave it: the part before any `;`, and `application/octet-stream` when there is none. |
+| `data` | `bytes` | required | The bytes of the file. |
+
 Answer `POST /v1/service-attachments` as igni does. Called by the fake's router.
 
 ### FakeAgents.status()
@@ -142,6 +180,11 @@ Answer `POST /v1/service-attachments` as igni does. Called by the fake's router.
 ```python
 def status(event_id: str, client_id: str) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_id` | `str` | required | The id of the item to report on, as igni gave it when it accepted the item. |
+| `client_id` | `str` | required | The service asking: only its own items are answered. |
 
 Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router.
 
@@ -173,6 +216,10 @@ The platform's caps; igni server's defaults.
 def refusal(wanted: Resolved) -> str | None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `wanted` | `Resolved` | required | The profile to check: the request with the deployment's Standard values filled in. |
+
 Why igni refuses `wanted` on this platform; `None` when it fits.
 
 ### FakeCaps.serve()
@@ -180,6 +227,10 @@ Why igni refuses `wanted` on this platform; `None` when it fits.
 ```python
 def serve(profile: FakeProfile) -> EffectiveVmProfile
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `profile` | `FakeProfile` | required | The profile a VM is given: an approval's, or the organisation's Standard default. |
 
 What a VM gets from `profile`: its values, clamped to these caps.
 
@@ -194,6 +245,12 @@ FakeIgni(
     require_approval: bool = False,
 )
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `clock` | `Clock \| None` | `None` | The clock the fake signs and expires by; a ``ManualClock`` moves it in a test. |
+| `addresses` | `IgniAddresses \| None` | `None` | Where the fake is reached, the issuer its tokens name, and the service under test's own URL. |
+| `require_approval` | `bool` | `False` | Whether a registration must be approved by a super admin before it is given a token. |
 
 Every igni endpoint a service calls, composed of one collaborator per part of igni.
 
@@ -239,6 +296,13 @@ def service(
 ) -> IgniService
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `settings` | `IgniSettings \| None` | `None` | The settings the service is made with; the fake's own, pointing at it, by default. |
+| `key_store` | `KeyStore \| None` | `None` | Where the service keeps its signing key; in memory, by default. |
+| `clock` | `Clock \| None` | `None` | The clock the service reads the time from for its tokens' age and expiry. |
+| `accepted_callers` | `Collection[CallerKind]` | `frozenset({CallerKind.PERSON})` | Whose tokens the service's ``caller`` accepts: people only, unless the service is told more. |
+
 An `IgniService` wired to this fake: key in memory, retries without waiting.
 
 ### FakeIgni.app()
@@ -246,6 +310,12 @@ An `IgniService` wired to this fake: key in memory, retries without waiting.
 ```python
 def app(app_id: str, *, org_id: str, name: str = '') -> IgniApp
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The id the app is known by at igni, as the portal shows it. |
+| `org_id` | `str` | required | The organisation whose admin registered the app. |
+| `name` | `str` | `''` | The app's display name, as the portal shows it. |
 
 An app an org admin registered in `org_id`, as an `IgniApp` wired to this fake.
 
@@ -258,6 +328,10 @@ paste on the portal's Apps page does; approved by that act.
 def settings(overrides: SettingsOverrides | None = None) -> IgniSettings
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `overrides` | `SettingsOverrides \| None` | `None` | What a test changes about the settings; only the fields it sets are applied, and the rest are the fake's own. |
+
 Settings that reach this fake, with what `overrides` sets.
 
 ### FakeIgni.upload()
@@ -268,6 +342,11 @@ async def upload(
     service: IgniService,
 ) -> HeldExtension
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `bundle` | `str \| Path \| ExtensionBundle` | required | The extension's bundle: a built archive, the extension's directory, or the ``ExtensionBundle`` already built. |
+| `service` | `IgniService` | required | The service that ships the bundle, and whose registration the upload is made under. |
 
 Upload an extension as `service` does at start-up: registered, signed, over the wire.
 
@@ -301,6 +380,10 @@ class FakeVmProfiles
 FakeVmProfiles(*, clock: Callable[[], float] = <built-in function time>)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `clock` | `Callable[[], float]` | `<built-in function time>` | The wall clock a request's and a decision's time are read from; ``FakeIgni`` hands it its own, so a test can move it. |
+
 One deployment's VM profiles and the requests for them, per organisation.
 
 ### FakeVmProfiles.request()
@@ -308,6 +391,11 @@ One deployment's VM profiles and the requests for them, per organisation.
 ```python
 def request(org_id: str, subject: VmProfileSubject) -> VmProfileRequestRecord
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the request was made in. |
+| `subject` | `VmProfileSubject` | required | Whose request to read: an app's, or an extension's. |
 
 The request `subject` made in `org_id`. `NoVmProfileRequest` if it made none.
 
@@ -321,6 +409,12 @@ def approve(
     by: str = 'u-admin',
 ) -> VmProfileRequestRecord
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the request was made in, whose admin approves it. |
+| `subject` | `VmProfileSubject` | required | Whose request is approved: an app's, or an extension's. |
+| `by` | `str` | `'u-admin'` | The user id of the org admin who decides; the decision is recorded as theirs. |
 
 Approve it, as an org admin: the profile is made or replaced, an app's assigned.
 
@@ -342,6 +436,13 @@ def reject(
 ) -> VmProfileRequestRecord
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the request was made in, whose admin rejects it. |
+| `subject` | `VmProfileSubject` | required | Whose request is rejected: an app's, or an extension's. |
+| `reason` | `str \| None` | `None` | Why the request was rejected, as the admin said; none for none. |
+| `by` | `str` | `'u-admin'` | The user id of the org admin who decides; the decision is recorded as theirs. |
+
 Reject it, as an org admin: what the VM gets is untouched.
 
 ### FakeVmProfiles.assign()
@@ -350,6 +451,13 @@ Reject it, as an org admin: what the VM gets is untouched.
 def assign(org_id: str, profile_id: str, *, groups: int = 0, apps: int = 0) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the profile belongs to. |
+| `profile_id` | `str` | required | The profile the admin gave. |
+| `groups` | `int` | `0` | How many of the organisation's groups were given the profile. |
+| `apps` | `int` | `0` | How many of the organisation's apps were given the profile. |
+
 Say how many groups and apps an org admin gave a profile.
 
 ### FakeVmProfiles.app_put()
@@ -357,6 +465,13 @@ Say how many groups and apps an org admin gave a profile.
 ```python
 def app_put(org_id: str, app_id: str, name: str, body: bytes) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the app belongs to. |
+| `app_id` | `str` | required | The app that asked for its VM profile. |
+| `name` | `str` | required | The app's display name, as its registration holds it. |
+| `body` | `bytes` | required | The request's body, as the bytes the app posted. |
 
 Answer an app's `PUT` of its VM profile request as igni does. Called by the fake's
 router.
@@ -367,6 +482,11 @@ router.
 def app_get(org_id: str, app_id: str) -> httpx.Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the app belongs to. |
+| `app_id` | `str` | required | The app whose request is read. |
+
 Answer an app's `GET` of its request as igni does. Called by the fake's router.
 
 ### FakeVmProfiles.app_profile()
@@ -374,6 +494,11 @@ Answer an app's `GET` of its request as igni does. Called by the fake's router.
 ```python
 def app_profile(org_id: str, app_id: str) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the app belongs to. |
+| `app_id` | `str` | required | The app whose VM's profile is read. |
 
 Answer an app's `GET` of what its VM gets now as igni does. Called by the fake's router.
 
@@ -386,6 +511,12 @@ def service(
     shipped: HeldExtension | None,
 ) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the service's token is for. |
+| `client_id` | `str` | required | The service's client id, whose extension this is about. |
+| `shipped` | `HeldExtension \| None` | required | The bundle the service shipped, whose manifest's ``vm`` section the request is; none when it shipped no bundle. |
 
 What `GET /v1/service-vm-profile` answers a service for one organisation.
 
@@ -430,6 +561,10 @@ The kind of each page its manifest contributes.
 def published(reason: str | None = None) -> PublishedExtension
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `reason` | `str \| None` | `None` | Why the bundle is held for a super admin; no reason publishes it. |
+
 What igni answers about it; held for a super admin when there is a `reason`.
 
 ## IgniAddresses
@@ -467,6 +602,10 @@ The portal's `/authorize`, as igni's metadata publishes it.
 def reaches(url: str) -> bool
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `url` | `str` | required | The URL to test: its scheme and host are compared with the fake's own address, and its path is not looked at. |
+
 Whether `url` is on the fake's own address.
 
 ### IgniAddresses.assertion_audiences()
@@ -501,6 +640,10 @@ The paths igni serves, spelled once.
 def app_vm_profile_request(app_id: str) -> str
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as an org admin registered it: whose request for a VM profile this is. |
+
 An app's own request for what its VM needs.
 
 ### IgniPaths.app_vm_profile()
@@ -509,6 +652,10 @@ An app's own request for what its VM needs.
 @classmethod
 def app_vm_profile(app_id: str) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as an org admin registered it: whose VM's profile this is. |
 
 The profile an app's VM gets now.
 
@@ -519,6 +666,10 @@ The profile an app's VM gets now.
 def service_event(event_id: str) -> str
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_id` | `str` | required | The id of the item to report on, as igni gave it when it accepted it. |
+
 What became of one item this service sent.
 
 ### IgniPaths.extension()
@@ -527,6 +678,10 @@ What became of one item this service sent.
 @classmethod
 def extension(client_id: str) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `client_id` | `str` | required | The client id this service registered with, as igni gave it: whose extension this is. |
 
 Where igni holds `client_id`'s extension bundle.
 
@@ -537,6 +692,11 @@ Where igni holds `client_id`'s extension bundle.
 def extension_asset(client_id: str, sha256: str) -> str
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `client_id` | `str` | required | The client id this service registered with, as igni gave it: whose extension the asset belongs to. |
+| `sha256` | `str` | required | The asset's SHA-256 digest: which asset of the bundle this is. |
+
 Where igni holds one asset of `client_id`'s extension, by its SHA-256.
 
 ## ManualClock
@@ -545,6 +705,10 @@ Where igni holds one asset of `client_id`'s extension, by its SHA-256.
 class ManualClock(Clock)
 ManualClock(start: float = 1800000000.0)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `start` | `float` | `1800000000.0` | The time it starts at, in seconds since the epoch: what both `wall` and `monotonic` answer until it is moved. |
 
 A clock that moves only when told to.
 
@@ -569,6 +733,10 @@ Seconds on a clock that never goes back.
 ```python
 def advance(seconds: float) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `seconds` | `float` | required | How far the clock moves forward, in seconds. |
 
 Move the clock forward `seconds`; both `monotonic` and `wall` move.
 
@@ -620,6 +788,10 @@ What igni sends a service when it deletes an organisation.
 ```python
 async def send(http: httpx.AsyncClient) -> httpx.Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `http` | `httpx.AsyncClient` | required | The client that reaches the service: the deletion is sent through it, to the service's own route. |
 
 Deliver it to the service `http` reaches, as igni does — again, if called again.
 
@@ -689,6 +861,10 @@ One request the fake was sent.
 def of(request: httpx.Request) -> SeenRequest
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `httpx.Request` | required | The request the fake was sent: its method, path, headers, body and query are what is kept of it. |
+
 What `request` was, read whole.
 
 ### SeenRequest.json_body()
@@ -704,6 +880,10 @@ The body, read as JSON.
 ```python
 def json_model(model: type[Body]) -> Body | DetailError
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `model` | `type[Body]` | required | The model the body is read as: what the body is expected to hold. |
 
 The body as `model`, or the 422 igni answers a body it cannot read with.
 
@@ -728,6 +908,11 @@ The bearer token the request carries; empty without one.
 ```python
 def first(name: str, default: str = '') -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The name of the query parameter to read. |
+| `default` | `str` | `''` | The value to answer with when the request carries no such parameter. |
 
 The first value of query parameter `name`, or `default`.
 
@@ -821,6 +1006,10 @@ own default. A field `IgniSettings` lacks is refused, not ignored.
 def settings_for(addresses: IgniAddresses) -> IgniSettings
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `addresses` | `IgniAddresses` | required | The fake's addresses: where the service reaches the fake, and the URL the service's own tokens are for. |
+
 Settings that reach the fake at `addresses`, with what this sets.
 
 ## SpaceClaims
@@ -877,6 +1066,10 @@ field is optional rather than defaulted.
 def seconds(default: float) -> float
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `default` | `float` | required | The lifetime to answer with when the test changed none: how long the token lives otherwise. |
+
 The lifetime in seconds, or `default` when not changed.
 
 ## VmProfileSubject
@@ -900,6 +1093,10 @@ Whose VM profile request: an app's, or an extension's.
 def app(app_id: str) -> VmProfileSubject
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as the org admin registered it. |
+
 An app's own request.
 
 ### VmProfileSubject.extension()
@@ -908,5 +1105,9 @@ An app's own request.
 @classmethod
 def extension(extension_id: str) -> VmProfileSubject
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extension_id` | `str` | required | The extension's manifest id. |
 
 An extension's request: its uploaded manifest's `vm` section.

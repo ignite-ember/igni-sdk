@@ -32,6 +32,10 @@ What the extension ships for this platform: `ext.assets.path("neo4j")`.
 def path(name: str) -> Path
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The asset's name as the manifest declares it: `neo4j`. |
+
 `<assets>/<name>/`: the unpacked archive, or the directory its one file is in.
 
 Raises `NotConfigured` when igni laid out no asset of that name —
@@ -42,6 +46,11 @@ the manifest does not declare it, or this is not running in igni.
 ```python
 def file(name: str, file: str) -> Path
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The asset's name as the manifest declares it: `neo4j`. |
+| `file` | `str` | required | The file's name within that asset: `neo4j.conf`. |
 
 One file of an asset that is not unpacked: `<assets>/<name>/<file>`.
 
@@ -77,6 +86,10 @@ What igni granted this process, read from its environment.
 @classmethod
 def read(environ: Mapping[str, str] | None = None) -> ExtensionEnvironment
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `environ` | `Mapping[str, str] \| None` | `None` | The environment variables to read, as igni set them; `os.environ` when `None`. |
 
 What igni granted, read from `environ` (`os.environ` when `None`).
 
@@ -123,6 +136,10 @@ Every declared secret the deployment supplied, by the manifest's name.
 def env_name(name: str) -> str
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The secret's name as the manifest writes it: `ledger-token`. |
+
 `ledger-token` → `LEDGER_TOKEN`, the way igni writes it.
 
 ### Secrets.get()
@@ -130,6 +147,10 @@ def env_name(name: str) -> str
 ```python
 def get(name: str) -> str | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The secret's name as the manifest writes it: `ledger-token`. |
 
 The secret the manifest names `name` (`ledger-token`), or `None` when the deployment
 supplied none.

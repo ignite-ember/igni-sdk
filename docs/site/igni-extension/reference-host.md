@@ -21,6 +21,12 @@ class Host(HostObject)
 Host(link: HostLink, window: str | None = None, session: str | None = None)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `str \| None` | `None` | The window it was reached through, or None for the one the extension is in. |
+| `session` | `str \| None` | `None` | The session it was reached through, or None for the one on screen. |
+
 The root. `changed` reports every change anywhere in the model, for an extension that wants to see all of it; each delivery needs the grant of the member that changed.
 
 ### Host.decide()
@@ -28,6 +34,11 @@ The root. `changed` reports every change anywhere in the model, for an extension
 ```python
 async def decide(context: dict[str, str], questions: list[DecisionQuestion]) -> Decision
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `context` | `dict[str, str]` | required | Named text fields. |
+| `questions` | `list[DecisionQuestion]` | required | The questions to ask, each with its own text and answer type. |
 
 Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. `context` is named text fields — at most 8, 6,000 characters in all — that the questions quote in backticks; `questions` are 1–16 `DecisionQuestion`s. A context the model would have to cut is refused (`invalid`), never answered from part of it; a model that cannot be loaded answers `unavailable`. Zero-shot accuracy is modest: measure it on your own data before acting on an answer, and use the probabilities, not just the answer.
 
@@ -39,6 +50,11 @@ async def decide_batch(
     questions: list[DecisionQuestion],
 ) -> list[Decision]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `contexts` | `list[dict[str, str]]` | required | The contexts to ask about, one decision each, in order. |
+| `questions` | `list[DecisionQuestion]` | required | The questions to ask of every context. |
 
 `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order.
 
@@ -73,6 +89,12 @@ class Notifications(HostObject)
 Notifications(link: HostLink, window: str | None = None, session: str | None = None)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `link` | `HostLink` | required | The link this object talks to the host through. |
+| `window` | `str \| None` | `None` | The window it was reached through, or None for the one the extension is in. |
+| `session` | `str \| None` | `None` | The session it was reached through, or None for the one on screen. |
+
 The floor's notifications. Its own always; everyone's with `notifications`.
 
 ### Notifications.notify()
@@ -80,6 +102,10 @@ The floor's notifications. Its own always; everyone's with `notifications`.
 ```python
 async def notify(notification: LocalNotification) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `notification` | `LocalNotification` | required | What to tell the person at this machine. |
 
 Tell the person at this machine something. It never leaves the machine.
 
@@ -92,6 +118,11 @@ async def mark_read(
 ) -> NotificationCounts
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `ids` | `list[str] \| None` | `None` | The notifications to mark read, by their ids. |
+| `source` | `str \| None` | `None` | The source whose notifications to mark read; every one of them when left out. |
+
 Mark notifications read: these ids, one source, or all of them.
 
 ## Property
@@ -100,6 +131,13 @@ Mark notifications read: these ids, one source, or all of them.
 class Property(Generic)
 Property(owner: HostObject, name: str, annotation: Any, *, writable: bool)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `owner` | `HostObject` | required | The host object the property belongs to: `host.chat`. |
+| `name` | `str` | required | The property's name on its object: `processing`. |
+| `annotation` | `Any` | required | The type its value is read as. |
+| `writable` | `bool` | required | Whether `set` may write it. |
 
 A value of a host object. `await prop` reads it; `set` writes it.
 
@@ -127,6 +165,10 @@ refuses.
 async def set(value: T) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | `T` | required | The value to write, as the property's annotation describes it. |
+
 Write it, as the person's UI would. Refused where theirs would be.
 
 ## SCHEMA_VERSION
@@ -144,6 +186,11 @@ class Signal(Generic)
 Signal(name: str, carries: Any)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `str` | required | The signal's wire name: `chat.run_completed`. |
+| `carries` | `Any` | required | The type of the value the signal carries. |
+
 One signal of one host object. `T` is the value it carries.
 
 `name` is its wire name — `chat.run_completed`, or for the four
@@ -155,6 +202,10 @@ events that predate the model their topic strings
 ```python
 def parse(value: Any) -> T
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | `Any` | required | The signal's value as the host sent it, before it was read as `T`. |
 
 The value the host sent, as `T`.
 

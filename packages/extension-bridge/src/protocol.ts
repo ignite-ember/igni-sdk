@@ -347,6 +347,8 @@ export type GuestMessage =
  * the answer has to be "no" for everything that is not exactly right.
  * A message that fails here is dropped without a reply: a guest that
  * can tell malformed from unauthorised has learned something.
+ *
+ * @param data — the message as it arrived, in whatever shape it is.
  */
 export function isGuestMessage(data: unknown): data is GuestMessage {
   if (typeof data !== "object" || data === null) return false;
@@ -407,7 +409,11 @@ export function isGuestMessage(data: unknown): data is GuestMessage {
   }
 }
 
-/** Is this a message from the host, shaped the way the guest requires? */
+/**
+ * Is this a message from the host, shaped the way the guest requires?
+ *
+ * @param data — the message as it arrived, in whatever shape it is.
+ */
 export function isHostMessage(data: unknown): data is HostMessage {
   if (typeof data !== "object" || data === null) return false;
   const m = data as Record<string, unknown>;
@@ -462,6 +468,10 @@ export function isHostMessage(data: unknown): data is HostMessage {
  * `*` anywhere but the end: a permission list is read by whoever
  * approves an install, and a pattern language it cannot be read in is
  * a permission nobody actually granted.
+ *
+ * @param method — the method the extension wants to call.
+ * @param allow — the methods it was granted, as exact names or as
+ *   `*`-suffixed prefixes.
  */
 export function methodAllowed(
   method: string,

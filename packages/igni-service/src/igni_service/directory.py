@@ -88,7 +88,13 @@ class CachedMember(BaseModel):
 
 
 class DirectoryClient:
-    """igni's directory for every organisation, with the `resolve` cache."""
+    """igni's directory for every organisation, with the `resolve` cache.
+
+    Args:
+        tokens: This service's own tokens for igni: the directory is asked with
+            the token of the organisation asked about.
+        clock: The clock the cache's age is read from; the real clock when left out.
+    """
 
     TTL = 30.0
     """How long a resolved member is reused, in seconds."""
@@ -105,6 +111,12 @@ class DirectoryClient:
         self._cache.clear()
 
     async def organisation(self, org_id: str) -> Organisation:
+        """The organisation igni holds, as it names it.
+
+        Args:
+            org_id: The organisation asked about: the call is made with this
+                service's token for it.
+        """
         response = await self._tokens.request(
             "GET", f"{IgniPaths.DIRECTORY}/organisation", org_id=org_id
         )
@@ -113,6 +125,17 @@ class DirectoryClient:
     async def members(
         self, org_id: str, *, query: str = "", limit: int = 100, include_former: bool = False
     ) -> list[Member]:
+        """The members of the organisation, as igni's directory has them.
+
+        Args:
+            org_id: The organisation whose members are asked for: the call is
+                made with this service's token for it.
+            query: Text to match at the start of a member's address or name,
+                in any case; empty matches everybody.
+            limit: How many members to ask for at most; between 1 and 500.
+            include_former: Whether the members who have left are in the
+                answer too.
+        """
         response = await self._tokens.request(
             "GET",
             f"{IgniPaths.DIRECTORY}/members",
@@ -126,6 +149,13 @@ class DirectoryClient:
         return self._parsed(response, Members).people
 
     async def person(self, org_id: str, user_id: str) -> Member | None:
+        """One member, by their igni user id.
+
+        Args:
+            org_id: The organisation the member is asked about: the call is
+                made with this service's token for it.
+            user_id: The member's igni user id.
+        """
         response = await self._tokens.request(
             "GET", f"{IgniPaths.DIRECTORY}/people/{user_id}", org_id=org_id
         )
@@ -141,6 +171,12 @@ class DirectoryClient:
         Keyed by every spelling a member answers to, casefolded: their
         user id and their address. An identity that is nobody in the
         organisation is simply absent.
+
+        Args:
+            org_id: The organisation the identities are asked about: the call
+                is made with this service's token for it.
+            identities: The user ids and addresses to look up; blanks are
+                ignored, and one that names nobody is absent from the answer.
         """
         wanted = list(
             dict.fromkeys(value.strip() for value in identities if value and value.strip())
@@ -199,7 +235,12 @@ class DirectoryClient:
 
 
 class Directory:
-    """igni's directory, for one organisation. What `host.directory` is."""
+    """igni's directory, for one organisation. What `host.directory` is.
+
+    Args:
+        client: The client igni's directory is asked through.
+        org_id: The organisation this directory answers for.
+    """
 
     def __init__(self, client: DirectoryClient, org_id: str) -> None:
         self._client = client
@@ -217,15 +258,32 @@ class Directory:
     async def members(
         self, *, query: str = "", limit: int = 100, include_former: bool = False
     ) -> list[Member]:
-        """Prefix search on address or name; at most 500."""
+        """Prefix search on address or name; at most 500.
+
+        Args:
+            query: Text to match at the start of a member's address or name,
+                in any case; empty matches everybody.
+            limit: How many members to ask for at most; between 1 and 500.
+            include_former: Whether the members who have left are in the
+                answer too.
+        """
         return await self._client.members(
             self._org_id, query=query, limit=limit, include_former=include_former
         )
 
     async def person(self, user_id: str) -> Member | None:
-        """One person, present or former; `None` if they were never a member."""
+        """One person, present or former; `None` if they were never a member.
+
+        Args:
+            user_id: The member's igni user id.
+        """
         return await self._client.person(self._org_id, user_id)
 
     async def resolve(self, identities: list[str]) -> dict[str, Member]:
-        """User ids or addresses → members, keyed by casefolded id and address."""
+        """User ids or addresses → members, keyed by casefolded id and address.
+
+        Args:
+            identities: The user ids and addresses to look up; blanks are
+                ignored, and one that names nobody is absent from the answer.
+        """
         return await self._client.resolve(self._org_id, identities)

@@ -74,6 +74,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * `btn-primery` is a typo that renders as a plain button and looks
  * like nothing at all, which is exactly why the name is one the
  * compiler checks.
+ *
+ * @param variant — how it reads: plain, the one action on the panel,
+ *   the one that destroys something, a warning, or one that should not
+ *   be the first thing the eye lands on.
+ * @param size — its size: `md` unless the row is dense, in which case
+ *   `sm` or `xs`.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the button.
  */
 export function Button({
   variant = "default",
@@ -98,7 +107,13 @@ export function Button({
 /** What an {@link Input} takes. */
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
 
-/** A single-line text field. */
+/**
+ * A single-line text field.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the input.
+ */
 export function Input({ className, ...rest }: InputProps) {
   return <input {...rest} className={cx("panel-input", className)} />;
 }
@@ -132,6 +147,12 @@ export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
 /**
  * A tag the reader can scan past. See {@link ChipProps} for when to
  * reach for a chip and when for a badge.
+ *
+ * @param tone — how loud it is: `neutral` for a state nothing is wrong
+ *   with, and the three that mean something.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the span.
  */
 export function Chip({ tone = "neutral", className, ...rest }: ChipProps) {
   return <span {...rest} data-tone={tone} className={cx("chip", className)} />;
@@ -156,6 +177,12 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 /**
  * A state the reader is meant to notice. See {@link BadgeProps} for
  * what the tone does and does not say.
+ *
+ * @param tone — how loud it is: `neutral` for a state nothing is wrong
+ *   with, and the three that mean something.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the span.
  */
 export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
   return (
@@ -165,13 +192,24 @@ export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
 
 // ── Layout ──────────────────────────────────────────────────────────
 
-/** A horizontal run of things, vertically centred. */
+/**
+ * A horizontal run of things, vertically centred.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the row.
+ */
 export function Row({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div {...rest} className={cx("ui-row", className)} />;
 }
 
 /** A horizontal run of buttons. Separate from `Row` because it is
- *  what a reader looks for at the foot of a panel. */
+ *  what a reader looks for at the foot of a panel.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the row of actions.
+ */
 export function Actions({
   className,
   ...rest
@@ -179,7 +217,13 @@ export function Actions({
   return <div {...rest} className={cx("ui-actions", className)} />;
 }
 
-/** A vertical stack. */
+/**
+ * A vertical stack.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the list.
+ */
 export function List({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div {...rest} className={cx("ui-list", className)} />;
 }
@@ -187,6 +231,10 @@ export function List({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
 /**
  * A row of controls at the top of a panel: what the panel is, and what
  * you can do to it.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the toolbar.
  */
 export function Toolbar({
   className,
@@ -197,13 +245,24 @@ export function Toolbar({
 
 // ── Containers ──────────────────────────────────────────────────────
 
-/** A surface: background, border, radius, padding. */
+/**
+ * A surface: background, border, radius, padding.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the card.
+ */
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return <div {...rest} className={cx("ui-card", className)} />;
 }
 
 /** One selectable row inside a list. Renders a button, because
- *  something clickable that is not a button is a keyboard trap. */
+ *  something clickable that is not a button is a keyboard trap.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the button.
+ */
 export function Item({
   className,
   ...rest
@@ -219,6 +278,10 @@ export function Item({
  * The class only; the head, the rows and the cells are yours, because
  * a table that decides its own columns is a table you cannot use for
  * anything the app has not already seen.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the table.
  */
 export function Table({
   className,
@@ -244,6 +307,13 @@ export interface EmptyProps extends HTMLAttributes<HTMLDivElement> {
  * What to show where there is nothing.
  *
  * See {@link EmptyProps} for why the `action` slot exists.
+ *
+ * @param children — what to show where there is nothing.
+ * @param action — a button, usually: the one thing to do about being
+ *   empty.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Empty({ children, action, className, ...rest }: EmptyProps) {
   return (
@@ -281,6 +351,16 @@ export interface DialogProps extends Omit<
  * click on the backdrop. Every extension that built its own would get
  * some of that wrong, and the ones they get wrong are the ones only
  * keyboard and screen-reader users notice.
+ *
+ * @param title — its title, also the accessible name of the dialog.
+ * @param sub — shown under the title: a sentence, not a paragraph.
+ * @param children — the body.
+ * @param actions — the buttons, rendered in an `Actions` row at the
+ *   foot.
+ * @param onClose — escape, or a click on the backdrop.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the dialog panel.
  */
 export function Dialog({
   title,
@@ -399,7 +479,13 @@ export function Dialog({
 /** What a {@link Select} takes. */
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {}
 
-/** A drop-down. */
+/**
+ * A drop-down.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the select.
+ */
 export function Select({ className, ...rest }: SelectProps) {
   return <select {...rest} className={cx("ui-select", className)} />;
 }
@@ -407,7 +493,13 @@ export function Select({ className, ...rest }: SelectProps) {
 /** What a {@link Textarea} takes. */
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
-/** A multi-line text field. */
+/**
+ * A multi-line text field.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the textarea.
+ */
 export function Textarea({ className, ...rest }: TextareaProps) {
   return <textarea {...rest} className={cx("ui-textarea", className)} />;
 }
@@ -424,6 +516,12 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
  * Wrapped rather than associated by `id`, because an `id` an
  * extension forgets to make unique is a label that checks somebody
  * else's box — and nothing about the page looks wrong when it does.
+ *
+ * @param label — the text beside the box, and the accessible name too.
+ * @param className — added to the label's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the input inside the
+ *   label.
  */
 export function Checkbox({ label, className, ...rest }: CheckboxProps) {
   return (
@@ -446,6 +544,12 @@ export interface RadioProps extends InputHTMLAttributes<HTMLInputElement> {
  * Wrapped for the same reason a {@link Checkbox} is: an `id` an
  * extension forgets to make unique is a label that picks somebody
  * else's radio.
+ *
+ * @param label — the text beside the box, and the accessible name too.
+ * @param className — added to the label's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the input inside the
+ *   label.
  */
 export function Radio({ label, className, ...rest }: RadioProps) {
   return (
@@ -482,6 +586,15 @@ export interface SwitchProps extends Omit<
  * The difference is not cosmetic. A checkbox is a value you submit; a
  * switch takes effect the moment it moves. `role="switch"` is what
  * tells a screen reader which of those it is looking at.
+ *
+ * @param checked — whether it is on.
+ * @param onChange — called with the next value; it takes effect at
+ *   once.
+ * @param label — shown beside the switch, and used as its accessible
+ *   name.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the button.
  */
 export function Switch({
   checked,
@@ -536,6 +649,17 @@ export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
  * See {@link FieldProps}. The error slot is the part that gets left
  * out, and a form that rejects input without saying why is the one
  * people abandon.
+ *
+ * @param label — the label, which is visible rather than a placeholder.
+ * @param hint — a sentence under the control, for when nothing is
+ *   wrong.
+ * @param error — why the control is wrong; it replaces the hint while
+ *   it is set.
+ * @param htmlFor — the id of the control, so the label points at it.
+ * @param children — the control the label is for.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Field({
   label,
@@ -598,6 +722,12 @@ export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
  * Work whose duration is unknown.
  *
  * See {@link SpinnerProps} for why `label` is required.
+ *
+ * @param label — required: a spinner with no name is a live region with
+ *   nothing in it.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the span.
  */
 export function Spinner({ label, className, ...rest }: SpinnerProps) {
   return (
@@ -636,6 +766,15 @@ export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
  * See {@link ProgressProps}. Without a `value` it slides, because a
  * bar that sits still while unknown work is happening is a bar that
  * looks broken.
+ *
+ * @param value — how far along, against `max`; omit it for
+ *   indeterminate, which slides rather than sits.
+ * @param max — the value that counts as complete, against which `value`
+ *   is measured; it defaults to 100.
+ * @param label — its name, for a screen reader.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Progress({
   value,
@@ -700,6 +839,16 @@ export interface TabsProps extends Omit<
 /**
  * Tabs with the arrow keys wired, because a tab strip that only
  * responds to clicks is a tab strip half the people cannot use.
+ *
+ * @param tabs — the tabs; the `id` is what the panels match on.
+ * @param active — which tab is showing.
+ * @param onChange — called with the id of the tab the reader chose.
+ * @param label — the strip's name, for a screen reader.
+ * @param base — the id prefix shared with this strip's panels; one is
+ *   generated when it is left out, and the panels need the same one.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function Tabs({
   tabs,
@@ -796,6 +945,16 @@ export interface TabPanelProps extends HTMLAttributes<HTMLDivElement> {
  * See {@link TabPanelProps}. It renders nothing at all when its tab is
  * not the active one, so the content of a panel that is not showing
  * is not in the page.
+ *
+ * @param base — the id prefix shared with its tabs, so the two agree.
+ * @param id — which tab this panel belongs to.
+ * @param active — which tab is showing; the panel renders only when
+ *   they match.
+ * @param children — the content of the panel, shown while its tab is
+ *   the active one.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
  */
 export function TabPanel({
   base,
@@ -822,7 +981,13 @@ export function TabPanel({
 
 // ── Text ────────────────────────────────────────────────────────────
 
-/** A horizontal rule. */
+/**
+ * A horizontal rule.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the rule.
+ */
 export function Divider({ className, ...rest }: HTMLAttributes<HTMLHRElement>) {
   return <hr {...rest} className={cx("ui-divider", className)} />;
 }
@@ -845,6 +1010,14 @@ const HEADING_SIZE = {
  *
  * The size follows the level, so the outline and the type cannot
  * disagree — which is the whole reason there is no `Title`.
+ *
+ * @param level — the outline level; it also picks the size, so the two
+ *   cannot disagree.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param style — the element's inline style, merged over the size the
+ *   level picks.
+ * @param rest — the remaining props, spread onto the heading.
  */
 export function Heading({
   level = 2,
@@ -876,12 +1049,23 @@ export interface TextProps extends HTMLAttributes<HTMLParagraphElement> {
  *
  * {@link TextTone} says how loud it is — emphasis, not status. A
  * status is a {@link Badge}.
+ *
+ * @param tone — how loud it is: emphasis rather than status.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the paragraph.
  */
 export function Text({ tone = "default", className, ...rest }: TextProps) {
   return <p {...rest} data-tone={tone} className={cx("ui-text", className)} />;
 }
 
-/** Inline code: a name, a path, a flag. */
+/**
+ * Inline code: a name, a path, a flag.
+ *
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
+ * @param rest — the remaining props, spread onto the element.
+ */
 export function Code({ className, ...rest }: HTMLAttributes<HTMLElement>) {
   return <code {...rest} className={cx("ui-code", className)} />;
 }

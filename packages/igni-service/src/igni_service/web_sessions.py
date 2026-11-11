@@ -68,37 +68,71 @@ class WebSessionStore(Protocol):
     in the service's database, for several replicas. A store of your own
     implements these five methods. Session ids and `state`s are secrets:
     keep a digest of them, not the value.
+
+    Args:
+        args: The positional arguments a concrete store's constructor takes; the protocol itself takes none of them on.
+        kwargs: The keyword arguments a concrete store's constructor takes; the protocol itself takes none of them on.
     """
 
     async def get(self, session_id: str) -> WebSession | None:
-        """The session `session_id` names, or `None` when there is none or it has expired."""
+        """The session `session_id` names, or `None` when there is none or it has expired.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie. A secret: keep a digest of it, not the value.
+        """
         ...
 
     async def put(self, session_id: str, session: WebSession) -> None:
-        """Keep `session` under `session_id`, replacing what was there."""
+        """Keep `session` under `session_id`, replacing what was there.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie, and the name the session is kept under.
+            session: The session to keep: who is signed in, and the tokens that keep them signed in.
+        """
         ...
 
     async def delete(self, session_id: str) -> None:
-        """Forget the session `session_id` names. Not an error when there is none."""
+        """Forget the session `session_id` names. Not an error when there is none.
+
+        Args:
+            session_id: The opaque, random id of the session to forget.
+        """
         ...
 
     async def put_login(self, attempt: LoginAttempt) -> None:
-        """Keep a sign-in in flight until igni sends the person back."""
+        """Keep a sign-in in flight until igni sends the person back.
+
+        Args:
+            attempt: The sign-in in flight: the OAuth `state` sent to igni, the PKCE verifier igni answers with, and where to send the person afterwards.
+        """
         ...
 
     async def take_login(self, state: str) -> LoginAttempt | None:
-        """The attempt for `state`, once: a second take finds nothing."""
+        """The attempt for `state`, once: a second take finds nothing.
+
+        Args:
+            state: The OAuth `state` igni sent the person back with, matched against the sign-in in flight.
+        """
         ...
 
 
 class Digest:
     @staticmethod
     def of(secret: str) -> str:
+        """The SHA-256 of a secret, as hex: what a store keeps a secret under.
+
+        Args:
+            secret: The secret to digest: a session id, or an OAuth `state`.
+        """
         return hashlib.sha256(secret.encode()).hexdigest()
 
 
 class MemoryWebSessionStore:
-    """Sessions in this process only. For tests, and for one replica."""
+    """Sessions in this process only. For tests, and for one replica.
+
+    Args:
+        clock: Where the store reads the time, so a test can move it; the system's own clock when it is not given.
+    """
 
     def __init__(self, *, clock: Clock | None = None) -> None:
         self._clock = clock or Clock()
@@ -107,7 +141,11 @@ class MemoryWebSessionStore:
         self._lock = asyncio.Lock()
 
     async def get(self, session_id: str) -> WebSession | None:
-        """The session `session_id` names, or `None` when there is none or it has expired."""
+        """The session `session_id` names, or `None` when there is none or it has expired.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie; the session is kept under a SHA-256 of it.
+        """
         session = self._sessions.get(Digest.of(session_id))
         if session is not None and self._clock.wall() >= session.expires_at:
             self._sessions.pop(Digest.of(session_id), None)
@@ -115,19 +153,36 @@ class MemoryWebSessionStore:
         return session
 
     async def put(self, session_id: str, session: WebSession) -> None:
-        """Keep `session` under `session_id`, replacing what was there."""
+        """Keep `session` under `session_id`, replacing what was there.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie, and the name the session is kept under.
+            session: The session to keep: who is signed in, and the tokens that keep them signed in.
+        """
         self._sessions[Digest.of(session_id)] = session
 
     async def delete(self, session_id: str) -> None:
-        """Forget the session `session_id` names."""
+        """Forget the session `session_id` names.
+
+        Args:
+            session_id: The opaque, random id of the session to forget.
+        """
         self._sessions.pop(Digest.of(session_id), None)
 
     async def put_login(self, attempt: LoginAttempt) -> None:
-        """Keep a sign-in in flight until igni sends the person back."""
+        """Keep a sign-in in flight until igni sends the person back.
+
+        Args:
+            attempt: The sign-in in flight, kept under a SHA-256 of its `state` until igni sends the person back.
+        """
         self._logins[Digest.of(attempt.state)] = attempt
 
     async def take_login(self, state: str) -> LoginAttempt | None:
-        """The attempt for `state`, once and unexpired: a second take finds nothing."""
+        """The attempt for `state`, once and unexpired: a second take finds nothing.
+
+        Args:
+            state: The OAuth `state` igni sent the person back with; the attempt kept under a SHA-256 of it is taken out of the store.
+        """
         async with self._lock:
             attempt = self._logins.pop(Digest.of(state), None)
         if attempt is None or self._clock.wall() >= attempt.expires_at:
@@ -136,7 +191,14 @@ class MemoryWebSessionStore:
 
 
 class SqlWebSessionStore:
-    """Sessions in two of the service's tables, sealed. See `igni_service.tables`."""
+    """Sessions in two of the service's tables, sealed. See `igni_service.tables`.
+
+    Args:
+        engine: The connection to the service's database, where the two tables are.
+        cipher: The cipher the rows are sealed with, under the service's key encryption key.
+        create_table: Whether the two tables are created on first use; `False` when the service owns its schema in migrations.
+        clock: Where the store reads the time, so a test can move it; the system's own clock when it is not given.
+    """
 
     def __init__(
         self,
@@ -154,7 +216,11 @@ class SqlWebSessionStore:
         )
 
     async def get(self, session_id: str) -> WebSession | None:
-        """The session `session_id` names, unsealed, or `None` when there is none or it has expired."""
+        """The session `session_id` names, unsealed, or `None` when there is none or it has expired.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie; the row is found under a SHA-256 of it.
+        """
         await self._tables.ensure()
         table = IgniTables.web_session
         async with self._engine.connect() as connection:
@@ -170,7 +236,12 @@ class SqlWebSessionStore:
         return WebSession.model_validate_json(self._cipher.open(str(row.sealed)))
 
     async def put(self, session_id: str, session: WebSession) -> None:
-        """Keep `session`, sealed, under a digest of `session_id`, replacing what was there."""
+        """Keep `session`, sealed, under a digest of `session_id`, replacing what was there.
+
+        Args:
+            session_id: The opaque, random id the browser holds in its cookie; the row is keyed by a SHA-256 of it.
+            session: The session to keep, sealed before it is written.
+        """
         await self._tables.ensure()
         table = IgniTables.web_session
         values = {
@@ -187,14 +258,22 @@ class SqlWebSessionStore:
                 )
 
     async def delete(self, session_id: str) -> None:
-        """Forget the session `session_id` names."""
+        """Forget the session `session_id` names.
+
+        Args:
+            session_id: The opaque, random id of the session to forget; the row under a SHA-256 of it is deleted.
+        """
         await self._tables.ensure()
         table = IgniTables.web_session
         async with self._engine.begin() as connection:
             await connection.execute(delete(table).where(table.c.id_hash == Digest.of(session_id)))
 
     async def put_login(self, attempt: LoginAttempt) -> None:
-        """Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are deleted on the way."""
+        """Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are deleted on the way.
+
+        Args:
+            attempt: The sign-in in flight, sealed before it is written and keyed by a SHA-256 of its `state`.
+        """
         await self._tables.ensure()
         table = IgniTables.web_login
         now = self._clock.wall()
@@ -213,7 +292,11 @@ class SqlWebSessionStore:
             )
 
     async def take_login(self, state: str) -> LoginAttempt | None:
-        """The attempt for `state`, once and unexpired: of two replicas taking it, one gets it."""
+        """The attempt for `state`, once and unexpired: of two replicas taking it, one gets it.
+
+        Args:
+            state: The OAuth `state` igni sent the person back with; the row under a SHA-256 of it is deleted, so of two replicas taking it, one gets it.
+        """
         await self._tables.ensure()
         table = IgniTables.web_login
         async with self._engine.begin() as connection:

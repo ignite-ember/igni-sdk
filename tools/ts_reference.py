@@ -27,6 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tools.param_docs import UNDOCUMENTED, code, jsdoc_params, strip_jsdoc_params, table
 from tools.reference_area import Area
 
 
@@ -42,6 +43,20 @@ class Member:
     kind: str
     type: str
     doc: str
+    #: Whether the member may be left out — a field written ``name?``.
+    optional: bool = False
+
+
+@dataclass
+class Parameter:
+    """One parameter of a TypeScript signature."""
+
+    name: str
+    type: str
+    default: str
+    optional: bool
+    #: Whether the parameter takes the rest of what is left: ``...rest``.
+    rest: bool = False
 
 
 @dataclass
@@ -54,6 +69,8 @@ class Declaration:
     doc: str
     #: The declaration's own text: an interface's or a class's body.
     body: str = ""
+    #: The parameters a function takes, as the source spells them.
+    params: str = ""
     members: list[Member] = field(default_factory=list)
     exported_from: str = ""
 
@@ -529,19 +546,21 @@ class Module:
         signature = ""
         members: list[Member] = []
         body = ""
+        params_text = ""
         if kind == "function":
             open_paren = after.find("(")
             if open_paren < 0:
                 return None
             params_end = _match_bracket(after, open_paren, "(", ")")
             params = after[open_paren + 1 : params_end - 1]
+            params_text = _one_line(_strip_comments(params))
             tail = after[params_end:]
             returns = ""
             tail_match = re.match(r"\s*:\s*([^{;]+?)\s*(?=\{|;|\Z)", tail, re.S)
             if tail_match:
                 returns = tail_match.group(1).strip()
             prefix = "async function" if match.group("async") else "function"
-            signature = f"{prefix} {name}{generics}({_one_line(_strip_comments(params))})"
+            signature = f"{prefix} {name}{generics}({params_text})"
             if returns:
                 signature += f": {returns}"
         elif kind in ("interface", "class", "enum"):
@@ -585,6 +604,7 @@ class Module:
             signature=signature,
             doc=doc,
             body=body.strip("\n"),
+            params=params_text,
             members=members,
             exported_from=self.name,
         )
@@ -637,6 +657,7 @@ class Module:
                 out.append(Member(name, "method", _method_type(rest), doc))
             else:
                 out.append(Member(name, "field", _field_type(rest), doc))
+            out[-1].optional = "?" in match.group(0)
         return out
 
 
@@ -807,6 +828,183 @@ def _accessor_type(rest: str, modifiers: str) -> str:
     tail = text[params_end:]
     tail_match = re.match(r"\s*:\s*([^{;]+?)\s*(?:\{|;|$)", tail, re.S)
     return tail_match.group(1).strip() if tail_match else ""
+
+
+# ── Parameters ─────────────────────────────────────────────────────
+
+
+def _skip_string(text: str, index: int) -> int:
+    """The index just past the string that starts at ``index``."""
+    quote = text[index]
+    index += 1
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == quote:
+            return index + 1
+        index += 1
+    return index
+
+
+def _top_level(text: str, separator: str) -> list[int]:
+    """The indexes of every ``separator`` that is not inside a bracket.
+
+    A bracket is a bracket of any kind, and a string is a string: the
+    comma in ``Record<string, number>`` and the one in ``"a, b"`` are
+    not separators.
+    """
+    out: list[int] = []
+    depth = 0
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char in "'\"`":
+            index = _skip_string(text, index)
+            continue
+        if text.startswith("=>", index):
+            index += 2
+            continue
+        if char in "([{<":
+            depth += 1
+        elif char in ")]}>":
+            depth -= 1
+        elif char == separator and depth == 0:
+            out.append(index)
+        index += 1
+    return out
+
+
+def _split_top_level(text: str, separator: str = ",") -> list[str]:
+    """``text`` split on a separator that is not inside a bracket."""
+    out: list[str] = []
+    start = 0
+    for index in _top_level(text, separator):
+        out.append(text[start:index])
+        start = index + 1
+    out.append(text[start:])
+    return out
+
+
+def _partition_top_level(text: str, separator: str) -> tuple[str, str, str]:
+    """``text`` at its first top-level ``separator``: before, it, after."""
+    indexes = _top_level(text, separator)
+    if not indexes:
+        return text, "", ""
+    index = indexes[0]
+    return text[:index], separator, text[index + 1 :]
+
+
+def object_pattern_properties(pattern: str) -> list[tuple[str, str, bool]]:
+    """The properties an object pattern takes: its name, its default, its rest.
+
+    A pattern renames as it binds: ``{ base: givenBase }`` takes the
+    property ``base`` and calls it ``givenBase`` in the body. The table
+    names the property, which is what a caller writes.
+    """
+    inner = pattern.strip()[1:-1]
+    out: list[tuple[str, str, bool]] = []
+    for part in _split_top_level(inner):
+        part = part.strip()
+        if not part:
+            continue
+        rest = part.startswith("...")
+        if rest:
+            part = part[3:].strip()
+        head, sep, tail = _partition_top_level(part, "=")
+        default = tail.strip() if sep else ""
+        name, _, _local = _partition_top_level(head, ":")
+        out.append((name.strip(), default, rest))
+    return out
+
+
+def signature_parameters(
+    text: str, prop_types: dict[str, dict[str, tuple[str, bool]]] | None = None
+) -> list[Parameter]:
+    """The parameters a TypeScript signature's parentheses hold.
+
+    A parameter is its name, its type, and the default it is given when
+    the source writes one. A name with a ``?`` is optional: the caller
+    may leave it out.
+
+    A parameter written as a pattern — ``{ variant, size }`` — is a
+    component's props. The props are what a caller writes, so the props
+    are what the table lists; their types come from the interface the
+    pattern is annotated with, when the module declares one.
+    """
+    out: list[Parameter] = []
+    for part in _split_top_level(text):
+        part = part.strip()
+        if not part:
+            continue
+        head, _, tail = _partition_top_level(part, ":")
+        head = head.strip()
+        if head.startswith("{") and head.endswith("}"):
+            known = (prop_types or {}).get(tail.strip(), {})
+            for name, default, rest in object_pattern_properties(head):
+                type_, optional = known.get(name, ("", not default))
+                out.append(
+                    Parameter(
+                        name,
+                        type_,
+                        default,
+                        optional=optional and not rest,
+                        rest=rest,
+                    )
+                )
+            continue
+        # A parameter may carry several modifiers — ``protected readonly
+        # link`` — and the name a caller writes is what is left once
+        # every one of them is gone.
+        name = re.sub(
+            r"^(?:(?:public|private|protected|readonly|override|static|declare|async)\s+)+",
+            "",
+            head,
+        ).strip()
+        optional = name.endswith("?")
+        name = name.rstrip("?").strip()
+        if name.startswith("..."):
+            name = name[3:].strip()
+        type_, _, default = _partition_top_level(tail, "=")
+        out.append(Parameter(name, type_.strip(), default.strip(), optional))
+    return out
+
+
+def member_parameters_text(member: Member) -> str:
+    """The parameters of a member's signature, as its type spells them."""
+    text = member.type.strip()
+    if not text.startswith("("):
+        return ""
+    try:
+        end = _match_bracket(text, 0, "(", ")")
+    except ReferenceError_:
+        return ""
+    return text[1 : end - 1]
+
+
+def parameter_table(params: list[Parameter], meanings: dict[str, str]) -> list[str]:
+    """The table of a signature's parameters, as the reference pages show it.
+
+    A parameter the JSDoc does not document is said to be undocumented:
+    the generator does not guess what a parameter is.
+    """
+    rows: list[tuple[str, str, str, str]] = []
+    for param in params:
+        if param.default:
+            default = code(param.default)
+        elif param.optional or param.rest:
+            default = "optional"
+        else:
+            default = "required"
+        rows.append(
+            (
+                param.name,
+                code(param.type) if param.type else "—",
+                default,
+                meanings.get(param.name) or UNDOCUMENTED,
+            )
+        )
+    return table(rows)
 
 
 class TsReference:
@@ -1037,13 +1235,53 @@ class TsReference:
     def _entry(self, entry: Declaration) -> list[str]:
         out = [f"## {entry.name}", ""]
         out += ["```typescript", entry.signature, "```", ""]
-        doc = _jsdoc(entry.doc)
+        out += parameter_table(
+            signature_parameters(entry.params, self._prop_types(entry)), jsdoc_params(entry.doc)
+        )
+        doc = _jsdoc(strip_jsdoc_params(entry.doc))
         if doc:
             out += [doc, ""]
         out += self._also(entry)
         if entry.members:
             out += self._member_table(entry.members)
             out.append("")
+            out += self._member_parameters(entry)
+        return out
+
+    def _prop_types(self, entry: Declaration) -> dict[str, dict[str, tuple[str, bool]]]:
+        """The interfaces a declaration's module declares, and their fields.
+
+        A component's props are written as a pattern, and a pattern says
+        no type of its own: the type is the interface it is annotated
+        with. This is where those types are read from.
+        """
+        module = self.modules.get(entry.exported_from)
+        if module is None:
+            return {}
+        out: dict[str, dict[str, tuple[str, bool]]] = {}
+        for name, declaration in module.declarations.items():
+            if declaration.kind != "interface":
+                continue
+            out[name] = {
+                member.name: (member.type, member.optional) for member in declaration.members
+            }
+        return out
+
+    def _member_parameters(self, entry: Declaration) -> list[str]:
+        """The parameters of a declaration's methods, a table each.
+
+        A method's own JSDoc says what each of its parameters is; the
+        table says it where a reader looks for it.
+        """
+        out: list[str] = []
+        for member in entry.members:
+            if member.kind != "method":
+                continue
+            params = signature_parameters(member_parameters_text(member), self._prop_types(entry))
+            if not params:
+                continue
+            out += [f"### {entry.name}.{member.name}()", ""]
+            out += parameter_table(params, jsdoc_params(member.doc))
         return out
 
     def _member_table(self, members: list[Member]) -> list[str]:

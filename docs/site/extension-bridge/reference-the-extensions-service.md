@@ -24,9 +24,16 @@ class ServiceError extends Error
 
 Why `bridge.service` could not do what was asked.
 
-| Member | Kind | Type |
-|---|---|---|
-| `constructor` | method | `(readonly code: string, message: string,)` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `constructor` | method | `(readonly code: string, message: string,)` | Why the service could not do what was asked. |
+
+### ServiceError.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `code` | `string` | required | why it failed: `no_service`, `refused`, `other_origin`, `closed` or `failed`. |
+| `message` | `string` | required | a sentence for a person to read. |
 
 ## IssuedToken
 
@@ -69,6 +76,20 @@ interface ServiceBridge
 | `fetch` | method | `(path: string, init?: RequestInit) => Promise<Response>` | `fetch` against the service, with the token. `path` is relative to `url`. A `401` fetches a new token and is sent once more. |
 | `websocket` | method | `(path: string, options?: ServiceSocketOptions) => Promise<WebSocket>` | A WebSocket to `path` on the service (`https` → `wss`), resolved once it is open and has said who it is (see `ServiceSocketOptions.authFrame`). |
 
+### ServiceBridge.fetch()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | where to go, relative to the service's URL. |
+| `init` | `RequestInit` | optional | what to send, as `fetch` takes it. |
+
+### ServiceBridge.websocket()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | where to open the socket, relative to the service's URL. |
+| `options` | `ServiceSocketOptions` | optional | how the socket says who it is: the first frame, and the sub-protocols. |
+
 ## RENEW_BEFORE_MS
 
 ```typescript
@@ -82,6 +103,10 @@ Fetch a new token when the held one has less than this left.
 ```typescript
 function authMessage(token: string): string
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `string` | required | the bearer token the frame carries. |
 
 The default first frame: `{"type": "auth", "token": …}`.
 
@@ -105,3 +130,38 @@ class ServiceLink implements ServiceBridge
 | `websocket` | method | `(path: string, options: ServiceSocketOptions = {},) => Promise<WebSocket>` | A socket to the service, with the token in the first frame. |
 | `fresh` | method | `(force: boolean) => Promise<string>` | A token that is worth handing out: the held one if it has time left, a new one otherwise. |
 | `resolve` | method | `(path: string, socket: boolean) => string` | `path` on the service, or a refusal if it is anywhere else. |
+
+### ServiceLink.constructor()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `url` | `string \| null` | required | the service's URL, or `null` when there is none. |
+| `ask` | `() => Promise<IssuedToken>` | required | how a token is asked of the host. |
+| `env` | `{ now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; }` | `{}` | what the browser is asked for, when it is not this one. |
+
+### ServiceLink.fetch()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | where to go, relative to the service's URL. |
+| `init` | `RequestInit` | `{}` | what to send, as `fetch` takes it. |
+
+### ServiceLink.websocket()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | where to open it, relative to the service's URL. |
+| `options` | `ServiceSocketOptions` | `{}` | how the socket says who it is. |
+
+### ServiceLink.fresh()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `force` | `boolean` | required | fetch a new one even when the held one is good. |
+
+### ServiceLink.resolve()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | the path on the service, relative to its URL. |
+| `socket` | `boolean` | required | whether the path is opened as a socket, which turns `https` into `wss`. |

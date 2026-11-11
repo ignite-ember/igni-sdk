@@ -56,7 +56,13 @@ if TYPE_CHECKING:
 
 
 class BearerRoutes:
-    """Which routes take their caller's own bearer token, and nothing else."""
+    """Which routes take their caller's own bearer token, and nothing else.
+
+    Args:
+        igni: The service whose routes are judged: a route is a bearer
+            route when what it depends on is one of the service's own
+            token dependencies.
+    """
 
     DEPENDENCIES = ("person", "optional_person", "org_admin", "caller", "token", "optional_token")
     """`IgniService`'s dependencies that read the caller's own bearer token.
@@ -72,7 +78,12 @@ class BearerRoutes:
         self._known: dict[int, bool] = {}
 
     def is_bearer(self, route: Any) -> bool:
-        """Whether `route` — the one a call was routed to — is a bearer route."""
+        """Whether `route` — the one a call was routed to — is a bearer route.
+
+        Args:
+            route: The route a call was routed to, as the router left it in
+                the scope; only a route of the service is a bearer route.
+        """
         if not isinstance(route, APIRoute):
             return False
         known = self._known.get(id(route))
@@ -101,7 +112,15 @@ class BearerRoutes:
 
 
 class BearerCors:
-    """ASGI middleware: cross-origin calls to bearer routes, from any origin, without credentials."""
+    """ASGI middleware: cross-origin calls to bearer routes, from any origin, without credentials.
+
+    Args:
+        app: The ASGI app this middleware wraps: a call it does not answer
+            itself goes on to it.
+        igni: The service whose routes are judged: the ones that take the
+            caller's own bearer token are the ones this middleware says
+            yes to.
+    """
 
     ALLOW_HEADERS = frozenset({"authorization", "content-type"})
     """The headers a page's token call sends that are not CORS-safelisted."""

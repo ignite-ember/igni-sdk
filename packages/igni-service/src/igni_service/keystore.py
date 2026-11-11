@@ -39,7 +39,14 @@ class StoredKey(BaseModel):
 
 @runtime_checkable
 class KeyStore(Protocol):
-    """Keeps one key. See the module note for the contract."""
+    """Keeps one key. See the module note for the contract.
+
+    Args:
+        args: The positional arguments a concrete implementation's constructor takes;
+            the protocol itself does not use them.
+        kwargs: The keyword arguments a concrete implementation's constructor takes;
+            the protocol itself does not use them.
+    """
 
     async def get(self) -> StoredKey | None:
         """The kept key, or `None` before there is one."""
@@ -50,12 +57,22 @@ class KeyStore(Protocol):
 
         Two replicas that each made a key both call it: one wins, and both
         sign with the winner's from then on.
+
+        Args:
+            key: The key to keep when none is kept yet: its ``kid`` thumbprint and
+                its private half.
         """
         ...
 
 
 class KeyCipher:
-    """Fernet under the service's key encryption key."""
+    """Fernet under the service's key encryption key.
+
+    Args:
+        key: The Fernet key encryption key the private half is sealed under, as
+            ``KeyCipher.generate`` produced it. An empty one leaves the cipher unusable:
+            sealing raises ``KeyStoreError``.
+    """
 
     def __init__(self, key: str) -> None:
         self._key = (key or "").strip()
@@ -76,11 +93,19 @@ class KeyCipher:
             raise KeyStoreError("IGNI_KEY_ENCRYPTION_KEY is not a Fernet key.") from exc
 
     def seal(self, plaintext: str) -> str:
-        """`plaintext` encrypted under the key encryption key, as Fernet text."""
+        """`plaintext` encrypted under the key encryption key, as Fernet text.
+
+        Args:
+            plaintext: The text to encrypt under the key encryption key.
+        """
         return self._fernet().encrypt(plaintext.encode()).decode()
 
     def open(self, sealed: str) -> str:
-        """What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed."""
+        """What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed.
+
+        Args:
+            sealed: The sealed text, as ``seal`` produced it.
+        """
         try:
             return self._fernet().decrypt(sealed.encode()).decode()
         except InvalidToken as exc:
@@ -103,7 +128,12 @@ class MemoryKeyStore:
         return self._kept
 
     async def claim(self, key: StoredKey) -> StoredKey:
-        """Keep `key` unless one is already kept; answer with whichever is."""
+        """Keep `key` unless one is already kept; answer with whichever is.
+
+        Args:
+            key: The key to keep when this process holds none: its ``kid`` thumbprint
+                and its private half.
+        """
         async with self._lock:
             if self._kept is None:
                 self._kept = key

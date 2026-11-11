@@ -46,7 +46,13 @@ from igni_service.vm_profiles import (
 
 
 class NoVmProfileRequest(LookupError):
-    """A test played the org admin on a request nobody has made yet."""
+    """A test played the org admin on a request nobody has made yet.
+
+    Args:
+        org_id: The organisation the request was expected in.
+        kind: Whose request it was: ``app`` or ``extension``.
+        subject_id: The app's id, or the extension's manifest id.
+    """
 
     def __init__(self, org_id: str, kind: str, subject_id: str) -> None:
         extension = (
@@ -72,17 +78,30 @@ class VmProfileSubject(BaseModel):
 
     @classmethod
     def app(cls, app_id: str) -> VmProfileSubject:
-        """An app's own request."""
+        """An app's own request.
+
+        Args:
+            app_id: The app's id, as the org admin registered it.
+        """
         return cls(kind="app", subject_id=app_id)
 
     @classmethod
     def extension(cls, extension_id: str) -> VmProfileSubject:
-        """An extension's request: its uploaded manifest's `vm` section."""
+        """An extension's request: its uploaded manifest's `vm` section.
+
+        Args:
+            extension_id: The extension's manifest id.
+        """
         return cls(kind="extension", subject_id=extension_id)
 
 
 class FakeVmProfiles:
-    """One deployment's VM profiles and the requests for them, per organisation."""
+    """One deployment's VM profiles and the requests for them, per organisation.
+
+    Args:
+        clock: The wall clock a request's and a decision's time are read from;
+            ``FakeIgni`` hands it its own, so a test can move it.
+    """
 
     def __init__(self, *, clock: Callable[[], float] = time.time) -> None:
         #: The wall clock a request's and a decision's time are read from;
@@ -104,7 +123,12 @@ class FakeVmProfiles:
     # ── Playing the org admin ───────────────────────────────────────
 
     def request(self, org_id: str, subject: VmProfileSubject) -> VmProfileRequestRecord:
-        """The request `subject` made in `org_id`. `NoVmProfileRequest` if it made none."""
+        """The request `subject` made in `org_id`. `NoVmProfileRequest` if it made none.
+
+        Args:
+            org_id: The organisation the request was made in.
+            subject: Whose request to read: an app's, or an extension's.
+        """
         try:
             return self.requests[(org_id, subject.kind, subject.subject_id)]
         except KeyError:
@@ -120,6 +144,12 @@ class FakeVmProfiles:
         uploaded and the service asked after it
         (`host.extension_vm_profile()`). `NoVmProfileRequest` (a
         `LookupError`) otherwise, saying so.
+
+        Args:
+            org_id: The organisation the request was made in, whose admin approves it.
+            subject: Whose request is approved: an app's, or an extension's.
+            by: The user id of the org admin who decides; the decision is recorded
+                as theirs.
         """
         record = self.request(org_id, subject)
         profile_id = record.profile_id or str(uuid.uuid4())
@@ -140,12 +170,27 @@ class FakeVmProfiles:
         reason: str | None = None,
         by: str = "u-admin",
     ) -> VmProfileRequestRecord:
-        """Reject it, as an org admin: what the VM gets is untouched."""
+        """Reject it, as an org admin: what the VM gets is untouched.
+
+        Args:
+            org_id: The organisation the request was made in, whose admin rejects it.
+            subject: Whose request is rejected: an app's, or an extension's.
+            reason: Why the request was rejected, as the admin said; none for none.
+            by: The user id of the org admin who decides; the decision is recorded
+                as theirs.
+        """
         record = self.request(org_id, subject)
         return self._decide(record, "rejected", by, reason=reason)
 
     def assign(self, org_id: str, profile_id: str, *, groups: int = 0, apps: int = 0) -> None:
-        """Say how many groups and apps an org admin gave a profile."""
+        """Say how many groups and apps an org admin gave a profile.
+
+        Args:
+            org_id: The organisation the profile belongs to.
+            profile_id: The profile the admin gave.
+            groups: How many of the organisation's groups were given the profile.
+            apps: How many of the organisation's apps were given the profile.
+        """
         self.assigned[(org_id, profile_id)] = Assigned(groups=groups, apps=apps)
 
     def _decide(
@@ -174,6 +219,12 @@ class FakeVmProfiles:
     def app_put(self, org_id: str, app_id: str, name: str, body: bytes) -> httpx.Response:
         """Answer an app's `PUT` of its VM profile request as igni does. Called by the fake's
         router.
+
+        Args:
+            org_id: The organisation the app belongs to.
+            app_id: The app that asked for its VM profile.
+            name: The app's display name, as its registration holds it.
+            body: The request's body, as the bytes the app posted.
         """
         try:
             resolved = Resolved.of(VmProfileRequest.model_validate_json(body or b"{}"))
@@ -191,7 +242,12 @@ class FakeVmProfiles:
         return httpx.Response(201 if changed else 200, json=record.model_dump(mode="json"))
 
     def app_get(self, org_id: str, app_id: str) -> httpx.Response:
-        """Answer an app's `GET` of its request as igni does. Called by the fake's router."""
+        """Answer an app's `GET` of its request as igni does. Called by the fake's router.
+
+        Args:
+            org_id: The organisation the app belongs to.
+            app_id: The app whose request is read.
+        """
         record = self.requests.get((org_id, "app", app_id))
         if record is None:
             return DetailError(
@@ -200,7 +256,12 @@ class FakeVmProfiles:
         return httpx.Response(200, json=record.model_dump(mode="json"))
 
     def app_profile(self, org_id: str, app_id: str) -> httpx.Response:
-        """Answer an app's `GET` of what its VM gets now as igni does. Called by the fake's router."""
+        """Answer an app's `GET` of what its VM gets now as igni does. Called by the fake's router.
+
+        Args:
+            org_id: The organisation the app belongs to.
+            app_id: The app whose VM's profile is read.
+        """
         profile = self._profile(org_id, self.app_profiles.get((org_id, app_id)))
         served = AppVmProfile(
             **self.caps.serve(profile).model_dump(), volume_gib=profile.settings.volume_gib
@@ -208,7 +269,14 @@ class FakeVmProfiles:
         return httpx.Response(200, json=served.model_dump(mode="json"))
 
     def service(self, org_id: str, client_id: str, shipped: HeldExtension | None) -> httpx.Response:
-        """What `GET /v1/service-vm-profile` answers a service for one organisation."""
+        """What `GET /v1/service-vm-profile` answers a service for one organisation.
+
+        Args:
+            org_id: The organisation the service's token is for.
+            client_id: The service's client id, whose extension this is about.
+            shipped: The bundle the service shipped, whose manifest's ``vm`` section
+                the request is; none when it shipped no bundle.
+        """
         vm = shipped.manifest.vm if shipped else None
         if shipped is None or vm is None:
             return httpx.Response(200, json=ServiceVmProfile(org_id=org_id).model_dump(mode="json"))

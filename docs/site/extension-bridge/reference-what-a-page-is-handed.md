@@ -36,3 +36,43 @@ What an extension's page is handed.
 | `host` | field | `Host` | igni, as this extension sees it: the host object model (`docs/HOST_OBJECT_MODEL.md` in igni). The same model the extension's process reaches as `ext.host`. |
 | `on` | method | `(signal: Signal<T>, fn: (value: T) => void, onRefused?: (error: HostError) => void,) => () => void` | Handle a host signal: `bridge.on(bridge.host.chat.run_completed, fn)`. |
 | `service` | field | `ServiceBridge` | The extension's own service, reached directly, as the signed-in person: |
+
+### Bridge.rpc()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `method` | `string` | required | the method to call, as `ext.<extension-id>.<method>` names it. |
+| `args` | `RpcArgs` | optional | the method's arguments, by name. |
+| `timeoutMs` | `number` | optional | how long to wait for the answer before giving up, in milliseconds. The host has a timeout of its own, and the shorter of the two is the one that fires. |
+
+### Bridge.navigate()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `to` | `string` | required | the page to go to; the host decides whether it exists. |
+
+### Bridge.onTheme()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `fn` | `(theme: string) => void` | required | called with the theme whenever it changes. |
+
+### Bridge.onParams()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `fn` | `(params: P) => void` | required | called with the parameters whenever they change. |
+
+### Bridge.setLocation()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `state` | `LocationState` | required | where inside the extension the user is now, in strings, for the host to fold into its own URL. |
+
+### Bridge.on()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `signal` | `Signal<T>` | required | the host signal to follow. |
+| `fn` | `(value: T) => void` | required | called with the signal's value each time it arrives. |
+| `onRefused` | `(error: HostError) => void` | optional | called with the refusal when the host will not grant the signal; without one the refusal goes to the console. |

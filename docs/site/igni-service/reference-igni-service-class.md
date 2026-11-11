@@ -26,6 +26,16 @@ IgniService(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `settings` | `IgniSettings` | required | The service's settings: where igni server is, what this service is called, its own public URL and the rest. |
+| `key_store` | `KeyStore` | required | Where the service keeps its signing key. |
+| `web_store` | `WebSessionStore \| None` | `None` | Where the service keeps the sign-in sessions of its own pages; in this process, in memory, when it is not given. |
+| `http` | `httpx.AsyncClient \| None` | `None` | The `httpx.AsyncClient` every call to igni server goes through; one of the service's own, which it closes, when it is not given. |
+| `clock` | `Clock \| None` | `None` | The clock every token's age and expiry is read from; a test passes a `ManualClock`. |
+| `retry_min` | `float \| None` | `None` | Seconds before the first retry of the registration with igni server, when it fails. |
+| `accepted_callers` | `Collection[CallerKind]` | `frozenset({CallerKind.PERSON})` | The kinds of caller `caller` lets in: people only, unless the service says more. |
+
 A service's place in an igni deployment.
 
 ### IgniService.from_settings()
@@ -41,6 +51,13 @@ def from_settings(
 ) -> IgniService
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `settings` | `IgniSettings` | required | The service's settings: where igni server is, what this service is called, its own public URL and the rest. |
+| `key_store` | `KeyStore \| None` | `None` | Where the service keeps its signing key; when it is not given, the key and the sessions are kept in `IGNI_KEY_DATABASE_URL` instead. |
+| `http` | `httpx.AsyncClient \| None` | `None` | The `httpx.AsyncClient` every call to igni server goes through; one of the service's own, which it closes, when it is not given. |
+| `clock` | `Clock \| None` | `None` | The clock every token's age and expiry is read from; a test passes a `ManualClock`. |
+
 A service from its settings, keeping its key and its people's
 sessions in `IGNI_KEY_DATABASE_URL`.
 
@@ -53,6 +70,10 @@ directly to pass a `web_store` too.
 ```python
 def lifespan(app: Any = None) -> AsyncIterator[None]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app` | `Any` | `None` | The app the lifespan runs for, as FastAPI passes it in; igni does not use it. |
 
 Register with igni, and keep its revocation list, for as long as the app runs.
 
@@ -74,6 +95,10 @@ Close what this object opened: its HTTP client, and its database engine.
 ```python
 def install(app: FastAPI) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app` | `FastAPI` | required | The FastAPI app igni's routes and middleware are put on. |
 
 Put igni's part of the service on `app`: igni's calls
 (`router`), sign-in to the service's own pages (`web.router`), and
@@ -98,6 +123,10 @@ deleted organisation.
 def on_erase(handler: EraseHandler) -> EraseHandler
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `handler` | `EraseHandler` | required | What to call when igni asks the service to erase or redact one person's data in one organisation; it is given a `Subject`, and must be idempotent, as igni repeats it until every service confirms. |
+
 Register what erases one person's data in one organisation.
 
 ### IgniService.on_export()
@@ -105,6 +134,10 @@ Register what erases one person's data in one organisation.
 ```python
 def on_export(handler: ExportHandler) -> ExportHandler
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `handler` | `ExportHandler` | required | What to call when igni asks what the service holds about one person in one organisation; it is given a `Subject` and answers with the sections of rows. |
 
 Register what lists one person's data in one organisation.
 
@@ -115,6 +148,10 @@ def on_organisation_deleted(
     handler: OrganisationDeletedHandler,
 ) -> OrganisationDeletedHandler
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `handler` | `OrganisationDeletedHandler` | required | What to call when igni says an organisation was deleted; it is given the organisation's id, and must be idempotent. |
 
 Register what stops routing to an organisation igni deleted.
 
@@ -128,6 +165,10 @@ async def person(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
 ) -> Person
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
 
 FastAPI dependency: the person a request's token names.
 
@@ -143,6 +184,10 @@ async def caller(
 ) -> Caller
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
 FastAPI dependency: whoever a request's token names — a `Person`, an
 `App` or a `Space` — among the kinds this service accepts
 (`accepted_callers`, people only by default). 401 for anybody else.
@@ -156,6 +201,10 @@ A bearer route like `person`'s: the extension's page may call it
 async def caller_of(token: str) -> Caller
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `str` | required | The caller's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
+
 `caller` for a bare token, outside an HTTP request (see `person_of`).
 
 ### IgniService.optional_person()
@@ -165,6 +214,10 @@ async def optional_person(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
 ) -> Person | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
 
 FastAPI dependency: the person, or `None` when no token was sent.
 
@@ -180,6 +233,10 @@ async def token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
 ) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
 
 FastAPI dependency: the bearer token itself, not yet checked; 401
 when none was sent.
@@ -197,6 +254,10 @@ async def optional_token(
 ) -> str | None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token; a scheme other than `Bearer` counts as no token. |
+
 FastAPI dependency: the bearer token, not yet checked, or `None`.
 
 ### IgniService.person_of()
@@ -204,6 +265,10 @@ FastAPI dependency: the bearer token, not yet checked, or `None`.
 ```python
 async def person_of(token: str) -> Person
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `str` | required | The person's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
 
 The person a bare token names, outside an HTTP request.
 
@@ -220,6 +285,10 @@ async def org_admin(
 ) -> Person
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
 FastAPI dependency: the person, if they are an admin of the organisation
 their token is for (`org_role == "admin"`); 403 for anybody else.
 
@@ -233,6 +302,10 @@ async def igni_call(
 ) -> IgniCall
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
 FastAPI dependency: igni itself, for the organisation its token names.
 
 ### IgniService.host()
@@ -240,6 +313,10 @@ FastAPI dependency: igni itself, for the organisation its token names.
 ```python
 def host(org_id: str) -> Host
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation's id in igni, the one every call this host makes is for. |
 
 igni for one organisation: `notify`, `agent(producer)`, `send_event`, `vm_profile`, and its `directory`.
 
@@ -257,6 +334,10 @@ The key's RFC 7638 thumbprint: what a super admin compares.
 @staticmethod
 def challenge(refused: TokenRefused | None = None) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `refused` | `TokenRefused \| None` | `None` | The refusal to say in the challenge, in words safe to show whoever holds the token; `None` when no token was sent, and the challenge is bare. |
 
 The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise.
 

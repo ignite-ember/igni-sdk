@@ -18,6 +18,19 @@ class Host:
 
     Cheap to make: it holds no state of its own. Tokens, caches and the
     HTTP client are the service's, shared by every `Host`.
+
+    Args:
+        org_id: The organisation this host is for; a host is for one, and
+            none may be named.
+        notifier: The notifier that sends this organisation's notifications
+            to igni.
+        directory: The client igni's directory is asked through, for this
+            organisation.
+        agents: The wire behind ``host.agent``; without it, ``host.agent``
+            raises ``RuntimeError``.
+        vm_profiles: The client that reads this extension's VM profile
+            request; without it, ``host.extension_vm_profile`` raises
+            ``RuntimeError``.
     """
 
     def __init__(
@@ -50,6 +63,10 @@ class Host:
         Raises `IgniUnavailable` when igni could not take them after
         retrying, and `NotificationRefused` when it read them and said no.
         A caller for whom notifying is best effort catches `IgniError`.
+
+        Args:
+            notifications: The things that happened, and who each concerns:
+                one with no recipients concerns nobody and is not sent.
         """
         return await self._notifier.send(self._org_id, notifications)
 
@@ -76,7 +93,12 @@ class Host:
         return await self._vm_profiles.of(self._org_id)
 
     def agent(self, producer: Producer) -> Agent:
-        """`producer`'s agent: send it messages, files and events, open chats (`igni_service.agents`)."""
+        """`producer`'s agent: send it messages, files and events, open chats (`igni_service.agents`).
+
+        Args:
+            producer: Whose igni the agent is: the person or the app every
+                item goes to.
+        """
         if self._agents is None:
             raise RuntimeError("this host was made without the agents' wire")
         return Agent(self._org_id, producer, self._agents)
@@ -98,6 +120,19 @@ class Host:
         is watching: it starts a run, or is queued for the run already
         going. Pass an `event_key` to make retries exact. Raises
         `IgniUnavailable` or `EventRefused`.
+
+        Args:
+            producer: Whose igni the event is for: the person or the app
+                whose agent is woken.
+            type: The extension's own word for what happened, as its
+                handler names it: ``claim.created``.
+            payload: The event's data, as the handler reads it: at most
+                65536 bytes as JSON.
+            event_key: The key that makes a retry exact: igni stores one
+                item per key and producer, so a retry after a lost reply
+                is answered with the item already stored.
+            expires_at: When igni stops waiting to deliver it: igni keeps
+                an item for at most 14 days.
         """
         return await self.agent(producer).send_event(
             type, payload, event_key=event_key, expires_at=expires_at

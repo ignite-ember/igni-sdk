@@ -41,7 +41,12 @@ class Resolved(RequestedVmProfile):
 
     @classmethod
     def of(cls, request: VmProfileRequest) -> Resolved:
-        """`request`'s values over the Standard ones. Raises `ValidationError`."""
+        """`request`'s values over the Standard ones. Raises `ValidationError`.
+
+        Args:
+            request: The profile asked for; only the values it sets are
+                used, the Standard ones fill in the rest.
+        """
         return cls.model_validate(
             {**cls.standard().model_dump(), **request.model_dump(exclude_unset=True)}
         )
@@ -71,7 +76,12 @@ class FakeProfile(BaseModel):
 
     @classmethod
     def default(cls, org_id: str) -> FakeProfile:
-        """What a VM with no profile of its own gets."""
+        """What a VM with no profile of its own gets.
+
+        Args:
+            org_id: The organisation the default profile is for; the
+                profile's id is ``default-`` and that organisation's id.
+        """
         return cls(id=f"default-{org_id}", name="Standard", settings=Resolved.standard())
 
 
@@ -90,7 +100,12 @@ class FakeCaps(BaseModel):
     """The largest volume, in GiB."""
 
     def refusal(self, wanted: Resolved) -> str | None:
-        """Why igni refuses `wanted` on this platform; `None` when it fits."""
+        """Why igni refuses `wanted` on this platform; `None` when it fits.
+
+        Args:
+            wanted: The profile to check: the request with the
+                deployment's Standard values filled in.
+        """
         if wanted.memory_mib > self.max_memory_mib:
             return f"The memory ceiling may be at most {self.max_memory_mib} MiB on this platform"
         if wanted.vcpus > self.max_vcpus:
@@ -105,7 +120,12 @@ class FakeCaps(BaseModel):
         return None
 
     def serve(self, profile: FakeProfile) -> EffectiveVmProfile:
-        """What a VM gets from `profile`: its values, clamped to these caps."""
+        """What a VM gets from `profile`: its values, clamped to these caps.
+
+        Args:
+            profile: The profile a VM is given: an approval's, or the
+                organisation's Standard default.
+        """
         s = profile.settings
         memory = min(s.memory_mib, self.max_memory_mib)
         idle = s.idle_before_pause_s

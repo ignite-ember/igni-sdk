@@ -62,7 +62,11 @@ class HostCall(BaseModel):
 
     @classmethod
     def of(cls, request: Request) -> HostCall:
-        """What `request` asked, without its number."""
+        """What `request` asked, without its number.
+
+        Args:
+            request: The request the extension sent, with the number the connection gave it.
+        """
         return cls(
             op=request.op.value,
             path=request.path,
@@ -90,6 +94,14 @@ class FakeHost:
     wire; `tell(event, value)` tells it one
     that decides nothing. Every `get`, `set` and `call` asked is kept in
     `calls`.
+
+    Args:
+        extension_id: The extension the host serves: `acme.example`.
+        granted: The `permissions.host` grants the hello says the extension holds:
+            `["chat.read", "chat.post"]`.
+        values: `path -> value` for a `get`; a `set` stores into it.
+        answers: `path -> value`, or a callable of the params, for a `call`.
+        refusals: `path -> (code, message)`: that member is refused with that code.
     """
 
     def __init__(
@@ -133,7 +145,11 @@ class FakeHost:
         }
 
     def environment(self, **extra: str) -> dict[str, str]:
-        """The variables igni starts the process with, for its host."""
+        """The variables igni starts the process with, for its host.
+
+        Args:
+            extra: More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`.
+        """
         return {"IGNI_HOST_URL": self.url, "IGNI_HOST_SECRET": self.secret, **extra}
 
     async def __aenter__(self) -> FakeHost:
@@ -162,7 +178,12 @@ class FakeHost:
             self._server = None
 
     async def emit(self, signal: str, value: Any) -> None:
-        """Fire `signal` (its wire name) at every connection that subscribed."""
+        """Fire `signal` (its wire name) at every connection that subscribed.
+
+        Args:
+            signal: The signal's wire name: `chat.run_completed`.
+            value: The value the signal carries, as the host sends it.
+        """
         if signal in self.subscribed:
             await self._send_all(SignalMessage(op="signal", signal=signal, value=value))
 
@@ -172,6 +193,12 @@ class FakeHost:
         """Ask the connected extension about a deciding `event`, as igni does.
 
         Its answer's parameters, as they crossed the wire.
+
+        Args:
+            event: The hook event's name, as igni sends it: `PreToolUse`.
+            value: The event's value, as igni sends it.
+            timeout: Seconds to wait for the extension's answer before giving up.
+            caller: The producer the event is for; `None` when it is for nobody.
         """
         await self._connected(timeout)
         hook_id = f"h-{next(self._hook_ids)}"
@@ -187,12 +214,24 @@ class FakeHost:
     async def tell(
         self, event: str, value: Any, timeout: float = 5.0, *, caller: Caller | None = None
     ) -> None:
-        """Tell the connected extension an `event` that decides nothing, as igni does."""
+        """Tell the connected extension an `event` that decides nothing, as igni does.
+
+        Args:
+            event: The hook event's name, as igni sends it: `SessionStart`.
+            value: The event's value, as igni sends it.
+            timeout: Seconds to wait for the extension to be connected before giving up.
+            caller: The producer the event is for; `None` when it is for nobody.
+        """
         await self._connected(timeout)
         await self._send_all(self._hook_message(None, event, value, caller))
 
     async def wait_subscribed(self, signal: str, timeout: float = 5.0) -> None:
-        """Wait until the extension has subscribed to `signal`."""
+        """Wait until the extension has subscribed to `signal`.
+
+        Args:
+            signal: The signal's wire name: `chat.run_completed`.
+            timeout: Seconds to wait for the subscription before giving up.
+        """
         with anyio.fail_after(timeout):
             while signal not in self.subscribed:
                 self._subscribed_changed.clear()

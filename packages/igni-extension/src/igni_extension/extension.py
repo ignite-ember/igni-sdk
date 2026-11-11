@@ -48,6 +48,17 @@ class IgniExtension(ReleasedNames):
     `ext.host` and its leases, the service and its tokens, and the
     process `run()` serves. 0.1.0's spellings (`ext.check_tools()`,
     `ext.busy_while(...)`, ...) delegate to them (`igni_extension.released`).
+
+    Args:
+        extension_id: The extension's manifest id, as its manifest writes it: `acme.example`.
+        instructions: The instructions the extension gives the model, as its author writes
+            them; `None` when it has none.
+        environ: The environment variables igni set for the process; `os.environ` when `None`.
+        token_transport: The HTTP transport the host's token endpoint is reached through, so a
+            test can answer it.
+        service_transport: The HTTP transport the extension's own service is reached through, so
+            a test can answer it.
+        clock: The clock a token's age is measured on, so a test can move it.
     """
 
     def __init__(
@@ -125,6 +136,13 @@ class IgniExtension(ReleasedNames):
         `Caller` receives whom the call is for, and is not part of the
         tool's input (`igni_extension.caller`). An exception the tool
         raises reaches igni, and the model, as its message.
+
+        Args:
+            hints: What the tool says it is: the four igni's permission modes read
+                (`igni_extension.hints`).
+            name: The name the tool is registered under; the function's own name when `None`.
+            description: What the model is told the tool does; the function's own docstring when
+                `None`.
         """
         return self.tools.tool(hints=hints, name=name, description=description)
 
@@ -135,6 +153,9 @@ class IgniExtension(ReleasedNames):
 
         A reaction: igni never waits on it. A plain `def` runs in a
         worker thread.
+
+        Args:
+            signal: The signal to handle: `ext.host.sessions.current_changed`.
         """
         return self._handlers.signals.on(signal)
 
@@ -145,6 +166,9 @@ class IgniExtension(ReleasedNames):
         `Allow()`, `Reject(reason)` or `Modify(value)` (`igni_extension.hooks`);
         on any other it is only told. igni asks only about the events the
         manifest lists in `permissions.hooks`; one handler per event.
+
+        Args:
+            event: The hook event to answer: `Hooks.PRE_TOOL_USE`.
         """
         return self._handlers.hooks.on(event)
 
@@ -158,6 +182,10 @@ class IgniExtension(ReleasedNames):
         only if it posts. An event with no handler for its type is reported
         to the service as not handled. Without `event_type` it handles every
         type no other handler names.
+
+        Args:
+            event_type: The type of service event to handle: `claim.created`; every type no
+                other handler names when `None`.
         """
         return self._handlers.service_events.on(event_type)
 
@@ -170,6 +198,9 @@ class IgniExtension(ReleasedNames):
         own `finally`. An exception it raises does not stop the extension;
         it is logged when the process stops. A plain `def` runs in a worker thread, and cannot
         be cancelled: it ends with the process.
+
+        Args:
+            fn: The function to run in the background for as long as the process serves igni.
         """
         self._process.on_start(fn)
         return fn

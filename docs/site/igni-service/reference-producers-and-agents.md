@@ -20,6 +20,12 @@ class Agent
 Agent(org_id: str, producer: Producer, wire: AgentWire)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `org_id` | `str` | required | The organisation the agent's items go into, as the id ``igni.host()`` was given. |
+| `producer` | `Producer` | required | Whose igni every item goes to: the person or the app the agent is for. |
+| `wire` | `AgentWire` | required | The wire the items go over: the calls to igni server. |
+
 One producer's agent — a person's or an app's — in one organisation.
 
 ### Agent.producer
@@ -46,6 +52,16 @@ async def send_message(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `str` | required | The message's words, as the agent reads them. |
+| `attachments` | `list[Attachment] \| None` | `None` | The files to send with it: each is uploaded to igni first, and the message names it by its id. |
+| `thread` | `str \| None` | `None` | The thread the message belongs to: the first message of a thread opens its chat, and every later one goes there. Without one the message goes to this extension's own chat. |
+| `title` | `str \| None` | `None` | The chat's title, for the message that opens its thread's. |
+| `start_run` | `bool` | `True` | Whether the message starts a run in the chat, or waits for the run already going. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 Post `text` as this extension's message: it starts a run, or waits for the run going.
 
 `start_run=False` waits for the chat's next run instead. `title`
@@ -65,6 +81,13 @@ async def send_event(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `type` | `str` | required | The extension's own word for what happened, as its handler names it: ``claim.created``. |
+| `payload` | `dict[str, object] \| None` | `None` | The event's data, as the handler reads it: at most 65536 bytes as JSON. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 Hand this extension an event. igni posts nothing for it: the extension's handler acts.
 
 One no handler took reads `not_handled` (`status`). Needs no grant.
@@ -83,6 +106,15 @@ async def new_chat(
 ) -> Chat
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `title` | `str` | required | The chat's title. |
+| `thread` | `str \| None` | `None` | The thread the chat belongs to: without one, a thread of its own is made for it. |
+| `text` | `str \| None` | `None` | The first message in the chat, if it should have one. |
+| `attachments` | `list[Attachment] \| None` | `None` | The files to send with that first message: each is uploaded to igni first, and the message names it by its id. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 Open a chat titled `title` — for `thread`, or a thread of its own — optionally with a first message.
 
 ### Agent.chat()
@@ -91,6 +123,10 @@ Open a chat titled `title` — for `thread`, or a thread of its own — optional
 def chat(thread: str) -> Chat
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `thread` | `str` | required | The thread's id: the same id names the same chat on every call. |
+
 The chat of `thread`: opened by its first item, whichever that is.
 
 ### Agent.status()
@@ -98,6 +134,10 @@ The chat of `thread`: opened by its first item, whichever that is.
 ```python
 async def status(event_id: str) -> ItemStatus
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_id` | `str` | required | The item's id, as ``EventAccepted.event_id`` gave it. |
 
 Where an item igni accepted stands, as igni holds it now.
 
@@ -133,6 +173,18 @@ async def send_item(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | `ItemKind` | required | What the item is: ``event``, ``message``, ``chat`` or ``action``. |
+| `text` | `str \| None` | `None` | The item's words: the message's text, or the chat's first message. |
+| `attachments` | `list[Attachment] \| None` | `None` | The files to send with the item: each is uploaded to igni first, and the item names it by its id. |
+| `thread` | `str \| None` | `None` | The chat thread the item belongs to: the first item of a thread opens its chat, and every later one goes there. |
+| `title` | `str \| None` | `None` | The chat's title, for the item that opens its thread's. |
+| `start_run` | `bool` | `True` | Whether the item starts a run in the chat, or waits for the run already going. |
+| `action` | `ChatAction \| None` | `None` | What an ``action`` item does to its thread's chat: show a view, rename it, or cancel the run working in it. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 Any item: the methods above and `Chat`'s are this, spelled for one kind.
 
 ## Attachment
@@ -166,6 +218,12 @@ def from_bytes(
 ) -> Attachment
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `filename` | `str` | required | The file's name, as people see it in the chat (1-200 characters); the media type is guessed from it unless one is given. |
+| `data` | `bytes` | required | The file's bytes: at least one, at most 5 MiB. |
+| `content_type` | `str \| None` | `None` | The media type, when it cannot be guessed from the name or differs from it. |
+
 An attachment of `data`, its media type guessed from `filename` unless given.
 
 ### Attachment.from_path()
@@ -175,6 +233,11 @@ An attachment of `data`, its media type guessed from `filename` unless given.
 def from_path(path: str | Path, content_type: str | None = None) -> Attachment
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `str \| Path` | required | The file to read now: its name becomes the attachment's name. |
+| `content_type` | `str \| None` | `None` | The media type, when it cannot be guessed from the file's name or differs from it. |
+
 The file at `path`, read now, named by its file name.
 
 ## Chat
@@ -183,6 +246,11 @@ The file at `path`, read now, named by its file name.
 class Chat
 Chat(agent: Agent, thread: str)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `agent` | `Agent` | required | The agent the chat's items go through: the producer's own agent. |
+| `thread` | `str` | required | The thread's id: the same id names the same chat on every call. |
 
 The chat of one thread in one producer's igni.
 
@@ -198,6 +266,13 @@ async def send_message(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `str` | required | The message's words, as the agent reads them. |
+| `attachments` | `list[Attachment] \| None` | `None` | The files to send with it: each is uploaded to igni first, and the message names it by its id. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 Post it: a run starts, or it waits for the run going.
 
 ### Chat.queue()
@@ -212,6 +287,13 @@ async def queue(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `str` | required | The message's words, held for the chat's next run. |
+| `attachments` | `list[Attachment] \| None` | `None` | The files to send with it: each is uploaded to igni first, and the message names it by its id. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+| `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
+
 For the chat's next run; starts nothing.
 
 ### Chat.show()
@@ -225,6 +307,12 @@ async def show(
 ) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `view` | `dict[str, Any]` | required | The view to show: its ``root`` and its ``elements``. |
+| `title` | `str \| None` | `None` | The view's title. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+
 A json-render view in the chat — `{root, elements}` — shown, never sent to the model.
 
 ### Chat.rename()
@@ -233,6 +321,11 @@ A json-render view in the chat — `{root, elements}` — shown, never sent to t
 async def rename(title: str, *, event_key: str | None = None) -> EventAccepted
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `title` | `str` | required | The chat's new title. |
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
+
 Give the chat a new title (1-200 characters). Starts no run.
 
 ### Chat.cancel()
@@ -240,6 +333,10 @@ Give the chat a new title (1-200 characters). Starts no run.
 ```python
 async def cancel(*, event_key: str | None = None) -> EventAccepted
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
 
 Stop the chat's working run. A run waiting on a person's approval is left alone.
 
@@ -326,6 +423,10 @@ Whose agent the event is for: a person or an app of the organisation.
 def person(user_id: str) -> Producer
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `user_id` | `str` | required | The person's igni user id: whose igni the event is for. |
+
 The igni of the person `user_id`.
 
 ### Producer.app()
@@ -334,5 +435,9 @@ The igni of the person `user_id`.
 @classmethod
 def app(app_id: str) -> Producer
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app_id` | `str` | required | The app's id, as an org admin registered it: whose Fleet VM the event is for. |
 
 The igni of the app `app_id`, in its Fleet VM.

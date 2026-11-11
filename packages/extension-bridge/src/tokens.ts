@@ -134,6 +134,9 @@ export type ThemeTokens = Record<string, string>;
  * query or overridden by a `data-theme` attribute resolves here to
  * what the user is actually looking at, which is the only answer
  * worth sending.
+ *
+ * @param root — the element whose computed styles are read; the
+ *   document's own root by default.
  */
 export function readThemeTokens(
   root: Element = document.documentElement,
@@ -155,6 +158,10 @@ export function readThemeTokens(
  *
  * Called by the guest bridge. Separate from reading them so the two
  * halves can be tested without a frame between them.
+ *
+ * @param tokens — what to apply: each published name and the value it
+ *   takes.
+ * @param root — the element they are applied to.
  */
 export function applyThemeTokens(tokens: ThemeTokens, root: HTMLElement): void {
   for (const [name, value] of Object.entries(tokens)) {

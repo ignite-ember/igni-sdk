@@ -16,6 +16,10 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 function connect<P extends LaunchParams = LaunchParams, S extends ExtensionSettings = ExtensionSettings,>(options: { timeoutMs?: number } = {}): Promise<Bridge<P, S>>
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `options` | `{ timeoutMs?: number }` | `{}` | how long to wait for the host's `hello` before giving up: `timeoutMs`, in milliseconds, and thirty seconds by default. |
+
 Wait for the host's `hello`, then hand back the bridge.
 
 Connecting is asynchronous because the host issues the nonce, and

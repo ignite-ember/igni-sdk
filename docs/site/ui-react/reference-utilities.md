@@ -45,6 +45,19 @@ What a `Split` takes.
 function Split({ aside, children, side = "start", defaultWidth = 280, min = 160, max = 640, label, onResize, className, ...rest }: SplitProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `aside` | `ReactNode` | required | the fixed-width pane. |
+| `children` | `ReactNode` | required | the pane that takes what is left. |
+| `side` | `"start" \| "end"` | `"start"` | which side `aside` is on; the left by default. |
+| `defaultWidth` | `number` | `280` | the starting width of `aside`, in pixels. |
+| `min` | `number` | `160` | the narrowest `aside` may be, in pixels. |
+| `max` | `number` | `640` | the widest `aside` may be, in pixels, and never more than 60% of the window. |
+| `label` | `string` | required | said to a screen reader, and shown on hover. |
+| `onResize` | `(width: number) => void` | optional | the width changed; called on release and on each keypress, not on every pointer move. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
+
 Two panes and a rule you can move.
 
 See the note at the top of this file: it drives a CSS variable
@@ -66,7 +79,7 @@ what makes a list scannable: the shape is recognised before the
 word is read, so the item somebody wants is found by looking rather
 than by reading the list from the top each time.
 
-**One set, one grammar.** All of them are 16×16, drawn in strokes
+*One set, one grammar.** All of them are 16×16, drawn in strokes
 of the same weight on the same grid, and coloured ``currentColor``
 so a disabled item's icon dims with its label and a destructive
 one turns red with it. Mixing a filled glyph into a stroked set is
@@ -98,6 +111,12 @@ What a `MenuIcon` takes.
 function MenuIcon({ name, path, className }: MenuIconProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | `MenuIconName` | optional | one of igni's own icons. |
+| `path` | `string` | optional | an SVG path, for an icon igni does not have; it is drawn on the same 16×16 grid, stroked rather than filled. |
+| `className` | `string` | optional | added to the element's classes, beside the one the theme gives it. |
+
 One of igni's own icons, drawn on a 16×16 grid.
 
 See the note at the top of this file for why there is one set and
@@ -112,6 +131,11 @@ is only how it is found.
 ```typescript
 function Monogram({ name, size = 18 }: { name: string; size?: number })
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | — | optional | the name the initials and the colour are derived from. |
+| `size` | — | `18` | the width and height of the square, in pixels. |
 
 Two letters standing in for a face.
 
@@ -145,6 +169,11 @@ One action in an `OverflowMenu`.
 function OverflowMenu({ actions, label = "More actions", }: { actions: OverflowAction[]; label?: string; })
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `actions` | — | optional | the actions to offer; the destructive ones are set apart from the rest. |
+| `label` | — | `"More actions"` | what the trigger is called, for anyone who cannot see three dots. |
+
 A row of actions collapsed behind one button.
 
 See the note at the top of this file. Everything that made the
@@ -168,12 +197,42 @@ Usage:
   <Skeleton.Block height={64} />
   <Skeleton.Circle size={48} />
 
-| Member | Kind | Type |
-|---|---|---|
-| `Line` | method | `({ width = "100%", height = 12, style, }: { width?: number | string; height?: number | string; style?: CSSProperties; })` |
-| `Block` | method | `({ height = 64, width = "100%", style, }: { height?: number | string; width?: number | string; style?: CSSProperties; })` |
-| `Circle` | method | `({ size = 24, style }: { size?: number; style?: CSSProperties })` |
-| `Rows` | method | `({ count = 4, style }: { count?: number; style?: CSSProperties })` |
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `Line` | method | `({ width = "100%", height = 12, style, }: { width?: number | string; height?: number | string; style?: CSSProperties; })` | A line of placeholder text, the size of the line it stands in for. |
+| `Block` | method | `({ height = 64, width = "100%", style, }: { height?: number | string; width?: number | string; style?: CSSProperties; })` | A block of placeholder content, the size of the content it stands in for. |
+| `Circle` | method | `({ size = 24, style }: { size?: number; style?: CSSProperties })` | A circle, the size of the thing it stands in for. |
+| `Rows` | method | `({ count = 4, style }: { count?: number; style?: CSSProperties })` | Several lines of placeholder text, the shape of the list they stand in for. |
+
+### Skeleton.Line()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `width` | — | `"100%"` | how wide the line is, in pixels or as a CSS length. |
+| `height` | — | `12` | how tall the line is, in pixels or as a CSS length. |
+| `style` | — | optional | the element's inline style, merged over the defaults. |
+
+### Skeleton.Block()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `height` | — | `64` | how tall the block is, in pixels or as a CSS length. |
+| `width` | — | `"100%"` | how wide the block is, in pixels or as a CSS length. |
+| `style` | — | optional | the element's inline style, merged over the defaults. |
+
+### Skeleton.Circle()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `size` | — | `24` | the diameter of the circle, in pixels. |
+| `style` | — | optional | the element's inline style, merged over the defaults. |
+
+### Skeleton.Rows()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `count` | — | `4` | how many rows of text to draw. |
+| `style` | — | optional | the stack's inline style, merged over the defaults. |
 
 ## TooltipProps
 
@@ -193,6 +252,11 @@ What a `Tooltip` takes.
 ```typescript
 function Tooltip({ text, children }: TooltipProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `text` | `string` | required | the word; nothing is rendered when it is empty. |
+| `children` | `React.ReactNode` | required | the control the word is about. |
 
 What an icon means, on hover and on focus.
 

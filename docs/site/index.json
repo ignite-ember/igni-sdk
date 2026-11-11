@@ -5432,6 +5432,36 @@
           "level": 2,
           "id": "bridge",
           "title": "Bridge"
+        },
+        {
+          "level": 3,
+          "id": "bridge-rpc",
+          "title": "Bridge.rpc()"
+        },
+        {
+          "level": 3,
+          "id": "bridge-navigate",
+          "title": "Bridge.navigate()"
+        },
+        {
+          "level": 3,
+          "id": "bridge-ontheme",
+          "title": "Bridge.onTheme()"
+        },
+        {
+          "level": 3,
+          "id": "bridge-onparams",
+          "title": "Bridge.onParams()"
+        },
+        {
+          "level": 3,
+          "id": "bridge-setlocation",
+          "title": "Bridge.setLocation()"
+        },
+        {
+          "level": 3,
+          "id": "bridge-on",
+          "title": "Bridge.on()"
         }
       ]
     },
@@ -5460,9 +5490,19 @@
           "title": "HostError"
         },
         {
+          "level": 3,
+          "id": "hosterror-constructor",
+          "title": "HostError.constructor()"
+        },
+        {
           "level": 2,
           "id": "hostlink",
           "title": "HostLink"
+        },
+        {
+          "level": 3,
+          "id": "hostlink-request",
+          "title": "HostLink.request()"
         },
         {
           "level": 2,
@@ -5470,14 +5510,39 @@
           "title": "HostObject"
         },
         {
+          "level": 3,
+          "id": "hostobject-constructor",
+          "title": "HostObject.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostobject-call",
+          "title": "HostObject.call()"
+        },
+        {
           "level": 2,
           "id": "property",
           "title": "Property"
         },
         {
+          "level": 3,
+          "id": "property-constructor",
+          "title": "Property.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "property-set",
+          "title": "Property.set()"
+        },
+        {
           "level": 2,
           "id": "signal",
           "title": "Signal"
+        },
+        {
+          "level": 3,
+          "id": "signal-constructor",
+          "title": "Signal.constructor()"
         },
         {
           "level": 2,
@@ -6100,9 +6165,44 @@
           "title": "HostAppState"
         },
         {
+          "level": 3,
+          "id": "hostappstate-constructor",
+          "title": "HostAppState.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostappstate-get",
+          "title": "HostAppState.get()"
+        },
+        {
+          "level": 3,
+          "id": "hostappstate-set",
+          "title": "HostAppState.set()"
+        },
+        {
+          "level": 3,
+          "id": "hostappstate-delete",
+          "title": "HostAppState.delete()"
+        },
+        {
           "level": 2,
           "id": "hostchatapprovals",
           "title": "HostChatApprovals"
+        },
+        {
+          "level": 3,
+          "id": "hostchatapprovals-constructor",
+          "title": "HostChatApprovals.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostchatapprovals-answer",
+          "title": "HostChatApprovals.answer()"
+        },
+        {
+          "level": 3,
+          "id": "hostchatapprovals-answer-all",
+          "title": "HostChatApprovals.answer_all()"
         },
         {
           "level": 2,
@@ -6110,9 +6210,39 @@
           "title": "HostChatViews"
         },
         {
+          "level": 3,
+          "id": "hostchatviews-constructor",
+          "title": "HostChatViews.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostchatviews-dispatch",
+          "title": "HostChatViews.dispatch()"
+        },
+        {
           "level": 2,
           "id": "hostapp",
           "title": "HostApp"
+        },
+        {
+          "level": 3,
+          "id": "hostapp-constructor",
+          "title": "HostApp.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostapp-set-verbose",
+          "title": "HostApp.set_verbose()"
+        },
+        {
+          "level": 3,
+          "id": "hostapp-set-output-style",
+          "title": "HostApp.set_output_style()"
+        },
+        {
+          "level": 3,
+          "id": "hostapp-open-external",
+          "title": "HostApp.open_external()"
         },
         {
           "level": 2,
@@ -6120,9 +6250,74 @@
           "title": "HostWindows"
         },
         {
+          "level": 3,
+          "id": "hostwindows-constructor",
+          "title": "HostWindows.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostwindows-ui",
+          "title": "HostWindows.ui()"
+        },
+        {
           "level": 2,
           "id": "hostui",
           "title": "HostUi"
+        },
+        {
+          "level": 3,
+          "id": "hostui-constructor",
+          "title": "HostUi.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-navigate",
+          "title": "HostUi.navigate()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-open-panel",
+          "title": "HostUi.open_panel()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-set-sidebar",
+          "title": "HostUi.set_sidebar()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-open-preview",
+          "title": "HostUi.open_preview()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-select",
+          "title": "HostUi.select()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-set-composer",
+          "title": "HostUi.set_composer()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-toast",
+          "title": "HostUi.toast()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-dismiss-toast",
+          "title": "HostUi.dismiss_toast()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-show-dialog",
+          "title": "HostUi.show_dialog()"
+        },
+        {
+          "level": 3,
+          "id": "hostui-scroll-to",
+          "title": "HostUi.scroll_to()"
         },
         {
           "level": 2,
@@ -6130,9 +6325,89 @@
           "title": "HostSessions"
         },
         {
+          "level": 3,
+          "id": "hostsessions-constructor",
+          "title": "HostSessions.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostsessions-open",
+          "title": "HostSessions.open()"
+        },
+        {
+          "level": 3,
+          "id": "hostsessions-create",
+          "title": "HostSessions.create()"
+        },
+        {
+          "level": 3,
+          "id": "hostsessions-attach",
+          "title": "HostSessions.attach()"
+        },
+        {
+          "level": 3,
+          "id": "hostsessions-chat",
+          "title": "HostSessions.chat()"
+        },
+        {
           "level": 2,
           "id": "hostchat",
           "title": "HostChat"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-constructor",
+          "title": "HostChat.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-post",
+          "title": "HostChat.post()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-queue",
+          "title": "HostChat.queue()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-append",
+          "title": "HostChat.append()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-replace",
+          "title": "HostChat.replace()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-search",
+          "title": "HostChat.search()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-cancel-agent",
+          "title": "HostChat.cancel_agent()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-truncate",
+          "title": "HostChat.truncate()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-extract-learnings",
+          "title": "HostChat.extract_learnings()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-discard-interrupted",
+          "title": "HostChat.discard_interrupted()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-upload",
+          "title": "HostChat.upload()"
         },
         {
           "level": 2,
@@ -6140,9 +6415,29 @@
           "title": "HostPlan"
         },
         {
+          "level": 3,
+          "id": "hostplan-constructor",
+          "title": "HostPlan.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostplan-approve",
+          "title": "HostPlan.approve()"
+        },
+        {
+          "level": 3,
+          "id": "hostplan-dismiss",
+          "title": "HostPlan.dismiss()"
+        },
+        {
           "level": 2,
           "id": "hosttasks",
           "title": "HostTasks"
+        },
+        {
+          "level": 3,
+          "id": "hosttasks-constructor",
+          "title": "HostTasks.constructor()"
         },
         {
           "level": 2,
@@ -6150,9 +6445,24 @@
           "title": "HostLoop"
         },
         {
+          "level": 3,
+          "id": "hostloop-constructor",
+          "title": "HostLoop.constructor()"
+        },
+        {
           "level": 2,
           "id": "hostcommands",
           "title": "HostCommands"
+        },
+        {
+          "level": 3,
+          "id": "hostcommands-constructor",
+          "title": "HostCommands.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostcommands-run",
+          "title": "HostCommands.run()"
         },
         {
           "level": 2,
@@ -6160,9 +6470,39 @@
           "title": "HostAgents"
         },
         {
+          "level": 3,
+          "id": "hostagents-constructor",
+          "title": "HostAgents.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostagents-promote-ephemeral",
+          "title": "HostAgents.promote_ephemeral()"
+        },
+        {
+          "level": 3,
+          "id": "hostagents-discard-ephemeral",
+          "title": "HostAgents.discard_ephemeral()"
+        },
+        {
           "level": 2,
           "id": "hostworkflows",
           "title": "HostWorkflows"
+        },
+        {
+          "level": 3,
+          "id": "hostworkflows-constructor",
+          "title": "HostWorkflows.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkflows-run",
+          "title": "HostWorkflows.run()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkflows-cancel",
+          "title": "HostWorkflows.cancel()"
         },
         {
           "level": 2,
@@ -6170,9 +6510,44 @@
           "title": "HostScheduler"
         },
         {
+          "level": 3,
+          "id": "hostscheduler-constructor",
+          "title": "HostScheduler.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostscheduler-run-now",
+          "title": "HostScheduler.run_now()"
+        },
+        {
+          "level": 3,
+          "id": "hostscheduler-cancel",
+          "title": "HostScheduler.cancel()"
+        },
+        {
           "level": 2,
           "id": "hostprocesses",
           "title": "HostProcesses"
+        },
+        {
+          "level": 3,
+          "id": "hostprocesses-constructor",
+          "title": "HostProcesses.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostprocesses-tail",
+          "title": "HostProcesses.tail()"
+        },
+        {
+          "level": 3,
+          "id": "hostprocesses-stop",
+          "title": "HostProcesses.stop()"
+        },
+        {
+          "level": 3,
+          "id": "hostprocesses-run",
+          "title": "HostProcesses.run()"
         },
         {
           "level": 2,
@@ -6180,9 +6555,44 @@
           "title": "HostWorkspace"
         },
         {
+          "level": 3,
+          "id": "hostworkspace-constructor",
+          "title": "HostWorkspace.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-read",
+          "title": "HostWorkspace.read()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-list",
+          "title": "HostWorkspace.list()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-complete",
+          "title": "HostWorkspace.complete()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-search",
+          "title": "HostWorkspace.search()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-open",
+          "title": "HostWorkspace.open()"
+        },
+        {
           "level": 2,
           "id": "hostmodels",
           "title": "HostModels"
+        },
+        {
+          "level": 3,
+          "id": "hostmodels-constructor",
+          "title": "HostModels.constructor()"
         },
         {
           "level": 2,
@@ -6190,9 +6600,79 @@
           "title": "HostMcp"
         },
         {
+          "level": 3,
+          "id": "hostmcp-constructor",
+          "title": "HostMcp.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostmcp-connect",
+          "title": "HostMcp.connect()"
+        },
+        {
+          "level": 3,
+          "id": "hostmcp-disconnect",
+          "title": "HostMcp.disconnect()"
+        },
+        {
+          "level": 3,
+          "id": "hostmcp-set-tool-enabled",
+          "title": "HostMcp.set_tool_enabled()"
+        },
+        {
           "level": 2,
           "id": "hostplugins",
           "title": "HostPlugins"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-constructor",
+          "title": "HostPlugins.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-contents",
+          "title": "HostPlugins.contents()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-preview",
+          "title": "HostPlugins.preview()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-install",
+          "title": "HostPlugins.install()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-update",
+          "title": "HostPlugins.update()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-remove",
+          "title": "HostPlugins.remove()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-set-enabled",
+          "title": "HostPlugins.set_enabled()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-add-marketplace",
+          "title": "HostPlugins.add_marketplace()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-remove-marketplace",
+          "title": "HostPlugins.remove_marketplace()"
+        },
+        {
+          "level": 3,
+          "id": "hostplugins-refresh-marketplaces",
+          "title": "HostPlugins.refresh_marketplaces()"
         },
         {
           "level": 2,
@@ -6200,9 +6680,24 @@
           "title": "HostExtensions"
         },
         {
+          "level": 3,
+          "id": "hostextensions-constructor",
+          "title": "HostExtensions.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostextensions-set-settings",
+          "title": "HostExtensions.set_settings()"
+        },
+        {
           "level": 2,
           "id": "hosthooks",
           "title": "HostHooks"
+        },
+        {
+          "level": 3,
+          "id": "hosthooks-constructor",
+          "title": "HostHooks.constructor()"
         },
         {
           "level": 2,
@@ -6210,9 +6705,29 @@
           "title": "HostPermissions"
         },
         {
+          "level": 3,
+          "id": "hostpermissions-constructor",
+          "title": "HostPermissions.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostpermissions-check",
+          "title": "HostPermissions.check()"
+        },
+        {
+          "level": 3,
+          "id": "hostpermissions-save-rule",
+          "title": "HostPermissions.save_rule()"
+        },
+        {
           "level": 2,
           "id": "hostpolicy",
           "title": "HostPolicy"
+        },
+        {
+          "level": 3,
+          "id": "hostpolicy-constructor",
+          "title": "HostPolicy.constructor()"
         },
         {
           "level": 2,
@@ -6220,9 +6735,29 @@
           "title": "HostAccount"
         },
         {
+          "level": 3,
+          "id": "hostaccount-constructor",
+          "title": "HostAccount.constructor()"
+        },
+        {
           "level": 2,
           "id": "hostnotifications",
           "title": "HostNotifications"
+        },
+        {
+          "level": 3,
+          "id": "hostnotifications-constructor",
+          "title": "HostNotifications.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostnotifications-notify",
+          "title": "HostNotifications.notify()"
+        },
+        {
+          "level": 3,
+          "id": "hostnotifications-mark-read",
+          "title": "HostNotifications.mark_read()"
         },
         {
           "level": 2,
@@ -6230,9 +6765,39 @@
           "title": "HostSelf"
         },
         {
+          "level": 3,
+          "id": "hostself-constructor",
+          "title": "HostSelf.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "hostself-busy",
+          "title": "HostSelf.busy()"
+        },
+        {
+          "level": 3,
+          "id": "hostself-done",
+          "title": "HostSelf.done()"
+        },
+        {
           "level": 2,
           "id": "host",
           "title": "Host"
+        },
+        {
+          "level": 3,
+          "id": "host-constructor",
+          "title": "Host.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "host-decide",
+          "title": "Host.decide()"
+        },
+        {
+          "level": 3,
+          "id": "host-decide-batch",
+          "title": "Host.decide_batch()"
         }
       ]
     },
@@ -6251,6 +6816,11 @@
           "title": "ServiceError"
         },
         {
+          "level": 3,
+          "id": "serviceerror-constructor",
+          "title": "ServiceError.constructor()"
+        },
+        {
           "level": 2,
           "id": "issuedtoken",
           "title": "IssuedToken"
@@ -6266,6 +6836,16 @@
           "title": "ServiceBridge"
         },
         {
+          "level": 3,
+          "id": "servicebridge-fetch",
+          "title": "ServiceBridge.fetch()"
+        },
+        {
+          "level": 3,
+          "id": "servicebridge-websocket",
+          "title": "ServiceBridge.websocket()"
+        },
+        {
           "level": 2,
           "id": "renew-before-ms",
           "title": "RENEW_BEFORE_MS"
@@ -6279,6 +6859,31 @@
           "level": 2,
           "id": "servicelink",
           "title": "ServiceLink"
+        },
+        {
+          "level": 3,
+          "id": "servicelink-constructor",
+          "title": "ServiceLink.constructor()"
+        },
+        {
+          "level": 3,
+          "id": "servicelink-fetch",
+          "title": "ServiceLink.fetch()"
+        },
+        {
+          "level": 3,
+          "id": "servicelink-websocket",
+          "title": "ServiceLink.websocket()"
+        },
+        {
+          "level": 3,
+          "id": "servicelink-fresh",
+          "title": "ServiceLink.fresh()"
+        },
+        {
+          "level": 3,
+          "id": "servicelink-resolve",
+          "title": "ServiceLink.resolve()"
         }
       ]
     },
@@ -6877,6 +7482,21 @@
           "title": "ErrorBoundary"
         },
         {
+          "level": 3,
+          "id": "errorboundary-getderivedstatefromerror",
+          "title": "ErrorBoundary.getDerivedStateFromError()"
+        },
+        {
+          "level": 3,
+          "id": "errorboundary-componentdidcatch",
+          "title": "ErrorBoundary.componentDidCatch()"
+        },
+        {
+          "level": 3,
+          "id": "errorboundary-componentdidupdate",
+          "title": "ErrorBoundary.componentDidUpdate()"
+        },
+        {
           "level": 2,
           "id": "toastoptions",
           "title": "ToastOptions"
@@ -7032,6 +7652,26 @@
           "level": 2,
           "id": "skeleton",
           "title": "Skeleton"
+        },
+        {
+          "level": 3,
+          "id": "skeleton-line",
+          "title": "Skeleton.Line()"
+        },
+        {
+          "level": 3,
+          "id": "skeleton-block",
+          "title": "Skeleton.Block()"
+        },
+        {
+          "level": 3,
+          "id": "skeleton-circle",
+          "title": "Skeleton.Circle()"
+        },
+        {
+          "level": 3,
+          "id": "skeleton-rows",
+          "title": "Skeleton.Rows()"
         },
         {
           "level": 2,

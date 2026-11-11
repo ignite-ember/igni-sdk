@@ -59,6 +59,10 @@ export interface MarkdownProps {
  * enabled and will not be — `rehype-raw` in a surface that renders
  * text somebody else wrote is a script tag waiting to happen, and an
  * extension's frame has a CSP precisely so that it cannot.
+ *
+ * @param children — the source; rendered as a document, not flattened.
+ * @param className — added to the element's classes, beside the one the
+ *   theme gives it.
  */
 export function Markdown({ children, className }: MarkdownProps) {
   return (

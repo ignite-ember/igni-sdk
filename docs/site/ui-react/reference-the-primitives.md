@@ -98,6 +98,13 @@ What a `Button` takes.
 function Button({ variant = "default", size = "md", className, ...rest }: ButtonProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `variant` | `ButtonVariant` | `"default"` | how it reads: plain, the one action on the panel, the one that destroys something, a warning, or one that should not be the first thing the eye lands on. |
+| `size` | `ButtonSize` | `"md"` | its size: `md` unless the row is dense, in which case `sm` or `xs`. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the button. |
+
 A button.
 
 The variant is a prop rather than a class name you spell:
@@ -120,6 +127,11 @@ What an `Input` takes.
 ```typescript
 function Input({ className, ...rest }: InputProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the input. |
 
 A single-line text field.
 
@@ -164,6 +176,12 @@ about the thing, it is a `Chip`.
 function Chip({ tone = "neutral", className, ...rest }: ChipProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tone` | `Tone` | `"neutral"` | how loud it is: `neutral` for a state nothing is wrong with, and the three that mean something. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the span. |
+
 A tag the reader can scan past. See `ChipProps` for when to
 reach for a chip and when for a badge.
 
@@ -195,6 +213,12 @@ the success one; an empty red badge does not.
 function Badge({ tone = "neutral", className, ...rest }: BadgeProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tone` | `Tone` | `"neutral"` | how loud it is: `neutral` for a state nothing is wrong with, and the three that mean something. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the span. |
+
 A state the reader is meant to notice. See `BadgeProps` for
 what the tone does and does not say.
 
@@ -206,6 +230,11 @@ what the tone does and does not say.
 function Row({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the row. |
+
 A horizontal run of things, vertically centred.
 
 ## Actions
@@ -213,6 +242,11 @@ A horizontal run of things, vertically centred.
 ```typescript
 function Actions({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the row of actions. |
 
 A horizontal run of buttons. Separate from `Row` because it is
  what a reader looks for at the foot of a panel.
@@ -223,6 +257,11 @@ A horizontal run of buttons. Separate from `Row` because it is
 function List({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the list. |
+
 A vertical stack.
 
 ## Toolbar
@@ -230,6 +269,11 @@ A vertical stack.
 ```typescript
 function Toolbar({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the toolbar. |
 
 A row of controls at the top of a panel: what the panel is, and what
 you can do to it.
@@ -240,6 +284,11 @@ you can do to it.
 function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the card. |
+
 A surface: background, border, radius, padding.
 
 ## Item
@@ -247,6 +296,11 @@ A surface: background, border, radius, padding.
 ```typescript
 function Item({ className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the button. |
 
 One selectable row inside a list. Renders a button, because
  something clickable that is not a button is a keyboard trap.
@@ -256,6 +310,11 @@ One selectable row inside a list. Renders a button, because
 ```typescript
 function Table({ className, ...rest }: HTMLAttributes<HTMLTableElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the table. |
 
 A table.
 
@@ -286,6 +345,13 @@ panel wastes the one moment it had the reader's attention. The
 function Empty({ children, action, className, ...rest }: EmptyProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `children` | — | optional | what to show where there is nothing. |
+| `action` | `ReactNode` | optional | a button, usually: the one thing to do about being empty. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
+
 What to show where there is nothing.
 
 See `EmptyProps` for why the `action` slot exists.
@@ -314,6 +380,16 @@ What a `Dialog` takes.
 function Dialog({ title, sub, children, actions, onClose, className, ...rest }: DialogProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `title` | `ReactNode` | required | its title, also the accessible name of the dialog. |
+| `sub` | `ReactNode` | optional | shown under the title: a sentence, not a paragraph. |
+| `children` | `ReactNode` | optional | the body. |
+| `actions` | `ReactNode` | optional | the buttons, rendered in an `Actions` row at the foot. |
+| `onClose` | `() => void` | required | escape, or a click on the backdrop. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the dialog panel. |
+
 The one primitive here that is behaviour rather than a box.
 
 A dialog has to trap focus, close on Escape, restore focus to
@@ -338,6 +414,11 @@ What a `Select` takes.
 function Select({ className, ...rest }: SelectProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the select. |
+
 A drop-down.
 
 **Also** [`SelectProps`](/docs/sdk/ui-react/reference-the-primitives#selectprops).
@@ -355,6 +436,11 @@ What a `Textarea` takes.
 ```typescript
 function Textarea({ className, ...rest }: TextareaProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the textarea. |
 
 A multi-line text field.
 
@@ -377,6 +463,12 @@ What a `Checkbox` takes.
 ```typescript
 function Checkbox({ label, className, ...rest }: CheckboxProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | `ReactNode` | required | the text beside the box, and the accessible name too. |
+| `className` | — | optional | added to the label's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the input inside the label. |
 
 A native checkbox, wrapped in its own label.
 
@@ -403,6 +495,12 @@ What a `Radio` takes.
 ```typescript
 function Radio({ label, className, ...rest }: RadioProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | `ReactNode` | required | the text beside the box, and the accessible name too. |
+| `className` | — | optional | added to the label's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the input inside the label. |
 
 A native radio, wrapped in its own label.
 
@@ -431,6 +529,14 @@ What a `Switch` takes.
 ```typescript
 function Switch({ checked, onChange, label, className, ...rest }: SwitchProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `checked` | `boolean` | required | whether it is on. |
+| `onChange` | `(next: boolean) => void` | required | called with the next value; it takes effect at once. |
+| `label` | `ReactNode` | required | shown beside the switch, and used as its accessible name. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the button. |
 
 A switch, which is a button rather than a checkbox.
 
@@ -466,6 +572,16 @@ rejects input without saying why is the one people abandon. When
 function Field({ label, hint, error, htmlFor, children, className, ...rest }: FieldProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | `ReactNode` | required | the label, which is visible rather than a placeholder. |
+| `hint` | `ReactNode` | optional | a sentence under the control, for when nothing is wrong. |
+| `error` | `ReactNode` | optional | why the control is wrong; it replaces the hint while it is set. |
+| `htmlFor` | `string` | optional | the id of the control, so the label points at it. |
+| `children` | — | optional | the control the label is for. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
+
 A label, a control, and room for the reason it is wrong.
 
 See `FieldProps`. The error slot is the part that gets left
@@ -497,6 +613,12 @@ watched something spin.
 function Spinner({ label, className, ...rest }: SpinnerProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | `string` | required | required: a spinner with no name is a live region with nothing in it. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the span. |
+
 Work whose duration is unknown.
 
 See `SpinnerProps` for why `label` is required.
@@ -522,6 +644,14 @@ What a `Progress` takes.
 ```typescript
 function Progress({ value, max = 100, label, className, ...rest }: ProgressProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | `number` | optional | how far along, against `max`; omit it for indeterminate, which slides rather than sits. |
+| `max` | `number` | `100` | the value that counts as complete, against which `value` is measured; it defaults to 100. |
+| `label` | `string` | required | its name, for a screen reader. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
 
 A bar that fills.
 
@@ -553,6 +683,16 @@ What a `Tabs` takes.
 function Tabs({ tabs, active, onChange, label, base: givenBase, className, ...rest }: TabsProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tabs` | `{ id: string; label: ReactNode }[]` | required | the tabs; the `id` is what the panels match on. |
+| `active` | `string` | required | which tab is showing. |
+| `onChange` | `(id: string) => void` | required | called with the id of the tab the reader chose. |
+| `label` | `string` | required | the strip's name, for a screen reader. |
+| `base` | `string` | optional | the id prefix shared with this strip's panels; one is generated when it is left out, and the panels need the same one. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
+
 Tabs with the arrow keys wired, because a tab strip that only
 responds to clicks is a tab strip half the people cannot use.
 
@@ -582,6 +722,15 @@ for it to control.
 function TabPanel({ base, id, active, children, className, ...rest }: TabPanelProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `base` | `string` | required | the id prefix shared with its tabs, so the two agree. |
+| `id` | `string` | required | which tab this panel belongs to. |
+| `active` | `string` | required | which tab is showing; the panel renders only when they match. |
+| `children` | — | optional | the content of the panel, shown while its tab is the active one. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
+
 The panel a tab controls.
 
 See `TabPanelProps`. It renders nothing at all when its tab is
@@ -595,6 +744,11 @@ is not in the page.
 ```typescript
 function Divider({ className, ...rest }: HTMLAttributes<HTMLHRElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the rule. |
 
 A horizontal rule.
 
@@ -615,6 +769,13 @@ What a `Heading` takes.
 ```typescript
 function Heading({ level = 2, className, style, ...rest }: HeadingProps)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `level` | `1 \| 2 \| 3 \| 4` | `2` | the outline level; it also picks the size, so the two cannot disagree. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `style` | — | optional | the element's inline style, merged over the size the level picks. |
+| `rest` | — | optional | the remaining props, spread onto the heading. |
 
 A heading, at the level you say.
 
@@ -649,6 +810,12 @@ What a `Text` takes.
 function Text({ tone = "default", className, ...rest }: TextProps)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tone` | `TextTone` | `"default"` | how loud it is: emphasis rather than status. |
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the paragraph. |
+
 A paragraph.
 
 `TextTone` says how loud it is — emphasis, not status. A
@@ -661,5 +828,10 @@ status is a `Badge`.
 ```typescript
 function Code({ className, ...rest }: HTMLAttributes<HTMLElement>)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `rest` | — | optional | the remaining props, spread onto the element. |
 
 Inline code: a name, a path, a flag.

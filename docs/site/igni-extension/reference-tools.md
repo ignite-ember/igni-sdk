@@ -62,6 +62,11 @@ others are derived from it and the extension's id, by igni's rules.
 def of(extension_id: str, tool: str) -> ToolNames
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extension_id` | `str` | required | The extension's manifest id: `acme.example`. |
+| `tool` | `str` | required | The tool's name in this code: `lookup_ticket`. |
+
 Every name the tool `tool` of the extension `extension_id` goes by.
 
 ## ToolHints
@@ -111,6 +116,10 @@ Tools on the server that do not state all four hints.
 def check(tools: Iterable[Tool]) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tools` | `Iterable[Tool]` | required | The tools the server lists, as it serves them. |
+
 Raise for the tools whose annotations leave a hint unstated.
 
 ### ToolHintsMissing.complete()
@@ -119,5 +128,9 @@ Raise for the tools whose annotations leave a hint unstated.
 @staticmethod
 def complete(annotations: ToolAnnotations | None) -> bool
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `annotations` | `ToolAnnotations \| None` | required | A tool's annotations as MCP spells them; `None` when it stated none. |
 
 Whether all four hints are stated.

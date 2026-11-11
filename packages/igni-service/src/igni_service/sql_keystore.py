@@ -31,7 +31,16 @@ THE_KEY = "service"
 
 
 class SqlKeyStore:
-    """Keeps the service's key sealed in one row of `igni_service_key`."""
+    """Keeps the service's key sealed in one row of `igni_service_key`.
+
+    Args:
+        engine: The database engine the key is kept through, and the one the table is
+            created through unless ``create_table`` is off.
+        cipher: The cipher that seals the private half before it is stored, and unseals
+            it when it is read back.
+        create_table: Whether the table is created on first use. Off when the service
+            owns the table in its migrations.
+    """
 
     metadata = IgniTables.metadata
     """Include in Alembic's `target_metadata` to own the table in migrations."""
@@ -69,7 +78,12 @@ class SqlKeyStore:
         )
 
     async def claim(self, key: StoredKey) -> StoredKey:
-        """Keep `key`, sealed, unless another replica kept one first; answer with the kept one."""
+        """Keep `key`, sealed, unless another replica kept one first; answer with the kept one.
+
+        Args:
+            key: The key to keep: its ``kid`` thumbprint and its private half, which
+                is sealed under the cipher before it is stored.
+        """
         await self._tables.ensure()
         sealed = self._cipher.seal(key.private_pem)
         try:

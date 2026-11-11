@@ -41,7 +41,11 @@ from igni_service.token_endpoint import GrantRefused, TokenEndpoint
 
 
 class AppId:
-    """The client id an app authenticates as: its app id, from the portal."""
+    """The client id an app authenticates as: its app id, from the portal.
+
+    Args:
+        app_id: The app's id, as an org admin registered it on the portal.
+    """
 
     def __init__(self, app_id: str) -> None:
         self._app_id = app_id
@@ -51,7 +55,27 @@ class AppId:
 
 
 class IgniApp:
-    """An app's place in an igni deployment: its key, its token, its VM's profile."""
+    """An app's place in an igni deployment: its key, its token, its VM's profile.
+
+    Args:
+        app_id: The app's id, as an org admin registered it on the portal:
+            the client id the app authenticates as, and the app whose VM
+            profile it asks for.
+        igni_server_url: Where igni server is: the address every call the
+            app makes is made against.
+        key_store: Where the app keeps its signing key; the key is made on
+            first use and kept there, and its private half never leaves the
+            app.
+        http: The ``httpx.AsyncClient`` every call to igni server goes
+            through; one igni server makes for itself, and closes, when it
+            is not given.
+        clock: The clock the token's age and expiry are read from, and the
+            one the client assertion's times are taken from; a test passes a
+            ``ManualClock``.
+        timeout: Seconds to wait for igni server's answer before giving up;
+            it is the timeout of the client igni server makes for itself, and
+            a client given in ``http`` keeps the timeout it was made with.
+    """
 
     RENEW_BEFORE = 60.0
     """How long before expiry the token is replaced, in seconds."""
@@ -141,7 +165,16 @@ class IgniApp:
     async def request(
         self, method: str, path: str, *, json: object | None = None
     ) -> httpx.Response:
-        """One call to igni as this app; a 401 is retried once with a new token."""
+        """One call to igni as this app; a 401 is retried once with a new token.
+
+        Args:
+            method: The HTTP method of the call, as it goes on the wire:
+                ``GET``, ``PUT``, and the rest.
+            path: The path on igni server, put after the address the app
+                reaches it at.
+            json: The JSON body of the call; nothing is sent when it is
+                not given.
+        """
         for attempt in (1, 2):
             token = await self.token()
             try:

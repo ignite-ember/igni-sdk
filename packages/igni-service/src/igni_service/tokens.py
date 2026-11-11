@@ -126,7 +126,13 @@ class Person(BaseModel):
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> Person:
-        """The person a verified token's claims describe (`sub`, `org`, `org_role`, ...)."""
+        """The person a verified token's claims describe (`sub`, `org`, `org_role`, ...).
+
+        Args:
+            claims: The verified claims of a token, as ``TokenVerifier.claims``
+                read them: the person's ``sub``, ``org``, ``org_name``,
+                ``org_role``, ``email``, ``name`` and ``super_admin``.
+        """
         return cls(
             user_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -157,7 +163,13 @@ class App(BaseModel):
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> App:
-        """The app a verified `app` token's claims describe."""
+        """The app a verified `app` token's claims describe.
+
+        Args:
+            claims: The verified claims of an ``app`` token, as
+                ``TokenVerifier.claims`` read them: the app's ``sub``, its
+                ``org`` and its ``name``.
+        """
         return cls(
             app_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -186,7 +198,14 @@ class Space(BaseModel):
 
     @classmethod
     def from_claims(cls, claims: dict[str, Any]) -> Space:
-        """The space a verified `space` token's claims describe."""
+        """The space a verified `space` token's claims describe.
+
+        Args:
+            claims: The verified claims of a ``space`` token, as
+                ``TokenVerifier.claims`` read them: the space's ``sub``, its
+                ``org``, the app's ``app`` and the app's own name for it,
+                ``external_id``.
+        """
         return cls(
             space_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
@@ -212,7 +231,18 @@ class IgniCall(BaseModel):
 
 
 class TokenVerifier:
-    """Checks tokens igni signed for this service."""
+    """Checks tokens igni signed for this service.
+
+    Args:
+        igni: igni server itself: its address, its issuer and this service's
+            own URL.
+        keys: igni's public keys, which a token's signature is checked
+            against.
+        clock: The clock a token's ``exp`` and ``iat`` are compared with; the
+            system's own by default.
+        revocations: What igni has revoked, which every token but igni's own
+            is checked against; nothing is checked when it is not given.
+    """
 
     LEEWAY = 60.0
     """How far in the future an `iat` may be, for clocks that disagree."""
@@ -237,6 +267,11 @@ class TokenVerifier:
         `TokenRefused` for a token that is not one; `IgniUnavailable` when
         it cannot be checked at all because igni's keys or issuer cannot
         be had.
+
+        Args:
+            token: The token to check, with or without the ``Bearer`` prefix.
+            use: The ``token_use`` the token must carry, or the kinds of it
+                this service takes.
         """
         bare = (token or "").removeprefix("Bearer ").strip()
         try:
@@ -298,7 +333,11 @@ class TokenVerifier:
         return claims
 
     async def person(self, token: str) -> Person:
-        """The person a `user` token names. `TokenRefused` for anything else."""
+        """The person a `user` token names. `TokenRefused` for anything else.
+
+        Args:
+            token: The token to read, as the person's own.
+        """
         person = Person.from_claims(await self.claims(token, use=TokenUse.USER))
         if not person.user_id or not person.org_id:
             # Every user token names one organisation. One that does not
@@ -312,6 +351,11 @@ class TokenVerifier:
         People only unless the service says more: an app's or a space's
         token is a token for this URL all the same, and a service that
         serves people must not take an app for one.
+
+        Args:
+            token: The token to read.
+            accept: The kinds of caller this service takes; people only
+                unless it says more.
         """
         kinds = {CallerKind(kind) for kind in accept}
         claims = await self.claims(token, use={kind.token_use for kind in kinds})
@@ -332,7 +376,11 @@ class TokenVerifier:
         return caller
 
     async def igni_call(self, token: str) -> IgniCall:
-        """igni itself, for the organisation an `igni` token names."""
+        """igni itself, for the organisation an `igni` token names.
+
+        Args:
+            token: The token igni itself signed for this service.
+        """
         claims = await self.claims(token, use=TokenUse.IGNI)
         org_id = str(claims.get("org") or "")
         if not org_id or claims.get("sub") != await self._igni.issuer():

@@ -31,6 +31,12 @@ ConcurrencyHarness(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `ext` | `IgniExtension` | required | The extension to call, as igni would. |
+| `stall_limit` | `float` | `0.1` | The longest the event loop may be held, in seconds, before a run fails. |
+| `timeout` | `float` | `10.0` | Seconds to wait for the extension before giving up. |
+
 Fires calls from different callers at once, as igni does, and checks two things.
 
 * **Nothing blocks the loop.** One extension process serves every
@@ -63,6 +69,11 @@ author's to assert on the results.
 async def run(calls: list[ConcurrentCall], *, check: bool = True) -> ConcurrencyReport
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `calls` | `list[ConcurrentCall]` | required | The calls to make, one a caller. |
+| `check` | `bool` | `True` | Whether to check the run and raise `ConcurrencyProblem` when it found one. |
+
 Make every call at once; `ConcurrencyProblem` on a stall or a leak, unless `check=False`.
 
 ### ConcurrencyHarness.check()
@@ -70,6 +81,10 @@ Make every call at once; `ConcurrencyProblem` on a stall or a leak, unless `chec
 ```python
 def check(report: ConcurrencyReport) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `report` | `ConcurrencyReport` | required | What the run found. |
 
 Raise `ConcurrencyProblem` when `report` found the loop held too long, or a caller
 leaked.
@@ -81,6 +96,10 @@ leaked.
 def sent_index(key: str) -> int
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `key` | `str` | required | The `_meta` key the harness numbers its calls with: `igni/test-call`. |
+
 Which of the harness's calls the request being served is.
 
 ### ConcurrencyHarness.compare()
@@ -89,6 +108,13 @@ Which of the harness's calls the request being served is.
 @staticmethod
 def compare(leaks: list[str], tool: str, when: str, expected: Caller) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `leaks` | `list[str]` | required | The lines found so far, which this one is added to. |
+| `tool` | `str` | required | The tool the call was made to. |
+| `when` | `str` | required | When the caller was read: `as it started`, `as it ended`. |
+| `expected` | `Caller` | required | The caller the call was sent with. |
 
 Add a line to `leaks` when the caller current now is not `expected`: the tool `tool` saw
 another's caller `when`.
@@ -172,6 +198,14 @@ FakeHost(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extension_id` | `str` | `'acme.example'` | The extension the host serves: `acme.example`. |
+| `granted` | `tuple[str, ...]` | `()` | The `permissions.host` grants the hello says the extension holds: `["chat.read", "chat.post"]`. |
+| `values` | `dict[str, Any] \| None` | `None` | `path -> value` for a `get`; a `set` stores into it. |
+| `answers` | `dict[str, Any] \| None` | `None` | `path -> value`, or a callable of the params, for a `call`. |
+| `refusals` | `dict[str, tuple[str, str]] \| None` | `None` | `path -> (code, message)`: that member is refused with that code. |
+
 igni's host object model for one extension process, on a loopback socket.
 
 Speaks the protocol igni does (`docs/HOST_MODEL_PROTOCOL.md` in igni).
@@ -194,6 +228,10 @@ that decides nothing. Every `get`, `set` and `call` asked is kept in
 ```python
 def environment(**extra: str) -> dict[str, str]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
 
 The variables igni starts the process with, for its host.
 
@@ -219,6 +257,11 @@ Stop listening and close every socket. `async with` calls it on the way out.
 async def emit(signal: str, value: Any) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `signal` | `str` | required | The signal's wire name: `chat.run_completed`. |
+| `value` | `Any` | required | The value the signal carries, as the host sends it. |
+
 Fire `signal` (its wire name) at every connection that subscribed.
 
 ### FakeHost.hook()
@@ -232,6 +275,13 @@ async def hook(
     caller: Caller | None = None,
 ) -> dict[str, Any]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event` | `str` | required | The hook event's name, as igni sends it: `PreToolUse`. |
+| `value` | `Any` | required | The event's value, as igni sends it. |
+| `timeout` | `float` | `5.0` | Seconds to wait for the extension's answer before giving up. |
+| `caller` | `Caller \| None` | `None` | The producer the event is for; `None` when it is for nobody. |
 
 Ask the connected extension about a deciding `event`, as igni does.
 
@@ -249,6 +299,13 @@ async def tell(
 ) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `event` | `str` | required | The hook event's name, as igni sends it: `SessionStart`. |
+| `value` | `Any` | required | The event's value, as igni sends it. |
+| `timeout` | `float` | `5.0` | Seconds to wait for the extension to be connected before giving up. |
+| `caller` | `Caller \| None` | `None` | The producer the event is for; `None` when it is for nobody. |
+
 Tell the connected extension an `event` that decides nothing, as igni does.
 
 ### FakeHost.wait_subscribed()
@@ -256,6 +313,11 @@ Tell the connected extension an `event` that decides nothing, as igni does.
 ```python
 async def wait_subscribed(signal: str, timeout: float = 5.0) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `signal` | `str` | required | The signal's wire name: `chat.run_completed`. |
+| `timeout` | `float` | `5.0` | Seconds to wait for the subscription before giving up. |
 
 Wait until the extension has subscribed to `signal`.
 
@@ -274,6 +336,16 @@ FakeHostTokenEndpoint(
     minter: Minter | None = None,
 )
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `service_url` | `str` | `'http://service.test'` | The service's URL, as the token's audience and `IGNI_SERVICE_URL`. |
+| `expires_in` | `float` | `600` | The lifetime it says each token has, in seconds. |
+| `user_id` | `str` | `'u-ada'` | The person signed in to begin with: `u-ada`. |
+| `org_id` | `str` | `'org-acme'` | The organisation that person belongs to: `org-acme`. |
+| `email` | `str` | `'ada@acme.test'` | That person's email address: `ada@acme.test`. |
+| `name` | `str` | `'Ada'` | That person's name: `Ada`. |
+| `minter` | `Minter \| None` | `None` | What makes each token; `unsigned` when none is given. |
 
 The host's token endpoint for one extension process (service identity §9).
 
@@ -298,6 +370,10 @@ host = FakeHostTokenEndpoint(
 def environment(**extra: str) -> dict[str, str]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
+
 The variables igni starts the process with, for its service.
 
 ### FakeHostTokenEndpoint.sign_in()
@@ -305,6 +381,13 @@ The variables igni starts the process with, for its service.
 ```python
 def sign_in(*, user_id: str, org_id: str, email: str = '', name: str = '') -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `user_id` | `str` | required | The person's igni user id: `u-ada`. |
+| `org_id` | `str` | required | The organisation the person belongs to: `org-acme`. |
+| `email` | `str` | `''` | The person's email address: `ada@acme.test`. |
+| `name` | `str` | `''` | The person's name: `Ada`. |
 
 Play somebody signing in to igni: tokens are theirs from now on.
 
@@ -332,6 +415,10 @@ An `httpx` transport answering as the endpoint: pass it as
 def handle(request: httpx.Request) -> httpx.Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `httpx.Request` | required | The request the extension made to the token endpoint. |
+
 Answer one request as the host's token endpoint does.
 
 ### FakeHostTokenEndpoint.unsigned()
@@ -340,6 +427,10 @@ Answer one request as the host's token endpoint does.
 @staticmethod
 def unsigned(claims: TokenClaims) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `claims` | `TokenClaims` | required | What the token says: who it is for, and which service it is for. |
 
 The default token: an unsigned JWT of `claims`.
 
@@ -379,6 +470,10 @@ a test can compare it with one it writes down.
 def of(request: Request) -> HostCall
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request the extension sent, with the number the connection gave it. |
+
 What `request` asked, without its number.
 
 ## HostHarness
@@ -387,6 +482,11 @@ What `request` asked, without its number.
 class HostHarness
 HostHarness(ext: IgniExtension, *, timeout: float = 5.0)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `ext` | `IgniExtension` | required | The extension to serve and talk to. |
+| `timeout` | `float` | `5.0` | Seconds to wait for the extension before giving up. |
 
 The igni host's MCP session with one extension, in this process.
 
@@ -411,6 +511,12 @@ async def call(
 ) -> types.CallToolResult
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `tool` | `str` | required | The tool's name, as it was registered: `do_thing`. |
+| `arguments` | `dict[str, Any] \| None` | `None` | The tool's arguments, as the model would pass them. |
+| `caller` | `Caller \| None` | `None` | The producer the call is for; nobody when it is `None`. |
+
 Call a tool as igni does: for `caller`, named in the request's `_meta`.
 
 ### HostHarness.request_meta()
@@ -419,6 +525,10 @@ Call a tool as igni does: for `caller`, named in the request's `_meta`.
 @staticmethod
 def request_meta(values: dict[str, Any]) -> types.RequestParamsMeta
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `values` | `dict[str, Any]` | required | The entries the request's `_meta` carries, by key. |
 
 `values` as a request's `_meta`.
 
@@ -432,6 +542,10 @@ dict is declared what it is here, once.
 async def received(count: int) -> list[LocalNotification]
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `count` | `int` | required | How many notifications to wait for. |
+
 Wait until the host has `count` notifications from the extension.
 
 ### HostHarness.conditions_said()
@@ -439,6 +553,10 @@ Wait until the host has `count` notifications from the extension.
 ```python
 async def conditions_said(count: int) -> list[dict[str, bool]]
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `count` | `int` | required | How many statements to wait for. |
 
 Wait until the extension has said `count` things about its conditions.
 
@@ -448,6 +566,10 @@ Wait until the extension has said `count` things about its conditions.
 class ManualClock(Clock)
 ManualClock(start: float = 1000.0)
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `start` | `float` | `1000.0` | The time it starts at, in seconds on the monotonic clock. |
 
 A clock that moves only when told to.
 
@@ -464,6 +586,10 @@ Seconds on the system's monotonic clock: only differences mean anything.
 ```python
 def advance(seconds: float) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `seconds` | `float` | required | How far to move it, in seconds. |
 
 Move the clock forward `seconds`.
 

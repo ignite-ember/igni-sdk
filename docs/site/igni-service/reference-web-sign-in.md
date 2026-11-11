@@ -20,6 +20,11 @@ class BearerCors
 BearerCors(app: ASGIApp, *, igni: IgniService)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `app` | `ASGIApp` | required | The ASGI app this middleware wraps: a call it does not answer itself goes on to it. |
+| `igni` | `IgniService` | required | The service whose routes are judged: the ones that take the caller's own bearer token are the ones this middleware says yes to. |
+
 ASGI middleware: cross-origin calls to bearer routes, from any origin, without credentials.
 
 ## MemoryWebSessionStore
@@ -29,6 +34,10 @@ class MemoryWebSessionStore
 MemoryWebSessionStore(*, clock: Clock | None = None)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `clock` | `Clock \| None` | `None` | Where the store reads the time, so a test can move it; the system's own clock when it is not given. |
+
 Sessions in this process only. For tests, and for one replica.
 
 ### MemoryWebSessionStore.get()
@@ -36,6 +45,10 @@ Sessions in this process only. For tests, and for one replica.
 ```python
 async def get(session_id: str) -> WebSession | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie; the session is kept under a SHA-256 of it. |
 
 The session `session_id` names, or `None` when there is none or it has expired.
 
@@ -45,6 +58,11 @@ The session `session_id` names, or `None` when there is none or it has expired.
 async def put(session_id: str, session: WebSession) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie, and the name the session is kept under. |
+| `session` | `WebSession` | required | The session to keep: who is signed in, and the tokens that keep them signed in. |
+
 Keep `session` under `session_id`, replacing what was there.
 
 ### MemoryWebSessionStore.delete()
@@ -52,6 +70,10 @@ Keep `session` under `session_id`, replacing what was there.
 ```python
 async def delete(session_id: str) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id of the session to forget. |
 
 Forget the session `session_id` names.
 
@@ -61,6 +83,10 @@ Forget the session `session_id` names.
 async def put_login(attempt: LoginAttempt) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `attempt` | `LoginAttempt` | required | The sign-in in flight, kept under a SHA-256 of its `state` until igni sends the person back. |
+
 Keep a sign-in in flight until igni sends the person back.
 
 ### MemoryWebSessionStore.take_login()
@@ -68,6 +94,10 @@ Keep a sign-in in flight until igni sends the person back.
 ```python
 async def take_login(state: str) -> LoginAttempt | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `state` | `str` | required | The OAuth `state` igni sent the person back with; the attempt kept under a SHA-256 of it is taken out of the store. |
 
 The attempt for `state`, once and unexpired: a second take finds nothing.
 
@@ -84,6 +114,13 @@ SqlWebSessionStore(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `engine` | `AsyncEngine` | required | The connection to the service's database, where the two tables are. |
+| `cipher` | `KeyCipher` | required | The cipher the rows are sealed with, under the service's key encryption key. |
+| `create_table` | `bool` | `True` | Whether the two tables are created on first use; `False` when the service owns its schema in migrations. |
+| `clock` | `Clock \| None` | `None` | Where the store reads the time, so a test can move it; the system's own clock when it is not given. |
+
 Sessions in two of the service's tables, sealed. See `igni_service.tables`.
 
 ### SqlWebSessionStore.get()
@@ -91,6 +128,10 @@ Sessions in two of the service's tables, sealed. See `igni_service.tables`.
 ```python
 async def get(session_id: str) -> WebSession | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie; the row is found under a SHA-256 of it. |
 
 The session `session_id` names, unsealed, or `None` when there is none or it has expired.
 
@@ -100,6 +141,11 @@ The session `session_id` names, unsealed, or `None` when there is none or it has
 async def put(session_id: str, session: WebSession) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie; the row is keyed by a SHA-256 of it. |
+| `session` | `WebSession` | required | The session to keep, sealed before it is written. |
+
 Keep `session`, sealed, under a digest of `session_id`, replacing what was there.
 
 ### SqlWebSessionStore.delete()
@@ -107,6 +153,10 @@ Keep `session`, sealed, under a digest of `session_id`, replacing what was there
 ```python
 async def delete(session_id: str) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id of the session to forget; the row under a SHA-256 of it is deleted. |
 
 Forget the session `session_id` names.
 
@@ -116,6 +166,10 @@ Forget the session `session_id` names.
 async def put_login(attempt: LoginAttempt) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `attempt` | `LoginAttempt` | required | The sign-in in flight, sealed before it is written and keyed by a SHA-256 of its `state`. |
+
 Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are deleted on the way.
 
 ### SqlWebSessionStore.take_login()
@@ -123,6 +177,10 @@ Keep a sign-in in flight, sealed; sign-ins and sessions that have expired are de
 ```python
 async def take_login(state: str) -> LoginAttempt | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `state` | `str` | required | The OAuth `state` igni sent the person back with; the row under a SHA-256 of it is deleted, so of two replicas taking it, one gets it. |
 
 The attempt for `state`, once and unexpired: of two replicas taking it, one gets it.
 
@@ -157,6 +215,11 @@ class WebSessionStore(Protocol)
 WebSessionStore(*args, **kwargs)
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `args` | — | required | The positional arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
+| `kwargs` | — | required | The keyword arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
+
 Where `igni.web` keeps its people's sessions and sign-ins in flight.
 
 `MemoryWebSessionStore` keeps them in the process; `SqlWebSessionStore`
@@ -170,6 +233,10 @@ keep a digest of them, not the value.
 async def get(session_id: str) -> WebSession | None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie. A secret: keep a digest of it, not the value. |
+
 The session `session_id` names, or `None` when there is none or it has expired.
 
 ### WebSessionStore.put()
@@ -177,6 +244,11 @@ The session `session_id` names, or `None` when there is none or it has expired.
 ```python
 async def put(session_id: str, session: WebSession) -> None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id the browser holds in its cookie, and the name the session is kept under. |
+| `session` | `WebSession` | required | The session to keep: who is signed in, and the tokens that keep them signed in. |
 
 Keep `session` under `session_id`, replacing what was there.
 
@@ -186,6 +258,10 @@ Keep `session` under `session_id`, replacing what was there.
 async def delete(session_id: str) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The opaque, random id of the session to forget. |
+
 Forget the session `session_id` names. Not an error when there is none.
 
 ### WebSessionStore.put_login()
@@ -194,6 +270,10 @@ Forget the session `session_id` names. Not an error when there is none.
 async def put_login(attempt: LoginAttempt) -> None
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `attempt` | `LoginAttempt` | required | The sign-in in flight: the OAuth `state` sent to igni, the PKCE verifier igni answers with, and where to send the person afterwards. |
+
 Keep a sign-in in flight until igni sends the person back.
 
 ### WebSessionStore.take_login()
@@ -201,6 +281,10 @@ Keep a sign-in in flight until igni sends the person back.
 ```python
 async def take_login(state: str) -> LoginAttempt | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `state` | `str` | required | The OAuth `state` igni sent the person back with, matched against the sign-in in flight. |
 
 The attempt for `state`, once: a second take finds nothing.
 
@@ -219,6 +303,15 @@ WebSignIn(
 )
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `igni` | `IgniServer` | required | igni server as this service reaches it: where a person's browser is sent to sign in, and whose issuer and keys every token it accepts comes from. |
+| `registration` | `ServiceRegistration` | required | This service's registration with igni; its client id is asked of it, registering first when there is none. |
+| `key` | `SigningKey` | required | This deployment's signing key: it signs the client assertion with which this service asks igni for tokens. |
+| `verifier` | `TokenVerifier` | required | Checks the access token igni issued: that it is a user token, and that it is for this service and this client. |
+| `store` | `WebSessionStore` | required | Where the sessions and the sign-ins in flight are kept. |
+| `clock` | `Clock \| None` | `None` | The clock the sign-in's expiry and the access token's renewal are read from; the system's own clock when not given. |
+
 Sign-in to the service's own pages, and the dependencies that require it.
 
 ### WebSignIn.redirect_uri_for()
@@ -227,6 +320,10 @@ Sign-in to the service's own pages, and the dependencies that require it.
 @classmethod
 def redirect_uri_for(own_url: str) -> str
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `own_url` | `str` | required | The service's own URL, as igni knows it: the base the callback path is put on. |
 
 The callback address igni sends a person back to, for a service at `own_url`.
 
@@ -281,6 +378,10 @@ The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `POST /auth/logout`
 async def login(return_to: str = '/') -> Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `return_to` | `str` | `'/'` | Where to bring the person once they are signed in: a path on this service, or ``/`` when the value is not one. |
+
 Send the browser to igni to sign in, and come back to `return_to`.
 
 ### WebSignIn.callback()
@@ -294,6 +395,13 @@ async def callback(
 ) -> Response
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request igni sent the browser back on: its ``igni_login`` cookie says which sign-in in flight this is. |
+| `code` | `str` | `''` | The authorization code igni issued, exchanged at igni for the person's access and refresh tokens. |
+| `state` | `str` | `''` | The OAuth ``state`` igni echoed back, matched against the cookie and the sign-in in flight. |
+| `error` | `str` | `''` | The error igni reported instead of a code, when it refused to sign the person in. |
+
 igni sending the browser back: exchange the code, open a session.
 
 ### WebSignIn.logout()
@@ -301,6 +409,11 @@ igni sending the browser back: exchange the code, open a session.
 ```python
 async def logout(request: Request, return_to: str = '/') -> Response
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request that ends the sign-in: its ``igni_session`` cookie names the session to end. |
+| `return_to` | `str` | `'/'` | Where to send the browser afterwards: a path on this service, or ``/`` when the value is not one. |
 
 End the session here, and the sign-in at igni.
 
@@ -315,6 +428,10 @@ own portal — that is igni's session, not this service's.
 async def person(request: Request) -> Person
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request to sign in for: its ``igni_session`` cookie names the session, and its ``Accept`` header says whether the caller is a page to redirect or a client to refuse. |
+
 FastAPI dependency: the person signed in to these pages.
 
 A page (a request that accepts HTML) is sent to sign in and brought
@@ -325,6 +442,10 @@ back; anything else is answered 401.
 ```python
 async def signed_in(request: Request) -> Person | None
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request to read the session of: its ``igni_session`` cookie names the session. |
 
 FastAPI dependency: the person signed in to these pages, or `None`.
 
@@ -339,6 +460,10 @@ that did not need one.
 async def super_admin(request: Request) -> Person
 ```
 
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request to check the role for: its ``igni_session`` cookie names the session the person is read from. |
+
 FastAPI dependency: a signed-in super admin; 403 for anybody else.
 
 ### WebSignIn.org_admin()
@@ -346,6 +471,10 @@ FastAPI dependency: a signed-in super admin; 403 for anybody else.
 ```python
 async def org_admin(request: Request) -> Person
 ```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `request` | `Request` | required | The request to check the role for: its ``igni_session`` cookie names the session the person is read from. |
 
 FastAPI dependency: a signed-in admin of the organisation they signed in to.
 

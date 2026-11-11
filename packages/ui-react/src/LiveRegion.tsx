@@ -102,6 +102,11 @@ export interface LiveRegionProps {
  * `<LiveRegion>{`${n} results`}</LiveRegion>` is the whole usage.
  * Mounted empty on the first render so the region exists before it
  * has anything to say — see note 1 above.
+ *
+ * @param children — what to say; changing it announces, and clearing it
+ *   says nothing.
+ * @param urgency — how insistently it is announced: politely, or
+ *   assertively.
  */
 export function LiveRegion({ children = "", urgency = "polite" }: LiveRegionProps) {
   const [text, setText] = useState("");
