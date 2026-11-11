@@ -364,7 +364,7 @@ events the topic strings `session.switched`, `workspace.head-changed`,
 `workspace.files-changed`, `extension.state-changed`).
 
 `SCHEMA_VERSION` is the host schema version `igni_extension.host_model`
-was generated from (currently `"1.11.0"`). `igni_extension.host_model`
+was generated from (currently `"1.13.0"`). `igni_extension.host_model`
 also holds every value type the model uses (`Run`, `SessionChange`,
 `ChatMessage`, `Approval`, …), as pydantic models that accept extra
 fields.
