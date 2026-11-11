@@ -338,8 +338,11 @@ a GitHub pre-release, and PyPI, where installers skip it unless asked.
 In order — the consumers cannot resolve the SDKs before they are published.
 
 1. **One-time setup**, above.
-2. **Rehearse** `0.1.0`, the version all six carry today.
-3. **Release** it: `git tag sdk-v0.1.0 && git push origin sdk-v0.1.0`.
+2. **Rehearse** `0.2.0`, the version all six carry today.
+3. **Release** it: `git tag sdk-v0.2.0 && git push origin sdk-v0.2.0` — that
+   publishes the three Python packages to PyPI as well, and the three npm
+   packages to npmjs. To publish only the npm side and leave PyPI for
+   later, publish the three tarballs by hand as §2 describes.
 4. **Trusted publishing**: on PyPI and TestPyPI add the publisher to the
    three projects and delete `PYPI_TOKEN` and `TEST_PYPI_TOKEN` (one-time
    setup, step 1.6); on npm configure the three packages and delete
