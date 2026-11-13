@@ -248,6 +248,9 @@ class Agent:
             expires_at: When igni stops waiting to deliver it: igni keeps
                 an item for at most 14 days.
         """
+        files = list(attachments or [])
+        # Made before anything is uploaded, with a stand-in id per file, so an item igni would
+        # refuse (too many files, a text too long) is caught before a single file is sent.
         item = ServiceItemRequest(
             producer=self._producer,
             kind=kind,
@@ -256,11 +259,11 @@ class Agent:
             title=title,
             start_run=start_run,
             action=action,
-            attachments=[],
+            attachments=[str(n) for n in range(len(files))],
             event_key=event_key,
             expires_at=expires_at,
         )
-        ids = await self._wire.uploaded(self._org_id, list(attachments or []))
+        ids = await self._wire.uploaded(self._org_id, files)
         return await self._wire.item(self._org_id, item.model_copy(update={"attachments": ids}))
 
 
