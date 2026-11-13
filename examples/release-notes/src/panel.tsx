@@ -55,6 +55,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
@@ -303,6 +304,9 @@ function NoteView({
   const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState("write");
   const toast = useToast();
+  // What the editor holds right now, readable from a save that
+  // started earlier: a keystroke while it is in flight is not saved.
+  const latest = useRef("");
 
   useEffect(() => {
     let alive = true;
@@ -311,6 +315,7 @@ function NoteView({
         if (!alive) return;
         setLoaded({ state: "ready", note, comments });
         setDraft(note.body);
+        latest.current = note.body;
         setRevision(note.revision);
       },
       (error: unknown) => {
@@ -328,7 +333,10 @@ function NoteView({
       try {
         const saved = await client.save(version, body, revision);
         setRevision(saved.revision);
-        setDirty(false);
+        // Only what was sent is saved. Typing during the round trip
+        // leaves the draft dirty, and the next autosave carries it
+        // with the revision just received.
+        setDirty(latest.current !== body);
         setConflict(null);
       } catch (cause) {
         if (cause instanceof ConflictError) {
@@ -348,10 +356,13 @@ function NoteView({
   // Autosave, debounced. A document that only saves on a button is a
   // document somebody loses.
   useEffect(() => {
-    if (!dirty || conflict !== null) return;
+    // Not while a save is out: its answer holds the revision this one
+    // has to send, and sending the old one would read as a conflict
+    // with ourselves.
+    if (!dirty || saving || conflict !== null) return;
     const timer = setTimeout(() => void save(draft), AUTOSAVE_MS);
     return () => clearTimeout(timer);
-  }, [draft, dirty, conflict, save]);
+  }, [draft, dirty, saving, conflict, save]);
 
   /*
     The unsaved-work guard, and the shape of the gap.
@@ -424,6 +435,7 @@ function NoteView({
             className="note-editor"
             value={draft}
             onChange={(event) => {
+              latest.current = event.target.value;
               setDraft(event.target.value);
               setDirty(true);
             }}

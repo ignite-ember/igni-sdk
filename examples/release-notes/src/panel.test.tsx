@@ -373,6 +373,22 @@ describe("autosave", () => {
     expect(client.save).toHaveBeenLastCalledWith("2.4.0", "two", "r2");
   });
 
+  it("keeps a typed change dirty when it lands while an earlier save is in flight", async () => {
+    let finish: (n: Note) => void = () => {};
+    const client = fakeClient({ save: () => new Promise((resolve) => (finish = resolve)) });
+    await mount(client);
+    type("first");
+    await flush(1_500);
+    expect(client.save).toHaveBeenCalledTimes(1);
+    type("first and more");
+    finish(noteOf("2.4.0", "first", "r2"));
+    await flush();
+    // The save answered for "first"; "first and more" has not been saved.
+    await flush(1_500);
+    expect(client.save).toHaveBeenCalledTimes(2);
+    expect(client.save).toHaveBeenLastCalledWith("2.4.0", "first and more", "r2");
+  });
+
   it("on a conflict keeps the draft, says so, stops saving and disables Publish", async () => {
     // Imported when called: the panel's module graph is reloaded for each
     // test, and `instanceof` only holds within one.
