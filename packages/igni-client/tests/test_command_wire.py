@@ -637,3 +637,155 @@ async def test_a_run_in_a_named_producer_s_vm_does_not_ask_who_this_is() -> None
     assert finished.ok
     assert [r.url.path for r in gateway.requests] == ["/v1/commands"]
     assert gateway.bodies()[0]["producer"] == {"kind": "space", "id": "sp-1"}
+
+
+async def test_who_this_is_asked_for_by_hand_is_not_asked_again_by_a_run() -> None:
+    gateway = Gateway()
+    commands = gateway.commands()
+
+    me = await commands.me()
+    await (await commands.run("ls")).wait()
+
+    assert me.producer == "person:u-ada"
+    assert [r.url.path for r in gateway.requests].count("/v1/me") == 1
+
+
+async def test_asking_who_this_is_again_replaces_what_a_run_takes_as_its_producer() -> None:
+    gateway = Gateway()
+    commands = gateway.commands()
+    await (await commands.run("ls")).wait()
+
+    gateway.me = httpx.Response(200, json={"producer": "app:app-bot"})
+    assert (await commands.me()).producer == "app:app-bot"
+    await (await commands.run("id")).wait()
+
+    assert [r.url.path for r in gateway.requests].count("/v1/me") == 2
+    assert [body["producer"] for body in gateway.bodies()] == [
+        {"kind": "person", "id": "u-ada"},
+        {"kind": "app", "id": "app-bot"},
+    ]
+
+
+class _NoToken:
+    async def token(self) -> str:
+        raise AuthError("the session ended")
+
+
+async def test_a_run_whose_credential_cannot_be_had_raises_why_before_it_is_started() -> None:
+    http = httpx.AsyncClient(transport=httpx.MockTransport(Gateway()))
+    commands = Commands(Fleet("http://gateway.test", auth=_NoToken(), http=http))
+
+    with pytest.raises(AuthError, match="the session ended"):
+        await commands.run("ls", producer="person:u-ada")
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503])
+async def test_a_gateway_in_trouble_is_unavailable_with_its_status_and_reason(
+    status: int,
+) -> None:
+    with pytest.raises(Unavailable, match=f"the gateway answered {status}: try later"):
+        await Gateway(httpx.Response(status, json={"detail": "try later"})).commands().me()
+    with pytest.raises(Unavailable, match=f"the gateway answered {status}: try later"):
+        await _run('{"detail": "try later"}', status=status).wait()
+
+
+@pytest.mark.parametrize("status", [400, 403, 404, 422])
+async def test_a_run_the_gateway_refuses_is_not_allowed_with_its_reason(status: int) -> None:
+    run = _run('{"detail": "no"}', status=status)
+
+    with pytest.raises(NotAllowed, match="the gateway refused: no"):
+        await run.wait()
+
+    assert run.finished is None
+
+
+async def test_a_run_that_raises_while_it_is_waited_for_has_not_finished() -> None:
+    fleet = Fleet(
+        "http://gateway.test",
+        auth=Person("t-ada"),
+        http=httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, stream=_Cut()))
+        ),
+    )
+    request = CommandRequest(producer=ProducerRef.parse("person:u-ada"), command="ls", timeout_s=5)
+    run = CommandRun(fleet, request, "t-ada")
+
+    with pytest.raises(Unavailable, match="did not answer"):
+        await run.wait()
+
+    assert run.finished is None and run.stdout == "ok\n"
+
+
+async def test_a_run_read_by_two_tasks_at_once_is_read_by_the_first_only() -> None:
+    run = _run('{"stream": "stdout", "data_b64": "b2sK"}', '{"done": true, "exit_code": 0}')
+
+    first = run.__aiter__()
+    second = run.__aiter__()
+    assert (await first.__anext__()).text == "ok\n"
+
+    with pytest.raises(RuntimeError, match="can be read once"):
+        await second.__anext__()
+    assert [output async for output in first] == []
+    assert run.finished is not None and run.finished.ok
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        '{"command": "ls", "stream": "stdout", "data_b64": "b2sK"}',
+        '{"woken": 5, "stream": "stdout", "data_b64": "b2sK"}',
+        '{"command": [], "woken": "x", "stream": "stdout", "data_b64": "b2sK"}',
+    ],
+)
+async def test_a_command_or_woken_that_is_not_an_object_leaves_the_line_to_its_other_keys(
+    line: str,
+) -> None:
+    run = _run(line, '{"done": true, "exit_code": 0}')
+
+    outputs = [output async for output in run]
+
+    assert [output.text for output in outputs] == ["ok\n"]
+    assert run.record is None and run.woken is None
+
+
+@pytest.mark.parametrize("done", ["false", "0", '""', "null"])
+async def test_a_done_that_is_not_true_does_not_end_the_run(done: str) -> None:
+    run = _run(f'{{"done": {done}, "exit_code": 3}}')
+
+    finished = await run.wait()
+
+    assert finished.exit_code is None
+    assert finished.error == "the gateway ended the output without a result"
+
+
+def test_a_record_or_a_wake_that_is_not_an_object_is_raised_not_kept() -> None:
+    with pytest.raises(ValidationError, match="CommandAccepted"):
+        CommandAccepted.model_validate({"command": "ls"})
+    with pytest.raises(ValidationError, match="VmWoken"):
+        VmWoken.model_validate({"woken": [1]})
+
+
+class _Body(httpx.AsyncByteStream):
+    """A refusal whose body arrives as a stream, unread until someone reads it."""
+
+    def __init__(self, content: bytes) -> None:
+        self.content = content
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield self.content[:5]
+        yield self.content[5:]
+
+
+async def test_a_refusal_that_arrives_as_a_stream_is_read_whole_for_its_reason() -> None:
+    body = _Body(b'{"detail": "not your VM"}')
+    fleet = Fleet(
+        "http://gateway.test",
+        auth=Person("t-ada"),
+        http=httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(403, stream=body))
+        ),
+    )
+    request = CommandRequest(producer=ProducerRef.parse("person:u-ada"), command="ls", timeout_s=5)
+
+    with pytest.raises(NotAllowed, match="the gateway refused: not your VM"):
+        await CommandRun(fleet, request, "t-ada").wait()
