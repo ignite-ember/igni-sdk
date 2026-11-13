@@ -186,14 +186,12 @@ async def test_an_answer_that_does_not_fit_the_result_is_refused(wire: str) -> N
     returns = typing.get_type_hints(function)["return"]
     result_type = typing.get_args(returns)[0] if typing.get_origin(returns) is Call else returns
     adapter = TypeAdapter(result_type)
-    bad = next(
-        (c for c in (None, "no", 7, [7], {"unrelated": 1}, []) if _refused(adapter, c)), None
-    )
-    if bad is None:
+    unfit = [c for c in (None, "no", 7, [7], {"unrelated": 1}, []) if _refused(adapter, c)]
+    if not unfit:
         pytest.skip("every answer fits this result")
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
-        fake.methods.answers[wire] = bad
+        fake.methods.answers[wire] = unfit[0]
         with pytest.raises(UnexpectedAnswer, match=wire):
             await _call(igni, session, spec)
 
