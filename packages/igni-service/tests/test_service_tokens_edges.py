@@ -29,6 +29,7 @@ class Wire(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         self.sent.append(request)
+        await asyncio.sleep(0.005)  # a real wire takes time: callers overlap
         if request.url.path == DIRECTORY:
             answer = self.answers.pop(0) if self.answers else self.always
             if isinstance(answer, Exception):
@@ -36,6 +37,9 @@ class Wire(httpx.AsyncBaseTransport):
             if answer is not None:
                 return answer
         return await self.inner.handle_async_request(request)
+
+    def grants(self) -> list[httpx.Request]:
+        return [r for r in self.sent if r.url.path == IgniPaths.TOKEN]
 
     def to_directory(self) -> list[httpx.Request]:
         return [r for r in self.sent if r.url.path == DIRECTORY]
@@ -75,21 +79,21 @@ async def test_a_token_is_replaced_exactly_a_minute_before_it_expires(
 
 
 async def test_callers_asking_at_once_for_one_organisation_cause_one_grant(
-    igni: IgniService, fake: FakeIgni
+    service: IgniService, wire: Wire
 ) -> None:
-    tokens = await asyncio.gather(*(igni.tokens.token(ORG) for _ in range(6)))
+    tokens = await asyncio.gather(*(service.tokens.token(ORG) for _ in range(6)))
 
     assert len(set(tokens)) == 1
-    assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 1
+    assert len(wire.grants()) == 1
 
 
 async def test_callers_asking_at_once_for_two_organisations_get_a_grant_each(
-    igni: IgniService, fake: FakeIgni
+    service: IgniService, wire: Wire
 ) -> None:
-    here, there = await asyncio.gather(igni.tokens.token(ORG), igni.tokens.token(OTHER_ORG))
+    here, there = await asyncio.gather(service.tokens.token(ORG), service.tokens.token(OTHER_ORG))
 
     assert here != there
-    assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 2
+    assert len(wire.grants()) == 2
 
 
 async def test_forgetting_one_organisation_leaves_the_others_kept(
