@@ -789,3 +789,11 @@ async def test_a_refusal_that_arrives_as_a_stream_is_read_whole_for_its_reason()
 
     with pytest.raises(NotAllowed, match="the gateway refused: not your VM"):
         await CommandRun(fleet, request, "t-ada").wait()
+
+
+def test_an_output_piece_is_only_ever_stdout_or_stderr_and_empty_data_reads_as_empty_text() -> None:
+    for stream in ("stdin", "", "STDOUT"):
+        with pytest.raises(ValidationError):
+            CommandOutput(stream=stream, data=b"x")  # type: ignore[arg-type]
+    assert CommandOutput(stream="stderr", data=b"").text == ""
+    assert CommandOutput(stream="stdout", data=b"ok").text == "ok"
