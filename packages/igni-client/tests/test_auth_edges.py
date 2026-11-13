@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -431,3 +433,21 @@ def test_a_key_that_is_encrypted_or_not_rsa_is_refused_as_a_value_error() -> Non
     for pem in (encrypted, not_rsa, "", "not a pem"):
         with pytest.raises(ValueError, match="RSA private key"):
             AppKey.from_pem(pem)
+
+
+def test_a_credentials_file_that_cannot_be_read_says_it_is_not_igni_s(tmp_path: Path) -> None:
+    unreadable = tmp_path / "unreadable.json"
+    unreadable.write_text(json.dumps({"access_token": "t"}))
+    unreadable.chmod(0)
+    binary = tmp_path / "binary.json"
+    binary.write_bytes(b"\xff\xfe\x00{")
+
+    try:
+        if os.access(unreadable, os.R_OK):  # running as root: nothing is unreadable
+            pytest.skip("this user can read a file with no permissions")
+        with pytest.raises(AuthError, match="is not an igni credentials file"):
+            Person.from_cli(unreadable)
+    finally:
+        unreadable.chmod(0o600)
+    with pytest.raises(AuthError, match="is not an igni credentials file"):
+        Person.from_cli(binary)
