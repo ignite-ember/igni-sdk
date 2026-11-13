@@ -208,19 +208,37 @@ class CallerScope:
         ]
         hints = {k: v for k, v in resolved.items() if k != name}
         return_annotation = resolved.get("return", signature.return_annotation)
+        slot = list(signature.parameters).index(name)
+        by_position = signature.parameters[name].kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
+
+        def fill(
+            args: tuple[Any, ...], kwargs: dict[str, Any]
+        ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+            # The signature the wrapper shows leaves the caller out, so a
+            # positional argument meant for a parameter after it must not land
+            # on the caller's own slot.
+            caller = find()
+            if by_position and len(args) >= slot:
+                return (*args[:slot], caller, *args[slot:]), kwargs
+            return args, {**kwargs, name: caller}
 
         if inspect.iscoroutinefunction(fn):
 
             @wraps(fn)
             async def with_caller_async(*args: Any, **kwargs: Any) -> Any:
-                return await fn(*args, **kwargs, **{name: find()})
+                filled_args, filled_kwargs = fill(args, kwargs)
+                return await fn(*filled_args, **filled_kwargs)
 
             wrapper: Callable[..., Any] = with_caller_async
         else:
 
             @wraps(fn)
             def with_caller(*args: Any, **kwargs: Any) -> Any:
-                return fn(*args, **kwargs, **{name: find()})
+                filled_args, filled_kwargs = fill(args, kwargs)
+                return fn(*filled_args, **filled_kwargs)
 
             wrapper = with_caller
         wrapper.__signature__ = signature.replace(  # type: ignore[attr-defined]
