@@ -76,6 +76,8 @@ class AppKey:
         )
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "wb") as handle:
+            # `os.open`'s mode applies only to a file it creates; one that was already here keeps its own.
+            os.fchmod(handle.fileno(), 0o600)
             handle.write(pem)
         return target
 

@@ -408,3 +408,14 @@ async def test_a_declare_answered_with_something_that_is_no_space_is_unavailable
 
     with pytest.raises(Unavailable, match="declaring a space with something else"):
         await app.spaces.declare("a")
+
+
+def test_a_new_key_replacing_a_looser_file_is_still_only_its_owner_s(tmp_path: Path) -> None:
+    target = tmp_path / "app-key.pem"
+    target.write_text("old")
+    target.chmod(0o644)
+
+    App.generate_key(target)
+
+    assert target.stat().st_mode & 0o777 == 0o600
+    assert target.read_text().startswith("-----BEGIN PRIVATE KEY-----")
