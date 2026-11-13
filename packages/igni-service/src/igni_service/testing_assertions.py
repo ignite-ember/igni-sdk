@@ -102,12 +102,15 @@ class ClientAssertionVerifier:
             )
         except jwt.PyJWTError:
             return AssertionResult()
-        lifetime = float(claims["exp"]) - self.clock.wall()
+        exp, jti = claims["exp"], claims["jti"]
+        if isinstance(exp, bool) or not isinstance(exp, int | float):
+            return AssertionResult()
+        lifetime = exp - self.clock.wall()
         if claims.get("sub") != client_id or not 0 < lifetime <= MAX_ASSERTION_LIFETIME:
             return AssertionResult()
-        if claims["jti"] in self.jtis:
+        if jti in self.jtis:
             return AssertionResult()
-        self.jtis.add(claims["jti"])
+        self.jtis.add(jti)
         return AssertionResult(client=client)
 
     def _refused(self, words: str, state: ClientState) -> AssertionResult:
