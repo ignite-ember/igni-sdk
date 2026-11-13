@@ -58,7 +58,9 @@ class HostSession:
             return
         async with self._lock:
             while self._pending:
-                await session.send_notification(self._pending.popleft())  # type: ignore[arg-type]
+                # Taken off the queue only once sent: one that fails stays for the next message.
+                await session.send_notification(self._pending[0])  # type: ignore[arg-type]
+                self._pending.popleft()
 
     async def send(self, notification: HostNotification) -> None:
         async with self._lock:
