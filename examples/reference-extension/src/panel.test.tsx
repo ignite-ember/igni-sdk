@@ -106,6 +106,22 @@ describe("loading and failing", () => {
   });
 });
 
+describe("retrying a failed load", () => {
+  it("Try again retries the load and does not start a scan", async () => {
+    let healthy = false;
+    const client = fakeClient(async () => {
+      if (!healthy) throw new Error("rpc denied");
+      return [v("a")];
+    });
+    await mount(client);
+    healthy = true;
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await flush();
+    expect(client.startScan).not.toHaveBeenCalled();
+    expect(screen.getByRole("table")).toBeTruthy();
+  });
+});
+
 describe("the poll", () => {
   it("asks for the list and the status every 2s", async () => {
     const client = fakeClient(ok([v("a")]));

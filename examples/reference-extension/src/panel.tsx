@@ -371,6 +371,7 @@ export function CompliancePanel({ client }: { client: ScannerClient }) {
           setOpen(violation);
         }}
         onScan={() => void startScan()}
+        onRetry={() => void refresh().catch(() => undefined)}
         onClearFilter={() => setSeverity("all")}
       />
 
@@ -436,6 +437,7 @@ function Body({
   busy,
   onReview,
   onScan,
+  onRetry,
   onClearFilter,
 }: {
   load: Load;
@@ -446,6 +448,7 @@ function Body({
   busy: boolean;
   onReview: (violation: Violation, button: HTMLButtonElement) => void;
   onScan: () => void;
+  onRetry: () => void;
   onClearFilter: () => void;
 }) {
   if (load.state === "loading") {
@@ -454,7 +457,7 @@ function Body({
 
   if (load.state === "failed") {
     return (
-      <Empty action={<Button size="sm" onClick={onScan}>Try again</Button>}>
+      <Empty action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
         {load.message}
       </Empty>
     );
