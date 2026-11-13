@@ -9,8 +9,9 @@ on with the resumed run:
         if isinstance(event, ApprovalRequested):
             await event.approve()
 
-igni asks about every tool call of a pause together, and a call left out
-of the answer counts as refused, so each answer covers all of them.
+igni asks about every tool call of a pause together and reads one answer
+for all of them, so each answer covers every call: `decide()` raises
+`ValueError` for a call left out.
 
 A loop that ends without answering leaves the run waiting on igni's side;
 it is offered again the next time the session is opened.
@@ -72,6 +73,7 @@ class ApprovalRequested:
         self.paused = paused
         self._answer = answer
         self.answered = False
+        self._sending = False
 
     @property
     def run_id(self) -> str:
@@ -93,14 +95,17 @@ class ApprovalRequested:
 
     async def decide(self, decisions: Mapping[str, Decision]) -> None:
         """Answer each call by its `requirement_id`. Every one must be answered."""
-        if self.answered:
+        if self.answered or self._sending:
             raise RuntimeError("this approval was already answered")
         missing = [r.requirement_id for r in self.requirements if r.requirement_id not in decisions]
         if missing:
             raise ValueError(f"every call needs an answer; missing {missing}")
-        await self._answer(
-            [decisions[r.requirement_id].frame(r.requirement_id) for r in self.requirements]
-        )
+        frames = [decisions[r.requirement_id].frame(r.requirement_id) for r in self.requirements]
+        self._sending = True
+        try:
+            await self._answer(frames)
+        finally:
+            self._sending = False
         self.answered = True
 
     def __repr__(self) -> str:
