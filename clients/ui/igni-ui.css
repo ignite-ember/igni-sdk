@@ -25,10 +25,10 @@
  * fallbacks were a different value from the theme they claim to
  * match.
  *
- * What it does not cover is layout. There is no page shell, no
- * split pane, no scroll container: those are shapes, and a shape is
- * cheap to write and expensive to promise. Write them yourself,
- * against the tokens below.
+ * Layout is covered only as far as the floor goes: a page shell
+ * (`.ui-shell`), a scroll container (`.ui-scroll`) and a resizable
+ * split pane (`.ui-split`). Anything past those shapes is yours to
+ * write, against the tokens below.
  */
 
 /* ── The tokens, as fallbacks ──────────────────────────────────────
