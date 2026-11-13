@@ -211,7 +211,7 @@ async def test_a_reply_for_nothing_asked_is_ignored() -> None:
     async with Script(stray_then_answer) as script:
         ext = IgniExtension("acme.example", environ=script.environment())
 
-        assert await ext.connection.request("get", "chat.processing") == "mine"
+        assert await asyncio.wait_for(ext.connection.request("get", "chat.processing"), 3) == "mine"
         assert ext.connection.connected
         await ext.aclose()
 
@@ -261,8 +261,9 @@ async def test_without_process_groups_only_the_secret_goes(monkeypatch: pytest.M
 async def test_calls_that_connect_at_once_share_one_socket(fake: FakeHost) -> None:
     ext = IgniExtension("acme.example", environ=fake.environment())
 
-    await asyncio.gather(*(ext.connection.connect() for _ in range(5)))
-    await asyncio.gather(*(ext.host.chat.processing.get() for _ in range(5)))
+    async with asyncio.timeout(5):
+        await asyncio.gather(*(ext.connection.connect() for _ in range(5)))
+        await asyncio.gather(*(ext.host.chat.processing.get() for _ in range(5)))
 
     assert len(fake._sockets) == 1
     await ext.aclose()
