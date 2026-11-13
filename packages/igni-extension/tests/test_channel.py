@@ -21,11 +21,14 @@ from websockets.datastructures import Headers
 
 from igni_extension import (
     Allow,
+    Caller,
+    CallerKind,
     Hooks,
     HostError,
     HostUnavailable,
     IgniExtension,
     NotConfigured,
+    Reject,
 )
 from igni_extension.hooks import PlanSubmit
 from igni_extension.host_model import Run
@@ -446,4 +449,22 @@ async def test_a_refusal_comes_back_as_the_hosts_error(fake: FakeHost) -> None:
         await ext.connection.request("get", "nothing.here")
 
     assert caught.value.code == "not_found"
+    await ext.aclose()
+
+
+async def test_a_deciding_hook_over_the_socket_is_decided_for_the_caller_igni_named(
+    fake: FakeHost,
+) -> None:
+    ext = IgniExtension("acme.example", environ=fake.environment())
+    ada = Caller(kind=CallerKind.PERSON, id="u-ada", org="org-acme", group="g-legal")
+
+    @ext.hook(Hooks.PLAN_SUBMIT)
+    async def only_for(plan: PlanSubmit, caller: Caller | None) -> Allow | Reject:
+        return Allow() if caller == ada else Reject(f"not for {caller and caller.ref}")
+
+    await ext.connect()
+
+    assert (await fake.hook("PlanSubmit", PLAN, caller=ada))["outcome"] == "allow"
+    nobody = await fake.hook("PlanSubmit", PLAN)
+    assert (nobody["outcome"], nobody["reason"]) == ("reject", "not for None")
     await ext.aclose()
