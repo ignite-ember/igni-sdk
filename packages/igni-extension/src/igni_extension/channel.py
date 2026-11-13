@@ -218,10 +218,11 @@ class HostConnection:
             await socket.send(request.numbered(request_id).frame())
             limit = None if request.waits_on_the_person else self.TIMEOUT
             return await asyncio.wait_for(future, limit)
+        except TimeoutError as exc:
+            # Before `OSError`, which a `TimeoutError` is.
+            raise HostUnavailable(f"host.{request.path} got no answer") from exc
         except (OSError, WebSocketException) as exc:
             raise HostUnavailable(f"the igni host went away: {exc}") from exc
-        except TimeoutError as exc:
-            raise HostUnavailable(f"host.{request.path} got no answer") from exc
         finally:
             self._waiting.pop(request_id, None)
 
@@ -256,6 +257,9 @@ class HostConnection:
         finally:
             if self._socket is socket:
                 self._socket = None
+            if self._hello is not None and not self._hello.done():
+                # Hung up before saying hello: connect() need not wait out TIMEOUT.
+                self._hello.set_exception(HostUnavailable("the igni host went away"))
             for waiter in self._waiting.values():
                 if not waiter.done():
                     waiter.set_exception(HostUnavailable("the igni host went away"))
