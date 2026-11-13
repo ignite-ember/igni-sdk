@@ -384,7 +384,7 @@ function NoteView({
   if (loaded.state === "loading") return <Text tone="muted">Loading…</Text>;
   if (loaded.state === "failed") return <Banner tone="danger">{loaded.message}</Banner>;
 
-  const { note, comments } = loaded;
+  const { comments } = loaded;
 
   return (
     <AppShell
@@ -482,9 +482,9 @@ function NoteView({
           }
         >
           <Text tone="muted">
-            {note.body.trim().length === 0
+            {draft.trim().length === 0
               ? "This note is empty."
-              : `${note.body.trim().split(/\s+/).length} words.`}
+              : `${draft.trim().split(/\s+/).length} words.`}
           </Text>
         </Dialog>
       ) : null}

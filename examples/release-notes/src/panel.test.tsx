@@ -489,6 +489,14 @@ describe("publishing", () => {
     expect(within(dialog).getByText("This note is empty.")).toBeTruthy();
   });
 
+  it("counts what was saved, not the text as first loaded", async () => {
+    await mount(fakeClient({ note: async (v) => noteOf(v, "") }));
+    type("now there are five whole words");
+    await flush(1_500);
+    const dialog = await open();
+    expect(within(dialog).getByText("6 words.")).toBeTruthy();
+  });
+
   it("publishes on confirm, then closes and toasts success", async () => {
     const client = fakeClient();
     await mount(client);
