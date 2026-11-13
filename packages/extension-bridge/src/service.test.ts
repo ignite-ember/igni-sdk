@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { connect } from "./bridge.js";
 import { BRIDGE_VERSION } from "./protocol.js";
-import { RENEW_BEFORE_MS, ServiceError, ServiceLink } from "./service.js";
+import { RENEW_BEFORE_MS, ServiceError, ServiceLink, authMessage } from "./service.js";
 
 const SERVICE = "https://notes.example.com/api";
 
@@ -254,5 +254,246 @@ describe("through the bridge", () => {
     const bridge = await frameWith(null).pending;
     expect(bridge.service.url).toBeNull();
     await expect(bridge.service.token()).rejects.toMatchObject({ code: "no_service" });
+  });
+});
+
+describe("a link with no service", () => {
+  it("rejects fetch and websocket with no_service, asking for nothing", async () => {
+    const ask = issuing("t1");
+    const fetcher = vi.fn();
+    const link = new ServiceLink(null, ask, {
+      fetch: fetcher as typeof fetch,
+      WebSocket: FakeSocket as unknown as typeof WebSocket,
+    });
+
+    await expect(link.fetch("/v1/notes")).rejects.toMatchObject({ code: "no_service" });
+    await expect(link.websocket("room")).rejects.toMatchObject({ code: "no_service" });
+    expect(ask).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(FakeSocket.made).toEqual([]);
+  });
+});
+
+describe("a ServiceError", () => {
+  it("carries its code, its name and a sentence", () => {
+    const error = new ServiceError("closed", "gone");
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("ServiceError");
+    expect(error.code).toBe("closed");
+    expect(error.message).toBe("gone");
+  });
+
+  it("says in the refusal which path it would not send the token to", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"));
+    await expect(link.fetch("https://evil.example/x")).rejects.toThrow(
+      "'https://evil.example/x' is not on this extension's service; its token goes nowhere else",
+    );
+  });
+});
+
+describe("the first frame by default", () => {
+  it("is the auth object with the token", () => {
+    expect(authMessage("t1")).toBe('{"type":"auth","token":"t1"}');
+  });
+});
+
+describe("the token, at its edges", () => {
+  it("is renewed at exactly the renewal window, and kept just outside it", async () => {
+    let now = 0;
+    const ask = issuing("t1", "t2");
+    const link = new ServiceLink(SERVICE, ask, { now: () => now });
+    await link.token();
+
+    now = 600_000 - RENEW_BEFORE_MS - 1;
+    expect(await link.token()).toBe("t1");
+    now = 600_000 - RENEW_BEFORE_MS;
+    expect(await link.token()).toBe("t2");
+  });
+
+  it("is asked for again on every call when it expires at once", async () => {
+    const ask = vi
+      .fn()
+      .mockResolvedValueOnce({ token: "t1", expiresIn: 0 })
+      .mockResolvedValueOnce({ token: "t2", expiresIn: -5 })
+      .mockResolvedValueOnce({ token: "t3", expiresIn: 600 });
+    const link = new ServiceLink(SERVICE, ask, { now: () => 0 });
+
+    expect(await link.token()).toBe("t1");
+    expect(await link.token()).toBe("t2");
+    expect(await link.token()).toBe("t3");
+  });
+
+  it("surfaces the host's refusal and asks again on the next call", async () => {
+    const ask = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("nobody is signed in"))
+      .mockResolvedValueOnce({ token: "t1", expiresIn: 600 });
+    const link = new ServiceLink(SERVICE, ask);
+
+    await expect(link.token()).rejects.toThrow("nobody is signed in");
+    expect(await link.token()).toBe("t1");
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it("is refused for another origin before the host is asked for a token", async () => {
+    const ask = issuing("t1");
+    const link = new ServiceLink(SERVICE, ask, {
+      WebSocket: FakeSocket as unknown as typeof WebSocket,
+    });
+
+    await expect(link.fetch("//evil.example/x")).rejects.toMatchObject({ code: "other_origin" });
+    await expect(link.websocket("https://evil.example/x")).rejects.toMatchObject({
+      code: "other_origin",
+    });
+    expect(ask).not.toHaveBeenCalled();
+    expect(FakeSocket.made).toEqual([]);
+  });
+});
+
+describe("fetch, at its edges", () => {
+  function recording(statuses: number[]) {
+    const calls: { url: string; headers: Headers; init?: RequestInit }[] = [];
+    const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ url: String(url), headers: new Headers(init?.headers), init });
+      return new Response("", { status: statuses.shift() ?? 200 });
+    });
+    return { calls, fetcher: fetcher as unknown as typeof fetch };
+  }
+
+  it("returns a second 401 as it is, and asks for no third token", async () => {
+    const { calls, fetcher } = recording([401, 401]);
+    const ask = issuing("old", "new", "never");
+    const link = new ServiceLink(SERVICE, ask, { fetch: fetcher });
+
+    const response = await link.fetch("/v1/notes");
+
+    expect(response.status).toBe(401);
+    expect(calls.map((c) => c.headers.get("Authorization"))).toEqual([
+      "Bearer old",
+      "Bearer new",
+    ]);
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry any other failure", async () => {
+    const { calls, fetcher } = recording([403]);
+    const link = new ServiceLink(SERVICE, issuing("t1"), { fetch: fetcher });
+
+    expect((await link.fetch("/v1/notes")).status).toBe(403);
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([
+    ["an object", { "X-Trace": "7" }],
+    ["a list", [["X-Trace", "7"]]],
+    ["a Headers", new Headers({ "X-Trace": "7" })],
+  ])("keeps the caller's headers, given as %s, and the rest of init", async (_label, headers) => {
+    const { calls, fetcher } = recording([200]);
+    const link = new ServiceLink(SERVICE, issuing("t1"), { fetch: fetcher });
+
+    await link.fetch("/v1/notes", { method: "POST", body: "x", headers: headers as HeadersInit });
+
+    expect(calls[0].headers.get("X-Trace")).toBe("7");
+    expect(calls[0].headers.get("Authorization")).toBe("Bearer t1");
+    expect(calls[0].init?.method).toBe("POST");
+    expect(calls[0].init?.body).toBe("x");
+  });
+
+  it("overwrites an Authorization the caller sent with the service token", async () => {
+    const { calls, fetcher } = recording([200]);
+    const link = new ServiceLink(SERVICE, issuing("t1"), { fetch: fetcher });
+
+    await link.fetch("/v1/notes", { headers: { authorization: "Bearer stolen" } });
+
+    expect(calls[0].headers.get("Authorization")).toBe("Bearer t1");
+  });
+
+  it.each([
+    ["/v1/notes", "https://notes.example.com/api/v1/notes"],
+    ["v1/notes", "https://notes.example.com/api/v1/notes"],
+    ["/v1/notes#top", "https://notes.example.com/api/v1/notes#top"],
+    ["", "https://notes.example.com/api/"],
+  ])("joins %j under the service's own path", async (path, expected) => {
+    const { calls, fetcher } = recording([200]);
+    const link = new ServiceLink(SERVICE, issuing("t1"), { fetch: fetcher });
+    await link.fetch(path);
+    expect(calls[0].url).toBe(expected);
+  });
+
+  it("joins under a service URL that ends in a slash without doubling it", async () => {
+    const { calls, fetcher } = recording([200]);
+    const link = new ServiceLink(`${SERVICE}/`, issuing("t1"), { fetch: fetcher });
+    await link.fetch("/v1/notes");
+    expect(calls[0].url).toBe("https://notes.example.com/api/v1/notes");
+  });
+
+  it("never leaves the service's origin, whatever the path climbs through", async () => {
+    const { calls, fetcher } = recording([200, 200]);
+    const link = new ServiceLink(SERVICE, issuing("t1"), { fetch: fetcher });
+    await link.fetch("../../x");
+    await link.fetch("\\evil.example\\x");
+    for (const call of calls) {
+      expect(new URL(call.url).origin).toBe("https://notes.example.com");
+    }
+  });
+});
+
+describe("websocket, at its edges", () => {
+  const sockets = { WebSocket: FakeSocket as unknown as typeof WebSocket };
+
+  it("hands the sub-protocols to the socket as they are", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"), sockets);
+    void link.websocket("room", { protocols: ["v1", "v2"] });
+    await vi.waitFor(() => expect(FakeSocket.made).toHaveLength(1));
+    expect(FakeSocket.made[0].protocols).toEqual(["v1", "v2"]);
+  });
+
+  it("sends the first frame once, and says closed in its own words when the socket closes first", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"), sockets);
+    const opening = link.websocket("room");
+    await vi.waitFor(() => expect(FakeSocket.made).toHaveLength(1));
+    const socket = FakeSocket.made[0];
+
+    socket.refuse();
+    await expect(opening).rejects.toMatchObject({
+      code: "closed",
+      message: "the service closed room before it opened",
+    });
+    // Nobody is listening any more: a late open sends nothing.
+    socket.open();
+    expect(socket.sent).toEqual([]);
+  });
+
+  it("does not send the frame twice, nor reject after it opened", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"), sockets);
+    const opening = link.websocket("room");
+    await vi.waitFor(() => expect(FakeSocket.made).toHaveLength(1));
+    const socket = FakeSocket.made[0];
+
+    socket.open();
+    await opening;
+    socket.open();
+    socket.refuse();
+
+    expect(socket.sent).toHaveLength(1);
+  });
+
+  it("rejects with the frame builder's own error before a socket is made", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"), sockets);
+    await expect(
+      link.websocket("room", {
+        authFrame: () => {
+          throw new Error("no frame");
+        },
+      }),
+    ).rejects.toThrow("no frame");
+    expect(FakeSocket.made).toEqual([]);
+  });
+
+  it("is wss for https even when the path carries a query", async () => {
+    const link = new ServiceLink(SERVICE, issuing("t1"), sockets);
+    void link.websocket("/room?doc=1");
+    await vi.waitFor(() => expect(FakeSocket.made).toHaveLength(1));
+    expect(FakeSocket.made[0].url).toBe("wss://notes.example.com/api/room?doc=1");
   });
 });
