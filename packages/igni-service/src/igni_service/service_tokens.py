@@ -151,7 +151,13 @@ class ServiceTokens:
         401 — which is retried once with a new token, and raised if it
         happens again.
         """
-        extra_headers: dict[str, str] = dict(kwargs.pop("headers", None) or {})
+        # The service's token is the only credential: a caller's own
+        # Authorization header, in any case, is dropped rather than sent beside it.
+        extra_headers: dict[str, str] = {
+            name: value
+            for name, value in dict(kwargs.pop("headers", None) or {}).items()
+            if name.lower() != "authorization"
+        }
         for attempt in (1, 2):
             token = await self.token(org_id)
             try:
