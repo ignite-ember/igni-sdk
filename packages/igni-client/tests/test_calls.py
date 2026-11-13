@@ -7,7 +7,7 @@ import gc
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from igni_client import (
     IgniClient,
@@ -147,3 +147,39 @@ async def test_a_failed_call_nobody_awaits_leaves_no_unretrieved_exception(
             loop.set_exception_handler(None)
 
     assert seen == []
+
+
+class _Aliased(BaseModel):
+    model_config = ConfigDict(validate_by_name=True, serialize_by_alias=True)
+
+    when_to_use: str = Field(default="", alias="whenToUse")
+
+
+async def test_a_call_s_arguments_go_to_igni_by_their_wire_names() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["list_background_processes"] = []
+        await Caller(igni._conn).answer(
+            "list_background_processes", _Aliased(when_to_use="now"), TypeAdapter(list[Any])
+        )
+
+    [sent] = [c for c in fake.methods.calls if c.method == "list_background_processes"]
+    assert sent.args == {"whenToUse": "now"}
+
+
+async def test_each_call_is_sent_under_an_id_of_its_own_making() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["run_workflow"] = {"workflow_run_id": "wf-1", "name": "n"}
+        first, second = session.workflows.run("n"), session.workflows.run("n")
+        await first
+        await second
+
+        async with FakeIgni() as other_fake, IgniClient(other_fake.local()) as other:
+            other_session = await other.sessions.create()
+            other_fake.methods.answers["run_workflow"] = {"workflow_run_id": "wf-2", "name": "n"}
+            await other_session.workflows.run("n")
+
+    ids = [c.id for c in fake.methods.calls if c.method == "run_workflow"]
+    foreign = [c.id for c in other_fake.methods.calls if c.method == "run_workflow"]
+    assert len(set(ids)) == 2 and ids[0] == first._request_id and ids[1] == second._request_id
+    assert set(ids).isdisjoint(foreign), "another client's call never carries this client's id"
