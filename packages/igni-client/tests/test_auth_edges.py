@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import ValidationError
 
-from igni_client import App
+from igni_client import ApiKey, App, AuthError, Unavailable
 from igni_client import auth as auth_package
 from igni_client.auth.grants import (
     ACCESS_TOKEN_TYPE,
@@ -164,3 +164,99 @@ def test_an_app_reads_its_key_file_from_the_home_directory(
 def test_an_app_whose_key_file_is_missing_says_so_as_an_os_error(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         App("app-bot", server="http://igni.test", key_file=tmp_path / "nope.pem")
+
+
+# ── An app calling igni server ───────────────────────────────────────
+
+
+async def test_the_retry_after_a_401_sends_the_same_call_with_the_same_params() -> None:
+    asked: list[httpx.Request] = []
+    signed_in = [0]
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        if request.url.path == "/v1/oauth/token":
+            signed_in[0] += 1
+            return httpx.Response(200, json={"access_token": f"t{signed_in[0]}"})
+        asked.append(request)
+        return httpx.Response(401 if len(asked) == 1 else 200)
+
+    app = _app_on(route)
+
+    answer = await app.request("GET", "/v1/x", what="asking", params={"limit": 7})
+
+    assert answer.status_code == 200
+    assert [(r.method, r.url.path, dict(r.url.params)) for r in asked] == [
+        ("GET", "/v1/x", {"limit": "7"})
+    ] * 2
+    assert [r.headers["Authorization"] for r in asked] == ["Bearer t1", "Bearer t2"]
+
+
+async def test_a_server_address_with_trailing_slashes_is_asked_without_a_double_slash() -> None:
+    urls: list[str] = []
+
+    def route(request: httpx.Request) -> httpx.Response:
+        urls.append(str(request.url))
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        return httpx.Response(200, json={"access_token": "t"})
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(route))
+    app = App("app-bot", server="http://igni.test//", key_pem=_rsa_pem(), http=http)
+
+    await app.token()
+
+    assert app.server == "http://igni.test"
+    assert urls == [
+        "http://igni.test/.well-known/openid-configuration",
+        "http://igni.test/v1/oauth/token",
+    ]
+
+
+# ── Discovery and the token endpoint ─────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        httpx.Response(200, text="<html>"),
+        httpx.Response(200, json={"issuer": ""}),
+        httpx.Response(200, json={}),
+        httpx.Response(404),
+    ],
+)
+async def test_discovery_that_names_no_issuer_is_unavailable_whatever_it_says(
+    answer: httpx.Response,
+) -> None:
+    app = _app_on(lambda request: answer)
+
+    with pytest.raises(Unavailable, match="igni server published no issuer"):
+        await app.token()
+
+
+async def test_a_token_answer_without_a_token_is_unavailable() -> None:
+    def route(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        return httpx.Response(200, json={"expires_in": 600})
+
+    with pytest.raises(Unavailable, match="the app's token with something else"):
+        await _app_on(route).token()
+
+
+@pytest.mark.parametrize("described", [None, ""])
+async def test_a_refusal_without_a_description_is_told_as_igni_server_wrote_it(
+    described: Any,
+) -> None:
+    body = {"error": "invalid_grant", "error_description": described}
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(401, json=body))
+    )
+    key = ApiKey("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    with pytest.raises(AuthError) as refused:
+        await key.token()
+
+    assert str(refused.value).startswith("igni server refused the API key: {")
+    assert "invalid_grant" in str(refused.value)
