@@ -52,7 +52,7 @@ class Host:
         )
 
 
-def issued(token: str = "t-1", **more: object) -> httpx.Response:
+def issued(token: str = "t-1", **more: object) -> httpx.Response:  # noqa: S107
     return httpx.Response(200, json={"access_token": token, **more})
 
 
