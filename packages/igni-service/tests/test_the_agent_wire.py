@@ -18,9 +18,9 @@ from igni_service.agent_wire import (
     ServiceItemRequest,
 )
 from igni_service.testing import FakeIgni
-from igni_service.testing_router import FakeRouter
 from igni_service.urls import IgniPaths
 
+from .answers import answer
 from .conftest import ORG
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -41,19 +41,6 @@ STATUS = {
     "created_at": "2026-11-14T10:00:00Z",
     "updated_at": "2026-11-14T10:00:00Z",
 }
-
-
-def answer(monkeypatch: pytest.MonkeyPatch, path: str, reply: Callable[[], httpx.Response]) -> None:
-    """Have igni answer what is asked at `path` with `reply()`, and everything else as the fake."""
-    real = FakeRouter.handle
-
-    def handle(router: FakeRouter, request: httpx.Request) -> httpx.Response:
-        if request.url.path.startswith(path):
-            router.traffic.record(request)
-            return reply()
-        return real(router, request)
-
-    monkeypatch.setattr(FakeRouter, "handle", handle)
 
 
 class TestAnAttachment:
