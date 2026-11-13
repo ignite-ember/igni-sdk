@@ -16,6 +16,8 @@ authorisation cache.
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -156,8 +158,10 @@ class DirectoryClient:
                 made with this service's token for it.
             user_id: The member's igni user id.
         """
+        if not user_id.strip():
+            return None
         response = await self._tokens.request(
-            "GET", f"{IgniPaths.DIRECTORY}/people/{user_id}", org_id=org_id
+            "GET", f"{IgniPaths.DIRECTORY}/people/{quote(user_id, safe='')}", org_id=org_id
         )
         if response.status_code == 404:
             return None
