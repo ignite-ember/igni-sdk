@@ -23,6 +23,7 @@ export default defineConfig({
       "packages/**/*.{test,spec}.{ts,tsx}",
       "clients/**/*.{test,spec}.{ts,tsx}",
       "examples/reference-extension/**/*.{test,spec}.{ts,tsx}",
+      "examples/release-notes/**/*.{test,spec}.{ts,tsx}",
     ],
     exclude: ["**/node_modules/**"],
     // ``npx vitest run --coverage`` (CI's npm job). Every source file
