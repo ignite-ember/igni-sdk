@@ -52,7 +52,14 @@ export class Correlator {
         reject,
         timer,
       });
-      post(id);
+      try {
+        post(id);
+      } catch (error) {
+        // Nothing was sent, so no reply will come: do not leave the
+        // waiter and its timer behind for a request that never left.
+        this.take(id);
+        throw error;
+      }
     });
   }
 

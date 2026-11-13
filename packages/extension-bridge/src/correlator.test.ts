@@ -112,4 +112,21 @@ describe("Correlator", () => {
 
     await expect(sent).resolves.toBe("at once");
   });
+
+  it("rejects, and leaves no timer behind, when the request cannot be posted", async () => {
+    const calls = new Correlator("", counter());
+
+    const sending = calls.send(
+      1000,
+      timedOut,
+      () => {
+        throw new Error("the window is gone");
+      },
+    );
+
+    await expect(sending).rejects.toThrow("the window is gone");
+    expect(vi.getTimerCount()).toBe(0);
+    // The id is free of a waiter: a stray reply to it is ignored.
+    calls.resolve("1", "late");
+  });
 });
