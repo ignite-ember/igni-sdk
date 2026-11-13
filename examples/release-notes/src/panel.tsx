@@ -304,6 +304,9 @@ function NoteView({
   const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState("write");
   const toast = useToast();
+  // Set for as long as a publish is out, so a second click on
+  // Publish does not send a second one.
+  const publishing = useRef(false);
   // What the editor holds right now, readable from a save that
   // started earlier: a keystroke while it is in flight is not saved.
   const latest = useRef("");
@@ -466,14 +469,21 @@ function NoteView({
               <Button
                 variant="primary"
                 onClick={() => {
-                  void client.publish(version).then(
-                    () => {
-                      setConfirming(false);
-                      toast.show(`${version} published`, { tone: "success" });
-                    },
-                    (error: unknown) =>
-                      toast.show(messageOf(error), { tone: "danger" }),
-                  );
+                  if (publishing.current) return;
+                  publishing.current = true;
+                  void client
+                    .publish(version)
+                    .then(
+                      () => {
+                        setConfirming(false);
+                        toast.show(`${version} published`, { tone: "success" });
+                      },
+                      (error: unknown) =>
+                        toast.show(messageOf(error), { tone: "danger" }),
+                    )
+                    .finally(() => {
+                      publishing.current = false;
+                    });
                 }}
               >
                 Publish

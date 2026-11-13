@@ -518,6 +518,19 @@ describe("publishing", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
+  it("sends one publish however many times confirm is clicked while it is in flight", async () => {
+    let done: () => void = () => {};
+    const client = fakeClient({ publish: () => new Promise<void>((resolve) => (done = resolve)) });
+    await mount(client);
+    const dialog = await open();
+    fireEvent.click(confirm(dialog));
+    fireEvent.click(confirm(dialog));
+    await flush();
+    done();
+    await flush();
+    expect(client.publish).toHaveBeenCalledTimes(1);
+  });
+
   it("closes without publishing on Cancel", async () => {
     const client = fakeClient();
     await mount(client);
