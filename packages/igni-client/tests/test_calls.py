@@ -95,6 +95,21 @@ async def test_the_default_wait_is_the_connection_s_and_none_waits_for_as_long_a
         assert isinstance(reply, RpcResponse) and reply.result == []
 
 
+async def test_an_answer_slower_than_nothing_but_inside_the_default_wait_is_still_read() -> None:
+    async def slow(args: dict[str, Any]) -> list[Any]:
+        await asyncio.sleep(0.2)
+        return []
+
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        fake.methods.answers["list_background_processes"] = slow
+        igni._conn.RPC_TIMEOUT = 5.0
+        for given in ({}, {"timeout": DEFAULT_TIMEOUT}):
+            reply = await igni._conn.ask("list_background_processes", **given)
+            assert isinstance(reply, RpcResponse) and reply.result == []
+        with pytest.raises(Unavailable, match="got no answer"):
+            await igni._conn.ask("list_background_processes", timeout=0.05)
+
+
 class _NoArgs(BaseModel):
     pass
 
