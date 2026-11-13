@@ -56,14 +56,14 @@ class Spaces:
         Idempotent: declaring the same id again returns the same space.
         igni provisions its VM in the background.
         """
-        if not external_id or "/" in external_id or len(external_id) > 200:
-            raise ValueError("a space's external id is 1 to 200 characters, without '/'")
+        _checked_id(external_id)
         what = "declaring a space"
         response = await self._app.request("PUT", self._path(external_id), what=what)
         return self._space(_parsed(response, SpaceRecord, what=what))
 
     async def get(self, external_id: str) -> Space | None:
         """The space for `external_id`, or `None` when the app has none."""
+        _checked_id(external_id)
         what = "reading a space"
         response = await self._app.request("GET", self._path(external_id), what=what)
         if response.status_code == 404:
@@ -88,6 +88,7 @@ class Spaces:
 
     async def delete(self, external_id: str) -> None:
         """Delete a space: its credential stops working and its VM is erased."""
+        _checked_id(external_id)
         what = "deleting a space"
         response = await self._app.request("DELETE", self._path(external_id), what=what)
         if response.status_code != 404:
@@ -124,6 +125,12 @@ class Space:
     async def token(self) -> str:
         """The space's token (`token_use=space`), renewed shortly before it runs out."""
         return await self._tokens.get(lambda: self.app.exchange(self.space_id))
+
+
+def _checked_id(external_id: str) -> None:
+    # An empty id would address the collection: a `DELETE` of it is not a space's.
+    if not external_id or "/" in external_id or len(external_id) > 200:
+        raise ValueError("a space's external id is 1 to 200 characters, without '/'")
 
 
 def _checked(response: httpx.Response, *, what: str) -> None:

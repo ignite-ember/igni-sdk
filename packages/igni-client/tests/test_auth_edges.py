@@ -451,3 +451,13 @@ def test_a_credentials_file_that_cannot_be_read_says_it_is_not_igni_s(tmp_path: 
         unreadable.chmod(0o600)
     with pytest.raises(AuthError, match="is not an igni credentials file"):
         Person.from_cli(binary)
+
+
+@pytest.mark.parametrize("ask", ["get", "delete"])
+async def test_a_space_without_an_external_id_is_refused_before_asking(ask: str) -> None:
+    app, asked = _spaces_on(lambda request: httpx.Response(204))
+
+    with pytest.raises(ValueError, match="1 to 200 characters"):
+        await getattr(app.spaces, ask)("")
+
+    assert asked == []
