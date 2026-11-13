@@ -137,11 +137,13 @@ complete:
 
 ## What it cannot do yet
 
-This compiles, is type-checked in CI, and **cannot run**. Two reasons,
-neither of them about this code:
+This compiles, is type-checked and tested in CI, and **cannot run as it
+stands**. Two reasons, neither of them about this code:
 
-1. `@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` are not published
-   packages — they are a tsconfig alias inside `clients/web`.
+1. It is not bundled: there is no build config here, and `igni-ui.css`
+   (from `@ignite-ember/ui-css`) has to be copied in beside the source.
+   The two packages it imports, `@ignite-ember/extension-bridge` and
+   `@ignite-ember/ui-react`, are published on npm.
 2. Nothing installs an extension. `ExtensionRegistry` takes a
    validated manifest and `ExtensionRpc.bind` takes a service, but
    nothing starts a sidecar, registers an endpoint, or renders
