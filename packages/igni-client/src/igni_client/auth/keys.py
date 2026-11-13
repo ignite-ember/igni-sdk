@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, Literal
 
 import jwt
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import BaseModel
@@ -59,9 +60,15 @@ class AppKey:
 
     @classmethod
     def from_pem(cls, pem: str) -> AppKey:
-        loaded = serialization.load_pem_private_key(pem.encode(), password=None)
+        try:
+            loaded = serialization.load_pem_private_key(pem.encode(), password=None)
+        except (ValueError, TypeError, UnsupportedAlgorithm) as exc:
+            # Garbage, a key with a password (a TypeError) and a curve this build lacks alike.
+            raise ValueError(
+                "an app's key must be an RSA private key, as an unencrypted PEM"
+            ) from exc
         if not isinstance(loaded, rsa.RSAPrivateKey):
-            raise ValueError("an app's key must be an RSA private key")
+            raise ValueError("an app's key must be an RSA private key, as an unencrypted PEM")
         return cls(loaded)
 
     @staticmethod

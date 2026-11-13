@@ -12,7 +12,7 @@ import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from pydantic import ValidationError
 
 from igni_client import ApiKey, App, AuthError, Person, Unavailable
@@ -419,3 +419,15 @@ def test_a_new_key_replacing_a_looser_file_is_still_only_its_owner_s(tmp_path: P
 
     assert target.stat().st_mode & 0o777 == 0o600
     assert target.read_text().startswith("-----BEGIN PRIVATE KEY-----")
+
+
+def test_a_key_that_is_encrypted_or_not_rsa_is_refused_as_a_value_error() -> None:
+    encrypted = _pem(
+        rsa.generate_private_key(public_exponent=65537, key_size=2048),
+        serialization.BestAvailableEncryption(b"pw"),
+    )
+    not_rsa = _pem(ec.generate_private_key(ec.SECP256R1()))
+
+    for pem in (encrypted, not_rsa, "", "not a pem"):
+        with pytest.raises(ValueError, match="RSA private key"):
+            AppKey.from_pem(pem)
