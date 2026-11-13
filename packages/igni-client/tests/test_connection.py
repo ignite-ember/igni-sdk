@@ -612,6 +612,23 @@ async def test_a_vm_that_stays_unbound_is_unavailable_after_its_retries() -> Non
     assert len({c.id for c in asked}) == 4, "each ask has an id of its own"
 
 
+async def test_a_vm_is_asked_thirty_times_a_second_apart_before_it_is_given_up_on() -> None:
+    assert Connection.UNBOUND_RETRIES == 30
+    assert Connection.UNBOUND_RETRY_SECONDS == 1.0
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        igni._conn.UNBOUND_RETRY_SECONDS = 0.0
+        fake.methods.answers["list_background_processes"] = lambda args: []
+        fake.methods.unbound_for(29)
+        assert await igni.processes.list() == [], "the thirtieth ask is answered"
+        fake.methods.calls.clear()
+        fake.methods.unbound_for(100)
+        with pytest.raises(Unavailable, match="was not bound to its producer in time"):
+            await igni.processes.list()
+
+    asked = [c for c in fake.methods.calls if c.method == "list_background_processes"]
+    assert len(asked) == 30
+
+
 async def test_a_vm_unbound_and_then_failing_raises_the_failure_not_the_wait() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         igni._conn.UNBOUND_RETRY_SECONDS = 0.001
