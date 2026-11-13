@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import ValidationError
 
-from igni_client import ApiKey, App, AuthError, Unavailable
+from igni_client import ApiKey, App, AuthError, Person, Unavailable
 from igni_client import auth as auth_package
 from igni_client.auth.grants import (
     ACCESS_TOKEN_TYPE,
@@ -327,3 +327,84 @@ async def test_a_forgotten_token_is_fetched_again() -> None:
     await cache.forget()
 
     assert (first, await cache.get(fetch)) == ("t1", "t2")
+
+
+# ── A person ─────────────────────────────────────────────────────────
+
+
+def test_an_api_key_never_shows_the_key_and_a_padded_one_is_sent_trimmed() -> None:
+    key = ApiKey("  igpak1.org.k1.secret \n", server="http://igni.test")
+
+    assert "secret" not in repr(key)
+    assert repr(key) == "ApiKey(server='http://igni.test')"
+    assert key._grant.form()["api_key"] == "igpak1.org.k1.secret"
+
+
+async def test_a_person_s_session_token_is_kept_without_its_padding() -> None:
+    assert await Person("  t-ada\n").token() == "t-ada"
+
+
+def test_an_api_key_from_the_person_uses_the_client_it_was_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("IGNI_API_KEY", "")
+    monkeypatch.setenv("IGNI_SERVER_URL", "")
+    http = httpx.AsyncClient()
+
+    key = Person.from_api_key("igpak1.org.k1.secret", server="http://igni.test", http=http)
+
+    assert key._server._http is http and not key._server._owns_http
+    with pytest.raises(AuthError, match="no API key"):
+        Person.from_api_key()
+
+
+def test_an_empty_environment_variable_is_no_key_and_no_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("IGNI_API_KEY", "")
+    monkeypatch.setenv("IGNI_SERVER_URL", "")
+
+    with pytest.raises(AuthError, match="no API key"):
+        Person.from_api_key(server="http://igni.test")
+    with pytest.raises(AuthError, match="where is igni server"):
+        Person.from_api_key("igpak1.org.k1.secret")
+
+
+def test_a_credentials_path_that_is_a_directory_is_no_session(tmp_path: Path) -> None:
+    with pytest.raises(AuthError, match="no igni session on this machine"):
+        Person.from_cli(tmp_path)
+
+
+# ── A space's id ─────────────────────────────────────────────────────
+
+
+def _spaces_on(
+    answer: Callable[[httpx.Request], httpx.Response],
+) -> tuple[App, list[httpx.Request]]:
+    asked: list[httpx.Request] = []
+
+    def route(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(200, json={"issuer": ISSUER})
+        if request.url.path == "/v1/oauth/token":
+            return httpx.Response(200, json={"access_token": "t"})
+        asked.append(request)
+        return answer(request)
+
+    return _app_on(route), asked
+
+
+async def test_an_external_id_of_two_hundred_characters_is_declared() -> None:
+    app, asked = _spaces_on(lambda request: httpx.Response(200, json={"space_id": "sp-1"}))
+
+    space = await app.spaces.declare("x" * 200)
+
+    assert space.space_id == "sp-1"
+    assert asked[0].url.path.endswith("/spaces/" + "x" * 200)
+
+
+async def test_a_declare_answered_with_something_that_is_no_space_is_unavailable() -> None:
+    app, _ = _spaces_on(lambda request: httpx.Response(200, json={"id": "sp-1"}))
+
+    with pytest.raises(Unavailable, match="declaring a space with something else"):
+        await app.spaces.declare("a")
