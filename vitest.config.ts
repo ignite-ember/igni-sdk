@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitest/config";
 
 // The npm SDKs' own tests, run together from the repository root. Each
@@ -5,9 +7,24 @@ import { defineConfig } from "vitest/config";
 // node_modules/@ignite-ember/, so a package imports another by the name an
 // extension author writes.
 export default defineConfig({
+  resolve: {
+    alias: [
+      // The reference extension imports ./igni-ui.css, which its bundler
+      // copies in beside the source (README: "ships inside your bundle").
+      // The tests stand in the published stylesheet for it.
+      {
+        find: /^\.\/igni-ui\.css$/,
+        replacement: fileURLToPath(new URL("./clients/ui/igni-ui.css", import.meta.url)),
+      },
+    ],
+  },
   test: {
-    include: ["packages/**/*.{test,spec}.{ts,tsx}", "clients/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["**/node_modules/**", "examples/**"],
+    include: [
+      "packages/**/*.{test,spec}.{ts,tsx}",
+      "clients/**/*.{test,spec}.{ts,tsx}",
+      "examples/reference-extension/**/*.{test,spec}.{ts,tsx}",
+    ],
+    exclude: ["**/node_modules/**"],
     // ``npx vitest run --coverage`` (CI's npm job). Every source file
     // counts, loaded by a test or not.
     coverage: {
