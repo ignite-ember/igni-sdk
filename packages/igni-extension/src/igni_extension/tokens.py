@@ -68,6 +68,8 @@ class SignedIn(BaseModel):
             )
         except (IndexError, ValueError, TypeError):
             return cls()
+        if not isinstance(claims, dict):
+            return cls()
         return cls(
             user_id=str(claims.get("sub") or ""),
             org_id=str(claims.get("org") or ""),
