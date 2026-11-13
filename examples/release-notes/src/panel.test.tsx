@@ -306,7 +306,8 @@ describe("the note", () => {
   });
 
   it("drops the draft when another release is picked", async () => {
-    await mount(fakeClient());
+    const client = fakeClient();
+    await mount(client);
     type("half typed");
     fireEvent.click(screen.getByText("2.3.1", { selector: "span" }));
     await flush();
