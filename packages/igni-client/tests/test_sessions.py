@@ -12,7 +12,7 @@ from igni_client import (
     RunCompleted,
 )
 from igni_client.events import ErrorMessage, Event, RequirementDetails, RunPaused
-from igni_client.frames import HitlResponseBatch
+from igni_client.frames import HitlResponseBatch, QueueMessage, UserMessage
 from igni_client.testing import FakeIgni, Steps
 from igni_client.testing.methods import DEFAULT_SESSION
 
@@ -153,3 +153,19 @@ async def _until(condition: Any, timeout: float = 5.0) -> None:
             await asyncio.sleep(0.01)
 
     await asyncio.wait_for(wait(), timeout)
+
+
+async def test_a_prompt_and_a_file_go_to_igni_byte_for_byte() -> None:
+    prompt = "\n  fix the \t build  \r\n\n"
+    files = {" a b.py ": "\n  x = 1 \n\n"}
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+
+        await session.ask(prompt, files=files)
+        await session.queue(prompt)
+        await _until(lambda: any(isinstance(r.frame, QueueMessage) for r in fake.socket.received))
+
+    [sent] = [r.frame for r in fake.socket.received if isinstance(r.frame, UserMessage)]
+    [queued] = [r.frame for r in fake.socket.received if isinstance(r.frame, QueueMessage)]
+    assert sent.text == prompt and sent.file_contents == files
+    assert queued.text == prompt
