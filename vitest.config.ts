@@ -16,6 +16,12 @@ export default defineConfig({
         find: /^\.\/igni-ui\.css$/,
         replacement: fileURLToPath(new URL("./clients/ui/igni-ui.css", import.meta.url)),
       },
+      // The release-notes panel imports ./panel.css; its stylesheet is
+      // ui/panel.css, which index.html links.
+      {
+        find: /^\.\/panel\.css$/,
+        replacement: fileURLToPath(new URL("./examples/release-notes/ui/panel.css", import.meta.url)),
+      },
     ],
   },
   test: {
