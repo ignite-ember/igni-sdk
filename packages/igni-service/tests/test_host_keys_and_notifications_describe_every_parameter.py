@@ -40,9 +40,10 @@ def _documented(doc: str) -> list[str]:
 
 def _surface() -> list[tuple[str, object, str]]:
     surface: list[tuple[str, object, str]] = []
-    for klass in (Host, KeyCipher, Notifier):
-        surface.append((klass.__name__, klass.__init__, inspect.getdoc(klass) or ""))
-    for klass in (Host, KeyCipher, KeyStore, MemoryKeyStore, Notification, Notifier):
+    for built in (Host, KeyCipher, Notifier):
+        surface.append((built.__name__, built.__init__, inspect.getdoc(built) or ""))
+    classes: tuple[type, ...] = (Host, KeyCipher, KeyStore, MemoryKeyStore, Notification, Notifier)
+    for klass in classes:
         for name, member in klass.__dict__.items():
             if name.startswith("_"):
                 continue
