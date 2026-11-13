@@ -80,6 +80,8 @@ class Lifecycle:
         """The open socket, waiting up to `timeout` while it is being opened again."""
         if self.failure is not None and self.phase is not Phase.OPEN:
             raise self.failure
+        if self.phase is Phase.OPEN and self.link is not None:
+            return self.link.socket
         try:
             await asyncio.wait_for(self._open.wait(), timeout)
         except TimeoutError as exc:

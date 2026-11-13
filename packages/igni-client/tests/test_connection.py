@@ -492,6 +492,15 @@ async def test_a_send_while_opening_waits_for_the_welcome() -> None:
     assert await asyncio.wait_for(sending, 1) is link.socket
 
 
+async def test_an_open_socket_is_given_even_when_there_is_no_time_to_wait() -> None:
+    lifecycle = Lifecycle()
+    link = Link(_StubSocket())  # type: ignore[arg-type]
+    lifecycle.opening(link)
+    lifecycle.opened()
+
+    assert await lifecycle.socket(0, "igni") is link.socket
+
+
 async def test_a_second_reply_and_a_message_without_an_id_go_no_further() -> None:
     router = Router()
     listener = router.listen()
