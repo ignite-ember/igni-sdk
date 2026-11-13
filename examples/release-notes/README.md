@@ -106,8 +106,8 @@ inside `clients/web` rather than an install, so `ui/panel.js` is not
 built here.
 
 The **backend** runs. `server.py` is a real MCP server and
-`tests/test_a_second_extension_shape_works.py` installs this bundle
-and calls it, including the revision conflict — which is the part
+`tests/test_the_release_notes_example.py` calls its five tools,
+including the revision conflict — which is the part
 worth copying.
 
 ```bash
