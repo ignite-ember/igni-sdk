@@ -43,10 +43,13 @@
  *
  * ## What does not work yet
  *
- * One thing: the packages are a tsconfig alias rather than an
- * install, so this is type-checked in CI and not bundled here. The
- * backend beside it is a real MCP server and is driven by
- * ``tests/test_a_second_extension_shape_works.py``.
+ * One thing: it is not bundled. There is no build config here, and
+ * `igni-ui.css` (from `@ignite-ember/ui-css`) has to be copied in
+ * beside the source. The two packages it imports,
+ * `@ignite-ember/extension-bridge` and `@ignite-ember/ui-react`, are
+ * published on npm. This file and `notes.ts` are type-checked and
+ * tested in CI (`notes.test.ts`, `panel.test.tsx`). The backend beside
+ * it is a real MCP server (`server.py`).
  */
 
 import {
