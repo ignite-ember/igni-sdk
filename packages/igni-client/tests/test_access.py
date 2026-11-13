@@ -108,3 +108,50 @@ def test_every_generated_method_needs_an_access_a_client_can_have() -> None:
     check("m", "approver", "approver")
     with pytest.raises(AccessRefused):
         check("m", "approver", "program")
+
+
+def test_what_each_standing_reaches_is_exactly_this() -> None:
+    expected = {
+        "program": frozenset({"client"}),
+        "approver": frozenset({"client", "approver"}),
+        "window": frozenset({"client", "approver", "window"}),
+        "unknown": None,
+    }
+    assert dict(REACHES) == expected
+
+
+def test_a_refusal_names_the_method_and_says_who_may() -> None:
+    with pytest.raises(AccessRefused) as window_only:
+        check("login", "window", "approver")
+    assert window_only.value.method == "login"
+    assert window_only.value.message == "only igni's window may do this"
+    assert isinstance(window_only.value, NotAllowed)
+
+    with pytest.raises(AccessRefused) as approver_only:
+        check("approve_plan", "approver", "program")
+    assert approver_only.value.method == "approve_plan"
+    assert "Local(approver_token=...)" in approver_only.value.message
+
+    with pytest.raises(AccessRefused):
+        check("login", "window", "program")
+
+
+def test_an_access_level_with_no_reason_is_refused_with_the_fallback_text() -> None:
+    for standing in ("program", "approver", "window"):
+        with pytest.raises(AccessRefused) as refused:
+            check("open_page", "page", standing)
+        assert refused.value.message == "a page call"
+        assert refused.value.method == "open_page"
+    with pytest.raises(AccessRefused) as empty:
+        check("", "platform", "window")
+    assert empty.value.message == "a platform call"
+
+
+def test_an_unknown_standing_never_refuses_even_what_nothing_reaches() -> None:
+    check("m", "page", "unknown")
+    check("m", "window", "unknown")
+
+
+def test_a_standing_that_does_not_exist_is_a_programming_error() -> None:
+    with pytest.raises(KeyError):
+        check("m", "client", "stranger")  # type: ignore[arg-type]
