@@ -311,6 +311,12 @@ describe("the note", () => {
     fireEvent.click(screen.getByText("2.3.1", { selector: "span" }));
     await flush();
     expect(editor().value).toBe("body of 2.3.1");
+    // Nothing of the old editor's state follows: not its unsaved flag,
+    // and so not its revision either.
+    expect(publishButton().disabled).toBe(false);
+    type("next");
+    await flush(1_500);
+    expect(client.save).toHaveBeenCalledWith("2.3.1", "next", "r1");
   });
 
   it("previews the draft as Markdown", async () => {
