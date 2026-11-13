@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ from igni_client.auth.grants import (
     SpaceExchangeGrant,
 )
 from igni_client.auth.keys import AppKey, ClientAssertion, _b64url_uint
+from igni_client.auth.tokens import IssuedToken, TokenCache
 
 ISSUER = "https://igni.example.test"
 
@@ -260,3 +262,68 @@ async def test_a_refusal_without_a_description_is_told_as_igni_server_wrote_it(
 
     assert str(refused.value).startswith("igni server refused the API key: {")
     assert "invalid_grant" in str(refused.value)
+
+
+# ── The token cache ──────────────────────────────────────────────────
+
+
+async def _fetcher(*lifetimes: int) -> Callable[[], Any]:
+    issued = iter(lifetimes)
+    count = [0]
+
+    async def fetch() -> IssuedToken:
+        count[0] += 1
+        return IssuedToken(access_token=f"t{count[0]}", expires_in=next(issued))
+
+    return fetch
+
+
+async def test_a_token_is_fetched_again_the_moment_its_margin_is_reached() -> None:
+    now = [0.0]
+    cache = TokenCache(lambda: now[0], renew_before=lambda: 60)
+    fetch = await _fetcher(600, 600)
+
+    first = await cache.get(fetch)
+    now[0] = 539.999
+    kept = await cache.get(fetch)
+    now[0] = 540.0
+    renewed = await cache.get(fetch)
+
+    assert (first, kept, renewed) == ("t1", "t1", "t2")
+
+
+@pytest.mark.parametrize("lifetime", [0, -5, 30])
+async def test_a_token_that_lives_less_than_the_margin_is_never_kept(lifetime: int) -> None:
+    cache = TokenCache(lambda: 100.0, renew_before=lambda: 60)
+    fetch = await _fetcher(lifetime, lifetime)
+
+    assert (await cache.get(fetch), await cache.get(fetch)) == ("t1", "t2")
+
+
+async def test_a_fetch_that_fails_leaves_the_cache_free_and_the_next_fetch_unpoisoned() -> None:
+    now = [0.0]
+    cache = TokenCache(lambda: now[0], renew_before=lambda: 60)
+    good = await _fetcher(600)
+    assert await cache.get(good) == "t1"
+    now[0] = 600.0
+
+    async def broken() -> IssuedToken:
+        raise Unavailable("down")
+
+    with pytest.raises(Unavailable):
+        await cache.get(broken)
+
+    async def fresh() -> IssuedToken:
+        return IssuedToken(access_token="fresh")
+
+    assert await asyncio.wait_for(cache.get(fresh), timeout=1) == "fresh"
+
+
+async def test_a_forgotten_token_is_fetched_again() -> None:
+    cache = TokenCache(lambda: 0.0, renew_before=lambda: 60)
+    fetch = await _fetcher(600, 600)
+
+    first = await cache.get(fetch)
+    await cache.forget()
+
+    assert (first, await cache.get(fetch)) == ("t1", "t2")
