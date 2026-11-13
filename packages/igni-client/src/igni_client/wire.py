@@ -74,7 +74,12 @@ def to_wire(message: BaseModel) -> str:
     — the contract's. A value JSON cannot hold raises.
     """
     fields = message.model_dump(mode="json", by_alias=True, exclude_unset=True)
-    return json.dumps({"type": getattr(message, "type", ""), **fields})
+    try:
+        return json.dumps({"type": getattr(message, "type", ""), **fields}, allow_nan=False)
+    except ValueError as error:
+        raise ValueError(
+            f"not valid JSON: a NaN or infinite number cannot be sent ({error})"
+        ) from error
 
 
 __all__ = ["Args", "Event", "Frame", "Model", "RunEvent", "to_wire"]
