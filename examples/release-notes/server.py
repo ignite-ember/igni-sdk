@@ -15,6 +15,7 @@ two people editing at once is normal rather than exceptional, and
 
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
@@ -112,6 +113,8 @@ def publish(version: str) -> str:
     for release in RELEASES:
         if release["version"] == version:
             release["state"] = "published"
+            if release["publishedAt"] is None:
+                release["publishedAt"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             return json.dumps(release)
     raise ToolError(f"no release {version}")
 
