@@ -946,6 +946,28 @@ def object_pattern_properties(pattern: str) -> list[tuple[str, str, bool]]:
     return out
 
 
+def inline_object_properties(type_: str) -> dict[str, tuple[str, bool]]:
+    """The properties of a type written in place: ``{ name: string; size?: number }``.
+
+    A component whose props are not worth an interface annotates its
+    pattern with the object type itself; the type and whether the property
+    may be left out are read from it the same way.
+    """
+    inner = _strip_comments(type_).strip()[1:-1]
+    parts = _split_top_level(inner, ";")
+    if len(parts) == 1:
+        parts = _split_top_level(inner, ",")
+    out: dict[str, tuple[str, bool]] = {}
+    for part in parts:
+        head, sep, tail = _partition_top_level(part.strip(), ":")
+        if not sep:
+            continue
+        name = head.strip()
+        optional = name.endswith("?")
+        out[name.rstrip("?").strip()] = (tail.strip(), optional)
+    return out
+
+
 def signature_parameters(
     text: str, prop_types: dict[str, dict[str, tuple[str, bool]]] | None = None
 ) -> list[Parameter]:
@@ -972,6 +994,8 @@ def signature_parameters(
         head = head.strip()
         if head.startswith("{") and head.endswith("}"):
             known = (prop_types or {}).get(tail.strip(), {})
+            if not known and tail.strip().startswith("{"):
+                known = inline_object_properties(tail.strip())
             for name, default, rest in object_pattern_properties(head):
                 type_, optional = known.get(name, ("", not default))
                 out.append(

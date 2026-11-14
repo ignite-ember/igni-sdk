@@ -22,6 +22,7 @@ from tools.ts_reference import (
     _prev_significant_index,
     member_parameters_text,
     object_pattern_properties,
+    signature_parameters,
 )
 
 
@@ -1056,3 +1057,14 @@ def test_the_module_exports_what_the_pages_use() -> None:
         "TsReference",
     ]
     assert issubclass(ReferenceError_, ValueError)
+
+
+def test_a_pattern_annotated_with_an_inline_type_takes_its_types_and_requiredness() -> None:
+    """``({ name, size = 18 }: { name: string; size?: number })`` is not all optional."""
+    params = signature_parameters(
+        "{ name, size = 18 }: { name: string; size?: number }"
+    )
+    assert [(p.name, p.type, p.default, p.optional) for p in params] == [
+        ("name", "string", "", False),
+        ("size", "number", "18", True),
+    ]
