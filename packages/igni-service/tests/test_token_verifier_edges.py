@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pytest
@@ -103,6 +104,16 @@ async def test_a_time_that_is_not_a_number_is_refused(
     verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, changes: dict[str, Any]
 ) -> None:
     reason = await reason_of(verifier, signed(fake, clock, **changes))
+
+    assert reason == "the token's exp or iat is not a number"
+
+
+@pytest.mark.parametrize("time", [math.nan, math.inf, -math.inf])
+@pytest.mark.parametrize("claim", ["exp", "iat"])
+async def test_a_time_that_is_not_a_finite_number_is_refused(
+    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, claim: str, time: float
+) -> None:
+    reason = await reason_of(verifier, signed(fake, clock, **{claim: time}))
 
     assert reason == "the token's exp or iat is not a number"
 

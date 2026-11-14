@@ -22,6 +22,7 @@ getting in when their ten-minute token expires and igni will not renew it.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Collection
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -321,6 +322,10 @@ class TokenVerifier:
             expires, issued = float(claims["exp"]), float(claims["iat"])
         except (TypeError, ValueError):
             raise TokenRefused("the token's exp or iat is not a number") from None
+        if not (math.isfinite(expires) and math.isfinite(issued)):
+            # NaN and infinity compare false with everything: a token with an
+            # exp of Infinity or NaN would never expire.
+            raise TokenRefused("the token's exp or iat is not a number")
         now = self._clock.wall()
         if now >= expires:
             raise TokenRefused("the token has expired")
