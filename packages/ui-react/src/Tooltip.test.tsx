@@ -178,3 +178,225 @@ describe("where it goes", () => {
     expect(tip()).toBeNull();
   });
 });
+
+/**
+ * jsdom lays nothing out, so every rectangle is zero. These give the
+ * control and the bubble the boxes a browser would, which is the
+ * measuring the component does and not something it is being tested
+ * against.
+ */
+function boxes(control: Partial<DOMRect>, bubble: Partial<DOMRect> = { left: 50, right: 150 }) {
+  const rect = (r: Partial<DOMRect>) => ({
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+    ...r,
+  });
+  return vi
+    .spyOn(Element.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: Element) {
+      return rect(this.classList.contains("tip") ? bubble : control);
+    });
+}
+
+function tipEl() {
+  return document.querySelector(".tip") as HTMLElement;
+}
+
+describe("where it sits against the control", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("is centred under the control, a gap below it", () => {
+    boxes({ left: 100, width: 40, top: 20, bottom: 50 });
+    iconButton();
+
+    fireEvent.focus(control());
+
+    expect(tipEl().style.left).toBe("120px");
+    expect(tipEl().style.top).toBe("58px");
+    expect(tipEl().style.transform).toBe("translate(-50%, 0)");
+  });
+
+  it("goes above the control when fewer than 42px remain below it", () => {
+    // 34px of bubble and the 8px gap: the fit is judged on both.
+    const room = window.innerHeight - 42;
+    boxes({ left: 100, width: 40, top: room - 30, bottom: room });
+    iconButton();
+    fireEvent.focus(control());
+
+    expect(tipEl().style.top).toBe(`${room - 30 - 8}px`);
+    expect(tipEl().style.transform).toBe("translate(-50%, -100%)");
+  });
+
+  it("stays below when exactly 43px remain", () => {
+    const bottom = window.innerHeight - 43;
+    boxes({ left: 100, width: 40, top: bottom - 30, bottom });
+    iconButton();
+    fireEvent.focus(control());
+
+    expect(tipEl().style.top).toBe(`${bottom + 8}px`);
+  });
+
+  it("is nudged left when it would run past the right edge", () => {
+    boxes(
+      { left: 100, width: 40, top: 20, bottom: 50 },
+      { left: 900, right: window.innerWidth + 30 },
+    );
+    iconButton();
+
+    fireEvent.focus(control());
+
+    // 30px beyond the window, and 8px of margin to keep.
+    expect(tipEl().style.transform).toBe("translate(calc(-50% - 38px), 0)");
+  });
+
+  it("is nudged right when it would run past the left edge", () => {
+    boxes(
+      { left: 0, width: 4, top: 20, bottom: 50 },
+      { left: -20, right: 60 },
+    );
+    iconButton();
+
+    fireEvent.focus(control());
+
+    expect(tipEl().style.transform).toBe("translate(calc(-50% + 28px), 0)");
+  });
+
+  it("keeps the lift above the control when it is nudged sideways", () => {
+    const bottom = window.innerHeight;
+    boxes(
+      { left: 0, width: 4, top: bottom - 30, bottom },
+      { left: -20, right: 60 },
+    );
+    iconButton();
+
+    fireEvent.focus(control());
+
+    expect(tipEl().style.transform).toBe("translate(calc(-50% + 28px), -100%)");
+  });
+
+  it("is left where it is when it fits inside the margins", () => {
+    boxes(
+      { left: 100, width: 40, top: 20, bottom: 50 },
+      { left: 8, right: window.innerWidth - 8 },
+    );
+    iconButton();
+
+    fireEvent.focus(control());
+
+    expect(tipEl().style.transform).toBe("translate(-50%, 0)");
+  });
+});
+
+describe("what puts it away", () => {
+  it("a scroll anywhere, as the control moves out from under it", () => {
+    iconButton();
+    fireEvent.focus(control());
+
+    fireEvent.scroll(document.body);
+
+    expect(tip()).toBeNull();
+  });
+
+  it("a resize of the window", () => {
+    iconButton();
+    fireEvent.focus(control());
+
+    fireEvent(window, new Event("resize"));
+
+    expect(tip()).toBeNull();
+  });
+
+  it("is not put away by a key that is not Escape", () => {
+    iconButton();
+    fireEvent.focus(control());
+
+    fireEvent.keyDown(window, { key: "a" });
+
+    expect(tip()).toBeTruthy();
+  });
+
+  it("an unmount with the dwell still running leaves no timer behind", () => {
+    vi.useFakeTimers();
+    const { unmount } = iconButton();
+    fireEvent.pointerEnter(control());
+    expect(vi.getTimerCount()).toBe(1);
+
+    unmount();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("the dwell, repeated", () => {
+  it("a second enter restarts the wait rather than adding to it", () => {
+    vi.useFakeTimers();
+    iconButton();
+
+    fireEvent.pointerEnter(control());
+    act(() => void vi.advanceTimersByTime(200));
+    fireEvent.pointerEnter(control());
+    act(() => void vi.advanceTimersByTime(200));
+    // 400ms since the first, 200ms since the second.
+    expect(tip()).toBeNull();
+    act(() => void vi.advanceTimersByTime(200));
+
+    expect(document.querySelectorAll(".tip")).toHaveLength(1);
+  });
+
+  it("does not appear a moment before 350ms", () => {
+    vi.useFakeTimers();
+    iconButton();
+    fireEvent.pointerEnter(control());
+
+    act(() => void vi.advanceTimersByTime(349));
+    expect(tip()).toBeNull();
+    act(() => void vi.advanceTimersByTime(1));
+
+    expect(tip()).toBeTruthy();
+  });
+});
+
+describe("what it describes", () => {
+  it("has no description while it is closed", () => {
+    iconButton();
+
+    expect(anchor().hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("gives two open tooltips two different ids", () => {
+    render(
+      <>
+        <Tooltip text="One">
+          <button type="button">a</button>
+        </Tooltip>
+        <Tooltip text="Two">
+          <button type="button">b</button>
+        </Tooltip>
+      </>,
+    );
+    for (const b of screen.getAllByRole("button")) fireEvent.focus(b);
+
+    const ids = [...document.querySelectorAll(".tip")].map((t) => t.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+});
+
+describe("a child that is not a control", () => {
+  it("text has no listeners and renders without a tooltip", () => {
+    render(<Tooltip text="Word">just words</Tooltip>);
+
+    fireEvent.focus(anchor());
+    fireEvent.pointerEnter(anchor());
+
+    expect(anchor().textContent).toBe("just words");
+    expect(tip()).toBeNull();
+  });
+});
