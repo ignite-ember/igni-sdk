@@ -941,6 +941,7 @@ SentEvent(
     event_key: str | None = None,
     state: Literal['pending', 'delivered', 'not_handled', 'expired', 'dropped', 'failed'] = 'pending',
     created_at: datetime,
+    expires_at: datetime.datetime | None = None,
 )
 ```
 
@@ -964,6 +965,7 @@ One item a service sent for a producer, as igni stored it.
 | `event_key` | `str \| None` | `None` | The key it was sent with, if any. |
 | `state` | `ItemState` | `'pending'` | Where it stands; `fake.agents.settle` moves it. |
 | `created_at` | `datetime` | required | When the fake stored it. |
+| `expires_at` | `datetime \| None` | `None` | What the service asked for; the fake stores the sooner of that and the 14-day limit. |
 
 ## SettingsOverrides
 

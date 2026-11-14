@@ -12,7 +12,7 @@ Every class the stylesheet defines, in the sections the stylesheet itself uses. 
 
 ## Primitives
 
-The shapes this app keeps making, named once. They were not extracted from duplication, because there was very little: the 231 classes called `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`, and deduplicating all fourteen patterns saved 84 declarations out of 17,789 lines. They did not repeat. They diverged, each feature picking its own gaps and paddings because there was no scale to pick from. So these are decided rather than derived. Where the existing uses agreed, the agreement is the value. Where they split, the split is resolved here with a reason, once, instead of in each feature. There is deliberately no `ui-title`. Titles varied across four type steps and that variation is the design — a heading level, not drift. Use the type scale and a weight.
+The shapes this app keeps making, named once. They were not extracted from duplication, because there was very little: the classes called `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`. They did not repeat. They diverged, each feature picking its own gaps and paddings because there was no scale to pick from. So these are decided rather than derived. Where the existing uses agreed, the agreement is the value. Where they split, the split is resolved here with a reason, once, instead of in each feature. There is deliberately no `ui-title`. Titles varied across four type steps and that variation is the design — a heading level, not drift. Use the type scale and a weight.
 
 | Class | Selector | What it sets |
 |---|---|---|

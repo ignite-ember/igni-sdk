@@ -59,6 +59,7 @@ fallback shows the error's message on purpose.
 | `getDerivedStateFromError` | method | `(error: Error) => State` | The state the boundary holds after a throw. |
 | `componentDidCatch` | method | `(error: Error, info: ErrorInfo) => void` | Reports the error to whoever asked for it. |
 | `componentDidUpdate` | method | `(previous: ErrorBoundaryProps) => void` | Clears the boundary when the reset keys change. |
+| `reset` | method | `() => void` |  |
 | `render` | method | `() => ReactNode` | The children, or the error page when the subtree threw. |
 
 ### ErrorBoundary.getDerivedStateFromError()

@@ -247,7 +247,7 @@ What a `Tooltip` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `text` | field | `string` | The word. Nothing is rendered when it is empty. |
+| `text` | field | `string` | The word. When it is empty, the control's own `title` is used instead; nothing is rendered when there is neither. |
 | `children` | field | `React.ReactNode` | The control the word is about. |
 
 ## Tooltip
@@ -258,13 +258,14 @@ function Tooltip({ text, children }: TooltipProps)
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `text` | `string` | required | the word; nothing is rendered when it is empty. |
+| `text` | `string` | required | the word; when it is empty the control's `title` is used, and nothing is rendered when there is neither. |
 | `children` | `React.ReactNode` | required | the control the word is about. |
 
 What an icon means, on hover and on focus.
 
 It replaces the browser's own `title` rather than sitting beside it:
-leave `title` off the control. Focus shows it at once; hover waits
-350 ms.
+a `title` on the control is removed from it, so the browser never
+shows a second tooltip, and is the word when `text` is empty. Focus
+shows it at once; hover waits 350 ms.
 
 **Also** [`TooltipProps`](/docs/sdk/ui-react/reference-utilities#tooltipprops).

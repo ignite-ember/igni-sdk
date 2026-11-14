@@ -12,8 +12,8 @@ These are the same class names igni itself uses, so a surface built here reads a
 
 They were written after finding two, neither of which was drift in the sense of a value slowly diverging:
 
-- **Seven components were never covered at all.** `OverflowMenu`, `Tooltip`, `Skeleton`, `Monogram`, `MarkdownInline`, `MenuIcon` and the mermaid block named thirty-two classes between them that only `theme.css` defined. Inside the app they looked right — the one environment they are promised for is the one nobody rendered them in. The reference extension did not catch it either, because it happens to import only from `primitives`, which was the covered half.
-- **Eighteen of fifty token fallbacks were a different value from the theme they claim to copy.** Radii at 6/10/14 against the app's 8/12/18, every semantic colour a different hue, a different UI font stack. Standalone is how an extension author develops before they ever mount the thing, so that is what they were tuning against.
+- **Some components were never covered at all.** `OverflowMenu`, `Tooltip`, `Skeleton`, `Monogram`, `MarkdownInline`, `MenuIcon` and the mermaid block named classes that only `theme.css` defined. Inside the app they looked right — the one environment they are promised for is the one nobody rendered them in. The reference extension did not catch it either, because it happens to import only from `primitives`, which was the covered half.
+- **Many token fallbacks were a different value from the theme they claim to copy.** Radii at 6/10/14 against the app's 8/12/18, every semantic colour a different hue, a different UI font stack. Standalone is how an extension author develops before they ever mount the thing, so that is what they were tuning against.
 
 `btn-warn` — a typed `variant="warn"` rendering as a plain button because the class existed in the app and not here — is the case the scanner cannot see by reading source, since no line contains the string `btn-warn`; it only exists as `btn-${variant}` at runtime. Those names are enumerated explicitly in the test for that reason.
 

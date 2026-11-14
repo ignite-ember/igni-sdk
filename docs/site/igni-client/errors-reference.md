@@ -92,8 +92,10 @@ class RpcError(IgniClientError)
 A call igni answered with an error, or whose answer could not be read.
 
 `method` is the wire method, `message` what igni said. igni answers an
-error as a sentence; `RpcError.of` reads which kind it is, and each kind
-is a subclass a caller can catch on its own.
+error with a sentence and, on a call's reply, a `code` word;
+`RpcError.of` reads which kind it is from the code, and each kind is a
+subclass a caller can catch on its own. A reply with no code is read from
+its sentence instead.
 
 ## AccessRefused
 

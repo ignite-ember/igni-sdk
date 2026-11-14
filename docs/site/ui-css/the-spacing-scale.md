@@ -6,4 +6,4 @@
 
 Use them for `gap`, `margin` and `padding` and your layout sits on the same rhythm as the app around it, rather than next to it.
 
-They are not an invention. They are the steps igni already used, written as literals in 375 places. 85% of gaps and 83% of margins landed on them exactly, which is why adopting them changed nothing on screen — and why the ~60 that stayed literal (`5px`, `3px`, `7px`, `18px`) are now visible as deviations rather than hidden among the rest.
+They are not an invention. They are the steps igni already used, written out as literals. Almost every gap and margin landed on them exactly, which is why adopting them changed nothing on screen — and why the few that stayed literal (`5px`, `3px`, `7px`, `18px`) are now visible as deviations rather than hidden among the rest.

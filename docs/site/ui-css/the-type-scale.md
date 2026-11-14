@@ -4,8 +4,8 @@
 
 `--text-2xs` through `--text-4xl` — 10, 11, 12, 13, 14, 17, 20, 30, 42.
 
-Nine steps, down from twenty-two hardcoded sizes that included every half-step from 9px to 15px. `11.5px`, `12px` and `12.5px` between them accounted for 272 declarations: one size written three ways, not three sizes.
+Nine steps, down from many hardcoded sizes that included every half-step from 9px to 15px. `11.5px`, `12px` and `12.5px` were one size written three ways, not three sizes.
 
-Collapsed by role rather than by ratio, because the clusters were already there. No value moved by more than 1px, and 98% of font sizes now name a step.
+Collapsed by role rather than by ratio, because the clusters were already there. No value moved by more than 1px, and nearly every font size now names a step.
 
 One deliberate exception survives, labelled where it lives: a digit inside a 12px circle stays at 7px, because 10px overflows it. A constrained space is a real exception. The half-pixel sizes were not.
