@@ -12,8 +12,16 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from tools.reference_area import Area
-from tools.ts_reference import Module, TsReference, object_pattern_properties
+from tools.ts_reference import (
+    Module,
+    ReferenceError_,
+    TsReference,
+    member_parameters_text,
+    object_pattern_properties,
+)
 
 
 def package(root: Path, files: dict[str, str]) -> Path:
@@ -577,3 +585,420 @@ def test_a_name_is_documented_where_it_is_declared_through_every_way_it_is_expor
         "SIZE": ("rest", "size"),
         "Timeout": ("rest", "timeout"),
     }
+
+
+# ── The refusals ──
+
+
+def test_a_missing_source_is_refused_naming_the_package_and_the_file(tmp_path: Path) -> None:
+    src = package(tmp_path, {"index.ts": "export const A = 1;\n"})
+    with pytest.raises(ReferenceError_, match="p: no source file gone.ts"):
+        TsReference("p", src, [Area("a", "A", ("gone.ts",))])
+    with pytest.raises(ReferenceError_, match="p: no source file other.ts"):
+        TsReference("p", src, [Area("a", "A", ("index.ts",))], entries=("other.ts",))
+
+
+def test_a_public_name_no_area_takes_is_refused_and_so_is_an_area_with_none(
+    tmp_path: Path,
+) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": "export const A = 1;\nexport const B = 2;\n",
+            "empty.ts": "const hidden = 1;\n",
+        },
+    )
+    with pytest.raises(ReferenceError_, match=r"no reference page takes: \['A', 'B'\]"):
+        TsReference("p", src, [Area("x", "X", ("empty.ts",))]).place()
+    with pytest.raises(ReferenceError_, match=r"no public name: \['x'\]"):
+        TsReference(
+            "p", src, [Area("a", "A", ("index.ts",)), Area("x", "X", ("empty.ts",))]
+        ).place()
+
+
+def test_an_internal_name_needs_no_page_and_a_package_of_only_those_has_none(
+    tmp_path: Path,
+) -> None:
+    src = package(tmp_path, {"index.ts": "/** @internal */\nexport const A = 1;\n"})
+    reference = TsReference("p", src, [])
+    assert reference.public == {"A"}
+    assert reference.place() == {}
+
+
+def test_an_unclosed_bracket_is_refused_when_a_declaration_is_read(tmp_path: Path) -> None:
+    with pytest.raises(ReferenceError_, match="an unclosed bracket"):
+        module(tmp_path, "export function f(a: number {\n")
+    with pytest.raises(ReferenceError_, match="an unclosed bracket"):
+        module(tmp_path, "export interface I {\n  a: number;\n")
+
+
+def test_an_unclosed_bracket_in_a_member_leaves_its_type_empty_and_hides_what_follows(
+    tmp_path: Path,
+) -> None:
+    parsed = module(tmp_path, "export class C {\n  go(a: number\n  other: string;\n}\n")
+    members = parsed.declarations["C"].members
+    # The line after the open bracket is inside it, so it is no member.
+    assert [(m.name, m.type) for m in members] == [("go", "")]
+    assert member_parameters_text(members[0]) == ""
+
+
+# ── Exports: lists, stars, specifiers, cycles ──
+
+
+def test_an_export_list_reads_type_prefixes_renames_trailing_commas_and_empty_items(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export { type A, B as C, , D, } from "./x.js";
+        export type { E } from "./y.js";
+        export { F };
+        export {};
+        """,
+    )
+    assert parsed.reexports == {"A": "./x.js", "C": "./x.js", "D": "./x.js", "E": "./y.js", "F": ""}
+    assert list(parsed.exported) == ["F"]
+    assert parsed.aliases == {"C": "B"}
+
+
+def test_a_module_exports_its_own_names_in_the_order_it_declares_them(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export const zeta = 1;
+        const private_ = 2;
+        export function alpha(): void {}
+        export type Mid = string;
+        """,
+    )
+    assert list(parsed.exported) == ["zeta", "alpha", "Mid"]
+    assert list(parsed.declarations) == ["zeta", "private_", "alpha", "Mid"]
+
+
+def test_a_specifier_names_a_ts_tsx_or_index_file_and_a_package_specifier_is_ignored(
+    tmp_path: Path,
+) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": (
+                'export * from "./a.js";\nexport * from "./b.jsx";\n'
+                'export * from "./dir/index.js";\nexport * from "./tsxdir";\n'
+                'export * from "zod";\nexport * from "./nowhere.js";\n'
+            ),
+            "a.ts": "export const A = 1;\n",
+            "b.tsx": "export const B = 1;\n",
+            "dir/index.ts": "export const D = 1;\n",
+            "tsxdir/index.tsx": "export const T = 1;\n",
+            "dir/deep.ts": 'export * from "../a.js";\nexport const Deep = 1;\n',
+        },
+    )
+    reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+    assert reference.target("index.ts", "./a.js") == "a.ts"
+    assert reference.target("index.ts", "./b.jsx") == "b.tsx"
+    assert reference.target("index.ts", "./dir/index.js") == "dir/index.ts"
+    assert reference.target("index.ts", "./tsxdir") == "tsxdir/index.tsx"
+    assert reference.target("dir/deep.ts", "../a.js") == ""  # only ./ specifiers are followed
+    assert reference.target("index.ts", "zod") == ""
+    assert reference.target("index.ts", "./nowhere.js") == ""
+    assert reference.entry_names() == ["A", "B", "D", "T"]
+
+
+def test_a_name_is_found_through_a_chain_of_re_exports_and_stars(tmp_path: Path) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": 'export * from "./mid.js";\n',
+            "mid.ts": 'export { Deep } from "./deep.js";\nexport * from "./other.js";\n',
+            "deep.ts": "/** Deep. */\nexport function Deep(): void {}\n",
+            "other.ts": "export const Other = 1;\n",
+        },
+    )
+    reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+    index = reference.modules["index.ts"]
+    deep = reference.resolve(index, "Deep")
+    assert deep is not None and deep.exported_from == "deep.ts"
+    other = reference.resolve(index, "Other")
+    assert other is not None and other.exported_from == "other.ts"
+    assert reference.resolve(index, "Missing") is None
+    assert reference.entry_names() == ["Deep", "Other"]
+
+
+def test_a_cycle_of_re_exports_resolves_to_nothing_instead_of_looping(tmp_path: Path) -> None:
+    src = package(
+        tmp_path,
+        {
+            "a.ts": 'export { X } from "./b.js";\nexport * from "./b.js";\n',
+            "b.ts": 'export { X } from "./a.js";\nexport * from "./a.js";\n',
+        },
+    )
+    reference = TsReference("p", src, [Area("a", "A", ("a.ts",))], entries=("a.ts",))
+    assert reference.resolve(reference.modules["a.ts"], "X") is None
+    assert reference.resolve(reference.modules["b.ts"], "Y") is None
+    assert reference.entry_names("a.ts") == ["X"]
+    # The name is public but has no declaration anywhere, so no page can hold it.
+    with pytest.raises(ReferenceError_, match="no public name"):
+        reference.place()
+
+
+# ── Reading the text: brackets, strings, comments, regexes ──
+
+
+def test_brackets_inside_strings_comments_and_regexes_do_not_end_a_parameter_list(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export function f(a = ")", b = `)`, c = /[)]/, d = 1 / 2, /* ) */ e = '\\'' ): void {}
+        export function g(
+          // it's a comment with ) and a quote
+          x: number,
+        ): string {}
+        """,
+    )
+    assert parsed.declarations["f"].signature == (
+        "function f(a = \")\", b = `)`, c = /[)]/, d = 1 / 2, e = '\\''): void"
+    )
+    assert parsed.declarations["g"].signature == "function g(x: number): string"
+
+
+# ── The words: JSDoc, summaries, the Also line ──
+
+
+def summary_of(root: Path, doc: str) -> str:
+    """The cell a table shows for a declaration documented by ``doc``."""
+    src = package(root, {"index.ts": f"{doc}\nexport const A = 1;\n"})
+    reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+    page, _ = reference.page(reference.areas[0])
+    return page.split("| [`A`](#a) | const | `index.ts` | ")[1].split(" |\n")[0]
+
+
+def test_a_summary_is_the_first_paragraph_on_one_line_and_stops_at_a_tag_fence_or_table(
+    tmp_path: Path,
+) -> None:
+    def summary(name: str, doc: str) -> str:
+        return summary_of(tmp_path / name, doc)
+
+    assert summary("a", "/** One line. */") == "One line."
+    assert summary("b", "/**\n * First line\n * goes on.\n *\n * Second paragraph.\n */") == (
+        "First line goes on."
+    )
+    assert summary("c", "/**\n * Before the tag.\n * @param x ignored\n */") == "Before the tag."
+    assert summary("d", "/**\n * Text.\n * ```ts\n * code\n * ```\n */") == "Text."
+    assert summary("e", "/**\n * Text.\n * | a | b |\n */") == "Text."
+    assert summary("f", "/**\n *\n * After a blank line.\n */") == "After a blank line."
+    assert summary("g", "/** See {@link Foo} and {@link Bar baz}. */") == "See `Foo` and `Bar baz`."
+
+
+def test_a_name_with_no_summary_is_a_dash_and_is_counted(tmp_path: Path) -> None:
+    src = package(
+        tmp_path,
+        {"index.ts": "/** Has one. */\nexport const A = 1;\nexport const B = 2;\n"},
+    )
+    reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+    page, missing = reference.page(reference.areas[0])
+    assert missing == 1
+    assert "| [`A`](#a) | const | `index.ts` | Has one. |" in page
+    assert "| [`B`](#b) | const | `index.ts` | — |" in page
+
+
+def test_a_long_summary_is_cut_at_a_sentence_after_sixty_characters_else_at_a_word(
+    tmp_path: Path,
+) -> None:
+    sentence = "This first sentence is comfortably longer than sixty characters in all."
+    long_rest = " ".join(["more"] * 60)
+    cut_at_sentence = summary_of(tmp_path / "a", f"/** {sentence} {long_rest} */")
+    assert cut_at_sentence == sentence
+    short = "Short one."
+    cut_at_word = summary_of(tmp_path / "b", f"/** {short} {long_rest} */")
+    assert cut_at_word.endswith("…") and len(cut_at_word) <= 201
+    assert cut_at_word.startswith("Short one. more more")
+    assert not cut_at_word[:-1].endswith(" ")
+    exactly = "x" * 200
+    assert summary_of(tmp_path / "c", f"/** {exactly} */") == exactly
+
+
+def test_a_jsdoc_loses_its_marks_keeps_its_paragraphs_and_rewrites_links(tmp_path: Path) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": (
+                "/**\n * Title line.\n *\n * Body with {@link Other} in it.\n"
+                " *   indented line\n * @param x The x.\n * @returns Ignored here.\n */\n"
+                "export function f(x: number): void {}\n"
+            )
+        },
+    )
+    reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+    page, _ = reference.page(reference.areas[0])
+    body = page.split("| `x` | `number` | required | The x. |\n\n")[1]
+    assert body == (
+        "Title line.\n\nBody with `Other` in it.\n  indented line\n@returns Ignored here.\n"
+    )
+
+
+def test_a_doc_separated_from_its_declaration_by_code_is_not_its_doc(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        /** Belongs to A. */
+        export const A = 1;
+        export const B = 2;
+        /** Right above C. */
+
+        export const C = 3;
+        """,
+    )
+    docs = {name: d.doc for name, d in parsed.declarations.items()}
+    assert docs == {"A": "/** Belongs to A. */", "B": "", "C": "/** Right above C. */"}
+
+
+def test_windows_line_endings_read_like_unix_ones(tmp_path: Path) -> None:
+    unix = (
+        "/**\n * Does it.\n * @param a The a.\n */\nexport class K {\n  /** Field. */\n"
+        "  a: string;\n  go(x: number): void {}\n}\n"
+    )
+    pages = []
+    for name, text in (("u", unix), ("w", unix.replace("\n", "\r\n"))):
+        src = tmp_path / name / "src"
+        src.mkdir(parents=True)
+        (src / "index.ts").write_bytes(text.encode())
+        reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
+        pages.append(reference.page(reference.areas[0])[0])
+    assert pages[0] == pages[1].replace("\r", "")
+    assert "\r" not in pages[1]
+
+
+def test_the_also_line_links_the_other_public_names_a_signature_names(tmp_path: Path) -> None:
+    files = {
+        "index.ts": (
+            "export interface Opts {}\nexport type Id = string;\n"
+            "export function make(opts: Opts, id: Id, more: Opts, other: Unknown): make2 {}\n"
+        )
+    }
+    asked: list[str] = []
+
+    def link(name: str) -> str | None:
+        asked.append(name)
+        return {"Opts": "#opts", "Id": "other.md#id"}.get(name)
+
+    page = page_of(tmp_path / "a", files, link)
+    assert "**Also** [`Opts`](#opts), [`Id`](other.md#id).\n" in page
+    assert "make" not in asked  # its own name is never asked about
+    assert asked.count("Opts") >= 1
+    assert "**Also**" not in page_of(tmp_path / "b", files)
+    assert "**Also**" not in page_of(tmp_path / "c", files, lambda name: None)
+
+
+def test_an_anchor_is_the_name_lower_cased_with_hyphens(tmp_path: Path) -> None:
+    reference = small(tmp_path)
+    assert reference.anchor("HostErrorCode") == "hosterrorcode"
+    assert reference.anchor("a_b$C") == "a-b-c"
+    assert reference.anchor("__x__") == "x"
+
+
+# ── Declarations: what each form's signature is ──
+
+
+def test_each_declaration_form_has_the_signature_a_reader_expects(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export class Thing extends Base implements A, B {}
+        export abstract class Abs {}
+        export interface Opts<T extends object> extends Base<T> {}
+        export async function af<T>(a: T): Promise<T> { return a; }
+        export declare function d(a: number): void;
+        export type Kind =
+          | "a"
+          | "b";
+        export type Pair<A, B> = [A, B];
+        export const MAX = 5;
+        export const NAME: string = "x";
+        export const LONG: string = "0123456789012345678901234567890123456789012345678901234567890";
+        export const BIG = "01234567890123456789012345678901234567890123456789012345678901234567890123456789ab";
+        export const table = {
+          one: 1,
+          two(a: number): number { return a; },
+        };
+        const hidden = 1;
+        """,
+    )
+    signatures = {name: d.signature for name, d in parsed.declarations.items()}
+    assert signatures == {
+        "Thing": "class Thing extends Base implements A, B",
+        "Abs": "class Abs",
+        "Opts": "interface Opts<T extends object> extends Base<T>",
+        "af": "async function af<T>(a: T): Promise<T>",
+        "d": "function d(a: number): void",
+        "Kind": 'type Kind = "a" | "b"',
+        "Pair": "type Pair<A, B> = [A, B]",
+        "MAX": "const MAX = 5",
+        "NAME": 'const NAME: string = "x"',
+        "LONG": "const LONG: string",
+        "BIG": "const BIG",
+        "table": "const table",
+        "hidden": "const hidden = 1",
+    }
+    assert [(m.name, m.kind) for m in parsed.declarations["table"].members] == [
+        ("one", "field"),
+        ("two", "method"),
+    ]
+    assert list(parsed.exported) == [n for n in signatures if n != "hidden"]
+
+
+def test_a_function_with_no_parens_and_a_class_with_no_body_are_not_declarations(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        "export function nothing\nexport class Bare\nexport interface Open\nexport const ok = 1;\n",
+    )
+    assert list(parsed.declarations) == ["ok"]
+
+
+def test_a_declaration_inside_a_body_is_not_a_declaration_and_the_last_of_a_name_wins(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export function outer(): void {
+          const inner = 1;
+          function nested(): void {}
+        }
+        export function over(a: string): void;
+        export function over(a: number): void {}
+        """,
+    )
+    assert list(parsed.declarations) == ["outer", "over"]
+    assert parsed.declarations["over"].signature == "function over(a: number): void"
+
+
+def test_an_empty_file_and_a_file_with_only_comments_declare_and_export_nothing(
+    tmp_path: Path,
+) -> None:
+    for name, text in (("a.ts", ""), ("b.ts", "// only a comment\n/* and another */\n")):
+        parsed = module(tmp_path, text, name)
+        assert (parsed.declarations, parsed.exported, parsed.reexports, parsed.stars) == (
+            {},
+            {},
+            {},
+            [],
+        )
+
+
+def test_the_module_exports_what_the_pages_use() -> None:
+    import tools.ts_reference as ts_reference
+
+    assert sorted(ts_reference.__all__) == [
+        "Area",
+        "Declaration",
+        "Member",
+        "Module",
+        "ReferenceError_",
+        "TsReference",
+    ]
+    assert issubclass(ReferenceError_, ValueError)
