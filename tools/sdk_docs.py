@@ -656,7 +656,9 @@ class ClientReference:
                 else ""
             )
             if note:
-                hidden = f" ({note}; `session_id` is this session's own)" if hidden else f" ({note})"
+                hidden = (
+                    f" ({note}; `session_id` is this session's own)" if hidden else f" ({note})"
+                )
             out += [f"Takes no arguments{hidden}.", ""]
         if followed:
             out += [
