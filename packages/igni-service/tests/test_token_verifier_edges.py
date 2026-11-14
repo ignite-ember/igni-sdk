@@ -316,3 +316,41 @@ def test_the_callers_are_frozen() -> None:
     ):
         with pytest.raises(ValueError, match="frozen"):
             caller.org_id = "other"
+
+
+async def test_a_token_from_another_issuer_is_refused_by_name(
+    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
+) -> None:
+    token = signed(fake, clock, iss="http://somebody-else.test")
+
+    assert (
+        await reason_of(verifier, token)
+        == "the token was issued by somebody other than igni server"
+    )
+
+
+async def test_a_token_for_another_audience_is_refused_naming_this_service_s_own_url(
+    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
+) -> None:
+    token = signed(fake, clock, aud="http://another-service.test")
+
+    assert await reason_of(verifier, token) == (
+        "the token is for another audience; this service's is " + fake.signer.addresses.service_url
+    )
+
+
+async def test_a_token_whose_payload_was_changed_after_signing_is_not_signed_by_igni(
+    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
+) -> None:
+    import base64
+    import json
+
+    head, payload, signature = signed(fake, clock).split(".")
+    padded = payload + "=" * (-len(payload) % 4)
+    claims = json.loads(base64.urlsafe_b64decode(padded))
+    claims["sub"] = "u-mallory"
+    forged = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=").decode()
+
+    assert await reason_of(verifier, f"{head}.{forged}.{signature}") == (
+        "the token is not signed by igni server's keys"
+    )
