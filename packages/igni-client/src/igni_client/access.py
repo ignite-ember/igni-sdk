@@ -33,6 +33,7 @@ decides, and a refusal comes back as the same `AccessRefused`.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Literal
 
 from igni_client.errors import AccessRefused
@@ -69,22 +70,26 @@ def check(method: str, access: str, standing: Standing) -> None:
 ANSWER = "hitl_response_batch"
 
 
-def check_answer(standing: Standing) -> None:
-    """Raise `AccessRefused` when a connection of `standing` cannot answer an approval.
+def check_answer(standing: Standing, choices: Iterable[str] = ()) -> None:
+    """Raise `AccessRefused` when a connection of `standing` cannot send this answer.
 
-    Answering is an `approver` act. A program with the lockfile's token was
-    let send it, and igni's refusal came back as `NotAllowed` from the next
-    turn of the `send()` loop, after `approve()` had returned as if it had
-    answered.
+    Answering is an `approver` act, and saving a rule with it (any `choice`
+    but `once`: `always`, `similar`, a remembered `deny`) a `window` one. Both
+    were sent regardless, and igni's refusal came back as `NotAllowed` from
+    the next turn of the `send()` loop, after `approve()` had returned as if
+    it had answered.
     """
     reached = REACHES[standing]
-    if reached is None or "approver" in reached:
+    if reached is None:
         return
-    raise AccessRefused(
-        ANSWER,
-        "a program answers approval requests only with an approver token, which "
-        "the person makes in igni's window (Local(approver_token=...))",
-    )
+    if "approver" not in reached:
+        raise AccessRefused(
+            ANSWER,
+            "a program answers approval requests only with an approver token, which "
+            "the person makes in igni's window (Local(approver_token=...))",
+        )
+    if "window" not in reached and any(choice != "once" for choice in choices):
+        raise AccessRefused(ANSWER, "an approver answers once; only igni's window saves a rule")
 
 
 __all__ = ["ANSWER", "REACHES", "Access", "Standing", "check", "check_answer"]

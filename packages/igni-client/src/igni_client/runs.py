@@ -74,7 +74,7 @@ class Run:
         await self._conn.send(frame)
 
     async def _answer(self, decisions: list[HitlDecision]) -> None:
-        access.check_answer(self._conn.target.standing)
+        access.check_answer(self._conn.target.standing, (d.choice for d in decisions))
         request_id = self._conn.router.new_id("hitl")
         self._answers.add(request_id)
         await self._start(
@@ -92,7 +92,7 @@ def answer_elsewhere(
     """
 
     async def answer(decisions: list[HitlDecision]) -> None:
-        access.check_answer(conn.target.standing)
+        access.check_answer(conn.target.standing, (d.choice for d in decisions))
         await conn.send(
             HitlResponseBatch(
                 id=conn.router.new_id("hitl"), session_id=session_id, decisions=decisions

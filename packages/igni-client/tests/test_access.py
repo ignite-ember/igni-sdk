@@ -9,6 +9,7 @@ answers; where it does not, igni decides.
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import pytest
@@ -198,3 +199,33 @@ async def test_a_connection_whose_standing_is_unknown_sends_its_answer(tmp_path:
                     await event.approve()
 
     assert len(fake.runs.decisions) == 1
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        lambda event: event.approve("always"),
+        lambda event: event.approve("similar"),
+        lambda event: event.reject(remember=True),
+    ],
+    ids=["always", "similar", "deny-remembered"],
+)
+async def test_an_approver_saving_a_rule_is_refused_before_it_is_sent(
+    tmp_path: Path, answer: Callable[[ApprovalRequested], Awaitable[None]]
+) -> None:
+    """`approve("always")` was sent anyway, igni refused it, `NotAllowed` came
+    from the loop and the run was left paused."""
+    async with FakeIgni(local_token="approver") as fake:
+        _lockfile(tmp_path, fake.socket.port, "program")
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(Local(project_dir=tmp_path, approver_token="approver")) as igni:
+            assert igni.target.standing == "approver"
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    with pytest.raises(AccessRefused, match="an approver answers once"):
+                        await answer(event)
+                    assert fake.runs.decisions == [], "refused before it was sent"
+                    await event.approve()  # once, which an approver may
+
+    assert [[d.choice for d in batch] for batch in fake.runs.decisions] == [["once"]]

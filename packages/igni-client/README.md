@@ -392,7 +392,9 @@ async with FakeIgni() as fake:
 - `approve(choice)` lets every call of the pause run: `"once"`, or
   `"always"` / `"similar"` to save a permission rule (igni's window only).
 - `reject(remember=False)` refuses them; `remember=True` saves a rule
-  refusing such calls from now on.
+  refusing such calls from now on (igni's window only).
+- From an approver, an answer that saves a rule raises `AccessRefused`
+  before it is sent, and the pause stays open for an answer of `"once"`.
 - `decide({requirement_id: Decision, ...})` answers each call on its own,
   with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
@@ -2667,7 +2669,8 @@ A program answers approvals only with an approver token: `/programs` in
 igni's window makes one; pass it as `Local(approver_token=...)` or
 `IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,
 `Decision.deny(remember=True)` and switching the permission mode stay the
-window's.
+window's, and igni-client refuses them from an approver before sending
+(`AccessRefused: … an approver answers once`).
 
 **`AuthError: igni at … refused the approver token`.** igni forgets
 approver tokens when it quits, and `/programs` can revoke them: make a new

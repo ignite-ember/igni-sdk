@@ -72,7 +72,9 @@ async with FakeIgni() as fake:
 - `approve(choice)` lets every call of the pause run: `"once"`, or
   `"always"` / `"similar"` to save a permission rule (igni's window only).
 - `reject(remember=False)` refuses them; `remember=True` saves a rule
-  refusing such calls from now on.
+  refusing such calls from now on (igni's window only).
+- From an approver, an answer that saves a rule raises `AccessRefused`
+  before it is sent, and the pause stays open for an answer of `"once"`.
 - `decide({requirement_id: Decision, ...})` answers each call on its own,
   with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 

@@ -14,7 +14,8 @@ A program answers approvals only with an approver token: `/programs` in
 igni's window makes one; pass it as `Local(approver_token=...)` or
 `IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,
 `Decision.deny(remember=True)` and switching the permission mode stay the
-window's.
+window's, and igni-client refuses them from an approver before sending
+(`AccessRefused: … an approver answers once`).
 
 **`AuthError: igni at … refused the approver token`.** igni forgets
 approver tokens when it quits, and `/programs` can revoke them: make a new
