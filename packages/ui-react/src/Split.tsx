@@ -198,7 +198,10 @@ export function Split({
     else if (event.key === "End") next = max;
     if (next === null) return;
     event.preventDefault();
-    onResize?.(apply(next));
+    // Applied first: `onResize?.(apply(next))` skips the argument
+    // when there is no `onResize`, and the pane never moved.
+    const width = apply(next);
+    onResize?.(width);
   };
 
   const handle = (
@@ -220,7 +223,10 @@ export function Split({
       onKeyDown={onKeyDown}
       // Back to where it started. A pane dragged somewhere silly is
       // otherwise a slow drag back to a width nobody remembers.
-      onDoubleClick={() => onResize?.(apply(defaultWidth))}
+      onDoubleClick={() => {
+        const width = apply(defaultWidth);
+        onResize?.(width);
+      }}
     />
   );
 
