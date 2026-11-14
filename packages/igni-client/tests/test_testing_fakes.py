@@ -502,14 +502,18 @@ class TestFakeMethods:
     async def test_the_registry_lists_the_models_and_the_first_is_the_default(self) -> None:
         methods = FakeMethods()
         registry = await methods.answer(_call("get_model_registry"))
-        switched = await methods.answer(_call("switch_model", model_name="igni-2"))
+        switched = await methods.answer(_call("switch_model", model_name="igni-1"))
+        unknown = await methods.answer(_call("switch_model", model_name="igni-2"))
         status = await methods.answer(_call("get_status"))
 
         assert isinstance(registry, RpcResponse)
         assert _result(registry)["default"] == "igni-1"
         assert _result(registry)["max_context_window"] == 200_000
         assert list(_result(registry)["registry"]) == ["igni-1"]
-        assert isinstance(switched, InfoMessage) and switched.text == "Switched to igni-2"
+        assert isinstance(switched, RpcResponse) and switched.error is None
+        assert _result(switched) == {"text": "Switched to igni-1"}
+        assert isinstance(unknown, RpcResponse) and unknown.result is None
+        assert unknown.error and "igni-2" in unknown.error
         assert isinstance(status, StatusUpdate) and status.model == "igni-1"
 
     async def test_history_is_by_session_and_empty_when_there_is_none(self) -> None:

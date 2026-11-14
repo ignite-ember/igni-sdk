@@ -41,7 +41,7 @@ from igni_client.frames import (
     RpcRequest,
     UserMessage,
 )
-from igni_client.models import RpcResponse, ToolTurn, UserTurn
+from igni_client.models import ModelSwitched, RpcResponse, ToolTurn, UserTurn
 from igni_client.replies import Reply
 from igni_client.testing import Delay, FakeIgni, Pause, Steps
 
@@ -217,16 +217,25 @@ async def test_sessions_are_created_opened_listed_and_switched() -> None:
         opened = await igni.sessions.open(created.id)
         listed = await igni.sessions.list()
         default = await igni.sessions.default()
-        notice = await created.models.switch("igni-1")
+        switched = await created.models.switch("igni-1")
         status = await created.status()
         registry = await created.models.list()
 
     assert opened is created and created.project_dir == "/workspace/payments"
     assert created.id in [entry.session_id for entry in listed]
     assert default.id == "s-default"
-    assert isinstance(notice, InfoMessage) and notice.text == "Switched to igni-1"
+    assert isinstance(switched, ModelSwitched) and switched.text == "Switched to igni-1"
     assert isinstance(status, StatusUpdate) and status.model == "igni-1"
     assert registry.default == "igni-1" and registry.registry["igni-1"].provider == "igni"
+
+
+async def test_switching_to_an_unknown_model_raises_the_documented_error() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        with pytest.raises(MethodFailed, match="Unknown model: nope") as failed:
+            await session.models.switch("nope")
+
+    assert failed.value.method == "switch_model"
 
 
 async def test_a_session_reads_its_history_as_typed_turns() -> None:
