@@ -15,8 +15,11 @@ extension/          the extension: what runs on a person's machine
 service/
   service.py        its service: registers with igni server, ships the
                     extension, answers export and erasure
+pytest.ini          where pytest looks for tests
 tests/
   test_example.py   both, tested on the SDKs' fakes
+  test_extension.py the extension's tools, hook and identity
+  test_service.py   the service's routes, erasure and export
 ```
 
 Run the tests from this directory, in an environment with both SDKs:
