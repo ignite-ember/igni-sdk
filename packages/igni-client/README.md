@@ -686,7 +686,7 @@ socket again after Fleet said busy or the line dropped.
 | `open(session_id, project_dir=None)` | that `Session` |
 | `default()` | the `Session` igni opened at start |
 | `list()` | `list[SessionListEntry]`, every session of igni's own project, newest first |
-| `attach(session_id="", project_dir="")` | igni's own call underneath: an `AttachSessionResult` |
+| `attach(*, project_dir="", session_id="")` | igni's own call underneath: an `AttachSessionResult` |
 
 A `Session`:
 
