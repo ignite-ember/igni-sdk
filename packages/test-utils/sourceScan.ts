@@ -70,7 +70,9 @@ export function withoutComments(src: string): string {
       const stop = end === -1 ? src.length : end + 2;
       // Newlines are kept so line numbers still line up with the
       // original — a scanner that reports a position stays truthful.
-      for (const c of src.slice(i, stop)) out += c === "\n" ? "\n" : " ";
+      // One space per UTF-16 unit, not per code point: an astral
+      // character is two units, and offsets are counted in units.
+      for (let k = i; k < stop; k++) out += src[k] === "\n" ? "\n" : " ";
       i = stop;
       continue;
     }
