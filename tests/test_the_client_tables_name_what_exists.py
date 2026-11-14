@@ -244,6 +244,8 @@ def test_every_table_key_names_a_method_a_message_or_a_def_that_exists() -> None
         assert not set(made) & set(args.get("required", [])), wire
     assert set(FOLLOWED) <= set(METHODS)
     assert set(CLASS_NAMES) <= set(CONTRACT.defs)
+    members = {m for names in UNION_NAMES for m in names}
+    assert members <= set(Plan(RpcContract.read()).contract.defs)
     assert set(MESSAGE_METHODS) <= set(CONTRACT.messages)
     assert set(MESSAGES_NOT_SENT) <= set(CONTRACT.messages)
     assert set(HAND_WRITTEN_NAMESPACES) <= set(NAMESPACES)

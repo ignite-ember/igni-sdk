@@ -451,7 +451,6 @@ UNION_NAMES: dict[frozenset[str], str] = {
             "VisualizationDeltaPayload",
         }
     ): "OrchestrateEvent",
-    frozenset({"PermissionModeChangedPayload", "PlanModeEnteredPayload"}): "PermissionModeChange",
     frozenset({"Dialog", "Toast"}): "WindowItem",
 }
 
