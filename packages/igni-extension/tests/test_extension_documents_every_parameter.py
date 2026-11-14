@@ -24,7 +24,12 @@ def _documented(docstring: str) -> list[str]:
 
         if in_args:
             # Stop when we hit another section (starts with capital letter followed by colon)
-            if stripped and stripped[0].isupper() and ":" in stripped and not stripped.startswith((" ", "\t")):
+            if (
+                stripped
+                and stripped[0].isupper()
+                and ":" in stripped
+                and not stripped.startswith((" ", "\t"))
+            ):
                 break
 
             # Skip empty lines and section headers
