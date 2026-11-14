@@ -193,7 +193,7 @@ The host said no, or it went wrong there. `code` is for code; the message, for p
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(readonly code: HostErrorCode \| string, message: string,)` | The failure, as the host reported it. |
+| `constructor` | method | `(readonly code: HostErrorCode \| string, message: string)` | The failure, as the host reported it. |
 
 ### HostError.constructor()
 
@@ -212,7 +212,7 @@ How requests reach the igni host.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `request` | method | `(op: "get" \| "set" \| "call", path: string, options: { window?: string \| null; session?: string \| null; params?: Record<string, unknown>; value?: unknown; },) => Promise<unknown>` | Send one request to the host. |
+| `request` | method | `(op: "get" \| "set" \| "call", path: string, options: { window?: string \| null; session?: string \| null; params?: Record<string, unknown>; value?: unknown; }) => Promise<unknown>` | Send one request to the host. |
 
 ### HostLink.request()
 
@@ -232,8 +232,8 @@ One object of the host model: `host.chat`, `host.windows.ui(id)`, `host.sessions
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(protected readonly link: HostLink, readonly path: string, protected readonly window: string \| null = null, protected readonly session: string \| null = null,)` | One object of the model, bound to a host. |
-| `call` | method | `(name: string, params: Record<string, unknown>,) => Promise<T>` | Call a method on the host. |
+| `constructor` | method | `(protected readonly link: HostLink, readonly path: string, protected readonly window: string \| null = null, protected readonly session: string \| null = null)` | One object of the model, bound to a host. |
+| `call` | method | `(name: string, params: Record<string, unknown>) => Promise<T>` | Call a method on the host. |
 
 ### HostObject.constructor()
 
@@ -261,7 +261,7 @@ A value of a host object: `get()` reads it, `set()` writes it.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(private readonly owner: HostObject, readonly name: string, readonly writable: boolean,)` | One value of one host object. |
+| `constructor` | method | `(private readonly owner: HostObject, readonly name: string, readonly writable: boolean)` | One value of one host object. |
 | `path` | accessor | `string` | Where in the model this value sits: `host.chat.processing`. |
 | `get` | method | `() => Promise<T>` | Read it. |
 | `set` | method | `(value: T) => Promise<void>` | Write it, as the person's UI would. Refused where theirs would be. |
@@ -293,7 +293,7 @@ the model their topic strings (`session.switched`, …).
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `carries` | field | `T` | Only for the type parameter; never set. |
-| `constructor` | method | `(readonly name: string,)` | One signal of one host object. |
+| `constructor` | method | `(readonly name: string)` | One signal of one host object. |
 
 ### Signal.constructor()
 
@@ -2158,7 +2158,7 @@ Key–value state of the extension's own, kept by the host across restarts. An e
 |---|---|---|---|
 | `values` | field | `Property<Record<string, string>>` | Every key and value. |
 | `changed` | field | `Signal<StateChange>` | A key was set or deleted. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `get` | method | `(key: string) => Promise<string \| null>` | One value, or `None`. |
 | `set` | method | `(key: string, value: string) => Promise<void>` | Store one value. |
 | `delete` | method | `(key: string) => Promise<void>` | Remove one key. |
@@ -2207,7 +2207,7 @@ The agent asking to act, and the answers. Through `host.sessions.chat(id)` `wait
 | `resolved` | field | `Signal<ApprovalResolved>` | Somebody answered. |
 | `details` | field | `Signal<ApprovalDetails>` | The reason arrived. |
 | `changed` | field | `Signal<ApprovalChange>` | An approval appeared or went away, whoever answered and whenever — including after a restart. For an app following approvals through the API. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `answer` | method | `(requirement_id: string, action: string, choice?: string) => Promise<void>` | Answer one request, as the person's dialog does. |
 | `answer_all` | method | `(answers: ApprovalAnswer[]) => Promise<void>` | Answer every request of a pause at once. |
 
@@ -2248,7 +2248,7 @@ json-render blocks in the transcript — the visualizer's and extensions'. Throu
 | `list` | field | `Property<View[]>` | The views in the current session. |
 | `shown` | field | `Signal<View>` | A view appeared or was replaced. |
 | `action` | field | `Signal<ViewAction>` | The person used a control in a view. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `dispatch` | method | `(view_id: string, action: string, params?: Record<string, JsonValue>) => Promise<JsonValue>` | Act on a view as if the person had. |
 
 ### HostChatViews.constructor()
@@ -2289,7 +2289,7 @@ igni itself: how it presents things, which version, whether it is connected.
 | `connection_changed` | field | `Signal<Connection>` | The connection changed. |
 | `update_changed` | field | `Signal<UpdateInfo \| null>` | An update check answered. |
 | `activity_changed` | field | `Signal<Activity>` | igni started or stopped doing something. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `set_verbose` | method | `(on: boolean) => Promise<Display>` | Show or hide routing detail. |
 | `set_output_style` | method | `(name: string) => Promise<Display>` | Switch the output style, as `/output-style <name>` does. |
 | `check_for_update` | method | `() => Promise<UpdateInfo \| null>` | Ask whether a newer igni exists: `None` when none does. A check that could not reach an answer (offline, an HTTP error, an unreadable reply) is refused (`refused`) rather than answered `None`. |
@@ -2338,7 +2338,7 @@ Every open igni window. Address one window's UI with `host.windows.ui(id)`.
 | `opened` | field | `Signal<WindowInfo>` | A window connected. |
 | `closed` | field | `Signal<WindowInfo>` | A window went away. |
 | `focus_changed` | field | `Signal<WindowInfo>` | A window took focus or lost it; `focused` says which. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `ui` | method | `(windowId: string) => HostUi` | `host.ui` of one window, by its id. |
 
 ### HostWindows.constructor()
@@ -2387,7 +2387,7 @@ What a window shows — the model its views bind to. `host.ui` is the active win
 | `dialog_opened` | field | `Signal<DialogChange>` | A dialog opened. |
 | `dialog_closed` | field | `Signal<DialogChange>` | A dialog closed, with the answer. |
 | `scrolled` | field | `Signal<Scroll>` | The transcript came to rest somewhere else, or started or stopped following the newest message. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `navigate` | method | `(page: string, params?: Record<string, string>) => Promise<Page[]>` | Open a page at the top of the stack, as a header link does. |
 | `back` | method | `() => Promise<Page[]>` | Go back one level; at the root, back to the chat. |
 | `open_panel` | method | `(kind: string, params?: Record<string, JsonValue>) => Promise<Panel>` | Open a panel over the chat, closing the one that was open. |
@@ -2497,7 +2497,7 @@ The sessions of this project, and which one the active window shows. Reach any s
 | `listed` | field | `Signal<SessionList>` | The session list was read. |
 | `cleared` | field | `Signal<SessionCleared>` | `/clear` renewed a session. |
 | `named` | field | `Signal<SessionNamed>` | A session got its name. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `open` | method | `(session_id: string) => Promise<SessionChange>` | Show a session in the active window. |
 | `create` | method | `(project_dir?: string, title?: string, focus?: boolean) => Promise<SessionAttached>` | Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. |
 | `attach` | method | `(session_id: string, project_dir?: string) => Promise<SessionAttached>` | Make sure a session is live, without showing it. |
@@ -2580,7 +2580,7 @@ The conversation in the current session. Signals carry the session they happened
 | `agent_event` | field | `Signal<AgentEvent>` | A sub-agent or team moved on. |
 | `retry` | field | `Signal<Retry>` | A network call is being retried. |
 | `history_changed` | field | `Signal<HistoryChange>` | Turns were truncated or discarded. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `post` | method | `(text: string, attachments?: Record<string, string>) => Promise<void>` | Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. |
 | `queue` | method | `(text: string) => Promise<void>` | Post a message for the next turn, labelled as this extension. |
 | `append` | method | `(view: JsonValue, title?: string) => Promise<string>` | Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id. |
@@ -2683,7 +2683,7 @@ Plan mode: the plan the agent proposed.
 |---|---|---|---|
 | `latest` | field | `Property<Plan>` | The latest plan. |
 | `changed` | field | `Signal<PlanChange>` | A plan was submitted or decided. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `approve` | method | `(run_id?: string) => Promise<PlanDecision>` | Approve the plan. |
 | `dismiss` | method | `(run_id?: string) => Promise<PlanDecision>` | Send the plan back. |
 
@@ -2725,7 +2725,7 @@ The agent's todo list and its sub-agent tasks.
 | `iteration` | field | `Signal<TaskIteration>` | A task loop moved on. |
 | `snapshot` | field | `Signal<TaskSnapshot>` | Every task, as it now stands. |
 | `todos_changed` | field | `Signal<Todos>` | The todo list changed. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 
 ### HostTasks.constructor()
 
@@ -2749,7 +2749,7 @@ class HostLoop extends HostObject
 |---|---|---|---|
 | `status` | field | `Property<LoopStatus>` | Where it is. |
 | `changed` | field | `Signal<LoopStatus>` | It paused, resumed, advanced or stopped. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `pause` | method | `() => Promise<boolean>` | Pause after this iteration. |
 | `resume` | method | `() => Promise<string>` | Carry on. |
 | `cancel_pending` | method | `() => Promise<boolean>` | Stop the loop. |
@@ -2779,7 +2779,7 @@ Slash commands and skills.
 | `skills` | field | `Property<string[]>` | Skill names. |
 | `skill_definitions` | field | `Property<SkillDefinition[]>` | Each skill's description and prompt. |
 | `skill_details` | field | `Property<SkillDetails[]>` | Each skill's details. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `run` | method | `(command: string) => Promise<CommandOutcome>` | Run a slash command, as the extension. The answer comes back here. |
 
 ### HostCommands.constructor()
@@ -2810,7 +2810,7 @@ Agent definitions.
 |---|---|---|---|
 | `details` | field | `Property<AgentInfo[]>` | Every agent. |
 | `changed` | field | `Signal<CollectionChange>` | An agent was promoted or discarded. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `promote_ephemeral` | method | `(name: string, target?: string) => Promise<PromoteResult>` | Keep an agent made for one task, as `/agents promote` does. |
 | `discard_ephemeral` | method | `(name: string) => Promise<DiscardResult>` | Drop an agent made for one task. |
 
@@ -2849,7 +2849,7 @@ Workflows: scripted runs.
 |---|---|---|---|
 | `list` | field | `Property<Workflow[]>` | Every workflow. |
 | `changed` | field | `Signal<CollectionChange>` | A workflow run moved on. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `run` | method | `(name: string, input?: Record<string, JsonValue>) => Promise<WorkflowRun>` | Start a workflow. |
 | `cancel` | method | `(workflow_run_id: string) => Promise<boolean>` | Stop a workflow run. |
 
@@ -2888,7 +2888,7 @@ Scheduled tasks.
 |---|---|---|---|
 | `tasks` | field | `Property<ScheduledTask[]>` | Every scheduled task. |
 | `event` | field | `Signal<SchedulerEvent>` | A task started, finished or changed. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `start` | method | `() => Promise<void>` | Start the scheduler. |
 | `run_now` | method | `(task_id: string) => Promise<string>` | Run a scheduled task now. |
 | `cancel` | method | `(task_id: string) => Promise<void>` | Cancel a scheduled task. |
@@ -2927,7 +2927,7 @@ Background shells.
 |---|---|---|---|
 | `list` | field | `Property<ProcessRow[]>` | Every background shell. |
 | `changed` | field | `Signal<ProcessEvent>` | A shell started, printed or exited. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `tail` | method | `(pid: number, lines?: number) => Promise<ProcessTail>` | A shell's last lines. |
 | `stop` | method | `(pid: number) => Promise<ProcessStop>` | Stop a shell. |
 | `run` | method | `(command: string) => Promise<ShellResult>` | Run a command in the project and wait for it. |
@@ -2975,7 +2975,7 @@ The project, as far as the extension's workspace grant reaches.
 | `head` | field | `Property<Head \| null>` | Git HEAD; `None` outside a repository. |
 | `head_changed` | field | `Signal<Head>` | HEAD moved. |
 | `files_changed` | field | `Signal<FilesChanged>` | Files changed, as git sees them, within the grant. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `read` | method | `(path: string) => Promise<JsonValue>` | Read a file in the project. |
 | `list` | method | `(dir?: string) => Promise<JsonValue>` | List a directory in the project. |
 | `complete` | method | `(prefix: string) => Promise<JsonValue>` | Complete a path, as `@` does. |
@@ -3036,7 +3036,7 @@ Models.
 | `registry` | field | `Property<ModelRegistry>` | Every model igni knows. |
 | `current` | field | `Property<string>` | The model in use. Writable: setting it switches. |
 | `changed` | field | `Signal<ModelChange>` | The model in use changed. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 
 ### HostModels.constructor()
 
@@ -3062,7 +3062,7 @@ MCP servers.
 | `status` | field | `Property<McpServer[]>` | Each server's status. |
 | `details` | field | `Property<McpServerDetails[]>` | Each server's tools and details. |
 | `changed` | field | `Signal<CollectionChange>` | A server connected, disconnected or changed tools. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `connect` | method | `(name: string) => Promise<void>` | Connect a server. |
 | `disconnect` | method | `(name: string) => Promise<void>` | Disconnect a server. |
 | `ensure` | method | `() => Promise<McpInit>` | Start the servers that should be running. |
@@ -3111,7 +3111,7 @@ Plugins and marketplaces.
 | `installed` | field | `Property<PluginInfo[]>` | Every installed plugin. |
 | `marketplaces` | field | `Property<Marketplace[]>` | Every marketplace. |
 | `changed` | field | `Signal<CollectionChange>` | A plugin or marketplace changed. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `contents` | method | `(name: string) => Promise<PluginContents>` | What a plugin carries. |
 | `preview` | method | `(source: string, branch?: string, subdir?: string) => Promise<PluginContents>` | What a plugin would install. |
 | `install` | method | `(ref: string, install_ref?: string) => Promise<void>` | Install a plugin. |
@@ -3203,7 +3203,7 @@ Installed extensions. Read-only, apart from this extension's own settings.
 |---|---|---|---|
 | `installed` | field | `Property<ExtensionInfo[]>` | Every installed extension. |
 | `state_changed` | field | `Signal<ExtensionStateChange>` | An extension's health moved. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `set_settings` | method | `(values: Record<string, JsonValue>) => Promise<SettingsChange>` | Change this extension's own settings. |
 
 ### HostExtensions.constructor()
@@ -3234,7 +3234,7 @@ Hooks.
 |---|---|---|---|
 | `details` | field | `Property<HookEntry[]>` | Every hook. |
 | `changed` | field | `Signal<CollectionChange>` | Hooks were reloaded. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `reload` | method | `() => Promise<void>` | Reload hooks. |
 | `fire_session_start` | method | `() => Promise<void>` | Run the session-start hooks. |
 
@@ -3260,7 +3260,7 @@ What the agent may do without asking.
 |---|---|---|---|
 | `mode` | field | `Property<string>` | `default`, `plan`, `acceptEdits` or `bypassPermissions`. |
 | `mode_changed` | field | `Signal<PermissionModeChange>` | The mode changed. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `check` | method | `(tool_name: string, func_name: string, tool_args?: Record<string, JsonValue>) => Promise<string>` | Would this tool call be allowed, asked or denied? One of `allow`, `ask` or `deny`. |
 | `save_rule` | method | `(rule: string, level: string) => Promise<void>` | Save a permission rule. |
 
@@ -3300,7 +3300,7 @@ The group policy in force.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `pack` | field | `Property<PolicyPack>` | The group's policy pack. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 
 ### HostPolicy.constructor()
 
@@ -3324,7 +3324,7 @@ Whether the person is signed in to igni. Never their session or a credential.
 |---|---|---|---|
 | `status` | field | `Property<Account>` | Who is signed in. |
 | `changed` | field | `Signal<Account>` | Someone signed in or out. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `sign_in` | method | `() => Promise<void>` | Start the person's own sign-in. Its result is theirs. |
 | `sign_out` | method | `() => Promise<Account>` | Sign the person out. |
 
@@ -3351,7 +3351,7 @@ The floor's notifications. Its own always; everyone's with `notifications`.
 | `list` | field | `Property<NotificationEntry[]>` | Newest first. |
 | `unread` | field | `Property<NotificationCounts>` | Unread counts. |
 | `changed` | field | `Signal<NotificationCounts>` | The counts moved. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `notify` | method | `(notification: LocalNotification) => Promise<void>` | Tell the person at this machine something. It never leaves the machine. |
 | `mark_read` | method | `(ids?: string[], source?: string) => Promise<NotificationCounts>` | Mark notifications read: these ids, one source, or all of them. |
 
@@ -3394,7 +3394,7 @@ This extension, as the host sees it.
 | `web_url` | field | `Property<string \| null>` | Its home on the web: its service's URL, when it has one. |
 | `settings_changed` | field | `Signal<SettingsChange>` | Its settings changed. |
 | `state_changed` | field | `Signal<ExtensionStateChange>` | Its health moved. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `busy` | method | `(reason: string, ttl_seconds?: number) => Promise<BusyLease>` | Say this extension is working inside igni's process, so the process is not suspended under it (in the cloud, its VM). |
 | `done` | method | `(reason: string) => Promise<void>` | Let go of the lease `busy` took for `reason`. Nothing happens if there is none. |
 
@@ -3456,7 +3456,7 @@ The root. `changed` reports every change anywhere in the model, for an extension
 | `notifications` | field | `HostNotifications` | `host.notifications`. The floor's notifications. Its own always; everyone's with `notifications`. |
 | `self` | field | `HostSelf` | `host.self`. This extension, as the host sees it. |
 | `changed` | field | `Signal<Change>` | Anything changed. Carries the member's path and its new value. |
-| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null,)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
+| `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `decide` | method | `(context: Record<string, string>, questions: DecisionQuestion[]) => Promise<Decision>` | Ask igni's local decision model (Laya) typed questions about a context, in one pass on this machine. |
 | `decide_batch` | method | `(contexts: (Record<string, string>)[], questions: DecisionQuestion[]) => Promise<Decision[]>` | `decide` for up to 16 contexts at once, sharing forward passes. One decision per context, in order. |
 

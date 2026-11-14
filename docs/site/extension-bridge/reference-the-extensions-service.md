@@ -26,7 +26,7 @@ Why `bridge.service` could not do what was asked.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(readonly code: string, message: string,)` | Why the service could not do what was asked. |
+| `constructor` | method | `(readonly code: string, message: string)` | Why the service could not do what was asked. |
 
 ### ServiceError.constructor()
 
@@ -124,10 +124,10 @@ class ServiceLink implements ServiceBridge
 |---|---|---|---|
 | `held` | field | `{ token: string; expiresAt: number } \| null` | The token this link is holding, and when it stops being valid. |
 | `fetching` | field | `Promise<string> \| null` | The fetch in flight, so two asks share one request to the host. |
-| `constructor` | method | `(readonly url: string \| null, private readonly ask: () => Promise<IssuedToken>, private readonly env: { now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; } = {},)` | One link, for one frame. |
+| `constructor` | method | `(readonly url: string \| null, private readonly ask: () => Promise<IssuedToken>, private readonly env: { now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; } = {})` | One link, for one frame. |
 | `token` | method | `() => Promise<string>` | A bearer token for the service. |
 | `fetch` | method | `(path: string, init: RequestInit = {}) => Promise<Response>` | `fetch` against the service, with the token. |
-| `websocket` | method | `(path: string, options: ServiceSocketOptions = {},) => Promise<WebSocket>` | A socket to the service, with the token in the first frame. |
+| `websocket` | method | `(path: string, options: ServiceSocketOptions = {}) => Promise<WebSocket>` | A socket to the service, with the token in the first frame. |
 | `fresh` | method | `(force: boolean) => Promise<string>` | A token that is worth handing out: the held one if it has time left, a new one otherwise. |
 | `resolve` | method | `(path: string, socket: boolean) => string` | `path` on the service, or a refusal if it is anywhere else. |
 

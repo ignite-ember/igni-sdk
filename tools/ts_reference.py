@@ -812,7 +812,7 @@ def _method_type(rest: str) -> str:
         tail_match = re.match(r"\s*:\s*([^{;]+?)\s*(?=\{|;|\Z)", tail, re.S)
         if tail_match:
             returns = tail_match.group(1).strip()
-    one = f"({_one_line(_strip_comments(params))})"
+    one = f"({re.sub(r',\s*$', '', _one_line(_strip_comments(params)))})"
     return f"{one} => {returns}" if returns else one
 
 

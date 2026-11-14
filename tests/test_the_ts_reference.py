@@ -155,3 +155,23 @@ def test_a_union_type_in_a_member_table_cannot_end_its_cell(tmp_path: Path) -> N
     reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
     page, _ = reference.page(reference.areas[0])
     assert '| `mode` | field | `"a" \\| "b"` | One of a \\| b. |' in page
+
+
+def test_a_method_written_with_a_trailing_comma_is_shown_without_it(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export class Link {
+          constructor(
+            readonly url: string,
+            private readonly env: { now?: () => number } = {},
+          ) {}
+          open(a: number, b: string,): void {}
+        }
+        """,
+    )
+    types = {m.name: m.type for m in parsed.declarations["Link"].members}
+    assert types == {
+        "constructor": "(readonly url: string, private readonly env: { now?: () => number } = {})",
+        "open": "(a: number, b: string) => void",
+    }
