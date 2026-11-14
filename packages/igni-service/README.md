@@ -603,7 +603,8 @@ server*, *the token has no '…' claim*, *the wrong kind of token:
 token_use '…', and this takes …*, *the token's exp or iat is not a
 number*, *the token has expired*, *the token was issued in the future;
 check this machine's clock*, *the token names no person, or no
-organisation*, and *was revoked* for a person removed since.
+organisation*, and *the token was revoked: its holder was removed or signed out*
+for a person removed since.
 
 A token that cannot be checked, because igni server's keys cannot be
 fetched or the revocations are not fresh, is answered **503**: nothing is
@@ -1564,7 +1565,7 @@ it (`await igni.host(org_id).extension_vm_profile()`).
 | `PortalRefused` | raised by `fake.oauth.sign_ins.authorize` |
 | `OrganisationDeletion` | the call igni owes after `delete_organisation` |
 | `HeldExtension` | what the fake holds for a client: `extension_id`, `version`, `sha256`, `manifest`, `pages` |
-| `BundleArchive` | `BundleArchive.write(directory, out)` writes a stand-in bundle archive |
+| `BundleArchive` | `BundleArchive.write(staging, out)` writes a stand-in bundle archive |
 | `FakeAgents`, `SentEvent` | the agent channel and one item in it |
 | `FakeVmProfiles`, `FakeCaps` | VM profiles, and the platform's caps (`max_memory_mib=8192`, `max_vcpus=4`, …) |
 | `Delivery`, `NotifyCall` | what `fake.notifications` records |
