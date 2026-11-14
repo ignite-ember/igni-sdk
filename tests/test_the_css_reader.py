@@ -25,6 +25,50 @@ def _classes(sheet: str) -> list[tuple[str, str, tuple[str, ...], str]]:
     ]
 
 
+def test_a_comment_above_a_custom_property_is_its_meaning_not_part_of_its_name() -> None:
+    sheet = """/* ── Colour ── the palette */
+:root {
+  /* The page's background. */
+  --bg: #111;
+  /* The text colour,
+   * on two lines. */
+  --fg: #eee;
+  --bare: 1px;
+}"""
+    assert _tokens(sheet) == [
+        ("--bg", "#111", "The page's background."),
+        ("--fg", "#eee", "The text colour, on two lines."),
+        ("--bare", "1px", ""),
+    ]
+
+
+def test_an_apostrophe_in_a_comment_does_not_start_a_string() -> None:
+    sheet = """/* ── A ── */
+:root { /* the user's colour */ --a: red; }
+/* don't read this as a string { */
+.x { color: var(--a); }"""
+    assert _tokens(sheet) == [("--a", "red", "the user's colour")]
+    assert Stylesheet(sheet).users_of("--a") == ["x"]
+
+
+def test_a_brace_in_a_comment_inside_a_rule_does_not_close_it() -> None:
+    sheet = "/* ── A ── */ .x { /* } */ color: red; }"
+    assert _classes(sheet) == [("A", ".x", ("color",), "")]
+
+
+def test_a_comment_above_a_rule_is_its_note_and_a_section_marker_titles_the_section() -> None:
+    sheet = """/* The sheet. */
+/* ── Buttons ── how they look
+ * and sit */
+/* A plain button. */
+.btn { color: red; }"""
+    reading = Stylesheet(sheet)
+    (section,) = reading.sections
+    assert section.title == "Buttons"
+    assert section.note == "how they look and sit"
+    assert [(r.selector, r.note) for r in section.rules] == [(".btn", "A plain button.")]
+
+
 def test_a_sheet_with_no_markers_has_one_section_named_for_its_header() -> None:
     # A later rule with no comment of its own does not erase the header.
     sheet = "/* The header. */\n:root { --a: 1; color: red; }\n.x { color: blue; }"
