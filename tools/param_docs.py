@@ -180,6 +180,10 @@ def jsdoc_lines(doc: str) -> list[str]:
     return [re.sub(r"^\s*\*\s?", "", line) for line in body.split("\n")]
 
 
+#: A JSDoc inline link, ``{@link Name}``: shown as the name in code.
+_JSDOC_LINK = re.compile(r"\{@link\s+([^}]+)\}")
+
+
 def jsdoc_params(doc: str) -> dict[str, str]:
     """What each parameter is, from a JSDoc's ``@param`` lines.
 
@@ -204,7 +208,10 @@ def jsdoc_params(doc: str) -> dict[str, str]:
             continue
         if name:
             texts[name].append(stripped)
-    return {key: " ".join(part for part in texts[key] if part).strip() for key in order}
+    return {
+        key: _JSDOC_LINK.sub(r"`\1`", " ".join(part for part in texts[key] if part).strip())
+        for key in order
+    }
 
 
 def strip_jsdoc_params(doc: str) -> str:

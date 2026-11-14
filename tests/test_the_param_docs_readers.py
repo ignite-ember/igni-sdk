@@ -163,3 +163,8 @@ def test_a_table_has_a_header_and_a_row_a_parameter_and_none_without_rows() -> N
         "| `a` | `int` | required | The first \\| one. |",
         "",
     ]
+
+
+def test_a_param_shows_an_inline_link_as_code_not_as_the_raw_tag() -> None:
+    doc = "/**\n * @param a - one of the {@link Codes}s, or {@link x.y} text\n */"
+    assert jsdoc_params(doc) == {"a": "one of the `Codes`s, or `x.y` text"}
