@@ -72,6 +72,18 @@ def annotation_text(annotation: Any) -> str:
     return re.sub(r"\b(typing|collections\.abc|builtins)\.", "", repr(annotation))
 
 
+def _is_private(param: inspect.Parameter) -> bool:
+    """A parameter named ``_like_this`` is not one a caller passes.
+
+    pydantic-settings adds ``_env_file`` and a dozen like it to a settings
+    class's constructor; they belong to the library, not to the class.
+    """
+    return param.name.startswith("_") and param.kind not in (
+        param.VAR_POSITIONAL,
+        param.VAR_KEYWORD,
+    )
+
+
 def signature_text(obj: Any, *, skip_self: bool = False) -> tuple[str, str]:
     """``(parameters, return annotation)`` of ``obj``, or ``("…", "")`` when unknowable."""
     try:
@@ -83,6 +95,8 @@ def signature_text(obj: Any, *, skip_self: bool = False) -> tuple[str, str]:
     params = list(sig.parameters.values())
     for index, param in enumerate(params):
         if skip_self and index == 0 and param.name in ("self", "cls"):
+            continue
+        if _is_private(param):
             continue
         if param.kind is param.KEYWORD_ONLY and not seen_keyword_only:
             parts.append("*")
@@ -176,8 +190,8 @@ def parameters_of(obj: Any, *, skip_self: bool = False) -> list[inspect.Paramete
         return []
     params = list(sig.parameters.values())
     if skip_self and params and params[0].name in ("self", "cls"):
-        return params[1:]
-    return params
+        params = params[1:]
+    return [param for param in params if not _is_private(param)]
 
 
 def parameter_table(params: list[inspect.Parameter], meanings: dict[str, str]) -> list[str]:
@@ -439,6 +453,10 @@ class PythonReference:
         out: list[str] = []
         doc_text = _own_doc(cls)
         if issubclass(cls, enum.Enum | BaseException):
+            out += ["```python", f"class {name}({base_text})", "```", ""]
+        elif getattr(cls, "_is_protocol", False):
+            # A protocol is never built: it says what a class must do, and a
+            # constructor line would say a caller may call it.
             out += ["```python", f"class {name}({base_text})", "```", ""]
         else:
             params, _ = signature_text(cls)

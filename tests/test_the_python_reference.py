@@ -36,6 +36,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 import functools
+import typing
 from typing import Literal
 
 import pydantic
@@ -56,6 +57,27 @@ def run(a: int, b: str = "x", *args: int, flag: bool = False, **extra: str) -> s
 
 async def wait(seconds: float, /, label: str = "l") -> None:
     """Wait."""
+
+
+def settle(a: int, _env_file: str | None = None, *, _cli_parse_args: bool = False, b: int = 0) -> None:
+    """Settle.
+
+    Args:
+        a: The one.
+        b: The other.
+    """
+
+
+class Store(typing.Protocol):
+    """Where it is kept.
+
+    Args:
+        args: Taken by a concrete store's constructor.
+    """
+
+    def fetch(self, key: str) -> str:
+        """Fetch."""
+        ...
 
 
 def bare(x):
@@ -184,12 +206,13 @@ SECRET: str = "s"
 INIT = '''
 """Package."""
 from pkg.core import (
-    BARE, LIMIT, TAGS, Boom, Child, Mode, Model, NoDoc, Plain, Quiet, Rec, Sub, bare, run, wait,
+    BARE, LIMIT, TAGS, Boom, Child, Mode, Model, NoDoc, Plain, Quiet, Rec, Store, Sub, bare, run, settle,
+    wait,
 )
 
 __all__ = [
     "BARE", "LIMIT", "TAGS", "Boom", "Child", "Mode", "Model", "NoDoc", "Plain", "Quiet", "Rec",
-    "Sub", "bare", "run", "wait", "run",
+    "Store", "Sub", "bare", "run", "settle", "wait", "run",
 ]
 '''
 
@@ -653,3 +676,21 @@ def test_docstring_markdown_leaves_an_indented_list_continuation_alone() -> None
 
 def test_docstring_markdown_of_nothing_is_nothing() -> None:
     assert docstring_markdown(None) == "" and docstring_markdown("") == ""
+
+
+def test_a_parameter_named_with_a_leading_underscore_is_not_shown_in_a_signature_or_table(
+    page: str,
+) -> None:
+    part = section(page, "## settle()")
+    assert "_env_file" not in part and "_cli_parse_args" not in part
+    assert "a: int, *, b: int = 0" in part
+    assert [row[0] for row in rows(part.split("```\n", 1)[1])[2:]] == ["`a`", "`b`"]
+    assert signature_text(lambda a, _b=1, **k: None)[0] == "a, **k"
+
+
+def test_a_protocol_has_no_constructor_line_or_table(page: str) -> None:
+    part = section(page, "## Store")
+    assert "class Store(Protocol)" in part
+    assert "Store(" not in part.replace("class Store(Protocol)", "")
+    assert "| Parameter" not in part
+    assert "### Store.fetch()" in page
