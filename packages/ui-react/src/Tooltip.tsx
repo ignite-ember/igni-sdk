@@ -47,8 +47,9 @@ export interface TooltipProps {
 /**
  * What an icon means, on hover and on focus.
  *
- * See the note at the top of this file. It replaces the browser's own
- * `title` rather than sitting beside it.
+ * It replaces the browser's own `title` rather than sitting beside it:
+ * leave `title` off the control. Focus shows it at once; hover waits
+ * 350 ms.
  *
  * @param text — the word; nothing is rendered when it is empty.
  * @param children — the control the word is about.

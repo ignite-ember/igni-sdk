@@ -82,9 +82,10 @@ export function hexOf(
 /**
  * Two letters standing in for a face.
  *
- * See the note at the top of this file. The colour comes from the
- * name, so the same person is the same colour on every machine and
- * across restarts.
+ * Not an avatar: nothing stores an uploaded picture, so the two
+ * letters come from the name. The colour comes from the name too, so
+ * the same person is the same colour on every machine and across
+ * restarts.
  *
  * @param name — the name the initials and the colour are derived from.
  * @param size — the width and height of the square, in pixels.
