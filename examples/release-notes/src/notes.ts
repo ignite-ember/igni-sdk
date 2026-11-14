@@ -2,10 +2,10 @@
  * The Release Notes backend, as a typed object.
  *
  * Same split as the reference extension: everything that knows an RPC
- * name or a wire shape is here, and `panel.tsx` renders state. The
- * difference is what this one has to carry — a document is editable,
- * so the client has a save with a concurrency token rather than a
- * read and a scan.
+ * name or a wire shape is here, and the UI modules (`panel.tsx` and the
+ * components it composes) render state. The difference is what this
+ * one has to carry — a document is editable, so the client has a save
+ * with a concurrency token rather than a read and a scan.
  */
 
 import type { Bridge } from "@ignite-ember/extension-bridge";

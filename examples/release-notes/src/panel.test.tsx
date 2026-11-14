@@ -418,6 +418,25 @@ describe("autosave", () => {
     expect(editor().value).toBe("mine");
     expect(publishButton().disabled).toBe(true);
   });
+
+  it("does not retry a failed save on its own, only after the next edit", async () => {
+    // The refusal arrives a round trip later, as a real one does: the
+    // panel renders "Saving" in between, and the failure ends it.
+    const client = fakeClient({
+      save: () => new Promise<Note>((_, reject) => setTimeout(() => reject(new Error("disk full")), 100)),
+    });
+    await mount(client);
+    type("mine");
+    await flush(1_500);
+    expect(client.save).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 10; i++) await flush(1_000);
+    expect(client.save).toHaveBeenCalledTimes(1);
+    type("mine, edited");
+    await flush(1_500);
+    await flush(100);
+    expect(client.save).toHaveBeenCalledTimes(2);
+    expect(client.save).toHaveBeenLastCalledWith("2.4.0", "mine, edited", "r1");
+  });
 });
 
 describe("the unsaved-work warning", () => {
@@ -529,6 +548,76 @@ describe("publishing", () => {
     done();
     await flush();
     expect(client.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables confirm while the publish is in flight and enables it again on failure", async () => {
+    let fail: (e: Error) => void = () => {};
+    const client = fakeClient({ publish: () => new Promise<void>((_, reject) => (fail = reject)) });
+    await mount(client);
+    const dialog = await open();
+    fireEvent.click(confirm(dialog));
+    expect((confirm(dialog) as HTMLButtonElement).disabled).toBe(true);
+    fail(new Error("not allowed"));
+    await flush();
+    expect((confirm(dialog) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("refreshes the release list after a publish, so the badge says published", async () => {
+    const published = new Set<string>();
+    const client = fakeClient({
+      releases: async () => [rel("2.4.0", published.has("2.4.0") ? "published" : "draft")],
+      publish: async (version) => {
+        published.add(version);
+      },
+    });
+    await mount(client);
+    expect(screen.getByText("draft")).toBeTruthy();
+    fireEvent.click(confirm(await open()));
+    await flush();
+    expect(client.releases).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("draft")).toBeNull();
+    expect(toneOf(screen.getByText("published"))).toBe("success");
+    // The note stays open: refreshing the list does not remount it.
+    expect(client.note).toHaveBeenCalledTimes(1);
+  });
+
+  it("publish succeeds, releases() refresh rejects: the list and the open note stay", async () => {
+    let calls = 0;
+    const client = fakeClient({
+      releases: async () => {
+        calls += 1;
+        if (calls > 1) throw new Error("list unavailable");
+        return [rel("2.4.0"), rel("2.3.1", "published")];
+      },
+    });
+    await mount(client);
+    fireEvent.click(confirm(await open()));
+    await flush();
+    expect(client.releases).toHaveBeenCalledTimes(2);
+    expect(toneOf(screen.getByText("2.4.0 published"))).toBe("success");
+    expect(toneOf(screen.getByText("Could not refresh the releases: list unavailable"))).toBe("danger");
+    expect(screen.queryByText("No releases yet.")).toBeNull();
+    expect(screen.getByText("2.3.1", { selector: "span" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "2.4.0" })).toBeTruthy();
+    expect(editor().value).toBe("body of 2.4.0");
+    expect(client.note).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the open note when a refresh brings back a different newest release", async () => {
+    let calls = 0;
+    const client = fakeClient({
+      releases: async () => {
+        calls += 1;
+        return calls > 1 ? [rel("2.5.0"), rel("2.4.0", "published")] : [rel("2.4.0")];
+      },
+    });
+    await mount(client);
+    fireEvent.click(confirm(await open()));
+    await flush();
+    expect(screen.getByText("2.5.0", { selector: "span" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "2.4.0" })).toBeTruthy();
+    expect(client.note).toHaveBeenCalledTimes(1);
+    expect(client.note).not.toHaveBeenCalledWith("2.5.0");
   });
 
   it("closes without publishing on Cancel", async () => {

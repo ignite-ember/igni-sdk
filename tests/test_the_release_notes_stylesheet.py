@@ -58,10 +58,13 @@ def test_the_stylesheet_sets_no_colour_of_its_own():
 
 
 def test_the_panel_uses_the_class_names_the_stylesheet_styles():
-    tsx = (EXAMPLE / "src" / "panel.tsx").read_text()
+    # The UI is split across the example's modules; panel.tsx is the
+    # entry point, and the one that imports the stylesheet.
+    sources = sorted(p for p in (EXAMPLE / "src").glob("*.tsx") if not p.name.endswith(".test.tsx"))
+    tsx = "\n".join(p.read_text() for p in sources)
     assert 'className="note-editor"' in tsx
     assert re.search(r'className="ui-card comment"', tsx)
-    assert 'import "./panel.css";' in tsx
+    assert 'import "./panel.css";' in (EXAMPLE / "src" / "panel.tsx").read_text()
 
 
 def test_the_page_loads_the_panel_stylesheet_after_the_floors():
