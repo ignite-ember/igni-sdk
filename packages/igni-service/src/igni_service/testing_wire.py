@@ -221,8 +221,13 @@ class SeenRequest(BaseModel):
             return DetailError(detail=str(exc), status=422)
 
     def form(self) -> TokenForm:
-        """The body, read as the form a token or revocation request posts."""
-        return TokenForm.model_validate({k: v[0] for k, v in parse_qs(self.body.decode()).items()})
+        """The body, read as the form a token or revocation request posts.
+
+        Bytes that are not text read as replacement characters: a form igni
+        refuses as unauthenticated, not one that crashes the fake.
+        """
+        text = self.body.decode(errors="replace")
+        return TokenForm.model_validate({k: v[0] for k, v in parse_qs(text).items()})
 
     def bearer(self) -> str:
         """The bearer token the request carries; empty without one."""

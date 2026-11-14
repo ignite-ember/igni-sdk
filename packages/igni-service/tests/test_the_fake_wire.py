@@ -224,6 +224,12 @@ class TestWhatWasSeen:
         assert seen("POST", content=b"zzz=1").form() == TokenForm()
         assert seen("POST").form() == TokenForm()
 
+    def test_a_form_that_is_not_text_reads_as_a_form_that_proves_nothing(self) -> None:
+        form = seen("POST", content=b"grant_type=\xff\xfe&code=ok").form()
+
+        assert form.code == "ok"
+        assert not form.is_jwt_bearer
+
     def test_the_bearer_token_is_what_follows_bearer(self) -> None:
         assert seen(headers={"Authorization": "Bearer abc.def"}).bearer() == "abc.def"
 
@@ -323,3 +329,13 @@ class TestTraffic:
         assert failing.status_code == 502
         assert healed.status_code == 200
         assert len(fake.traffic.requests_to(IgniPaths.JWKS)) == 2
+
+
+async def test_a_token_request_whose_body_is_not_text_is_refused_not_a_crash(
+    fake: FakeIgni,
+) -> None:
+    async with fake.http_client() as http:
+        for path in (IgniPaths.TOKEN, IgniPaths.REVOKE):
+            answer = await http.post(f"{BASE}{path}", content=b"grant_type=\xff\xfe&token=\x80")
+            assert answer.status_code in (400, 401), path
+            assert "error" in answer.json()
