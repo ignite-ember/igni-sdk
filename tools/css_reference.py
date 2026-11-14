@@ -366,10 +366,12 @@ class Stylesheet:
 
     def users_of(self, token: str) -> list[str]:
         """The classes whose rules use ``var(--token)``."""
-        needle = f"var({token}"
+        # ``var(--a`` is followed by ``)``, ``,`` or a space; ``var(--a-b)``
+        # is another token's.
+        needle = re.compile(rf"var\(\s*{re.escape(token)}(?![\w-])")
         out: list[str] = []
         for _section, rule in self.classes():
-            if any(needle in value for _name, value in rule.declarations):
+            if any(needle.search(value) for _name, value in rule.declarations):
                 for name in rule.classes:
                     if name not in out:
                         out.append(name)
