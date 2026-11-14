@@ -129,7 +129,7 @@ async def notify(*notifications: Notification) -> Delivered
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `notifications` | `Notification` | required | The things that happened, and who each concerns: one with no recipients concerns nobody and is not sent. |
+| `*notifications` | `Notification` | — | The things that happened, and who each concerns: one with no recipients concerns nobody and is not sent. |
 
 Tell people in this organisation that something happened.
 

@@ -376,3 +376,10 @@ def test_a_class_with_a_field_table_has_no_constructor_table(page: str) -> None:
     for name in ("Model", "Quiet", "Rec"):
         assert "| Parameter" not in section(page, f"## {name}")
         assert "| Field" in section(page, f"## {name}")
+
+
+def test_a_star_parameter_is_shown_with_its_stars_and_is_not_required(page: str) -> None:
+    by_name = {row[0]: row for row in rows(section(page, "## run()").split("```\n", 1)[1])[2:]}
+    assert by_name["`*args`"][1:3] == ["`int`", "—"]
+    assert by_name["`**extra`"][1:3] == ["`str`", "—"]
+    assert "`args`" not in by_name and "`extra`" not in by_name

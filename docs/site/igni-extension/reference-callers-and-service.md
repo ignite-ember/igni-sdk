@@ -158,7 +158,7 @@ def websocket(path: str, **options: Any) -> ServiceWebSocket
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `path` | `str` | required | The path on the service, relative to its base URL: `/v1/rooms/runbook`. |
-| `options` | `Any` | required | The options the WebSocket connection takes, as `websockets.asyncio.client.connect` spells them. |
+| `**options` | `Any` | — | The options the WebSocket connection takes, as `websockets.asyncio.client.connect` spells them. |
 
 A WebSocket to `path` on the service, with the person's token.
 

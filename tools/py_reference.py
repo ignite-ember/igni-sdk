@@ -190,14 +190,18 @@ def parameter_table(params: list[inspect.Parameter], meanings: dict[str, str]) -
     rows: list[tuple[str, str, str, str]] = []
     for param in params:
         annotation = annotation_text(param.annotation)
+        variadic = param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
         default = (
-            "required"
+            "—"
+            if variadic
+            else "required"
             if param.default is inspect.Parameter.empty
             else code(stable_repr(param.default))
         )
+        prefix = "*" if param.kind is param.VAR_POSITIONAL else "**" if variadic else ""
         rows.append(
             (
-                param.name,
+                prefix + param.name,
                 code(annotation) if annotation else "—",
                 default,
                 meanings.get(param.name) or UNDOCUMENTED,

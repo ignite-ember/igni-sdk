@@ -231,7 +231,7 @@ def environment(**extra: str) -> dict[str, str]
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
+| `**extra` | `str` | — | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
 
 The variables igni starts the process with, for its host.
 
@@ -372,7 +372,7 @@ def environment(**extra: str) -> dict[str, str]
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
+| `**extra` | `str` | — | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
 
 The variables igni starts the process with, for its service.
 
