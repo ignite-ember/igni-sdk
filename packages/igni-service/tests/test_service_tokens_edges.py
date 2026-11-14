@@ -96,6 +96,14 @@ async def test_callers_asking_at_once_for_two_organisations_get_a_grant_each(
     assert len(wire.grants()) == 2
 
 
+async def test_no_lock_is_kept_for_an_organisation_once_its_grant_is_done(
+    service: IgniService,
+) -> None:
+    await asyncio.gather(*(service.tokens.token(f"org-{n}") for n in range(5)))
+
+    assert len(service.tokens._locks) == 0  # noqa: SLF001 — what is kept is the point
+
+
 async def test_forgetting_one_organisation_leaves_the_others_kept(
     igni: IgniService, fake: FakeIgni
 ) -> None:

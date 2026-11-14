@@ -51,10 +51,8 @@ call that needs one raises `ServiceNotApproved`; after a revoke,
 igni refuses such a token with `invalid_client`, and the SDK tells the
 two apart by the registration's **state**, a field, never by the words
 of igni's message: the `client_state` igni sends beside `invalid_client`
-(`pending` or `revoked`). An igni server that does not send
-`client_state` yet is asked for the state the way every start asks it —
-the same key registered again answers the same registration, with its
-`state`, and changes nothing. Any other refusal is a plain
+(`pending` or `revoked`; every igni server since 0.7.0 sends it). Any
+other refusal, and an `invalid_client` that names no state, is a plain
 `IgniUnavailable`.
 
 ## The extension bundle

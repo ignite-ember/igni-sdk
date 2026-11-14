@@ -149,17 +149,12 @@ async def test_the_state_is_read_from_igni_s_field_not_its_words(
         await igni.tokens.token(ORG)
 
 
-@pytest.mark.parametrize(
-    ("revoke", "raised"), [(False, ServiceNotApproved), (True, ServiceRevoked)]
-)
-async def test_an_igni_that_names_no_state_is_asked_for_its_registration(
-    clock: ManualClock,
-    monkeypatch: pytest.MonkeyPatch,
-    revoke: bool,
-    raised: type[IgniUnavailable],
+@pytest.mark.parametrize("revoke", [False, True])
+async def test_an_igni_that_names_no_state_is_igni_unavailable(
+    clock: ManualClock, monkeypatch: pytest.MonkeyPatch, revoke: bool
 ) -> None:
-    """An igni server from before `client_state` says the state only in
-    words; the registration's `state` field says it too, and is read."""
+    """Without `client_state` the state is said only in words, which decide
+    nothing, and the registration is not asked again."""
     swap_igni_words(monkeypatch)
     fake = FakeIgni(clock=clock, require_approval=True)
     fake.oauth.verifier.names_client_state = False
@@ -168,12 +163,11 @@ async def test_an_igni_that_names_no_state_is_asked_for_its_registration(
     if revoke:
         fake.clients.revoke()
 
-    with pytest.raises(raised):
+    with pytest.raises(IgniUnavailable) as raised:
         await igni.tokens.token(ORG)
 
-    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 2
-    assert igni.registration.current is not None
-    assert igni.registration.current.state == ("revoked" if revoke else "pending")
+    assert type(raised.value) is IgniUnavailable
+    assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1
 
 
 def refused(**body: str) -> GrantRefused:
@@ -198,37 +192,32 @@ async def test_a_state_igni_names_that_the_sdk_does_not_know_is_igni_unavailable
 ) -> None:
     exc = refused(error="invalid_client", client_state="suspended")
 
-    state = await igni.tokens.client_state(exc)
-
-    assert state == "suspended"
-    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
+    assert type(igni.tokens.refusal(exc)) is IgniUnavailable
 
 
-async def test_invalid_client_for_an_approved_service_is_igni_unavailable(
-    igni: IgniService, fake: FakeIgni
+@pytest.mark.parametrize(
+    ("state", "raised"), [("pending", ServiceNotApproved), ("revoked", ServiceRevoked)]
+)
+async def test_the_client_state_beside_invalid_client_names_the_error(
+    igni: IgniService, state: str, raised: type[IgniUnavailable]
 ) -> None:
-    """From an igni naming no state, `invalid_client` while the registration
-    is approved is some other refusal (a replayed assertion, a moved key)."""
-    await igni.registration.register()
-    fake.clients.approve()
+    exc = refused(error="invalid_client", client_state=state)
+
+    assert type(igni.tokens.refusal(exc)) is raised
+
+
+async def test_a_client_state_beside_another_error_decides_nothing(igni: IgniService) -> None:
+    exc = refused(error="invalid_grant", client_state="revoked")
+
+    assert type(igni.tokens.refusal(exc)) is IgniUnavailable
+
+
+async def test_invalid_client_naming_no_state_is_igni_unavailable(igni: IgniService) -> None:
+    """`invalid_client` with no `client_state` is some other refusal (a
+    replayed assertion, a moved key), whatever igni's words say."""
     exc = refused(error="invalid_client", error_description="this client has been revoked")
 
-    state = await igni.tokens.client_state(exc)
-
-    assert state == "approved"
-    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
-
-
-async def test_invalid_client_with_no_registration_to_ask_is_igni_unavailable(
-    igni: IgniService, fake: FakeIgni
-) -> None:
-    fake.traffic.fail(IgniPaths.CLIENTS, 503)
-    exc = refused(error="invalid_client")
-
-    state = await igni.tokens.client_state(exc)
-
-    assert state is None
-    assert type(igni.tokens.refusal(exc, state)) is IgniUnavailable
+    assert type(igni.tokens.refusal(exc)) is IgniUnavailable
 
 
 @pytest.mark.parametrize("body", ["", "not json", "[1, 2]", '{"error": 7}'])
@@ -238,7 +227,7 @@ async def test_a_refusal_body_that_is_not_rfc_6749_reads_as_no_error(
     exc = GrantRefused(401, body)
 
     assert exc.refusal.error == "" and exc.refusal.client_state is None
-    assert await igni.tokens.client_state(exc) is None
+    assert type(igni.tokens.refusal(exc)) is IgniUnavailable
 
 
 async def test_a_token_names_one_organisation(igni: IgniService) -> None:
