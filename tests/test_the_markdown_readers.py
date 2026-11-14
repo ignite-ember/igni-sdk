@@ -9,7 +9,16 @@ still seen.
 
 from __future__ import annotations
 
-from tools.markdown_pages import signature, split_params
+import pytest
+
+from tools.markdown_pages import (
+    PageError,
+    ReadmePages,
+    fenced,
+    signature,
+    split_params,
+    strip_comments,
+)
 
 # ── signatures: one line, or one parameter a line as black writes it ──
 
@@ -67,3 +76,94 @@ def test_a_signature_with_no_parameters_never_wraps() -> None:
     assert signature("def a_very_long_name_indeed", "", " -> a_very_long_return", 10) == (
         "def a_very_long_name_indeed() -> a_very_long_return"
     )
+
+
+# ── comments and heading-like lines are not markup ──
+
+
+def test_a_comment_on_one_line_is_removed_and_the_text_around_it_stays() -> None:
+    assert strip_comments("a <!-- x --> b\nc") == "a  b\nc"
+    assert strip_comments("<!-- x --><!-- y -->z") == "z"
+
+
+def test_a_comment_over_many_lines_is_removed_and_the_text_around_it_stays() -> None:
+    text = "before\nlead <!-- one\n## Hidden\ntwo --> tail\nafter"
+    assert strip_comments(text) == "before\nlead \n tail\nafter"
+
+
+def test_a_comment_that_is_never_closed_swallows_the_rest() -> None:
+    assert strip_comments("keep\n<!-- never\n## gone") == "keep"
+
+
+def test_a_comment_inside_a_code_fence_is_code_and_stays() -> None:
+    text = "```html\n<!-- kept -->\n```\nafter <!-- gone -->"
+    assert strip_comments(text) == "```html\n<!-- kept -->\n```\nafter "
+
+
+def test_a_heading_inside_a_comment_is_not_a_heading() -> None:
+    pages = ReadmePages("# T\n\n<!--\n## Hidden\n-->\n\n## Real\n\nx\n", "p/README.md")
+    assert [s.title for s in pages.sections] == ["Real"]
+    assert [h.text for h in pages.headings] == ["T", "Real"]
+
+
+def test_a_heading_like_line_inside_a_fence_is_not_a_heading() -> None:
+    text = "# T\n\n## One\n\n```sh\n# a comment\n## nor this\n```\n\n~~~\n## nor this\n~~~\n"
+    pages = ReadmePages(text, "p/README.md")
+    assert [s.title for s in pages.sections] == ["One"]
+    assert [h.text for h in pages.headings] == ["T", "One"]
+    assert "## nor this" in pages.sections[0].lines
+
+
+def test_fenced_says_which_lines_are_code_including_the_fences() -> None:
+    lines = ["a", "```py", "b", "```", "c", "~~~", "d", "~~~", "e"]
+    assert [code for _, code in fenced(lines)] == [
+        False, True, True, True, False, True, True, True, False,
+    ]  # fmt: skip
+
+
+def test_a_fence_closes_only_on_the_same_character_and_at_least_as_long_with_nothing_after() -> (
+    None
+):
+    lines = ["````", "```", "~~~~", "```not a close", "````", "after"]
+    assert [code for _, code in fenced(lines)] == [True, True, True, True, True, False]
+    lines = ["~~~", "```", "~~~", "out"]
+    assert [code for _, code in fenced(lines)] == [True, True, True, False]
+
+
+def test_a_fence_never_closed_swallows_the_rest_of_the_document() -> None:
+    pages = ReadmePages("# T\n\n## A\n\n```\n## B\n\n## C\n", "p/README.md")
+    assert [s.title for s in pages.sections] == ["A"]
+
+
+def test_a_readme_with_no_title_is_an_error_that_names_the_file() -> None:
+    for text in ("", "no heading\n\n## Section\n", "```\n# in code\n```\n"):
+        with pytest.raises(PageError, match="packages/x/README.md has no `# title`"):
+            ReadmePages(text, "packages/x/README.md")
+    assert issubclass(PageError, ValueError)
+
+
+def test_a_readme_is_cut_into_title_intro_sections_and_headings() -> None:
+    text = "# Title\n\nIntro.\n\n## One\n\nA\n\n### Deep\n\nB\n\n## Two\n\nC\n"
+    pages = ReadmePages(text, "p/README.md")
+    assert pages.title == "Title"
+    assert "Intro." in pages.intro and "A" not in pages.intro
+    assert [s.title for s in pages.sections] == ["One", "Two"]
+    assert "### Deep" in pages.sections[0].lines and "### Deep" not in pages.sections[1].lines
+    assert [(h.level, h.text, h.section) for h in pages.headings] == [
+        (1, "Title", None),
+        (2, "One", "One"),
+        (3, "Deep", "One"),
+        (2, "Two", "Two"),
+    ]
+
+
+def test_a_second_h1_is_a_heading_of_the_section_it_is_in_not_a_new_title() -> None:
+    pages = ReadmePages("# Title\n\n## One\n\n# Again\n", "p/README.md")
+    assert pages.title == "Title"
+    assert [(h.level, h.text, h.section) for h in pages.headings][-1] == (1, "Again", "One")
+
+
+def test_trailing_hashes_of_a_heading_are_not_part_of_its_text() -> None:
+    pages = ReadmePages("# Title #\n\n## One ##\n\n### Deep ###  \n", "p/README.md")
+    assert pages.title == "Title"
+    assert [h.text for h in pages.headings] == ["Title", "One", "Deep"]
