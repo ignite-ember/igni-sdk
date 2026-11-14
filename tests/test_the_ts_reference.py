@@ -454,3 +454,126 @@ def test_a_name_exported_under_another_is_documented_as_the_package_names_it(
     assert "| [`Wait`](#wait) | const | `time.ts` | How long to wait. |" in page
     assert "| [`Near`](#near) | function | `index.ts` | Close by. |" in page
     assert "Timeout" not in page and "Local" not in page
+
+
+# ── A package read into pages ──
+
+SMALL = {
+    "index.ts": """
+    export { greet, type Options } from "./greet.js";
+    export * from "./shapes.js";
+    export { Timeout } from "./time.js";
+    """,
+    "greet.ts": """
+    /** Options of {@link greet}. */
+    export interface Options {
+      /** Who to greet. */
+      name: string;
+    }
+
+    /**
+     * Says hello.
+     *
+     * More words that the table cell leaves out.
+     * @param options Who and how.
+     */
+    export function greet(options: Options): string {
+      return options.name;
+    }
+
+    /** Not public: index.ts does not export it. */
+    export function helper(): void {}
+    """,
+    "shapes.ts": """
+    /** @internal */
+    export const HIDDEN = 1;
+    /** A colour. */
+    export type Colour =
+      | "red"
+      | "blue";
+    export const SIZE = 3;
+    """,
+    "time.ts": """
+    /** How long to wait. */
+    export const Timeout = 30;
+    """,
+}
+
+
+def small(root: Path, link: object = None) -> TsReference:
+    return TsReference(
+        "small",
+        package(root, SMALL),
+        [
+            Area("hello", "Hello", ("greet.ts",), "About greeting."),
+            Area("rest", "Rest", ("shapes.ts", "time.ts")),
+        ],
+        link=link,  # type: ignore[arg-type]
+    )
+
+
+def test_a_page_is_its_note_a_table_of_names_and_a_section_for_each(tmp_path: Path) -> None:
+    reference = small(tmp_path)
+    page, missing = reference.page(reference.areas[0])
+    assert missing == 0
+    assert page == textwrap.dedent(
+        """\
+        About greeting.
+
+        Read from the source: every name below, its signature, its JSDoc, and — for a type or a class — its own members.
+
+        | Name | Kind | Defined in | What it is |
+        |---|---|---|---|
+        | [`Options`](#options) | interface | `greet.ts` | Options of `greet`. |
+        | [`greet`](#greet) | function | `greet.ts` | Says hello. |
+
+        ## Options
+
+        ```typescript
+        interface Options
+        ```
+
+        Options of `greet`.
+
+        | Member | Kind | Type | What it is |
+        |---|---|---|---|
+        | `name` | field | `string` | Who to greet. |
+
+        ## greet
+
+        ```typescript
+        function greet(options: Options): string
+        ```
+
+        | Parameter | Type | Default | Meaning |
+        |---|---|---|---|
+        | `options` | `Options` | required | Who and how. |
+
+        Says hello.
+
+        More words that the table cell leaves out.
+        """
+    )
+
+
+def test_a_name_is_documented_where_it_is_declared_through_every_way_it_is_exported(
+    tmp_path: Path,
+) -> None:
+    reference = small(tmp_path)
+    assert reference.entry_names() == ["greet", "Options", "Timeout", "HIDDEN", "Colour", "SIZE"]
+    assert reference.public == {"greet", "Options", "Timeout", "HIDDEN", "Colour", "SIZE"}
+    assert reference.entry_names("nowhere.ts") == []
+    placed = reference.place()
+    # Each name is on exactly one page, in the order its module exports it; the
+    # private helper and the @internal name are on none.
+    assert {slug: [d.name for d in found] for slug, found in placed.items()} == {
+        "hello": ["Options", "greet"],
+        "rest": ["Colour", "SIZE", "Timeout"],
+    }
+    assert reference.anchors() == {
+        "Options": ("hello", "options"),
+        "greet": ("hello", "greet"),
+        "Colour": ("rest", "colour"),
+        "SIZE": ("rest", "size"),
+        "Timeout": ("rest", "timeout"),
+    }
