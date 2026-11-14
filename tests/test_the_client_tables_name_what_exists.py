@@ -308,7 +308,7 @@ def test_a_method_named_that_igni_lacks_fails(monkeypatch: pytest.MonkeyPatch) -
 
 def test_a_page_that_names_nothing_the_client_has_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "tools.sdk_docs.REFERENCE_PAGES",
+        "tools.client_doc_layout.REFERENCE_PAGES",
         [*REFERENCE_PAGES, ("extra", "Extra", ("igni.no_such_thing",))],
     )
     with pytest.raises(DocsError, match="extra.*igni.no_such_thing"):
@@ -319,13 +319,13 @@ def test_a_method_on_no_page_and_a_method_on_two_fail(monkeypatch: pytest.Monkey
     slug, title, sources = REFERENCE_PAGES[0]
     taken = METHODS["check_for_update"]
     monkeypatch.setattr(
-        "tools.sdk_docs.REFERENCE_PAGES",
+        "tools.client_doc_layout.REFERENCE_PAGES",
         [(slug, title, tuple(s for s in sources if s != taken)), *REFERENCE_PAGES[1:]],
     )
     with pytest.raises(DocsError, match="no page.*igni.check_for_update"):
         SdkDocs(ROOT).pages()
     monkeypatch.setattr(
-        "tools.sdk_docs.REFERENCE_PAGES",
+        "tools.client_doc_layout.REFERENCE_PAGES",
         [*REFERENCE_PAGES, ("again", "Again", (taken,))],
     )
     with pytest.raises(DocsError, match="two reference pages"):

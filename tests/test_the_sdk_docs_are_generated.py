@@ -23,7 +23,16 @@ from tools.client_contract import RpcContract
 from tools.client_examples import EXAMPLES
 from tools.client_names import METHODS, NOT_FOR_CLIENTS, REFERENCE_PAGES
 from tools.markdown_pages import ReadmePages, github_anchor, site_id
-from tools.sdk_docs import INDEX, OUTPUT, PACKAGES, DocsError, SdkDocs, docs_url
+from tools.sdk_docs import (
+    INDEX,
+    OUTPUT,
+    PACKAGES,
+    DocsError,
+    Package,
+    ReadmeSite,
+    SdkDocs,
+    docs_url,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = SdkDocs(ROOT)
@@ -123,8 +132,6 @@ def test_every_link_between_pages_lands_on_a_page_and_a_heading() -> None:
 
 def test_a_readme_link_to_a_heading_it_lacks_is_an_error() -> None:
     text = "# pkg\n\nSee [nothing](#no-such-heading).\n\n## Installing\n\nIt installs.\n"
-    from tools.sdk_docs import Package, ReadmeSite
-
     site = ReadmeSite(Package("pkg", "pkg", "packages/pkg"), text, description="d")
     with pytest.raises(ValueError, match="no-such-heading"):
         site.pages()
@@ -136,8 +143,6 @@ def test_a_readme_is_cut_at_its_top_level_sections_and_its_links_follow() -> Non
         "## Installing\n\n```sh\n## not a heading\n```\n\n### The call\n\nIt calls.\n\n"
         "## Guides\n\nBack to [installing](#installing).\n"
     )
-    from tools.sdk_docs import Package, ReadmeSite
-
     pages = ReadmeSite(Package("pkg", "pkg", "packages/pkg"), text, description="d").pages()
     assert [p.slug for p in pages] == ["overview", "installing", "guides"]
     assert "(/docs/sdk/pkg/installing#the-call)" in pages[0].body
@@ -288,7 +293,7 @@ def test_the_generator_leaves_no_package_undocumented() -> None:
     docs = SdkDocs(ROOT)
     docs.pages()
     for package, notes in docs.report.items():
-        assert notes.get("undocumented", 0) == 0, (package, notes)
+        assert notes.undocumented == 0, (package, notes)
 
 
 def _cells(row: str) -> list[str]:

@@ -173,9 +173,10 @@ class Plan:
                 outputs.append(message.schema_)
         for channel in self.contract.push_channels.values():
             outputs.append(channel.schema_)
-        return self._closure(inputs), self._closure(outputs)
+        return self.closure(inputs), self.closure(outputs)
 
-    def _closure(self, roots: Iterable[dict[str, Any]]) -> set[str]:
+    def closure(self, roots: Iterable[dict[str, Any]]) -> set[str]:
+        """Every def ``roots`` reach, through the defs they name."""
         found: set[str] = set()
         stack: list[Any] = list(roots)
         while stack:
