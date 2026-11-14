@@ -314,3 +314,233 @@ describe("a disabled submenu parent", () => {
     expect(screen.queryByRole("menuitem", { name: "Export HTML" })).toBeNull();
   });
 });
+
+describe("the trigger's state", () => {
+  it("points at the menu only while it is open", () => {
+    render(<OverflowMenu actions={actions()} label="Document actions" />);
+    const trigger = screen.getByRole("button", { name: "Document actions" });
+    expect(trigger.getAttribute("aria-controls")).toBeNull();
+    open();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(trigger.getAttribute("aria-controls")).toBe(
+      screen.getByRole("menu").id,
+    );
+    open();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(trigger.getAttribute("aria-controls")).toBeNull();
+  });
+
+  it("closes on a second click and hands focus back to the trigger", () => {
+    render(<OverflowMenu actions={actions()} label="Document actions" />);
+    open();
+    open();
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Document actions" }),
+    );
+  });
+
+  it("names the menu after the trigger, and defaults to More actions", () => {
+    render(<OverflowMenu actions={actions()} />);
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(screen.getByRole("menu").getAttribute("aria-label")).toBe(
+      "More actions",
+    );
+  });
+
+  it("gives two menus on one page their own ids", () => {
+    render(
+      <>
+        <OverflowMenu actions={actions()} label="First" />
+        <OverflowMenu actions={actions()} label="Second" />
+      </>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "First" }));
+    fireEvent.click(screen.getByRole("button", { name: "Second" }));
+    const [a, b] = screen.getAllByRole("menu");
+    expect(a!.id).not.toBe(b!.id);
+  });
+});
+
+describe("dismissing and picking", () => {
+  it("closes on a click outside without pulling focus to the trigger", () => {
+    // The click has already put focus where the user aimed it.
+    const { container } = render(
+      <>
+        <input aria-label="elsewhere" />
+        <OverflowMenu actions={actions()} label="Document actions" />
+      </>,
+    );
+    open();
+    screen.getByLabelText("elsewhere").focus();
+    fireEvent.click(container.querySelector(".overflow-backdrop")!);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByLabelText("elsewhere"));
+  });
+
+  it("closes a picked action without pulling focus to the trigger", () => {
+    // Most actions replace the header the trigger lives in.
+    render(<OverflowMenu actions={actions()} label="Document actions" />);
+    open();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Share" }));
+    expect(document.activeElement).not.toBe(
+      screen.getByRole("button", { name: "Document actions" }),
+    );
+  });
+
+  it("takes an action with no onSelect", () => {
+    render(
+      <OverflowMenu
+        actions={[{ key: "x", label: "Nothing" }]}
+        label="Document actions"
+      />,
+    );
+    open();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Nothing" }));
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("lists safe actions first and the danger ones after, whatever order they came in", () => {
+    const a: OverflowAction[] = [
+      { key: "remove", label: "Remove", danger: true },
+      { key: "export", label: "Export" },
+    ];
+    render(<OverflowMenu actions={a} label="Document actions" />);
+    open();
+    expect(screen.getAllByRole("menuitem").map((n) => n.textContent)).toEqual([
+      "Export",
+      "Remove",
+    ]);
+    const menu = screen.getByRole("menu");
+    const kinds = [...menu.children].map((n) => n.getAttribute("role"));
+    expect(kinds).toEqual(["menuitem", "separator", "menuitem"]);
+  });
+
+  it("has no separator with only danger actions, or with only safe ones", () => {
+    const { unmount } = render(
+      <OverflowMenu
+        actions={[{ key: "r", label: "Remove", danger: true }]}
+        label="Document actions"
+      />,
+    );
+    open();
+    expect(screen.queryByRole("separator")).toBeNull();
+    unmount();
+    render(
+      <OverflowMenu
+        actions={[{ key: "e", label: "Export" }]}
+        label="Document actions"
+      />,
+    );
+    open();
+    expect(screen.queryByRole("separator")).toBeNull();
+  });
+
+  it("marks a danger action, and only that one", () => {
+    render(<OverflowMenu actions={actions()} label="Document actions" />);
+    open();
+    expect(
+      screen.getByRole("menuitem", { name: "Remove" }).className,
+    ).toContain("overflow-item-danger");
+    expect(
+      screen.getByRole("menuitem", { name: "Share" }).className,
+    ).not.toContain("overflow-item-danger");
+  });
+
+  it("draws an action's icon, and only when it has one", () => {
+    const a = actions([{ icon: "export" }]);
+    render(<OverflowMenu actions={a} label="Document actions" />);
+    open();
+    expect(
+      screen.getByRole("menuitem", { name: "Export" }).querySelector("svg"),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("menuitem", { name: "Share" }).querySelector("svg"),
+    ).toBeNull();
+  });
+
+  it("does not move focus when every action is disabled, and arrows do nothing", () => {
+    const a = actions([{ disabled: true }, { disabled: true }, { disabled: true }]);
+    render(<OverflowMenu actions={a} label="Document actions" />);
+    open();
+    const trigger = screen.getByRole("button", { name: "Document actions" });
+    trigger.focus();
+    expect(fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" })).toBe(
+      true,
+    );
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("prevents the page's scroll on the arrows it handles", () => {
+    render(<OverflowMenu actions={actions()} label="Document actions" />);
+    open();
+    expect(fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" })).toBe(
+      false,
+    );
+    expect(fireEvent.keyDown(screen.getByRole("menu"), { key: "a" })).toBe(true);
+  });
+});
+
+describe("submenu opening", () => {
+  const sub = (): OverflowAction[] => [
+    {
+      key: "export",
+      label: "Export",
+      icon: "export",
+      items: [{ key: "html", label: "HTML", onSelect: vi.fn() }],
+    },
+    { key: "share", label: "Share", onSelect: vi.fn() },
+  ];
+  const parent = () => screen.getByRole("menuitem", { name: "Export" });
+
+  it("opens when the pointer enters and closes when it leaves", () => {
+    render(<OverflowMenu actions={sub()} label="Document actions" />);
+    open();
+    fireEvent.mouseEnter(parent().parentElement!);
+    expect(parent().getAttribute("aria-expanded")).toBe("true");
+    expect(parent().getAttribute("aria-controls")).toBe(
+      screen.getAllByRole("menu")[1]!.id,
+    );
+    fireEvent.mouseLeave(parent().parentElement!);
+    expect(parent().getAttribute("aria-expanded")).toBe("false");
+    expect(parent().getAttribute("aria-controls")).toBeNull();
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+  });
+
+  it.each([["Enter"], [" "]])("opens on the %j key and focuses its first item", (key) => {
+    render(<OverflowMenu actions={sub()} label="Document actions" />);
+    open();
+    fireEvent.keyDown(parent(), { key });
+    expect(document.activeElement?.textContent).toBe("HTML");
+  });
+
+  it("closes on a second click on the parent", () => {
+    render(<OverflowMenu actions={sub()} label="Document actions" />);
+    open();
+    fireEvent.click(parent());
+    fireEvent.click(parent());
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+  });
+
+  it("draws the parent's icon", () => {
+    render(<OverflowMenu actions={sub()} label="Document actions" />);
+    open();
+    // The icon and the chevron.
+    expect(parent().querySelectorAll("svg")).toHaveLength(2);
+  });
+
+  it("is a plain item when items is an empty list", () => {
+    const onSelect = vi.fn();
+    render(
+      <OverflowMenu
+        actions={[{ key: "e", label: "Export", items: [], onSelect }]}
+        label="Document actions"
+      />,
+    );
+    open();
+    const item = screen.getByRole("menuitem", { name: "Export" });
+    expect(item.getAttribute("aria-haspopup")).toBeNull();
+    fireEvent.click(item);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+});
