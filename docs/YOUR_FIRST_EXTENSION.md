@@ -560,6 +560,14 @@ did not run" and exit 1:
 igni --read-only -m "What is the status of ticket T-1001?"
 ```
 
+The first igni run in a folder sets it up as an igni project: it writes
+`igni.md` and a `.igni/` directory (built-in agents, skills, hooks,
+`config.yaml`, `settings.json`) into `~/ticket-lookup`, trusted or not —
+igni's [First Run](https://github.com/ignite-ember/igni-core/blob/main/QUICKSTART.md#first-run).
+They are igni's files, not the extension's: `igni-service-bundle` reads only
+`extension/`, so they never reach the bundle, but a `git add .` picks them
+up. Delete them, or keep them out of git, if you do not want them.
+
 The agent calls `lookup_ticket` and answers "open". (The model is shown the
 tool's answer wrapped in `<untrusted_tool_output>` tags, so a tool's text
 is never taken for an instruction; a development install also prints a

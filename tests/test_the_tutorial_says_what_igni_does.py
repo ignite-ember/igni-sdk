@@ -103,3 +103,19 @@ def test_the_bridge_readme_says_how_to_test_a_page_outside_igni_s_app() -> None:
     (example,) = re.findall(r"`(packages/test-utils/[\w.]+)`", section)
     assert (REPO / example).is_file()
     assert "HostHarness" in section
+
+
+@needs_core
+def test_step_7_says_the_first_run_writes_igni_s_project_files() -> None:
+    """The first headless run in ~/ticket-lookup wrote igni.md and a .igni/
+    tree of 22 files, untrusted folder or not, and nothing in the tutorial said
+    igni writes into the project: a reader who commits the directory picks
+    them up unknowingly. igni's QUICKSTART says the first run writes them."""
+    quickstart = (IGNI_CORE / "QUICKSTART.md").read_text(encoding="utf-8")
+    first_run = quickstart[quickstart.index("## First Run") :]
+    assert "Writes `igni.md`" in first_run.split("\n## ", 1)[0]
+
+    section = " ".join(_section("## 7. Use it").split())
+    assert "it writes `igni.md` and a `.igni/` directory" in section
+    assert "QUICKSTART.md#first-run" in section
+    assert "`igni-service-bundle` reads only `extension/`" in section
