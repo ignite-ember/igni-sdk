@@ -939,7 +939,10 @@ def signature_parameters(
         part = part.strip()
         if not part:
             continue
-        head, _, tail = _partition_top_level(part, ":")
+        # The first top-level ``=`` is the default: what is left of it is
+        # the name, and its type when it has one.
+        spelled, _, default_text = _partition_top_level(part, "=")
+        head, _, tail = _partition_top_level(spelled, ":")
         head = head.strip()
         if head.startswith("{") and head.endswith("}"):
             known = (prop_types or {}).get(tail.strip(), {})
@@ -968,8 +971,7 @@ def signature_parameters(
         rest = name.startswith("...")
         if rest:
             name = name[3:].strip()
-        type_, _, default = _partition_top_level(tail, "=")
-        out.append(Parameter(name, type_.strip(), default.strip(), optional, rest))
+        out.append(Parameter(name, tail.strip(), default_text.strip(), optional, rest))
     return out
 
 

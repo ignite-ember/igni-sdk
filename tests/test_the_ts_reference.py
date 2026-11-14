@@ -88,3 +88,22 @@ def test_a_rest_parameter_is_optional_in_the_table_and_loses_its_dots(tmp_path: 
     page, _ = reference.page(reference.areas[0])
     assert "| `sep` | `string` | required | Not documented yet. |" in page
     assert "| `parts` | `string[]` | optional | Not documented yet. |" in page
+
+
+def test_a_parameter_with_a_default_and_no_type_is_its_name_and_its_default(
+    tmp_path: Path,
+) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": """
+            /** Greets. */
+            export function greet(name = "a, b", count = 2, fn = (x: number) => x) {}
+            """
+        },
+    )
+    reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
+    page, _ = reference.page(reference.areas[0])
+    assert '| `name` | — | `"a, b"` | Not documented yet. |' in page
+    assert "| `count` | — | `2` | Not documented yet. |" in page
+    assert "| `fn` | — | `(x: number) => x` | Not documented yet. |" in page
