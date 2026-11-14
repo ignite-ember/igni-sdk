@@ -135,10 +135,18 @@ A **target** says where the igni is and how to reach it.
   sees a pause, not an error.
 - **`Local(project_dir)`** — the igni the desktop app runs for that
   project on this machine, found from the lockfile it writes there
-  (`<project>/.igni/backend.lock`), which also carries the token a
-  program attaches with.
+  (`<project>/.igni/backend.lock`), which carries the token a
+  program attaches with when the desktop app launched it. A backend started
+  by hand writes the lockfile with its port and no token, and then
+  `standing` is `"unknown"`.
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
-  one started by hand with `--ws-port`.
+  one started by hand with `--ws-port`. A hand-started backend takes no
+  token and does not check one, so it has no access control: any program
+  that reaches its port may call it, and a wrong or missing approver token
+  does not refuse (the `AuthError` and `NotAllowed` below come from the
+  desktop app's igni). It prints `{"status": "ready", "ws_url": ...}` on
+  stdout once it listens: read that line to know it is ready, and pass
+  `--project-dir` so sessions have a folder.
 
 <!-- illustrative -->
 ```python
@@ -222,7 +230,7 @@ from igni_client.testing import FakeIgni
 
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create(project_dir="/workspace/payments")
-    again = await igni.sessions.open(session.id)     # the same Session object
+    again = await igni.sessions.open(session.id)     # the same Session object; an id igni does not know is opened new, not an error
     default = await igni.sessions.default()          # the one igni opened at start
     for entry in await igni.sessions.list():
         print(entry.session_id, entry.name, entry.run_count)
@@ -557,7 +565,7 @@ from igni_client.testing import FakeIgni
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create()
     result = await session.command("/help")
-    print(result.kind, result.content)
+    print(result.kind, result.content)   # against a real igni, /help is an action for the window: kind "action", content empty
     await session.typing("half a tho")              # every client sees the draft
 ```
 
@@ -800,7 +808,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
 | `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
 | `UnknownMethod` (`RpcError`) | igni is older than this igni-client | upgrade igni |
-| `InvalidArguments` (`RpcError`, `ValueError`) | the arguments are not what the method takes; checked before sending | fix the call |
+| `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
 | `RunFailed` | a run ended with `run_error` | read the message |
@@ -2671,8 +2679,9 @@ new.
 return: igni and igni-client disagree about the contract. Align their
 versions; report it if they match.
 
-**`InvalidArguments`.** An argument is not of the method's type, or is
-one it does not take. Nothing was sent.
+**`InvalidArguments`.** An argument is not of the method's type. Nothing was
+sent. A keyword the method does not take, or a required one left out, is
+Python's `TypeError`, raised by the method's signature before anything else.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read

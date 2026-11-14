@@ -75,8 +75,9 @@ class Local:
 
     By default it is found from the lockfile a running igni writes in its
     project, `<project_dir>/.igni/backend.lock`, which also carries the
-    token a program attaches with. Pass `url` (and `token`) to name one
-    directly, such as a backend started with `--ws-port 8765`.
+    token a program attaches with when the desktop app launched it. Pass
+    `url` (and `token`) to name one directly, such as a backend started with
+    `--ws-port 8765`; that one takes no token and checks none.
 
     A program attached with the lockfile's token runs sessions but cannot
     answer the agent's approval requests: the agent can read the lockfile
