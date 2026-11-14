@@ -135,11 +135,14 @@ socket.addEventListener("message", (e) => render(JSON.parse(e.data)));
 
 `url` is `null` when the extension has no service a page may reach, and
 then `fetch` and `websocket` reject with `no_service`. An extension igni
-distributed always has one: the service that shipped it. A development
+distributed always has a service: the one that shipped it. A development
 install has one only when its manifest declares a `serviceUrl` setting
-(`contributes.settings`) and it is set; a plain-`http` URL counts only for
-this machine (`localhost`, `127.0.0.1`, `::1`) and only with
-`IGNI_DEV_EXTENSIONS=1`, so a service on another host must be `https`.
+(`contributes.settings`) and it is set. A page is given the service only
+over `https`: a plain-`http` URL counts only for this machine (`localhost`,
+any name under `.localhost`, or a loopback address such as `127.0.0.1` or
+`::1`) and only with `IGNI_DEV_EXTENSIONS=1`. A service on another host,
+or on this machine outside development, leaves `url` `null`; a service on
+another host must be `https`.
 
 `websocket` resolves once the socket is open and has sent
 `{"type": "auth", "token": …}` as its first frame (a browser socket

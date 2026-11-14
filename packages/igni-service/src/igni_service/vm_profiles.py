@@ -95,7 +95,7 @@ class VmProfileRequest(BaseModel):
     setup_script: str | None = Field(default=None, max_length=MAX_SETUP_SCRIPT)
     """Run as root when the profile's layer is built, after the packages."""
     volume_gib: int | None = Field(default=None, ge=1)
-    """A new VM's volume, and how far an admin may grow it, in GiB."""
+    """The volume a new VM gets, in GiB (igni server's default is 10)."""
     volume_max_gib: int | None = Field(default=None, ge=1)
     """The largest an admin may grow the volume to, in GiB."""
     erase_after_idle_days: int | None = Field(default=None, ge=1, le=3650)

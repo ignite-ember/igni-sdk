@@ -293,8 +293,8 @@ whenever igni server holds different bytes. Two separate decisions then
 put it on a person's device, and **both** are needed:
 
 1. a **super admin approves the service** (portal, *Services*), and
-2. an **org admin switches the extension on for a group** (portal,
-   *Extensions*). Each person is in exactly one group.
+2. an **org admin switches the extension on for a group** (portal, the
+   group's *Extensions* tab). Each person is in exactly one group.
 
 Every signed-in igni of a person in that group installs the extension the
 next time it syncs with igni server. Approval alone installs it nowhere.
@@ -1053,7 +1053,9 @@ class Agent:
 For every send: `event_key` (1–200 characters) makes retries exact — igni
 stores one item per key and producer, and answers a repeat with the item
 already stored (`duplicate=True`). `expires_at` stops delivery after that
-time; igni keeps an item at most 14 days. Attachments are uploaded first.
+time; igni keeps an item at most 14 days (igni server's default,
+`service_event_max_wait_seconds`; an operator may change it).
+Attachments are uploaded first.
 
 Each send raises `IgniUnavailable` when igni cannot take it after three
 tries, and `EventRefused` when igni reads it and says no (a 4xx other
@@ -2506,8 +2508,8 @@ admin.
 
 **The service was approved, but nobody has the extension.** Approval
 installs it nowhere. An org admin must switch the extension on for a
-group (portal, *Extensions*). Each person's igni installs it at its next
-sync.
+group (portal, the group's *Extensions* tab). Each person's igni installs
+it at its next sync.
 
 **A new version does not reach anybody, and the log says it is held for
 a super admin.** The new version asks for more than the approved one: a
