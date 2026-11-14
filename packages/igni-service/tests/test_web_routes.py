@@ -13,7 +13,7 @@ def test_the_router_mounts_login_and_callback_for_get_and_logout_for_get_and_pos
 ) -> None:
     web = fake.service().web
 
-    routes = {r.path: set(r.methods) for r in web.router.routes if isinstance(r, APIRoute)}
+    routes = {r.path: set(r.methods or ()) for r in web.router.routes if isinstance(r, APIRoute)}
 
     assert routes == {
         "/auth/login": {"GET"},
