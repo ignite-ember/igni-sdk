@@ -17,7 +17,8 @@ A **target** says where the igni is and how to reach it.
   (`<project>/.igni/backend.lock`), which carries the token a
   program attaches with. A backend started by hand publishes the same
   lockfile, so `Local(project_dir=...)` attaches to it too, as a program
-  (`standing` is `"program"`; it approves nothing).
+  (`standing` is `"program"` once the client is open — it is
+  `"unknown"` until the lockfile is read, at open; it approves nothing).
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
   one started by hand with `--ws-port`. A hand-started backend mints its
   own window token, prints it once to stderr and requires it:

@@ -138,7 +138,8 @@ A **target** says where the igni is and how to reach it.
   (`<project>/.igni/backend.lock`), which carries the token a
   program attaches with. A backend started by hand publishes the same
   lockfile, so `Local(project_dir=...)` attaches to it too, as a program
-  (`standing` is `"program"`; it approves nothing).
+  (`standing` is `"program"` once the client is open — it is
+  `"unknown"` until the lockfile is read, at open; it approves nothing).
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
   one started by hand with `--ws-port`. A hand-started backend mints its
   own window token, prints it once to stderr and requires it:
@@ -741,7 +742,10 @@ entering one twice.
 
 Each has `standing` — what igni stands the connection as (`"window"`,
 `"approver"`, `"program"` or `"unknown"`; see
-[Who may call what](#who-may-call-what)) — and `describe()`. `Local.approves`
+[Who may call what](#who-may-call-what)) — and `describe()`. A
+`Local(project_dir)` reads its lockfile when the client opens, so until
+then its `standing` is `"unknown"` (or `"approver"`, with an approver
+token); read it inside `async with IgniClient(...)`. `Local.approves`
 says whether it has an approver token; `IGNI_APPROVER_TOKEN` gives it one.
 
 ### Credentials: Person, App, Space

@@ -69,7 +69,10 @@ entering one twice.
 
 Each has `standing` — what igni stands the connection as (`"window"`,
 `"approver"`, `"program"` or `"unknown"`; see
-[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)) — and `describe()`. `Local.approves`
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)) — and `describe()`. A
+`Local(project_dir)` reads its lockfile when the client opens, so until
+then its `standing` is `"unknown"` (or `"approver"`, with an approver
+token); read it inside `async with IgniClient(...)`. `Local.approves`
 says whether it has an approver token; `IGNI_APPROVER_TOKEN` gives it one.
 
 ## Credentials: Person, App, Space
