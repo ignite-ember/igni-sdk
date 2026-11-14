@@ -1107,6 +1107,9 @@ class ClientReference:
             else:
                 kind = prop_schema.get("type")
                 default = "`{}`" if kind == "object" else "`[]`" if kind == "array" else "`None`"
+                # The model says `X | None` for a field that defaults to None.
+                if default == "`None`" and annotation != "None" and not annotation.endswith("| None"):
+                    annotation += " | None"
             const = f"always `{prop_schema['const']!r}`. " if "const" in prop_schema else ""
             desc = const + rst(prop_schema.get("description", ""))
             row = f"| {name} | {self.type_md(annotation, in_table=True)} | {default} |"
