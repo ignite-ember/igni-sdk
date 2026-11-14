@@ -747,9 +747,15 @@ def _field_type(rest: str) -> str:
             if char == "=" and type_[index : index + 2] == "=>":
                 # An arrow, not a value: the type goes on.
                 continue
+            if char == "\n" and (
+                type_[:index].rstrip().endswith(("|", "&"))
+                or type_[index:].lstrip().startswith(("|", "&"))
+            ):
+                # A union or an intersection written one member a line.
+                continue
             type_ = type_[:index]
             break
-    return _tight_generics(type_.strip())
+    return _tight_generics(type_.strip()).lstrip("| ")
 
 
 #: Words that are not members of anything: a statement, not a declaration.

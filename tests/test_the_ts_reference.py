@@ -351,3 +351,27 @@ def test_a_type_parameter_defaulting_to_an_object_type_does_not_hide_the_extends
     box = parsed.declarations["Box"]
     assert box.signature == "class Box<T = {}> implements Holder"
     assert [m.name for m in box.members] == ["item"]
+
+
+def test_a_field_type_written_over_several_lines_as_a_union_is_one_type(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export interface Job {
+          state:
+            | "queued"
+            | "running";
+          kind: "a" |
+            "b";
+          plain: string
+          next: number;
+        }
+        """,
+    )
+    types = {m.name: m.type for m in parsed.declarations["Job"].members}
+    assert types == {
+        "state": '"queued" | "running"',
+        "kind": '"a" | "b"',
+        "plain": "string",
+        "next": "number",
+    }
