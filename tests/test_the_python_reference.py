@@ -19,14 +19,19 @@ from pathlib import Path
 
 import pytest
 
+from tools.py_constant_docs import ConstantDocs
+from tools.py_docstring import Docstring
+from tools.py_entry import Entry
 from tools.py_reference import (
+    Anchor,
+    CallableSignature,
     PythonReference,
     ReferenceError_,
     annotation_text,
     docstring_markdown,
-    signature_text,
     stable_repr,
 )
+from tools.py_render import EntryRenderer
 from tools.reference_area import Area
 
 CORE = '''
@@ -252,8 +257,7 @@ def reference(package: str, areas: list[Area] | None = None) -> PythonReference:
 @pytest.fixture(scope="module")
 def page(package: str) -> str:
     ref = reference(package)
-    body, _ = ref.page(ref.areas[0])
-    return body
+    return ref.page(ref.areas[0]).body
 
 
 def section(page: str, heading: str) -> str:
@@ -299,10 +303,10 @@ def test_a_name_exported_twice_by_one_module_is_one_name(package: str) -> None:
 
 def test_anchors_name_the_page_and_the_heading_of_every_documented_name(package: str) -> None:
     anchors = reference(package).anchors()
-    assert anchors["run"] == ("everything", "run")
-    assert anchors["Plain"] == ("everything", "plain")
-    assert anchors["Minter"] == ("minting", "minter")
-    assert anchors["LIMIT"] == ("everything", "limit")
+    assert anchors["run"] == Anchor(slug="everything", anchor="run")
+    assert anchors["Plain"] == Anchor(slug="everything", anchor="plain")
+    assert anchors["Minter"] == Anchor(slug="minting", anchor="minter")
+    assert anchors["LIMIT"] == Anchor(slug="everything", anchor="limit")
 
 
 # ── the page: names table and a section a name ──
@@ -322,7 +326,8 @@ def test_the_page_opens_with_where_to_import_from_and_a_table_of_names(page: str
 
 def test_a_name_with_no_docstring_has_a_dash_and_is_counted(package: str) -> None:
     ref = reference(package)
-    body, undocumented = ref.page(ref.areas[0])
+    result = ref.page(ref.areas[0])
+    body, undocumented = result.body, result.undocumented
     assert "| [`bare`](#bare) | — |" in body.split("\n")
     assert "| [`NoDoc`](#nodoc) | — |" in body.split("\n")
     # bare, Child, NoDoc, BARE, TAGS, Plain.undocumented
@@ -330,15 +335,13 @@ def test_a_name_with_no_docstring_has_a_dash_and_is_counted(package: str) -> Non
 
 
 def test_a_summary_is_the_first_paragraph_and_is_cut_at_two_hundred_characters() -> None:
-    from tools.py_reference import _summary
-
     long = "word " * 80
 
-    out = _summary("One :class:`~pkg.X` and ``y`` | z.\n\nSecond paragraph.")
+    out = Docstring(text="One :class:`~pkg.X` and ``y`` | z.\n\nSecond paragraph.").summary()
     assert out == "One `pkg.X` and `y` \\| z."
-    cut = _summary(long)
+    cut = Docstring(text=long).summary()
     assert cut.endswith("…") and len(cut) <= 201
-    assert _summary(None) == "" and _summary("") == ""
+    assert Docstring().summary() == "" and Docstring(text="").summary() == ""
 
 
 # ── C6: a table of parameters under every signature, the meanings read from Args: ──
@@ -525,7 +528,7 @@ def test_a_constant_re_exported_from_testing_has_the_docstring_its_defining_modu
     package: str,
 ) -> None:
     ref = reference(package)
-    body, _ = ref.page(ref.areas[1])
+    body = ref.page(ref.areas[1]).body
     secret = section(body, "## SECRET")
     assert "SECRET: str = 's'" in secret
     assert secret.strip().endswith("A typed constant, documented.")
@@ -540,8 +543,8 @@ def test_a_string_in_a_comment_after_a_constant_is_not_its_docstring(page: str) 
 
 def test_a_constant_with_no_docstring_is_counted_and_not_invented(package: str) -> None:
     ref = reference(package)
-    _, undocumented = ref.page(ref.areas[0])
-    _, documented_only = ref.page(ref.areas[1])
+    undocumented = ref.page(ref.areas[0]).undocumented
+    documented_only = ref.page(ref.areas[1]).undocumented
     assert undocumented >= 2 and documented_only == 0
 
 
@@ -567,12 +570,12 @@ def test_a_source_that_cannot_be_read_does_not_stop_the_lookup(
             [Area("only", "Only", ("docs_broken:GOOD", "docs_broken:PLAIN"))],
             lambda name: None,
         )
-        body, undocumented = ref.page(ref.areas[0])
+        result = ref.page(ref.areas[0])
     finally:
         for name in [m for m in sys.modules if m.startswith("docs_broken")]:
             del sys.modules[name]
-    assert "Found past two bad files." in section(body, "## GOOD")
-    assert undocumented == 1
+    assert "Found past two bad files." in section(result.body, "## GOOD")
+    assert result.undocumented == 1
 
 
 # ── the readers, on their own ──
@@ -616,45 +619,49 @@ def test_annotation_text_is_what_the_source_spells() -> None:
     assert annotation_text(__import__("inspect").Parameter.empty) == ""
 
 
-def test_signature_text_marks_keyword_only_positional_only_and_star_parameters() -> None:
+def test_a_signature_marks_keyword_only_positional_only_and_star_parameters() -> None:
     def f(a, b: int = 1, /, c: str = "x", *args: int, d: bool, e: float = 0.5, **kw: str) -> None:  # type: ignore[no-untyped-def]
         pass
 
-    params, returns = signature_text(f)
+    sig = CallableSignature.of(f)
+    params, returns = sig.text(), sig.returns
     assert (
         params == "a, b: int = 1, /, c: str = 'x', *args: int, d: bool, e: float = 0.5, **kw: str"
     )
     assert returns == "None"
 
 
-def test_signature_text_puts_a_bare_star_before_keyword_only_parameters() -> None:
+def test_a_signature_puts_a_bare_star_before_keyword_only_parameters() -> None:
     def f(a: int, *, b: int = 2, c) -> int:  # type: ignore[no-untyped-def]
         return a
 
-    assert signature_text(f) == ("a: int, *, b: int = 2, c", "int")
+    sig = CallableSignature.of(f)
+    assert (sig.text(), sig.returns) == ("a: int, *, b: int = 2, c", "int")
 
 
-def test_signature_text_skips_self_or_cls_only_when_asked() -> None:
+def test_a_signature_skips_self_or_cls_only_when_asked() -> None:
     class C:
         def m(self, x: int) -> None: ...
 
         @classmethod
         def k(cls, x: int) -> None: ...
 
-    assert signature_text(C.m, skip_self=True) == ("x: int", "None")
-    assert signature_text(C.m) == ("self, x: int", "None")
-    assert signature_text(C.k.__func__, skip_self=True) == ("x: int", "None")  # type: ignore[attr-defined]
+    assert CallableSignature.of(C.m, skip_self=True).text() == "x: int"
+    assert CallableSignature.of(C.m).text() == "self, x: int"
+    assert CallableSignature.of(C.m).returns == "None"
+    assert CallableSignature.of(C.k.__func__, skip_self=True).text() == "x: int"  # type: ignore[attr-defined]
 
 
-def test_signature_text_of_what_has_no_signature_is_an_ellipsis() -> None:
-    assert signature_text(1) == ("…", "")
+def test_a_signature_of_what_has_no_signature_is_an_ellipsis() -> None:
+    sig = CallableSignature.of(1)
+    assert (sig.text(), sig.returns, sig.parameters) == ("…", "", [])
 
 
 def test_a_default_without_an_annotation_is_written_without_spaces() -> None:
     def f(a=1, b: int = 2):  # type: ignore[no-untyped-def]
         pass
 
-    assert signature_text(f)[0] == "a=1, b: int = 2"
+    assert CallableSignature.of(f).text() == "a=1, b: int = 2"
 
 
 def test_docstring_markdown_turns_roles_and_double_backticks_into_code() -> None:
@@ -685,7 +692,7 @@ def test_a_parameter_named_with_a_leading_underscore_is_not_shown_in_a_signature
     assert "_env_file" not in part and "_cli_parse_args" not in part
     assert "a: int, *, b: int = 0" in part
     assert [row[0] for row in rows(part.split("```\n", 1)[1])[2:]] == ["`a`", "`b`"]
-    assert signature_text(lambda a, _b=1, **k: None)[0] == "a, **k"
+    assert CallableSignature.of(lambda a, _b=1, **k: None).text() == "a, **k"
 
 
 def test_a_protocol_has_no_constructor_line_or_table(page: str) -> None:
@@ -694,3 +701,44 @@ def test_a_protocol_has_no_constructor_line_or_table(page: str) -> None:
     assert "Store(" not in part.replace("class Store(Protocol)", "")
     assert "| Parameter" not in part
     assert "### Store.fetch()" in page
+
+
+class Fetcher(typing.Protocol):
+    """Fetches."""
+
+    def fetch(self) -> str: ...
+
+
+class Pair[T](typing.Protocol):
+    """A generic protocol."""
+
+    def first(self) -> T: ...
+
+
+class Concrete(Fetcher):
+    """Says it is a fetcher, and is built like any class."""
+
+    def __init__(self, size: int) -> None:
+        self.size = size
+
+    def fetch(self) -> str:
+        """Fetch."""
+        return ""
+
+
+def test_a_protocol_is_one_that_names_protocol_among_its_bases_not_one_that_implements_one() -> (
+    None
+):
+    renderer = EntryRenderer(lambda name: None, ConstantDocs(()))
+
+    def lines(cls: type) -> str:
+        entry = Entry(name=cls.__name__, obj=cls, exported_from="m")
+        return "\n".join(renderer.render(entry).lines)
+
+    for protocol in (Fetcher, Pair):
+        name = protocol.__name__
+        head, _, rest = lines(protocol).partition(f"class {name}(Protocol")
+        assert f"{name}(" not in head + rest.split("\n", 1)[1]
+    concrete = lines(Concrete)
+    assert "class Concrete(Fetcher)\nConcrete(size: int)" in concrete
+    assert "| `size` | `int` | required |" in concrete

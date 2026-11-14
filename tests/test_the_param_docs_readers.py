@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from tools.param_docs import (
     UNDOCUMENTED,
+    ParameterRow,
     cell,
     code,
     jsdoc_lines,
@@ -157,7 +158,8 @@ def test_code_is_backticked_and_its_pipes_escaped() -> None:
 
 def test_a_table_has_a_header_and_a_row_a_parameter_and_none_without_rows() -> None:
     assert table([]) == []
-    assert table([("a", "`int`", "required", "The  first\n| one.")]) == [
+    row = ParameterRow(name="a", type="`int`", default="required", meaning="The  first\n| one.")
+    assert table([row]) == [
         "| Parameter | Type | Default | Meaning |",
         "|---|---|---|---|",
         "| `a` | `int` | required | The first \\| one. |",

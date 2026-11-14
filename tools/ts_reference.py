@@ -27,7 +27,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from tools.param_docs import UNDOCUMENTED, cell, code, jsdoc_params, strip_jsdoc_params, table
+from tools.param_docs import (
+    UNDOCUMENTED,
+    ParameterRow,
+    cell,
+    code,
+    jsdoc_params,
+    strip_jsdoc_params,
+    table,
+)
 from tools.reference_area import Area
 
 
@@ -1157,7 +1165,7 @@ def parameter_table(params: list[Parameter], meanings: dict[str, str]) -> list[s
     A parameter the JSDoc does not document is said to be undocumented:
     the generator does not guess what a parameter is.
     """
-    rows: list[tuple[str, str, str, str]] = []
+    rows: list[ParameterRow] = []
     for param in params:
         if param.default:
             default = code(param.default)
@@ -1166,11 +1174,11 @@ def parameter_table(params: list[Parameter], meanings: dict[str, str]) -> list[s
         else:
             default = "required"
         rows.append(
-            (
-                param.name,
-                code(param.type) if param.type else "—",
-                default,
-                meanings.get(param.name) or UNDOCUMENTED,
+            ParameterRow(
+                name=param.name,
+                type=code(param.type) if param.type else "—",
+                default=default,
+                meaning=meanings.get(param.name) or UNDOCUMENTED,
             )
         )
     return table(rows)

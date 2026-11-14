@@ -1617,11 +1617,10 @@ def python_pages(package: Package, start: int, report: dict[str, Any]) -> list[P
         reference = holder.get("ref")
         if reference is None:
             return None
-        anchors = reference.anchors()
-        if name not in anchors:
+        anchor = reference.anchors().get(name)
+        if anchor is None:
             return None
-        slug, anchor = anchors[name]
-        return url(package.site, f"reference-{slug}", anchor)
+        return url(package.site, f"reference-{anchor.slug}", anchor.anchor)
 
     reference = PythonReference(
         package.module, (package.module, f"{package.module}.testing"), areas, link
@@ -1630,8 +1629,9 @@ def python_pages(package: Package, start: int, report: dict[str, Any]) -> list[P
     pages: list[Page] = []
     undocumented = 0
     for index, area in enumerate(areas):
-        body, missing = reference.page(area)
-        undocumented += missing
+        page = reference.page(area)
+        body = page.body
+        undocumented += page.undocumented
         first = reference.placed[area.slug][0]
         names = ", ".join(e.name for e in reference.placed[area.slug][:6])
         more = "…" if len(reference.placed[area.slug]) > 6 else ""
