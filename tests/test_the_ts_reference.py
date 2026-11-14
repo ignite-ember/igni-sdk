@@ -107,3 +107,21 @@ def test_a_parameter_with_a_default_and_no_type_is_its_name_and_its_default(
     assert '| `name` | — | `"a, b"` | Not documented yet. |' in page
     assert "| `count` | — | `2` | Not documented yet. |" in page
     assert "| `fn` | — | `(x: number) => x` | Not documented yet. |" in page
+
+
+def test_a_regex_after_return_hides_its_brackets_but_a_division_does_not(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export function f(a = (x: string) => { return /[)]/.test(x) }, b: number): void {}
+        export function g(a = (n: number) => { return (n) / 2 }, b = 1): void {}
+        """,
+    )
+    assert parsed.declarations["f"].signature == (
+        "function f(a = (x: string) => { return /[)]/.test(x) }, b: number): void"
+    )
+    assert parsed.declarations["g"].signature == (
+        "function g(a = (n: number) => { return (n) / 2 }, b = 1): void"
+    )

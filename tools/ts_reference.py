@@ -111,8 +111,11 @@ _REGEX_AFTER_WORDS = frozenset(
 )
 
 
-def _prev_significant(text: str, index: int) -> str:
-    """The last character before ``index`` that is not a space or a comment."""
+def _prev_significant_index(text: str, index: int) -> int:
+    """The index of the last character before ``index`` that is not a space or a comment.
+
+    -1 when there is none.
+    """
     position = index - 1
     while position >= 0:
         char = text[position]
@@ -122,14 +125,20 @@ def _prev_significant(text: str, index: int) -> str:
         if char == "/" and position > 0 and text[position - 1] == "*":
             start = text.rfind("/*", 0, position)
             if start < 0:
-                return char
+                return position
             position = start - 1
             continue
         if char == "/" and position > 0 and text[position - 1] == "/":
             position = text.rfind("\n", 0, position)
             continue
-        return char
-    return ""
+        return position
+    return -1
+
+
+def _prev_significant(text: str, index: int) -> str:
+    """The last character before ``index`` that is not a space or a comment."""
+    position = _prev_significant_index(text, index)
+    return text[position] if position >= 0 else ""
 
 
 def _regex_end(text: str, index: int) -> int:
@@ -161,7 +170,8 @@ def _is_regex_start(text: str, index: int) -> bool:
     if previous in _REGEX_AFTER:
         return True
     if previous.isalpha():
-        word = re.search(r"[A-Za-z_$][\w$]*$", text[:index])
+        # The word may be a space or a comment away from the slash.
+        word = re.search(r"[A-Za-z_$][\w$]*$", text[: _prev_significant_index(text, index) + 1])
         if word is None:
             return False
         return word.group(0) in _REGEX_AFTER_WORDS
