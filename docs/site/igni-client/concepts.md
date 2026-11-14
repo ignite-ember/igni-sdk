@@ -113,7 +113,7 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
 
     registry = await session.models.list()           # a ModelRegistryResult
     print(registry.default, list(registry.registry))
-    notice = await session.models.switch("igni-1")   # an InfoMessage
+    notice = await session.models.switch("igni-1")   # a ModelSwitched
     print(notice.text)
 ```
 

@@ -8,7 +8,7 @@ On purpose, and not backwards compatible:
   `session.rpc(...)` are gone: every one of igni's methods is a Python
   method on `IgniClient` or `Session`, its arguments checked before
   sending and its result a model. `session.use_model(name)` is
-  `session.models.switch(name)` (an `InfoMessage`); `igni.models.list()`
+  `session.models.switch(name)` (a `ModelSwitched`); `igni.models.list()`
   is `session.models.list()` (a `ModelRegistryResult`; `ModelCatalogue`
   and `ModelEntry` are gone); `session.history()` is
   `session.history.get()`, a list of `ChatTurn` — `UserTurn`,
