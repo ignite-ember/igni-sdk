@@ -87,6 +87,7 @@ def test_a_run_that_answers_starts_says_the_text_and_completes() -> None:
 def test_the_default_run_answers_with_the_agent_and_model_igni_reports() -> None:
     started = Steps.answer("x")[0]
 
+    assert isinstance(started, RunStarted)
     assert (started.agent_name, started.model) == ("igni", "igni-1")
 
 

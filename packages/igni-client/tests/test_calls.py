@@ -65,7 +65,7 @@ def test_an_error_message_as_an_answer_is_raised_as_the_kind_it_is() -> None:
 async def test_a_message_igni_answers_a_message_with_an_error_raises_its_kind() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
-        fake.commands = lambda text: ErrorMessage(text="the disk is full")
+        fake.commands = lambda text: ErrorMessage(text="the disk is full")  # type: ignore[assignment,return-value]
         with pytest.raises(MethodFailed, match="command: the disk is full"):
             await session.command("/help")
 
@@ -103,7 +103,8 @@ async def test_an_answer_slower_than_nothing_but_inside_the_default_wait_is_stil
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         fake.methods.answers["list_background_processes"] = slow
         igni._conn.RPC_TIMEOUT = 5.0
-        for given in ({}, {"timeout": DEFAULT_TIMEOUT}):
+        cases: list[dict[str, Any]] = [{}, {"timeout": DEFAULT_TIMEOUT}]
+        for given in cases:
             reply = await igni._conn.ask("list_background_processes", **given)
             assert isinstance(reply, RpcResponse) and reply.result == []
         with pytest.raises(Unavailable, match="got no answer"):
@@ -174,7 +175,9 @@ async def test_a_call_s_arguments_go_to_igni_by_their_wire_names() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         fake.methods.answers["list_background_processes"] = []
         await Caller(igni._conn).answer(
-            "list_background_processes", _Aliased(when_to_use="now"), TypeAdapter(list[Any])
+            "list_background_processes",
+            _Aliased.model_validate({"when_to_use": "now"}),
+            TypeAdapter(list[Any]),
         )
 
     [sent] = [c for c in fake.methods.calls if c.method == "list_background_processes"]

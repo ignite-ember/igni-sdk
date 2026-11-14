@@ -144,4 +144,4 @@ def test_a_request_is_named_by_what_it_asks_and_a_decision_cannot_be_changed() -
 
     assert repr(request) == "ApprovalRequested(Run a command, write)" and request.run_id == "r-1"
     with pytest.raises(ValidationError):
-        decision.choice = "always"  # type: ignore[misc]
+        decision.choice = "always"
