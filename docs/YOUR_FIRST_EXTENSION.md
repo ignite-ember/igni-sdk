@@ -330,8 +330,13 @@ igni ext doctor extension
 ```
 
 `doctor` validates the manifest, starts the extension, asks it for its
-tools over MCP (with a timeout), and says what is wrong, with the fix. The
-end of what it prints:
+tools over MCP (with a timeout), and says what is wrong, with the fix.
+Above the part shown below it prints a few `-` notes, such as `no
+wheelhouse at 'wheels'` (a development install builds one), and that an
+extension that runs as a process installs only on a single-user backend, and
+that pages are shown only by one. They are notes, not problems: only a
+line that says what to fix is a problem, and the last line says whether
+there were any. The end of what it prints:
 
 ```
   process    started it and asked for its tools: 2
@@ -464,6 +469,10 @@ the next step for that state:
   ============================================================
 ```
 
+The identity is printed once the service has registered with igni server.
+If the server is not reachable it logs `registration failed … retrying`
+with a growing delay and prints no banner, so start igni server first.
+
 Restart it once approved and the last lines say an org admin switches it
 on for a group. A new version that asks for more than the approved one is
 **held**, and the service logs a warning saying so.
@@ -510,7 +519,8 @@ synced with http://localhost:7777 (group Default)
   installed  acme.tickets 0.2.0 from http://tickets.localhost:8201
 ```
 
-and `igni ext list` shows `acme.tickets  0.2.0  from http://tickets.localhost:8201`.
+and `igni ext list` shows `acme.tickets  0.2.0  from http://tickets.localhost:8201`
+(for a development install it shows `development install` instead of the URL).
 If it says *nothing is switched on for you*, step 4 or 5 is not done yet.
 
 You need `ext sync` only the first time: every `igni -m` / `igni -p` run
@@ -543,7 +553,10 @@ In chat:
 igni -m "What is the status of ticket T-1001?"
 ```
 
-The agent calls `lookup_ticket` and answers "open". Then once through the
+The agent calls `lookup_ticket` and answers "open". (The model is shown the
+tool's answer wrapped in `<untrusted_tool_output>` tags, so a tool's text
+is never taken for an instruction; a development install also prints a
+line saying it is one.) Then once through the
 service, so it has something to export:
 
 ```bash
@@ -551,7 +564,10 @@ igni -m "Look ticket T-1002 up on the ticket service."
 ```
 
 Open igni's app: **Tickets** is in the sidebar, and its page shows
-T-1001, fetched through `ext.acme.tickets.lookup_ticket`.
+T-1001, fetched through `ext.acme.tickets.lookup_ticket`. The page lives on
+a loopback origin igni picks (a new port each start), and only igni's app
+frames it; a program reads the origin with `igni.extensions.list()` in
+`igni-client`, but cannot call `ext.*` methods as a page.
 
 The service's log shows `GET /v1/tickets/T-1002 … 200`: the extension
 called it as you, with a token igni server issued for the service.
@@ -678,7 +694,11 @@ async def test_the_service_takes_a_person_and_answers_export_and_erasure() -> No
 pytest
 ```
 
-Three tests, no igni and no igni server.
+The test file this page prints, `tests/test_example.py`, is three tests. A
+copy of the whole example also holds `test_extension.py` and
+`test_service.py` (the extension's tools, hook and identity, and the
+service's routes), and `pytest` runs all three files. None of them needs
+igni or an igni server.
 
 ## Changing it
 
