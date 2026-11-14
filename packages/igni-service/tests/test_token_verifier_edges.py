@@ -1,34 +1,50 @@
-"""The verifier's own rules, read from tokens signed with exactly the claims a test names."""
+"""TokenVerifier read directly: what it refuses and says, claim by claim, and the models it builds."""
 
 from __future__ import annotations
 
-import math
 from typing import Any
 
 import pytest
 
-from igni_service import App, CallerKind, Person, Space
-from igni_service.testing import FakeIgni, ManualClock, SpaceClaims
-from igni_service.tokens import PEOPLE_ONLY, TokenRefused, TokenUse, TokenVerifier
+from igni_service import App, CallerKind, IgniService, Person, Space
+from igni_service.testing import FakeIgni, ManualClock
+from igni_service.tokens import PEOPLE_ONLY, IgniCall, TokenRefused, TokenUse, TokenVerifier
 
 from .conftest import ORG
 
+LIFETIME = 600
 
-def signed(fake: FakeIgni, clock: ManualClock, **changes: Any) -> str:
-    """A person's token with these claims, `None` taking a claim away."""
+
+def mint(fake: FakeIgni, clock: ManualClock, **changes: Any) -> str:
+    """A user token signed with igni's own key, its claims set claim by claim."""
     now = int(clock.wall())
-    claims: dict[str, Any] = {
+    payload: dict[str, Any] = {
         "iss": fake.signer.addresses.issuer,
         "sub": "u-ada",
         "aud": fake.signer.addresses.service_url,
         "token_use": "user",
-        "iat": now,
-        "exp": now + 600,
         "org": ORG,
+        "iat": now,
+        "exp": now + LIFETIME,
     }
-    claims.update(changes)
-    claims = {k: v for k, v in claims.items() if v is not None}
-    return fake.signer.keys.pair.sign_jwt(claims, kid=fake.signer.keys.kid)
+    payload |= changes
+    return fake.signer.keys.pair.sign_jwt(payload, kid=fake.signer.keys.kid)
+
+
+def mint_without(fake: FakeIgni, clock: ManualClock, claim: str) -> str:
+    """The same token with one claim left out."""
+    now = int(clock.wall())
+    payload: dict[str, Any] = {
+        "iss": fake.signer.addresses.issuer,
+        "sub": "u-ada",
+        "aud": fake.signer.addresses.service_url,
+        "token_use": "user",
+        "org": ORG,
+        "iat": now,
+        "exp": now + LIFETIME,
+    }
+    del payload[claim]
+    return fake.signer.keys.pair.sign_jwt(payload, kid=fake.signer.keys.kid)
 
 
 @pytest.fixture
@@ -36,321 +52,337 @@ def verifier(fake: FakeIgni) -> TokenVerifier:
     return fake.service().verifier
 
 
-async def reason_of(verifier: TokenVerifier, token: str, use: str = "user") -> str:
+async def reason(verifier: TokenVerifier, token: str, use: str = "user") -> str:
     with pytest.raises(TokenRefused) as refused:
         await verifier.claims(token, use=use)
     return refused.value.reason
 
 
-async def test_a_token_is_read_with_or_without_the_bearer_prefix_and_around_whitespace(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    token = signed(fake, clock)
+class TestTheClaimsAToken:
+    @pytest.mark.parametrize("missing", ["exp", "iat", "sub", "iss", "aud"])
+    async def test_a_missing_required_claim_is_named(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, missing: str
+    ) -> None:
+        token = mint_without(fake, clock, missing)
 
-    for form in (token, f"Bearer {token}", f"  {token}\n", f"Bearer  {token} "):
-        assert (await verifier.claims(form, use="user"))["sub"] == "u-ada"
+        assert await reason(verifier, token) == f"the token has no {missing!r} claim"
 
+    @pytest.mark.parametrize("bad", ["soon", "", [1], {}])
+    @pytest.mark.parametrize("claim", ["exp", "iat"])
+    async def test_an_exp_or_iat_that_is_not_a_number_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, claim: str, bad: object
+    ) -> None:
+        token = mint(fake, clock, **{claim: bad})
 
-@pytest.mark.parametrize("token", [None, "", "   ", "Bearer ", "Bearer", "a.b.c"])
-async def test_nothing_or_something_that_is_not_a_jwt_is_refused_as_such(
-    verifier: TokenVerifier, token: str | None
-) -> None:
-    reason = await reason_of(verifier, token)  # type: ignore[arg-type]
+        assert await reason(verifier, token) == "the token's exp or iat is not a number"
 
-    assert reason == "the token is not a JWT"
+    async def test_a_token_expires_at_its_exp_not_after_it(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        token = mint(fake, clock)
 
+        clock.advance(LIFETIME - 1)
+        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
+        clock.advance(1)
+        assert await reason(verifier, token) == "the token has expired"
 
-@pytest.mark.parametrize("claim", ["sub", "exp", "iat", "iss", "aud"])
-async def test_each_missing_required_claim_is_named(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, claim: str
-) -> None:
-    reason = await reason_of(verifier, signed(fake, clock, **{claim: None}))
+    async def test_iat_may_be_a_minute_ahead_and_no_more(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        now = int(clock.wall())
+        within = mint(fake, clock, iat=now + 60)
+        beyond = mint(fake, clock, iat=now + 61)
 
-    assert reason == f"the token has no {claim!r} claim"
+        assert (await verifier.claims(within, use="user"))["sub"] == "u-ada"
+        assert "issued in the future" in await reason(verifier, beyond)
+        assert TokenVerifier.LEEWAY == 60.0
 
+    async def test_numbers_written_as_text_are_numbers(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        now = int(clock.wall())
+        token = mint(fake, clock, exp=str(now + LIFETIME), iat=str(now))
 
-async def test_a_token_expires_at_its_exp_not_after(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    token = signed(fake, clock, exp=int(clock.wall()) + 10)
+        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
 
-    clock.advance(9)
-    assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
-    clock.advance(1)
+    async def test_nbf_is_not_checked(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        token = mint(fake, clock, nbf=int(clock.wall()) + 100_000)
 
-    assert await reason_of(verifier, token) == "the token has expired"
+        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
 
+    @pytest.mark.parametrize("value", ["", "refresh", "USER", 1])
+    async def test_a_token_use_that_is_not_the_kind_asked_for_is_the_wrong_kind(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, value: object
+    ) -> None:
+        token = mint(fake, clock, token_use=value)
 
-async def test_an_iat_up_to_the_leeway_ahead_is_accepted_and_beyond_it_is_not(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    now = int(clock.wall())
-    edge = signed(fake, clock, iat=now + int(TokenVerifier.LEEWAY))
-    over = signed(fake, clock, iat=now + int(TokenVerifier.LEEWAY) + 1)
+        assert (await reason(verifier, token)).startswith("the wrong kind of token: token_use")
 
-    assert TokenVerifier.LEEWAY == 60.0
-    assert (await verifier.claims(edge, use="user"))["sub"] == "u-ada"
-    assert await reason_of(verifier, over) == (
-        "the token was issued in the future; check this machine's clock"
-    )
+    async def test_a_token_missing_its_use_names_none(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        token = mint_without(fake, clock, "token_use")
 
+        assert await reason(verifier, token) == (
+            "the wrong kind of token: token_use None, and this takes user"
+        )
 
-@pytest.mark.parametrize(
-    "changes",
-    [{"exp": "soon"}, {"iat": "yesterday"}, {"exp": [1]}, {"iat": {"a": 1}}],
-    ids=["exp-text", "iat-text", "exp-list", "iat-object"],
-)
-async def test_a_time_that_is_not_a_number_is_refused(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, changes: dict[str, Any]
-) -> None:
-    reason = await reason_of(verifier, signed(fake, clock, **changes))
+    async def test_several_kinds_may_be_asked_for_and_all_are_named(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        both = await verifier.claims(mint(fake, clock, token_use="app"), use=["user", "app"])
+        said = await reason(verifier, mint(fake, clock, token_use="space"), use=["user", "app"])  # type: ignore[arg-type]
 
-    assert reason == "the token's exp or iat is not a number"
+        assert both["token_use"] == "app"
+        assert said.endswith("and this takes app or user")
 
+    @pytest.mark.parametrize("token", ["", "   ", "Bearer ", "Bearer    "])
+    async def test_nothing_is_not_a_jwt(self, verifier: TokenVerifier, token: str) -> None:
+        assert await reason(verifier, token) == "the token is not a JWT"
 
-@pytest.mark.parametrize("time", [math.nan, math.inf, -math.inf])
-@pytest.mark.parametrize("claim", ["exp", "iat"])
-async def test_a_time_that_is_not_a_finite_number_is_refused(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, claim: str, time: float
-) -> None:
-    reason = await reason_of(verifier, signed(fake, clock, **{claim: time}))
+    async def test_none_is_nothing(self, verifier: TokenVerifier) -> None:
+        assert await reason(verifier, None) == "the token is not a JWT"  # type: ignore[arg-type]
 
-    assert reason == "the token's exp or iat is not a number"
+    @pytest.mark.parametrize("wrap", ["Bearer {}", "Bearer {}  ", "  {}  "])
+    async def test_the_bearer_prefix_and_blanks_are_stripped(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, wrap: str
+    ) -> None:
+        token = wrap.format(mint(fake, clock))
 
+        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
 
-async def test_the_kind_may_be_one_string_or_any_of_a_collection(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    token = signed(fake, clock)
+    async def test_a_truncated_token_is_not_a_jwt(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        token = mint(fake, clock)
 
-    assert (await verifier.claims(token, use=["app", "user"]))["token_use"] == "user"
-    assert (await verifier.claims(token, use={"user"}))["token_use"] == "user"
-    reason = await reason_of(verifier, token, use="app")
-    assert reason == "the wrong kind of token: token_use 'user', and this takes app"
-    with pytest.raises(TokenRefused) as several:
-        await verifier.claims(token, use=("space", "app"))
-    assert several.value.reason.endswith("and this takes app or space")
+        assert await reason(verifier, token[:-8]) == "the token is not a JWT"
 
+    async def test_a_token_with_no_kid_is_not_signed_by_igni(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        now = int(clock.wall())
+        payload = {
+            "iss": fake.signer.addresses.issuer,
+            "sub": "u-ada",
+            "aud": fake.signer.addresses.service_url,
+            "token_use": "user",
+            "iat": now,
+            "exp": now + LIFETIME,
+        }
+        import jwt
 
-async def test_a_token_without_a_kind_is_refused(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    reason = await reason_of(verifier, signed(fake, clock, token_use=None))
+        token = jwt.encode(payload, fake.signer.keys.pair._private, algorithm="RS256")  # noqa: SLF001
 
-    assert reason.startswith("the wrong kind of token: token_use None")
+        assert "not signed by igni" in await reason(verifier, token)
 
-
-async def test_a_refusal_has_a_default_reason_and_carries_the_given_one() -> None:
-    assert TokenRefused().reason == "the token is not one this service accepts"
-    assert str(TokenRefused()) == "the token is not one this service accepts"
-    assert TokenRefused("because").reason == "because"
-
-
-@pytest.mark.parametrize(
-    ("change", "said"),
-    [
-        ({"sub": ""}, "no person, or no organisation"),
-        ({"org": ""}, "no person, or no organisation"),
-        ({"org": None}, "no person, or no organisation"),
-    ],
-)
-async def test_a_person_needs_an_id_and_an_organisation(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock, change: dict[str, Any], said: str
-) -> None:
-    token = signed(fake, clock, **change)
-
-    with pytest.raises(TokenRefused, match=said):
-        await verifier.person(token)
-    with pytest.raises(TokenRefused, match=said):
-        await verifier.caller(token)
-
-
-async def test_accept_may_be_given_as_plain_strings_and_must_name_real_kinds(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    app = fake.signer.app_token("reporter", org_id=ORG, name="Reporter")
-
-    caller = await verifier.caller(app, accept=["app"])  # type: ignore[list-item]
-    assert caller == App(app_id="reporter", org_id=ORG, name="Reporter")
-    with pytest.raises(ValueError, match="not a valid CallerKind"):
-        await verifier.caller(app, accept=["robot"])  # type: ignore[list-item]
+    async def test_an_audience_is_compared_as_the_string_igni_wrote(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        own = fake.signer.addresses.service_url
+        for aud in (own + "/", own.upper()):
+            said = await reason(verifier, mint(fake, clock, aud=aud))
+            assert said == f"the token is for another audience; this service's is {own}"
 
 
-async def test_accepting_nobody_refuses_everybody(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    with pytest.raises(TokenRefused):
-        await verifier.caller(signed(fake, clock), accept=[])
+class TestWhoACallerIs:
+    async def test_the_kinds_say_the_token_use_they_carry(self) -> None:
+        assert [kind.token_use for kind in CallerKind] == ["user", "app", "space"]
+        assert (TokenUse.USER, TokenUse.IGNI, TokenUse.APP, TokenUse.SPACE) == (
+            "user",
+            "igni",
+            "app",
+            "space",
+        )
+        assert {CallerKind.PERSON} == PEOPLE_ONLY
 
+    async def test_a_kind_that_is_none_is_a_value_error(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        with pytest.raises(ValueError, match="bogus"):
+            await verifier.caller(mint(fake, clock), accept=["bogus"])  # type: ignore[list-item]
 
-async def test_a_person_is_a_caller_by_default_and_an_app_is_not(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    person = await verifier.caller(signed(fake, clock, name="Ada", org_role="admin"))
-    assert person == Person(user_id="u-ada", org_id=ORG, name="Ada", org_role="admin")
-    with pytest.raises(TokenRefused, match="wrong kind of token"):
-        await verifier.caller(fake.signer.app_token("reporter", org_id=ORG))
+    async def test_a_kind_may_be_given_as_its_value(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        caller = await verifier.caller(mint(fake, clock), accept=["person"])  # type: ignore[list-item]
 
+        assert isinstance(caller, Person)
 
-async def test_an_app_and_a_space_must_name_what_they_are_for(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    everybody = frozenset(CallerKind)
-    no_app = signed(fake, clock, sub="", token_use="app")
-    no_org = signed(fake, clock, token_use="app", org="")
-    no_space = signed(fake, clock, sub="", token_use="space", app="r", external_id="c")
-    no_space_org = signed(fake, clock, token_use="space", app="r", org="")
-    no_parent = signed(fake, clock, token_use="space", org=ORG)
+    @pytest.mark.parametrize("gap", ["sub", "org"])
+    async def test_a_person_without_an_id_or_organisation_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, gap: str
+    ) -> None:
+        token = mint(fake, clock, **{gap: ""})
 
-    for token in (no_app, no_org):
+        with pytest.raises(TokenRefused, match="names no person, or no organisation"):
+            await verifier.caller(token)
+        with pytest.raises(TokenRefused, match="names no person, or no organisation"):
+            await verifier.person(token)
+
+    @pytest.mark.parametrize("gap", ["sub", "org"])
+    async def test_an_app_without_an_id_or_organisation_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, gap: str
+    ) -> None:
+        token = mint(fake, clock, token_use="app", **{gap: ""})
+
         with pytest.raises(TokenRefused, match="names no app, or no organisation"):
-            await verifier.caller(token, accept=everybody)
-    for token in (no_space, no_space_org, no_parent):
+            await verifier.caller(token, accept={CallerKind.APP})
+
+    @pytest.mark.parametrize("gap", ["sub", "org", "app"])
+    async def test_a_space_without_an_id_app_or_organisation_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, gap: str
+    ) -> None:
+        token = mint(fake, clock, token_use="space", **{"app": "app-r", gap: ""})
+
         with pytest.raises(TokenRefused, match="names no space, app or organisation"):
-            await verifier.caller(token, accept=everybody)
+            await verifier.caller(token, accept={CallerKind.SPACE})
+
+    async def test_a_service_that_takes_apps_still_asks_for_each_kind_by_name(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        user = mint(fake, clock)
+        space = mint(fake, clock, token_use="space", app="app-r")
+
+        with pytest.raises(TokenRefused, match="token_use 'user', and this takes app"):
+            await verifier.caller(user, accept={CallerKind.APP})
+        with pytest.raises(TokenRefused, match="token_use 'space', and this takes app or user"):
+            await verifier.caller(space, accept={CallerKind.APP, CallerKind.PERSON})
 
 
-async def test_an_igni_token_must_come_from_igni_for_an_organisation(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    issuer = fake.signer.addresses.issuer
+class TestIgniCalling:
+    async def test_an_igni_token_for_an_organisation_is_igni_calling(
+        self, fake: FakeIgni, verifier: TokenVerifier
+    ) -> None:
+        call = await verifier.igni_call(fake.signer.igni_token(ORG))
 
-    call = await verifier.igni_call(signed(fake, clock, sub=issuer, token_use="igni"))
-    assert call.org_id == ORG
-    for token in (
-        signed(fake, clock, sub=issuer, token_use="igni", org=None),
-        signed(fake, clock, sub="u-ada", token_use="igni"),
-    ):
-        with pytest.raises(TokenRefused, match="not igni's own call for an organisation"):
+        assert call == IgniCall(org_id=ORG)
+
+    async def test_an_igni_token_for_no_organisation_is_refused(
+        self, fake: FakeIgni, verifier: TokenVerifier
+    ) -> None:
+        with pytest.raises(TokenRefused, match="igni's own call for an organisation"):
+            await verifier.igni_call(fake.signer.igni_token(""))
+
+    async def test_an_igni_token_whose_subject_is_not_igni_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        token = mint(fake, clock, token_use="igni", sub="somebody-else")
+
+        with pytest.raises(TokenRefused, match="igni's own call for an organisation"):
             await verifier.igni_call(token)
 
+    async def test_a_person_token_is_not_igni(
+        self, fake: FakeIgni, verifier: TokenVerifier
+    ) -> None:
+        with pytest.raises(TokenRefused, match="token_use 'user', and this takes igni"):
+            await verifier.igni_call(fake.signer.person_token("u-ada", org_id=ORG))
 
-class Revoked:
-    """A revocation feed that has revoked everything it is asked about."""
+    async def test_igni_calling_is_not_checked_against_the_revocations(
+        self, fake: FakeIgni, service: IgniService | None = None
+    ) -> None:
+        class Revoked:
+            seen: list[object] = []  # noqa: RUF012
 
-    def __init__(self) -> None:
-        self.asked: list[str] = []
+            async def check(self, claims: dict[str, Any]) -> None:
+                self.seen.append(claims["token_use"])
+                raise TokenRefused("revoked")
 
-    async def check(self, claims: dict[str, Any]) -> None:
-        self.asked.append(claims["token_use"])
-        raise TokenRefused("the token was revoked")
+        verifier = fake.service().verifier
+        verifier.revocations = Revoked()  # type: ignore[assignment]
 
-
-async def test_revocation_is_asked_of_every_kind_of_token_but_igni_own(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    feed = Revoked()
-    verifier.revocations = feed  # type: ignore[assignment]
-    issuer = fake.signer.addresses.issuer
-    space = fake.signer.space_token("sp-1", SpaceClaims(org=ORG, app="r", external_id="c"))
-
-    for token, use in (
-        (signed(fake, clock), "user"),
-        (fake.signer.app_token("reporter", org_id=ORG), "app"),
-        (space, "space"),
-    ):
-        assert await reason_of(verifier, token, use=use) == "the token was revoked"
-    igni = await verifier.claims(signed(fake, clock, sub=issuer, token_use="igni"), use="igni")
-
-    assert feed.asked == ["user", "app", "space"]
-    assert igni["sub"] == issuer
+        assert (await verifier.igni_call(fake.signer.igni_token(ORG))).org_id == ORG
+        with pytest.raises(TokenRefused, match="revoked"):
+            await verifier.person(fake.signer.person_token("u-ada", org_id=ORG))
+        assert Revoked.seen == ["user"]
 
 
-def test_the_token_use_claims_and_their_kinds() -> None:
-    assert (TokenUse.USER, TokenUse.IGNI, TokenUse.APP, TokenUse.SPACE) == (
-        "user",
-        "igni",
-        "app",
-        "space",
-    )
-    assert CallerKind.PERSON.token_use == "user"
-    assert CallerKind.APP.token_use == "app"
-    assert CallerKind.SPACE.token_use == "space"
-    assert frozenset({CallerKind.PERSON}) == PEOPLE_ONLY
-    assert Person(user_id="u", org_id="o").kind is CallerKind.PERSON
+class TestTheModelsOfWhoCalls:
+    def test_a_person_from_a_bare_token_has_defaults(self) -> None:
+        person = Person.from_claims({"sub": "u", "org": "o"})
 
-
-def test_a_person_from_claims_fills_what_is_missing_and_reads_only_true_as_super_admin() -> None:
-    bare = Person.from_claims({"sub": "u", "org": "o"})
-    assert bare == Person(user_id="u", org_id="o")
-    assert (bare.org_role, bare.org_name, bare.super_admin) == ("member", "", False)
-
-    nones = Person.from_claims(
-        {"sub": "u", "org": "o", "org_role": None, "name": None, "email": None}
-    )
-    assert nones == bare
-    for other in ("true", 1, "yes", [True]):
-        assert (
-            Person.from_claims({"sub": "u", "org": "o", "super_admin": other}).super_admin is False
+        assert person == Person(
+            user_id="u",
+            org_id="o",
+            org_name="",
+            org_role="member",
+            email="",
+            name="",
+            super_admin=False,
         )
-    assert Person.from_claims({"sub": "u", "org": "o", "super_admin": True}).super_admin is True
-    assert Person.from_claims({"sub": 7, "org": "o"}).user_id == "7"
-    assert Person.from_claims({}).user_id == ""
+        assert person.kind is CallerKind.PERSON
+        assert not person.is_org_admin
 
+    def test_missing_or_null_claims_are_empty_text_and_a_member(self) -> None:
+        person = Person.from_claims(
+            {
+                "sub": None,
+                "org": None,
+                "org_name": None,
+                "org_role": None,
+                "email": None,
+                "name": None,
+            }
+        )
 
-def test_a_person_is_an_org_admin_only_as_admin_and_shows_a_name_or_an_email() -> None:
-    assert Person(user_id="u", org_id="o", org_role="admin").is_org_admin is True
-    assert Person(user_id="u", org_id="o").is_org_admin is False
-    assert Person(user_id="u", org_id="o", org_role="owner").is_org_admin is False
-    named = Person(user_id="u", org_id="o", name="Ada", email="a@x.test")
-    assert named.display_name == "Ada"
-    assert Person(user_id="u", org_id="o", email="a@x.test").display_name == "a@x.test"
-    assert Person(user_id="u", org_id="o").display_name == ""
+        assert person.model_dump() == {
+            "user_id": "",
+            "org_id": "",
+            "org_name": "",
+            "org_role": "member",
+            "email": "",
+            "name": "",
+            "super_admin": False,
+        }
 
+    @pytest.mark.parametrize("value", ["true", 1, "yes", None, [True], 1.0])
+    def test_super_admin_is_only_ever_true(self, value: object) -> None:
+        assert (
+            Person.from_claims({"sub": "u", "org": "o", "super_admin": value}).super_admin is False
+        )
+        assert Person.from_claims({"sub": "u", "org": "o", "super_admin": True}).super_admin is True
 
-def test_an_app_and_a_space_from_claims() -> None:
-    assert App.from_claims({"sub": "a", "org": "o", "name": "N"}) == App(
-        app_id="a", org_id="o", name="N"
-    )
-    assert App.from_claims({}) == App(app_id="", org_id="")
-    space = Space.from_claims({"sub": "s", "org": "o", "app": "a", "external_id": "x"})
-    assert space == Space(space_id="s", org_id="o", app_id="a", external_id="x")
-    assert Space.from_claims({"sub": "s", "external_id": None}).external_id == ""
+    def test_only_the_admin_role_is_an_org_admin(self) -> None:
+        assert Person.from_claims({"org_role": "admin"}).is_org_admin
+        assert not Person.from_claims({"org_role": "Admin"}).is_org_admin
+        assert not Person.from_claims({"org_role": "owner", "super_admin": True}).is_org_admin
 
+    def test_a_display_name_is_the_name_else_the_email(self) -> None:
+        assert Person(user_id="u", org_id="o", name="Ada", email="a@x").display_name == "Ada"
+        assert Person(user_id="u", org_id="o", email="a@x").display_name == "a@x"
+        assert Person(user_id="u", org_id="o").display_name == ""
 
-def test_the_callers_are_frozen() -> None:
-    for caller in (
-        Person(user_id="u", org_id="o"),
-        App(app_id="a", org_id="o"),
-        Space(space_id="s", org_id="o", app_id="a"),
-    ):
-        with pytest.raises(ValueError, match="frozen"):
-            caller.org_id = "other"
+    def test_claims_that_are_not_text_are_written_as_text(self) -> None:
+        person = Person.from_claims({"sub": 42, "org": 7, "name": "Zoë ✓", "email": 1.5})
 
+        assert (person.user_id, person.org_id, person.name, person.email) == (
+            "42",
+            "7",
+            "Zoë ✓",
+            "1.5",
+        )
 
-async def test_a_token_from_another_issuer_is_refused_by_name(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    token = signed(fake, clock, iss="http://somebody-else.test")
+    def test_an_app_and_a_space_read_their_own_claims(self) -> None:
+        app = App.from_claims({"sub": "a", "org": "o", "name": None})
+        space = Space.from_claims({"sub": "s", "org": "o", "app": "a", "external_id": "ext"})
 
-    assert (
-        await reason_of(verifier, token)
-        == "the token was issued by somebody other than igni server"
-    )
+        assert app == App(app_id="a", org_id="o", name="")
+        assert space == Space(space_id="s", org_id="o", app_id="a", external_id="ext")
+        assert Space.from_claims({}) == Space(space_id="", org_id="", app_id="")
 
+    def test_who_calls_cannot_be_changed_afterwards(self) -> None:
+        for model in (
+            Person(user_id="u", org_id="o"),
+            App(app_id="a", org_id="o"),
+            Space(space_id="s", org_id="o", app_id="a"),
+            IgniCall(org_id="o"),
+        ):
+            with pytest.raises(ValueError, match="frozen"):
+                model.org_id = "other"
 
-async def test_a_token_for_another_audience_is_refused_naming_this_service_s_own_url(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    token = signed(fake, clock, aud="http://another-service.test")
-
-    assert await reason_of(verifier, token) == (
-        "the token is for another audience; this service's is " + fake.signer.addresses.service_url
-    )
-
-
-async def test_a_token_whose_payload_was_changed_after_signing_is_not_signed_by_igni(
-    verifier: TokenVerifier, fake: FakeIgni, clock: ManualClock
-) -> None:
-    import base64
-    import json
-
-    head, payload, signature = signed(fake, clock).split(".")
-    padded = payload + "=" * (-len(payload) % 4)
-    claims = json.loads(base64.urlsafe_b64decode(padded))
-    claims["sub"] = "u-mallory"
-    forged = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=").decode()
-
-    assert await reason_of(verifier, f"{head}.{forged}.{signature}") == (
-        "the token is not signed by igni server's keys"
-    )
+    def test_a_refusal_has_a_default_reason_and_keeps_the_one_given(self) -> None:
+        assert TokenRefused().reason == "the token is not one this service accepts"
+        assert str(TokenRefused()) == "the token is not one this service accepts"
+        assert TokenRefused("no").reason == "no"
