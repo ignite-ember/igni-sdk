@@ -61,3 +61,27 @@ def test_a_development_install_is_said_to_be_a_copy_refreshed_with_replace() -> 
     assert "straight from disk" not in loops
     assert "igni ext install --replace extension" in loops
     assert "igni ext install --replace <dir>" in bridge.read_text(encoding="utf-8")
+
+
+def test_the_example_s_readme_says_how_to_run_it() -> None:
+    """The example's README documented only `pytest`, and its extension's
+    README no command at all: a reader of the README alone could not start,
+    install or use the example."""
+    example = REPO / "examples" / "ticket-lookup"
+    readme = (example / "README.md").read_text(encoding="utf-8")
+    extension = (example / "extension" / "README.md").read_text(encoding="utf-8")
+
+    for command in (
+        "igni ext doctor extension",
+        "IGNI_DEV_EXTENSIONS=1 igni ext install extension",
+        'igni --read-only -m "What is the status of ticket T-1001?"',
+    ):
+        assert command in readme, command
+    for anchor in re.findall(r"YOUR_FIRST_EXTENSION\.md#([\w-]+)", readme):
+        headings = TUTORIAL.read_text(encoding="utf-8")
+        slugs = {
+            re.sub(r"[^\w\- ]", "", h.lower()).replace(" ", "-")
+            for h in re.findall(r"^#+ (.+)$", headings, re.M)
+        }
+        assert anchor in slugs, f"no heading for #{anchor}"
+    assert "igni ext install ." in extension and "../README.md#run-it" in extension

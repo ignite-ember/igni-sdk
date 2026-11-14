@@ -22,8 +22,31 @@ tests/
   test_service.py   the service's routes, erasure and export
 ```
 
-Run the tests from this directory, in an environment with both SDKs:
+Run the tests from this directory, in an environment with both SDKs
+([Step 0](../../docs/YOUR_FIRST_EXTENSION.md#step-0-one-environment-for-the-walk-through)
+of the tutorial makes one):
 
 ```bash
 pytest
 ```
+
+## Run it
+
+On your own machine, with no igni server, as a development install —
+the extension runs and its page shows, and `ticket_from_service` answers
+that the service is not set up:
+
+```bash
+igni ext doctor extension                          # checks it; "no problems found"
+IGNI_DEV_EXTENSIONS=1 igni ext install extension   # installs a copy (--replace after a change)
+IGNI_DEV_EXTENSIONS=1 igni --read-only -m "What is the status of ticket T-1001?"
+```
+
+Shipped the way it reaches other people — bundled, uploaded by its
+service, approved and switched on in igni's portal, synced — it needs
+igni server: the tutorial's steps
+[2](../../docs/YOUR_FIRST_EXTENSION.md#2-bundle-it) (bundle),
+[3](../../docs/YOUR_FIRST_EXTENSION.md#3-run-the-service) (run the service),
+[4–6](../../docs/YOUR_FIRST_EXTENSION.md#4-a-super-admin-approves-the-service)
+(approve, switch on, sign in and sync) and
+[7](../../docs/YOUR_FIRST_EXTENSION.md#7-use-it) (use it) give every command.
