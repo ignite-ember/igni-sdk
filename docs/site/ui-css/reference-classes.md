@@ -275,6 +275,7 @@ Mermaid produces its own SVG with embedded styles tuned for a light background â
 | `.igni-root` | `.igni-root *::before` | `box-sizing` |
 | `.igni-root` | `.igni-root *::after` | `box-sizing` |
 | `.ui-shell` | `.ui-shell` | `display`, `flex-direction`, `height`, `min-height` |
+| `.ui-shell` | `body > :has(> .ui-shell)` | `height` |
 | `.ui-shell-header` | `.ui-shell-header` | `flex` |
 | `.ui-shell-footer` | `.ui-shell-footer` | `flex` |
 | `.ui-shell-body` | `.ui-shell-body` | `flex`, `min-height`, `display`, `flex-direction` |

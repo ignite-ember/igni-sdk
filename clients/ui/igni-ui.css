@@ -1255,6 +1255,15 @@ body {
   min-height: 0;
 }
 
+/* A React page mounts the shell into an element of its own
+   (`<div id="root">`), and `height: 100%` of a parent with no height is
+   no height: the ui-react Quick start's shell was 70px tall in a 600px
+   frame, its footer right under the list. The element between the body
+   and a shell fills the body too, whatever it is called. */
+body > :has(> .ui-shell) {
+  height: 100%;
+}
+
 .ui-shell-header,
 .ui-shell-footer {
   flex: 0 0 auto;

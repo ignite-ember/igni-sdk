@@ -158,6 +158,15 @@ describe("layout", () => {
     expect(declsOf(".ui-split")["min-height"]).toBe("0");
   });
 
+  it("gives the element a page mounts its shell into the body's height", () => {
+    // `<body><div id="root"><div class="ui-shell">`: without it the shell's
+    // `height: 100%` resolved against an auto-height #root, and collapsed.
+    expect(declsOf("html")["height"]).toBe("100%");
+    expect(declsOf("body")["height"]).toBe("100%");
+    expect(declsOf("body > :has(> .ui-shell)")["height"]).toBe("100%");
+    expect(declsOf(".ui-shell")["height"]).toBe("100%");
+  });
+
   it("sizes a split from its own --ui-split-w, 280px by default, on either side", () => {
     expect(declsOf(".ui-split")["grid-template-columns"]).toBe("var(--ui-split-w, 280px) 5px 1fr");
     expect(declsOf(".ui-split-end")["grid-template-columns"]).toBe("1fr 5px var(--ui-split-w, 280px)");
