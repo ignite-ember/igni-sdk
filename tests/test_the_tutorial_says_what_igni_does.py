@@ -133,3 +133,14 @@ def test_the_example_s_readme_says_the_untrusted_notice_is_not_about_the_extensi
     assert "is not trusted" in run_it
     assert "`PostToolUse` audit hook" in run_it
     assert "tool-audit.log" in run_it
+
+
+def test_igni_client_s_approval_answers_are_one_list() -> None:
+    """A paragraph inserted after the AccessRefused bullet split the Approvals
+    answers in two: `decide(...)` rendered as a list of its own."""
+    readme = (REPO / "packages" / "igni-client" / "README.md").read_text(encoding="utf-8")
+    start = readme.index("- `approve(choice)`")
+    block = readme[start : readme.index("\n\n", start)]
+
+    for answer in ("`approve(choice)`", "`reject(remember=False)`", "`AccessRefused`", "`decide("):
+        assert answer in block, answer

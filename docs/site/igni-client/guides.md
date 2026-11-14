@@ -75,13 +75,13 @@ async with FakeIgni() as fake:
   refusing such calls from now on (igni's window only).
 - From an approver, an answer that saves a rule raises `AccessRefused`
   before it is sent, and the pause stays open for an answer of `"once"`.
+- `decide({requirement_id: Decision, ...})` answers each call on its own,
+  with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
 A refused call never starts, so the resumed run sends no `ToolStarted`,
 `ToolCompleted` or `ToolError` for it: the model reads the refusal as the
 call's result, and the run goes on to its answer. A program counting
 tool events counts only the calls that ran. (`FakeIgni` plays it so.)
-- `decide({requirement_id: Decision, ...})` answers each call on its own,
-  with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
 igni asks about every call of one pause together and counts a call left
 out as refused, so every answer covers them all: `decide()` raises
