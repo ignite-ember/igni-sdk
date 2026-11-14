@@ -574,7 +574,8 @@ class Module:
             if returns:
                 signature += f": {returns}"
         elif kind in ("interface", "class", "enum"):
-            brace = after.find("{")
+            # Past the type parameters: a default there may be a ``{}``.
+            brace = after.find("{", generics_end)
             if brace < 0:
                 return None
             body_end = _match_bracket(after, brace, "{", "}")

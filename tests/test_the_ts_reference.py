@@ -329,3 +329,25 @@ def test_an_object_pattern_names_the_property_not_its_local_rename() -> None:
         ("others", "", True),
     ]
     assert object_pattern_properties("{}") == []
+
+
+def test_a_type_parameter_defaulting_to_an_object_type_does_not_hide_the_extends_clause(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export interface Opts<T extends object = {}> extends Base<T> {
+          value: T;
+        }
+        export class Box<T = {}> implements Holder {
+          item: T;
+        }
+        """,
+    )
+    opts = parsed.declarations["Opts"]
+    assert opts.signature == "interface Opts<T extends object = {}> extends Base<T>"
+    assert [m.name for m in opts.members] == ["value"]
+    box = parsed.declarations["Box"]
+    assert box.signature == "class Box<T = {}> implements Holder"
+    assert [m.name for m in box.members] == ["item"]
