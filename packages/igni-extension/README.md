@@ -1216,7 +1216,7 @@ Connects to the igni backend's socket now rather than on the first
 `ext.host` call, and subscribes to the signals that have handlers. `run()`
 does this itself; a test or script that drives the extension without
 `run()` calls it so that signals, hooks and service events arrive.
-Idempotent. Raises `HostUnavailable` if the host does not answer.
+Idempotent. Raises `NotConfigured` outside igni, where igni gave the process no host address, and `HostUnavailable` if the host does not answer.
 
 **`await ext.aclose() -> None`**
 
@@ -1277,7 +1277,7 @@ and the first `ext.host` call opens it, so an extension rarely needs it.
 | `connected` | Whether the socket is open now. |
 | `granted` | Once connected, the `permissions.host` grants the host says this extension holds. Empty before. |
 | `schema_version` | Once connected, the version of the host's object model. Empty before. |
-| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `HostUnavailable`. |
+| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `NotConfigured` when not `configured`, `HostUnavailable` if the host does not answer. |
 | `await serve_forever()` | Stays connected, connecting again every two seconds after the host goes away, until cancelled. Returns at once when not `configured`. `run()` runs it; run it as a task in a test that needs signals, hooks and service events to keep arriving. |
 | `await close()` | Closes the socket. `ext.aclose()` calls it. |
 

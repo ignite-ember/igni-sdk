@@ -56,7 +56,8 @@ class HostConnection:
       `permissions.host` grants this extension holds, and the version of
       its object model. Empty until the first connection.
     - `await connect()` — connect, and subscribe to every handled signal.
-      Idempotent. Raises `HostUnavailable` when the host does not answer.
+      Idempotent. Raises `NotConfigured` when igni gave the process no host
+      address, and `HostUnavailable` when the host does not answer.
     - `await serve_forever()` — stay connected, reconnecting every
       `RETRY_SECONDS`, until cancelled; returns at once when not
       `configured`. `ext.run()` runs it.
@@ -160,6 +161,11 @@ class HostConnection:
         async with self._lock:
             if self._socket is not None:
                 return
+            if not self.configured:
+                raise NotConfigured(
+                    "igni did not give this process the host's address "
+                    "(IGNI_HOST_URL, IGNI_HOST_SECRET) — it is not running inside igni"
+                )
             try:
                 socket = await connect(
                     self._endpoint.url,

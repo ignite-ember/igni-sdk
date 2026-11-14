@@ -485,3 +485,12 @@ async def test_a_socket_that_fails_sending_says_the_host_went_away(fake: FakeHos
     finally:
         ext.connection._socket = real
         await ext.aclose()
+
+
+async def test_connecting_without_a_host_says_what_is_missing_and_does_not_try() -> None:
+    ext = IgniExtension("acme.example", environ={})
+
+    with pytest.raises(NotConfigured, match="IGNI_HOST_URL"):
+        await ext.connect()
+
+    assert not ext.connection.connected
