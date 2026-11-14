@@ -9,7 +9,7 @@ permission rule, a trusted folder, a plugin) or changes whom igni acts
 for. Make the change in igni's window, or run the program through Fleet,
 where every connection is the window.
 
-**`AccessRefused: … approver token`, or `NotAllowed` from the `send()` loop (or `ask()`) after `approve()`.**
+**`AccessRefused: … approver token` from `approve()`, or `NotAllowed` from the `send()` loop (or `ask()`) after it.**
 A program answers approvals only with an approver token: `/programs` in
 igni's window makes one; pass it as `Local(approver_token=...)` or
 `IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,

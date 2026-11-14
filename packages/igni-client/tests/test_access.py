@@ -13,11 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from igni_client import AccessRefused, IgniClient, Local, NotAllowed, Person
+from igni_client import AccessRefused, ApprovalRequested, IgniClient, Local, NotAllowed, Person
 from igni_client.access import REACHES, check
 from igni_client.api import METHODS
 from igni_client.models import ApproverTokenMinted, LoginStarted, PlanDecisionResult, RpcResponse
-from igni_client.testing import FakeGateway, FakeIgni, sample
+from igni_client.testing import FakeGateway, FakeIgni, Steps, sample
 
 
 def _lockfile(project: Path, port: int, token: str | None) -> None:
@@ -165,3 +165,36 @@ async def test_a_reply_that_carries_a_code_is_classified_by_it_not_by_its_words(
         async with IgniClient(Local(url=fake.socket.url, token="whose")) as igni:
             with pytest.raises(AccessRefused, match="not for this connection"):
                 await igni.auth.login()
+
+
+async def test_a_program_s_approve_is_refused_before_it_is_sent(tmp_path: Path) -> None:
+    """`approve()` returned as if it had answered, and igni's refusal came back as
+    a bare `NotAllowed` from the next turn of the `send()` loop."""
+    async with FakeIgni(local_token="program") as fake:
+        _lockfile(tmp_path, fake.socket.port, "program")
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(Local(project_dir=tmp_path)) as igni:
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    with pytest.raises(AccessRefused, match="approver token") as refused:
+                        await event.approve()
+                    assert isinstance(refused.value, NotAllowed)
+                    assert refused.value.method == "hitl_response_batch"
+                    assert not event.answered
+                    break
+
+    assert fake.runs.decisions == [], "refused before it was sent"
+
+
+async def test_a_connection_whose_standing_is_unknown_sends_its_answer(tmp_path: Path) -> None:
+    async with FakeIgni(local_token="anything") as fake:
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(fake.local()) as igni:
+            assert igni.target.standing == "unknown"
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    await event.approve()
+
+    assert len(fake.runs.decisions) == 1

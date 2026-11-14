@@ -85,8 +85,12 @@ session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
-A program without an approver token cannot answer: igni refuses, and
-`approve()` raises `NotAllowed` (see [Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)).
+A program without an approver token cannot answer: `approve()`,
+`reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
+anything is sent, and the run keeps waiting (see
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Where igni-client does not know
+the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
+refusal comes as `NotAllowed` from the `send()` loop.
 
 ## The whole answer at once
 

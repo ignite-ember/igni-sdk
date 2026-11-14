@@ -65,4 +65,26 @@ def check(method: str, access: str, standing: Standing) -> None:
     raise AccessRefused(method, _WHY.get(access, f"a {access} call"))
 
 
-__all__ = ["REACHES", "Access", "Standing", "check"]
+#: The message an approval's answer travels in, as igni names it when it refuses.
+ANSWER = "hitl_response_batch"
+
+
+def check_answer(standing: Standing) -> None:
+    """Raise `AccessRefused` when a connection of `standing` cannot answer an approval.
+
+    Answering is an `approver` act. A program with the lockfile's token was
+    let send it, and igni's refusal came back as `NotAllowed` from the next
+    turn of the `send()` loop, after `approve()` had returned as if it had
+    answered.
+    """
+    reached = REACHES[standing]
+    if reached is None or "approver" in reached:
+        return
+    raise AccessRefused(
+        ANSWER,
+        "a program answers approval requests only with an approver token, which "
+        "the person makes in igni's window (Local(approver_token=...))",
+    )
+
+
+__all__ = ["ANSWER", "REACHES", "Access", "Standing", "check", "check_answer"]
