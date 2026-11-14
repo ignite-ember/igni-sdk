@@ -40,7 +40,8 @@ clients (the reason is in the row)
    the typed result, or `async with` it and `async for` the typed events
    this call caused, told apart from every other call's by what they
    carry (`igni_client.follow`). A method whose events igni gives nothing
-   to correlate returns its result only, and its row says why.
+   to correlate would return its result only, and its row would say why
+   (`UNFOLLOWED` in `tools/client_names.py`); none does now.
 4. **Access.** igni-core's contract says a Fleet connection stands as
    igni's window; a desktop program with the lockfile's token reaches
    `client` calls, one with an approver token `approver` calls too.
@@ -66,7 +67,7 @@ clients (the reason is in the row)
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `attach_session` | `await igni.sessions.attach(…)` | client | ✅ AttachSessionParams | ✅ `AttachSessionResult` | yes | ✅ done | not followed: the approvals and runs it shows again carry no request id and no end; on `igni` though scoped `session`: a session is attached before there is a `Session` to call it on; `igni.sessions.create()` and `.open()` are built on it |
+| 1 | `attach_session` | `igni.sessions.attach(…)` → `Call` | client | ✅ AttachSessionParams | ✅ `AttachSessionResult` | yes | ✅ done | followed: the approvals and the run it shows again, each carrying the attach's own request id, to the `stream_end` that closes them; on `igni` though scoped `session`: a session is attached before there is a `Session` to call it on; `igni.sessions.create()` and `.open()` are built on it |
 | 2 | `list_sessions` | `await session.list_sessions(…)` | client | ✅ NoArgs | ✅ `SessionListResult` |  | ✅ done |  |
 | 3 | `switch_session` | `await session.switch(…)` | client | ✅ SessionIdArgs | ✅ `InfoMessage` |  | ✅ done |  |
 | 4 | `get_session_id` | `await session.current_id(…)` | client | ✅ NoArgs | ✅ `str` |  | ✅ done |  |
@@ -79,7 +80,7 @@ clients (the reason is in the row)
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 9 | `cancel_run` | `await session.cancel(…)` | client | ✅ NoArgs | ✅ `None` | yes | ✅ done | not followed: the `info` and `stream_end` it causes belong to the turn it stops |
+| 9 | `cancel_run` | `session.cancel(…)` → `Call` | client | ✅ NoArgs | ✅ `CancelRunResult` | yes | ✅ done | followed: the `info` and `stream_end` of the turn it stops |
 | 10 | `cancel_agent_run` | `await igni.agents.cancel_run(…)` | client | ✅ AgentRunArgs | ✅ `CancelAgentRunResult` |  | ✅ done |  |
 | 11 | `get_pending_messages` | `await session.runs.pending_messages(…)` | client | ✅ SessionIdArgs | ✅ `list[PendingMessage]` |  | ✅ done |  |
 | 12 | `get_interrupted_runs` | `await session.runs.interrupted(…)` | client | ✅ SessionIdArgs | ✅ `list[InterruptedRun]` |  | ✅ done |  |
@@ -97,7 +98,7 @@ clients (the reason is in the row)
 | 19 | `truncate_history` | `await session.history.truncate(…)` | client | ✅ TruncateHistoryArgs | ✅ `TruncateHistoryResult` |  | ✅ done |  |
 | 20 | `count_context_tokens` | `await session.context.tokens(…)` | client | ✅ NoArgs | ✅ `int` |  | ✅ done |  |
 | 21 | `get_context_breakdown` | `await session.context.breakdown(…)` | client | ✅ NoArgs | ✅ `ContextBreakdown` |  | ✅ done |  |
-| 22 | `compact_if_needed` | `await session.context.compact(…)` | client | ✅ CompactIfNeededArgs | ✅ `SessionCleared \| None` |  | ✅ done |  |
+| 22 | `compact_if_needed` | `await session.context.compact(…)` | client | ✅ CompactIfNeededArgs | ✅ `CompactionOutcome` |  | ✅ done |  |
 | 23 | `extract_learnings` | `await session.extract_learnings(…)` | client | ✅ ExtractLearningsArgs | ✅ `None` |  | ✅ done |  |
 
 ### Loop
@@ -141,7 +142,7 @@ clients (the reason is in the row)
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 40 | `get_workspace_trust` | `await session.workspace.trust(…)` | client | ✅ NoArgs | ✅ `WorkspaceTrustStatus` |  | ✅ done |  |
-| 41 | `set_workspace_trust` | `await session.workspace.set_trust(…)` | window | ✅ TrustDecisionArgs | ✅ `WorkspaceTrustStatus` | yes | ✅ done | not followed: igni pushes `workspace_trust_required` only to the windows showing the trust dialog |
+| 41 | `set_workspace_trust` | `session.workspace.set_trust(…)` → `Call` | window | ✅ TrustDecisionArgs | ✅ `WorkspaceTrustStatus` | yes | ✅ done | followed: `workspace_trust_required`, which igni pushes to the windows when the folder's trust changes |
 
 ### Files
 
@@ -157,7 +158,7 @@ clients (the reason is in the row)
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 47 | `run_shell` | `await session.run_shell(…)` | window | ✅ RunShellArgs | ✅ `RunShellResult` | yes | ✅ done | not followed: a command that moves to the background is reported by `process_*` pushes carrying its `pid` |
+| 47 | `run_shell` | `session.run_shell(…)` → `Call` | window | ✅ RunShellArgs | ✅ `RunShellResult` | yes | ✅ done | followed: a command that moves to the background is followed by the `process_*` and `background_process_done` pushes of its `pid` |
 | 48 | `list_background_processes` | `await igni.processes.list(…)` | client | ✅ NoArgs | ✅ `list[ProcessRow]` |  | ✅ done |  |
 | 49 | `read_process_tail` | `await igni.processes.tail(…)` | client | ✅ ProcessTailArgs | ✅ `ProcessTailResult` |  | ✅ done |  |
 | 50 | `stop_background_process` | `igni.processes.stop(…)` → `Call` | client | ✅ ProcessArgs | ✅ `StopProcessResult` | yes | ✅ done | followed: `process_*` by `pid` |
@@ -193,7 +194,7 @@ clients (the reason is in the row)
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 62 | `start_scheduler` | `session.scheduler.start(…)` → `Call` | client | ✅ NoArgs | ✅ `None` | yes | ✅ done | followed: `scheduler_*` by session |
-| 63 | `execute_scheduled_task` | `await session.scheduler.execute(…)` | client | ✅ ExecuteScheduledTaskArgs | ✅ `str` | yes | ✅ done | not followed: what the task's tools push carries nothing that says which run it came from |
+| 63 | `execute_scheduled_task` | `session.scheduler.execute(…)` → `Call` | client | ✅ ExecuteScheduledTaskArgs | ✅ `ScheduledTaskRunResult` | yes | ✅ done | followed: the pushes of the run it starts, by the `run_id` given (igni-client makes one when the caller gives none) |
 | 64 | `cancel_scheduled_task` | `await session.scheduler.cancel(…)` | client | ✅ ScheduledTaskArgs | ✅ `InfoMessage` |  | ✅ done |  |
 | 65 | `get_scheduled_tasks` | `await session.scheduler.list(…)` | client | ✅ ScheduledTasksArgs | ✅ `list[ScheduledTask]` |  | ✅ done |  |
 
@@ -244,9 +245,9 @@ clients (the reason is in the row)
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 89 | `notifications_list` | `await igni.notifications.list(…)` | client | ✅ NoArgs | ✅ `NotificationsListResult` | yes | ✅ done | not followed: the `notifications_changed` push repeats the counts the answer carries |
+| 89 | `notifications_list` | `igni.notifications.list(…)` → `Call` | client | ✅ NoArgs | ✅ `NotificationsListResult` | yes | ✅ done | followed: `notifications_changed` |
 | 90 | `notifications_counts` | `await igni.notifications.counts(…)` | client | ✅ NoArgs | ✅ `NotificationCounts` |  | ✅ done |  |
-| 91 | `notifications_mark_read` | `await igni.notifications.mark_read(…)` | client | ✅ MarkReadArgs | ✅ `NotificationsReadResult` | yes | ✅ done | not followed: the `notifications_changed` push repeats the counts the answer carries |
+| 91 | `notifications_mark_read` | `igni.notifications.mark_read(…)` → `Call` | client | ✅ MarkReadArgs | ✅ `NotificationsReadResult` | yes | ✅ done | followed: `notifications_changed` |
 
 ### Sign-in & server
 
@@ -256,7 +257,7 @@ clients (the reason is in the row)
 | 93 | `discover_server` | `await igni.auth.discover_server(…)` | client | ✅ DiscoverServerArgs | ✅ `ServerFound` |  | ✅ done |  |
 | 94 | `set_server` | `await igni.auth.set_server(…)` | window | ✅ SetServerArgs | ✅ `ServerChoice` |  | ✅ done |  |
 | 95 | `reload_cloud_credentials` | `await session.auth.reload_credentials(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` |  | ✅ done |  |
-| 96 | `clear_cloud_credentials` | `await session.auth.sign_out(…)` | window | ✅ NoArgs | ✅ `StatusUpdate` | yes | ✅ done | not followed: `notifications_changed` carries the new counts |
+| 96 | `clear_cloud_credentials` | `session.auth.sign_out(…)` → `Call` | window | ✅ NoArgs | ✅ `StatusUpdate` | yes | ✅ done | followed: `notifications_changed` |
 | 97 | `get_cloud_plan` | `await session.auth.plan(…)` | client | ✅ NoArgs | ✅ `CloudPlan \| None` |  | ✅ done |  |
 | 98 | `check_for_update` | `await igni.check_for_update(…)` | client | ✅ NoArgs | ✅ `UpdateAvailable \| None` |  | ✅ done |  |
 
@@ -272,7 +273,7 @@ clients (the reason is in the row)
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 101 | `host_model` | — | page | ✅ PageRequest | ✅ `Reply` | yes | ⛔ not for clients | an extension page's call: igni's window makes it for the page it hosts, setting `caller`, which igni honours from no other connection |
-| 102 | `window_model` | `await igni.window.model(…)` | window | ✅ WindowModelArgs | ✅ `WindowModelResult` | yes | ✅ done | not followed: a `window_model_changed` push says which window changed and its new revision |
+| 102 | `window_model` | `igni.window.model(…)` → `Call` | window | ✅ WindowModelArgs | ✅ `WindowModelResult` | yes | ✅ done | followed: `window_model_changed` carrying the change's `token` (igni-client makes one when the caller gives none) |
 | 103 | `extension_service_token` | — | page | ✅ NoArgs | ✅ `PageTokenReply` |  | ⛔ not for clients | an extension page's call: it hands the page its service's token, and only igni's window speaks for a page |
 
 ### Platform only
@@ -347,25 +348,25 @@ channel's class, a `PushNotification` whose `payload` is typed.
 | 1 | `background_process_done` | `BackgroundProcessDonePush` | `BackgroundProcessDonePayload` | ✅ done |
 | 2 | `file_edited` | `FileEditedPush` | `FileEditedPayload` | ✅ done |
 | 3 | `host_signal` | `HostSignalPush` | `HostSignal` | ✅ done |
-| 4 | `http_retry_attempt` | `HttpRetryAttemptPush` | `HttpRetryAttemptPayload` | ✅ done |
-| 5 | `http_retry_succeeded` | `HttpRetrySucceededPush` | `HttpRetrySucceededPayload` | ✅ done |
+| 4 | `http_retry_attempt` | `HttpRetryAttemptPush` | `HttpRetryAttemptEventPayload` | ✅ done |
+| 5 | `http_retry_succeeded` | `HttpRetrySucceededPush` | `HttpRetrySucceededEventPayload` | ✅ done |
 | 6 | `login_result` | `LoginResultPush` | `LoginResultPayload` | ✅ done |
 | 7 | `login_status` | `LoginStatusPush` | `LoginStatusPayload` | ✅ done |
 | 8 | `notifications_changed` | `NotificationsChangedPush` | `NotificationsChanged` | ✅ done |
 | 9 | `open_external` | `OpenExternalPush` | `ExternalOpen` | ✅ done |
-| 10 | `orchestrate_event` | `OrchestrateEventPush` | `OrchestrateEvent` | ✅ done |
-| 11 | `output_style_changed` | `OutputStyleChangedPush` | `OutputStyleChangedPayload` | ✅ done |
-| 12 | `permission_mode_changed` | `PermissionModeChangedPush` | `PermissionModeChange` | ✅ done |
-| 13 | `plan_decided` | `PlanDecidedPush` | `PlanDecidedPayload` | ✅ done |
-| 14 | `plan_submitted` | `PlanSubmittedPush` | `PlanSubmittedPayload` | ✅ done |
+| 10 | `orchestrate_event` | `OrchestrateEventPush` | `OrchestrateEventPayload` | ✅ done |
+| 11 | `output_style_changed` | `OutputStyleChangedPush` | `OutputStyleChangedEventPayload` | ✅ done |
+| 12 | `permission_mode_changed` | `PermissionModeChangedPush` | `PermissionModeChangedPayload` | ✅ done |
+| 13 | `plan_decided` | `PlanDecidedPush` | `PlanDecidedEventPayload` | ✅ done |
+| 14 | `plan_submitted` | `PlanSubmittedPush` | `PlanSubmittedEventPayload` | ✅ done |
 | 15 | `process_exited` | `ProcessExitedPush` | `ProcessExitedPayload` | ✅ done |
 | 16 | `process_line` | `ProcessLinePush` | `ProcessLinePayload` | ✅ done |
 | 17 | `process_started` | `ProcessStartedPush` | `ProcessStartedPayload` | ✅ done |
 | 18 | `scheduler_completed` | `SchedulerCompletedPush` | `SchedulerCompletedPayload` | ✅ done |
 | 19 | `scheduler_started` | `SchedulerStartedPush` | `SchedulerStartedPayload` | ✅ done |
 | 20 | `session_named` | `SessionNamedPush` | `SessionNamedPayload` | ✅ done |
-| 21 | `todos_updated` | `TodosUpdatedPush` | `TodosUpdatedPayload` | ✅ done |
-| 22 | `visualization_action_dispatched` | `VisualizationActionDispatchedPush` | `VisualizationActionDispatchedPayload` | ✅ done |
+| 21 | `todos_updated` | `TodosUpdatedPush` | `TodosUpdatedEventPayload` | ✅ done |
+| 22 | `visualization_action_dispatched` | `VisualizationActionDispatchedPush` | `VisualizationActionDispatchedEventPayload` | ✅ done |
 | 23 | `vm_credential` | `VmCredentialPush` | `VmCredentialState` | ✅ done |
 | 24 | `window_model_changed` | `WindowModelChangedPush` | `WindowChange` | ✅ done |
 | 25 | `workflow_event` | `WorkflowEventPush` | `WorkflowEventRecord` | ✅ done |
@@ -376,5 +377,5 @@ channel's class, a `PushNotification` whose `payload` is typed.
 | Package | Status | What "done" means |
 |---|---|---|
 | `igni-client` | ✅ written: a complete reference, its API section generated from the contract; its examples run as tests | Every area and method above: what it does, its arguments, its result, its errors, and an example. Streaming, approvals, events, reconnects, and Fleet vs local, each with a worked example. |
-| `igni-service` | ✅ written (branch `docs/pypi-reference`, 2,591 lines; its examples run as tests); on PyPI from 0.1.1 | The plain opening (PR #18), then every capability documented in depth. |
-| `igni-extension` | ✅ written (branch `docs/pypi-reference`, 1,739 lines; its examples run as tests); on PyPI from 0.1.1 | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
+| `igni-service` | ✅ written (2,681 lines; its examples run as tests); on PyPI from 0.2.0 | The plain opening (PR #18), then every capability documented in depth. |
+| `igni-extension` | ✅ written (1,865 lines; its examples run as tests); on PyPI from 0.2.0 | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
