@@ -105,7 +105,7 @@ class Child(Plain):
 class Model(pydantic.BaseModel):
     """A model."""
 
-    name: str = pydantic.Field(description="The  name\\nof it | really.")
+    name: str = pydantic.Field(description="The name\\nof it | really.")
     kind: Literal["a", "b"] = "a"
     items: list[int] = pydantic.Field(default_factory=list)
     required_one: int
@@ -383,3 +383,106 @@ def test_a_star_parameter_is_shown_with_its_stars_and_is_not_required(page: str)
     assert by_name["`*args`"][1:3] == ["`int`", "—"]
     assert by_name["`**extra`"][1:3] == ["`str`", "—"]
     assert "`args`" not in by_name and "`extra`" not in by_name
+
+
+# ── C7: every name says what it is: fields, members and constants ──
+
+
+def table_of(text: str) -> list[list[str]]:
+    """The first table in a section, header and rows, unescaped."""
+    return [[c.replace("\0", "|") for c in row] for row in rows(text)]
+
+
+def test_a_pydantic_model_has_a_table_of_its_fields_with_their_descriptions(page: str) -> None:
+    table = table_of(section(page, "## Model"))
+    assert table[0] == ["Field", "Type", "Default", "Description"]
+    assert table[2:] == [
+        ["`name`", "`str`", "required", "The name of it | really."],
+        ["`kind`", "`Literal['a', 'b']`", "`'a'`", ""],
+        ["`items`", "`list[int]`", "factory", ""],
+        ["`required_one`", "`int`", "required", ""],
+    ]
+
+
+def test_a_model_shows_only_the_fields_it_adds_not_the_ones_it_inherits(page: str) -> None:
+    table = table_of(section(page, "## Sub"))
+    assert [row[0] for row in table[2:]] == ["`extra`"]
+
+
+def test_a_table_of_fields_none_of_which_says_what_it_is_has_no_description_column(
+    page: str,
+) -> None:
+    table = table_of(section(page, "## Quiet"))
+    assert table[0] == ["Field", "Type", "Default"]
+    assert table[2:] == [["`one`", "`int`", "`1`"], ["`two`", "`str | None`", "`None`"]]
+
+
+def test_a_dataclass_shows_its_public_fields_and_not_a_private_or_hidden_one(page: str) -> None:
+    table = table_of(section(page, "## Rec"))
+    assert table[2:] == [
+        ["`a`", "`int`", "required"],
+        ["`b`", "`str`", "`'x'`"],
+        ["`c`", "`list[int]`", "factory"],
+    ]
+
+
+def test_an_enum_has_a_table_of_members_and_no_constructor(page: str) -> None:
+    body = section(page, "## Mode")
+    assert "class Mode(Enum)" in body and "Mode(" not in body.replace("class Mode(", "")
+    assert table_of(body) == [
+        ["Member", "Value"],
+        ["---", "---"],
+        ["`FAST`", "`'fast'`"],
+        ["`SLOW`", "`2`"],
+    ]
+
+
+def test_an_exception_has_no_constructor_line_and_no_table(page: str) -> None:
+    body = section(page, "## Boom")
+    assert body.startswith("\n```python\nclass Boom(Exception)\n```\n") or body.startswith(
+        "```python\nclass Boom(Exception)\n```\n"
+    )
+    assert "| " not in body
+    assert "It broke." in body
+
+
+def test_a_subclass_names_the_documented_base_it_links_to_and_not_the_others(page: str) -> None:
+    assert "Based on [`Plain`](/docs/plain)." in section(page, "## Child")
+    assert "Based on" not in section(page, "## Sub")  # Model has no link
+    assert "Based on" not in section(page, "## Model")  # BaseModel has no link
+
+
+def test_a_class_with_no_docstring_of_its_own_does_not_borrow_its_parents(page: str) -> None:
+    child = section(page, "## Child")
+    assert "A plain class" not in child
+    assert "| [`Child`](#child) | — |" in page
+
+
+def test_a_class_is_shown_with_its_own_public_members_labelled_by_what_they_are(
+    page: str,
+) -> None:
+    assert "@property\nwidth: int" in section(page, "### Plain.width")
+    assert "@property\nheight: int" in section(page, "### Plain.height")
+    assert "@classmethod\ndef make(size: int) -> Plain" in section(page, "### Plain.make()")
+    assert "@staticmethod\ndef helper(x: int) -> int" in section(page, "### Plain.helper()")
+    assert "async def later() -> None" in section(page, "### Plain.later()")
+    assert "def go(to: str) -> int" in section(page, "### Plain.go()")
+    assert "_private" not in page and "Hidden" not in page
+
+
+def test_a_member_with_no_docstring_is_shown_and_counted_but_not_invented(page: str) -> None:
+    body = section(page, "### Plain.undocumented()")
+    assert "def undocumented() -> None" in body
+    assert body.strip().endswith("```")
+
+
+def test_a_constant_is_its_name_type_and_value_with_the_docstring_that_follows_it(
+    page: str,
+) -> None:
+    body = section(page, "## LIMIT")
+    assert "LIMIT: int = 30" in body
+    assert body.strip().endswith("How many, at most.")
+
+
+def test_a_set_constant_is_shown_sorted(page: str) -> None:
+    assert "TAGS: frozenset = frozenset({'a', 'b'})" in section(page, "## TAGS")
