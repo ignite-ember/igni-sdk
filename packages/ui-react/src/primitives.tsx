@@ -526,7 +526,7 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
 export function Checkbox({ label, className, ...rest }: CheckboxProps) {
   return (
     <label className={cx("ui-check", className)}>
-      <input type="checkbox" {...rest} />
+      <input {...rest} type="checkbox" />
       <span>{label}</span>
     </label>
   );
@@ -554,7 +554,7 @@ export interface RadioProps extends InputHTMLAttributes<HTMLInputElement> {
 export function Radio({ label, className, ...rest }: RadioProps) {
   return (
     <label className={cx("ui-check", className)}>
-      <input type="radio" {...rest} />
+      <input {...rest} type="radio" />
       <span>{label}</span>
     </label>
   );

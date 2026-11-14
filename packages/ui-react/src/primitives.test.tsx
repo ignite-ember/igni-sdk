@@ -770,3 +770,372 @@ describe("Dialog edges: closing, keys and focus", () => {
     );
   });
 });
+
+describe("accessibility wiring of Switch, Field, Tabs and TabPanel", () => {
+  it("toggles from on to off, and names the switch by its visible label", () => {
+    const onChange = vi.fn();
+    render(<Switch checked onChange={onChange} label="Live sync" />);
+    const sw = screen.getByRole("switch");
+    expect(sw.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(false);
+    const labelId = sw.getAttribute("aria-labelledby") as string;
+    expect(document.getElementById(labelId)?.textContent).toBe("Live sync");
+    expect(sw.className).toBe("ui-switch");
+  });
+
+  it("cannot be clobbered by a caller's onClick, type or role", () => {
+    const onChange = vi.fn();
+    const onClick = vi.fn();
+    render(
+      <Switch
+        checked={false}
+        onChange={onChange}
+        label="x"
+        {...({ onClick, type: "submit", role: "checkbox" } as object)}
+        className="mine"
+      />,
+    );
+    const sw = screen.getByRole("switch");
+    expect(sw.getAttribute("type")).toBe("button");
+    fireEvent.click(sw);
+    expect(onChange).toHaveBeenCalledWith(true);
+    expect(onClick).not.toHaveBeenCalled();
+    expect(sw.className).toBe("ui-switch mine");
+  });
+
+  it("does not toggle when disabled and renders a node as its label", () => {
+    const onChange = vi.fn();
+    render(
+      <Switch
+        checked={false}
+        onChange={onChange}
+        disabled
+        label={<em>Fancy</em>}
+      />,
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("switch", { name: "Fancy" })).toBeDefined();
+  });
+
+  it("wires a hint without marking the control invalid", () => {
+    render(
+      <Field label="Name" htmlFor="n" hint="Lowercase.">
+        <Input id="n" />
+      </Field>,
+    );
+    const input = screen.getByLabelText("Name");
+    const hint = screen.getByText("Lowercase.");
+    expect(hint.className).toBe("ui-hint");
+    expect(hint.id).toBe("n-note");
+    expect(input.getAttribute("aria-describedby")).toBe("n-note");
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+  });
+
+  it("does not wire anything without htmlFor, but still shows the note", () => {
+    render(
+      <Field label="Name" error="Bad.">
+        <Input id="n" />
+      </Field>,
+    );
+    const input = document.getElementById("n") as HTMLElement;
+    expect(input.hasAttribute("aria-describedby")).toBe(false);
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+    const err = screen.getByRole("alert");
+    expect(err.textContent).toBe("Bad.");
+    expect(err.hasAttribute("id")).toBe(false);
+  });
+
+  it("neither clones nor renders a note when there is no hint or error", () => {
+    const { container } = render(
+      <Field label="Name" htmlFor="n" className="mine">
+        <Input id="n" />
+      </Field>,
+    );
+    expect(container.querySelector(".ui-hint, .ui-error")).toBeNull();
+    expect(
+      (document.getElementById("n") as HTMLElement).hasAttribute(
+        "aria-describedby",
+      ),
+    ).toBe(false);
+    expect(container.firstElementChild?.className).toBe("ui-field mine");
+    expect(container.querySelector("label")?.getAttribute("for")).toBe("n");
+  });
+
+  it("does not clone a string, an array or a fragment child", () => {
+    const { container } = render(
+      <>
+        <Field label="a" htmlFor="a" error="E1">
+          plain text
+        </Field>
+        <Field label="b" htmlFor="b" error="E2">
+          {[<Input key="1" id="b1" />, <Input key="2" id="b2" />]}
+        </Field>
+        <Field label="c" htmlFor="c" error="E3">
+          <>
+            <Input id="c1" />
+          </>
+        </Field>
+      </>,
+    );
+    expect(container.textContent).toContain("plain text");
+    for (const id of ["b1", "b2", "c1"]) {
+      expect(
+        document.getElementById(id)?.hasAttribute("aria-describedby"),
+      ).toBe(false);
+    }
+    expect(screen.getAllByRole("alert")).toHaveLength(3);
+  });
+
+  it("builds Radio as a label around a radio input, type not overridable", () => {
+    const { container } = render(
+      <Radio
+        label="Small"
+        className="mine"
+        name="size"
+        value="s"
+        {...({ type: "text" } as object)}
+      />,
+    );
+    const label = container.querySelector("label");
+    expect(label?.className).toBe("ui-check mine");
+    const input = screen.getByLabelText("Small") as HTMLInputElement;
+    expect(input.type).toBe("radio");
+    expect(input.name).toBe("size");
+    expect(input.className).toBe("");
+    expect(label?.querySelector("span")?.textContent).toBe("Small");
+  });
+
+  it("puts a Checkbox's className on the label and its rest on the input", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Checkbox
+        label="Go"
+        className="mine"
+        name="n"
+        onChange={onChange}
+        {...({ type: "text" } as object)}
+      />,
+    );
+    expect(container.querySelector("label")?.className).toBe("ui-check mine");
+    const input = screen.getByLabelText("Go") as HTMLInputElement;
+    expect(input.type).toBe("checkbox");
+    expect(input.name).toBe("n");
+    fireEvent.click(input);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  const tabs = [
+    { id: "a", label: "Browse" },
+    { id: "b", label: "Search" },
+    { id: "c", label: "Lineage" },
+  ];
+
+  it("gives every tab an id, a panel pointer, selection and a roving tabindex", () => {
+    render(
+      <Tabs label="Views" base="v" active="b" onChange={vi.fn()} tabs={tabs} />,
+    );
+    const strip = screen.getByRole("tablist", { name: "Views" });
+    expect(strip.getAttribute("aria-orientation")).toBe("horizontal");
+    const got = screen
+      .getAllByRole("tab")
+      .map((t) => [
+        t.id,
+        t.getAttribute("aria-controls"),
+        t.getAttribute("aria-selected"),
+        t.getAttribute("tabindex"),
+        t.getAttribute("type"),
+      ]);
+    expect(got).toEqual([
+      ["v-a", "v-a-panel", "false", "-1", "button"],
+      ["v-b", "v-b-panel", "true", "0", "button"],
+      ["v-c", "v-c-panel", "false", "-1", "button"],
+    ]);
+  });
+
+  it("generates distinct bases for two strips when none is given", () => {
+    render(
+      <>
+        <Tabs label="One" active="a" onChange={vi.fn()} tabs={tabs} />
+        <Tabs label="Two" active="a" onChange={vi.fn()} tabs={tabs} />
+      </>,
+    );
+    const ids = screen.getAllByRole("tab").map((t) => t.id);
+    expect(new Set(ids).size).toBe(6);
+  });
+
+  it("calls onChange with the clicked tab's id", () => {
+    const onChange = vi.fn();
+    render(<Tabs label="V" active="a" onChange={onChange} tabs={tabs} />);
+    fireEvent.click(screen.getByText("Lineage"));
+    expect(onChange).toHaveBeenCalledWith("c");
+  });
+
+  it("walks ArrowRight and ArrowLeft with wrapping, and prevents the default", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Tabs label="V" active="c" onChange={onChange} tabs={tabs} />,
+    );
+    const strip = () => screen.getByRole("tablist");
+    expect(fireEvent.keyDown(strip(), { key: "ArrowRight" })).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith("a");
+    rerender(<Tabs label="V" active="b" onChange={onChange} tabs={tabs} />);
+    fireEvent.keyDown(strip(), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith("a");
+    fireEvent.keyDown(strip(), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith("c");
+  });
+
+  it("ignores unrelated keys without preventing them", () => {
+    const onChange = vi.fn();
+    render(<Tabs label="V" active="a" onChange={onChange} tabs={tabs} />);
+    expect(fireEvent.keyDown(screen.getByRole("tablist"), { key: "x" })).toBe(
+      true,
+    );
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("treats an active id that is not in the list as the first tab", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Tabs label="V" active="zzz" onChange={onChange} tabs={tabs} />,
+    );
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith("b");
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith("c");
+    rerender(<Tabs label="V" active="zzz" onChange={onChange} tabs={tabs} />);
+    // Nothing is selected, so no tab is in the tab order... and none crash.
+    expect(
+      screen.getAllByRole("tab").map((t) => t.getAttribute("tabindex")),
+    ).toEqual(["-1", "-1", "-1"]);
+  });
+
+  it("keeps a single tab on itself when wrapping", () => {
+    const onChange = vi.fn();
+    render(
+      <Tabs
+        label="V"
+        active="a"
+        onChange={onChange}
+        tabs={[{ id: "a", label: "Only" }]}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowLeft" });
+    expect(onChange.mock.calls).toEqual([["a"], ["a"]]);
+  });
+
+  it("moves focus to the newly selected tab only when focus was in the strip", () => {
+    const { rerender } = render(
+      <Tabs label="V" base="v" active="a" onChange={vi.fn()} tabs={tabs} />,
+    );
+    // Focus outside the strip: selection changes must not steal it.
+    const outside = document.createElement("input");
+    document.body.appendChild(outside);
+    outside.focus();
+    rerender(
+      <Tabs label="V" base="v" active="b" onChange={vi.fn()} tabs={tabs} />,
+    );
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+
+    // Focus inside the strip: it follows the selection.
+    screen.getByText("Search").focus();
+    rerender(
+      <Tabs label="V" base="v" active="c" onChange={vi.fn()} tabs={tabs} />,
+    );
+    expect(document.activeElement).toBe(screen.getByText("Lineage"));
+  });
+
+  it("keeps odd characters in ids as given", () => {
+    render(
+      <Tabs
+        label="V"
+        base="my base"
+        active="a b"
+        onChange={vi.fn()}
+        tabs={[{ id: "a b", label: "Odd" }]}
+      />,
+    );
+    const tab = screen.getByRole("tab");
+    expect(tab.id).toBe("my base-a b");
+    expect(tab.getAttribute("aria-controls")).toBe("my base-a b-panel");
+  });
+
+  it("renders a TabPanel only for the active tab, wired back to its tab", () => {
+    const { container, rerender } = render(
+      <TabPanel base="v" id="a" active="b" className="mine">
+        body
+      </TabPanel>,
+    );
+    expect(container.innerHTML).toBe("");
+    rerender(
+      <TabPanel base="v" id="a" active="a" className="mine" data-k="v">
+        body
+      </TabPanel>,
+    );
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.id).toBe("v-a-panel");
+    expect(panel.getAttribute("aria-labelledby")).toBe("v-a");
+    expect(panel.getAttribute("tabindex")).toBe("0");
+    expect(panel.className).toBe("mine");
+    expect(panel.getAttribute("data-k")).toBe("v");
+    expect(panel.textContent).toBe("body");
+  });
+
+  it("pairs a strip with its panel through a shared base", () => {
+    render(
+      <>
+        <Tabs label="V" base="v" active="a" onChange={vi.fn()} tabs={tabs} />
+        <TabPanel base="v" id="a" active="a">
+          x
+        </TabPanel>
+      </>,
+    );
+    const tab = screen.getByRole("tab", { selected: true });
+    expect(screen.getByRole("tabpanel").id).toBe(
+      tab.getAttribute("aria-controls"),
+    );
+    expect(screen.getByRole("tabpanel", { name: "Browse" })).toBeDefined();
+  });
+
+  it("sizes every heading level, merges a style and keeps the caller's own fontSize", () => {
+    const { container } = render(
+      <>
+        <Heading level={1}>a</Heading>
+        <Heading>b</Heading>
+        <Heading level={4}>d</Heading>
+        <Heading level={3} className="mine" style={{ color: "red" }}>
+          c
+        </Heading>
+        <Heading level={3} style={{ fontSize: "9px" }}>
+          e
+        </Heading>
+      </>,
+    );
+    const size = (sel: string) =>
+      container.querySelector<HTMLElement>(sel)?.style.fontSize;
+    expect(size("h1")).toBe("var(--text-2xl)");
+    expect(size("h2")).toBe("var(--text-xl)");
+    expect(size("h4")).toBe("var(--text-sm)");
+    const hs = container.querySelectorAll<HTMLElement>("h3");
+    expect(hs[0].className).toBe("ui-heading mine");
+    expect(hs[0].style.color).toBe("red");
+    expect(hs[0].style.fontSize).toBe("var(--text-lg)");
+    expect(hs[1].style.fontSize).toBe("9px");
+  });
+
+  it("passes a spinner's label, class and props through", () => {
+    const { container } = render(
+      <Spinner label="Ünïcode … wait" className="mine" data-k="v" />,
+    );
+    const s = container.querySelector(".ui-spinner") as HTMLElement;
+    expect(s.className).toBe("ui-spinner mine");
+    expect(s.getAttribute("data-k")).toBe("v");
+    expect(s.querySelector(".ui-visually-hidden")?.textContent).toBe(
+      "Ünïcode … wait",
+    );
+  });
+});
