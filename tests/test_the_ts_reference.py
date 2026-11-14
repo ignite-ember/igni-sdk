@@ -472,8 +472,8 @@ def test_a_name_whose_reexport_leaves_the_package_or_is_never_declared_resolves_
         tmp_path,
         {
             "index.ts": (
-                'export { Outside } from "zod";\n'
-                'export { Missing } from "./time.js";\n'
+                'export { Outside as Far } from "zod";\n'
+                'export { Absent as Gone } from "./time.js";\n'
                 "export { Nowhere as Near };\n"
             ),
             "time.ts": "export const Timeout = 30;\n",
@@ -481,8 +481,8 @@ def test_a_name_whose_reexport_leaves_the_package_or_is_never_declared_resolves_
     )
     reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
     index = reference.modules["index.ts"]
-    assert reference.resolve(index, "Outside") is None
-    assert reference.resolve(index, "Missing") is None
+    assert reference.resolve(index, "Far") is None
+    assert reference.resolve(index, "Gone") is None
     assert reference.resolve(index, "Near") is None
 
 
