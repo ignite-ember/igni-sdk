@@ -347,7 +347,7 @@ preview = await session.plugins.preview("https://github.com/acme/review-plugin",
 print(preview.name, preview.readme[:200])
 """,
     "install_plugin": """
-info = await session.plugins.install("acme-review@acme")
+info = await session.plugins.install("@acme/acme-review")
 print(info.text)
 """,
     "update_plugin": """
