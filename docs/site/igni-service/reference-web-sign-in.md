@@ -370,7 +370,7 @@ Where the sessions and sign-ins in flight are kept.
 router: APIRouter
 ```
 
-The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `POST /auth/logout`. `igni.install(app)` mounts them.
+The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `GET` or `POST /auth/logout`. `igni.install(app)` mounts them.
 
 ### WebSignIn.login()
 

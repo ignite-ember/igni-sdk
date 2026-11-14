@@ -370,7 +370,7 @@ Properties and constants:
 | `router` | the three routes |
 | `WebSignIn.COOKIE` | `"igni_session"` |
 | `WebSignIn.LOGIN_TTL` | 600 s for a sign-in at the portal |
-| `WebSignIn.SESSION_TTL` | 30 days: a refresh token's life |
+| `WebSignIn.SESSION_TTL` | 30 days from the sign-in or its last renewal: a session not renewed within it is dead |
 | `WebSignIn.RENEW_BEFORE` | 60 s |
 
 These sessions use cookies, so they are **not** reachable from the
