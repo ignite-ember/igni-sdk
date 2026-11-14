@@ -968,3 +968,41 @@ def test_the_module_exports_what_the_tests_and_the_command_use() -> None:
     for name in client_codegen.__all__:
         assert hasattr(client_codegen, name), name
     assert {"ClientApi", "ContractError", "Plan"} <= set(client_codegen.__all__)
+
+
+# ── What a user of the published igni-client sees ─────────────────────
+
+
+def test_the_client_a_user_installs_has_every_method_the_contract_says_it_can() -> None:
+    """igni-client's models, methods and reference come from the contract, all of it."""
+    _wire()
+    api = importlib.import_module("igni_client.api")
+    models = importlib.import_module("igni_client.models")
+    readme = (ROOT / README).read_text(encoding="utf-8")
+    placed = [w for w in CONTRACT.methods if w not in NOT_FOR_CLIENTS]
+    assert len(placed) > 50
+    for wire_name in placed:
+        path = METHODS[wire_name]
+        spec = api.METHODS[wire_name]
+        assert spec.python == path and spec.followed == (wire_name in FOLLOWED), wire_name
+        owner, *rest = path.split(".")
+        cls = api.IgniApi if owner == "igni" else api.SessionApi
+        if ".".join(path.split(".")[:2]) not in client_codegen.HAND_WRITTEN_NAMESPACES:
+            holder: Any = cls
+            for part in rest[:-1]:
+                holder = typing_hint(holder, part)
+            assert callable(getattr(holder, rest[-1])), wire_name
+        assert f"Wire method `{wire_name}`" in readme, wire_name
+    for wire_name in NOT_FOR_CLIENTS:
+        assert wire_name not in api.METHODS
+        assert f"| `{wire_name}` |" in readme
+    for wire_type in CONTRACT.messages:
+        cls_name = Plan(CONTRACT).types.class_name(CONTRACT.message_def(wire_type))
+        assert hasattr(models, cls_name), wire_type
+    assert set(models.EVENT_TYPES) | set(models.FRAME_TYPES) == set(CONTRACT.messages)
+
+
+def typing_hint(owner: Any, attr: str) -> Any:
+    """The class a namespace attribute of a generated owner holds."""
+    hints = owner.__annotations__
+    return getattr(importlib.import_module("igni_client.api"), hints[attr])
