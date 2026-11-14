@@ -273,6 +273,17 @@ def rst(text: str) -> str:
     return text.replace("``", "`")
 
 
+_NO_ARGUMENTS = re.compile(r"Takes no arguments(?: \(([^)]*)\))?\.\s*")
+
+
+def _take_no_arguments(text: str) -> tuple[str, str]:
+    """``text`` without its opening "Takes no arguments.", and what that said in brackets."""
+    match = _NO_ARGUMENTS.match(text)
+    if match is None:
+        return text, ""
+    return text[match.end() :], match.group(1) or ""
+
+
 def cell(text: str) -> str:
     """``text`` fit for one cell of a Markdown table."""
     return " ".join(text.split()).replace("|", "\\|")
@@ -441,6 +452,7 @@ class ClientReference:
         self.links: dict[str, str] = {}
         self._link_everything()
         self.missing_meanings: list[str] = []
+        self._wire_properties: set[str] | None = None
 
     # ── What is where ──
 
@@ -544,15 +556,46 @@ class ClientReference:
     def method_link(self, wire: str) -> str:
         return f"[`{self.placements[wire].path}()`]({self._method_url(wire)})"
 
+    def wire_properties(self) -> set[str]:
+        """Every field name the contract spells in the wire's camelCase."""
+        if self._wire_properties is None:
+            names: set[str] = set()
+            for schema in self.contract.defs.values():
+                names.update(schema.get("properties", {}))
+            self._wire_properties = names
+        return self._wire_properties
+
+    def prose(self, text: str) -> str:
+        """The contract's prose for a Python page: it names the Python call or attribute.
+
+        igni-core writes its docs for the wire: ``whenToUse`` is the field
+        and ``run_workflow`` the method. A Python reader finds
+        ``when_to_use`` and ``session.workflows.run()``, so a name in code
+        font is said the way the Python API says it.
+        """
+        text = rst(text)
+        fields = self.wire_properties()
+
+        def name(match: re.Match[str]) -> str:
+            token = match.group(1)
+            placement = self.placements.get(token)
+            if placement is not None and "_" in token and token not in fields:
+                return f"`{placement.path}()`"
+            if token in fields and field_name(token) != token:
+                return f"`{field_name(token)}`"
+            return match.group(0)
+
+        return re.sub(r"`([A-Za-z_][A-Za-z0-9_]*)`", name, text)
+
     def meaning(self, wire: str, prop: str, schema: dict[str, Any], doc: str) -> str:
         """What a parameter is: its own description, else what the method's doc says of it."""
         if schema.get("description"):
-            return rst(schema["description"])
+            return self.prose(schema["description"])
         text = " ".join(doc.split())
         sentences = re.split(r"(?<=[.;:])\s+(?=[A-Z`(*])", text)
         for sentence in sentences:
             if f"``{prop}``" in sentence:
-                return rst(sentence)
+                return self.prose(sentence)
         self.missing_meanings.append(f"{wire}.{prop}")
         return "—"
 
@@ -578,11 +621,21 @@ class ClientReference:
         else:
             code = signature(f"async def {placement.name}", sig, f" -> {result}")
         doc_paragraphs = method.doc.strip().split("\n\n")
-        summary = rst(doc_paragraphs[0].replace("\n", " "))
-        rest = [rst(p) for p in doc_paragraphs[1:]]
-        out = [f"## {self.heading(placement)}", "", summary, "", "```python", code, "```", ""]
+        summary = self.prose(doc_paragraphs[0].replace("\n", " "))
+        rest = [self.prose(p) for p in doc_paragraphs[1:]]
+        # igni-core's text may open with "Takes no arguments."; the page says
+        # it once, in the place a parameter table would be.
+        note = ""
+        if not shown:
+            summary, note = _take_no_arguments(summary)
+            taken = [_take_no_arguments(p) for p in rest]
+            rest = [text for text, _ in taken]
+            note = note or next((n for _, n in taken if n), "")
+        out = [f"## {self.heading(placement)}", ""]
+        out += [summary, ""] if summary else []
+        out += ["```python", code, "```", ""]
         for paragraph in rest:
-            out += [paragraph, ""]
+            out += [paragraph, ""] if paragraph else []
         args_def = self.contract.ref_name(method.args) or ""
         props = self.contract.defs[args_def].get("properties", {}) if args_def else {}
         if shown:
@@ -602,6 +655,8 @@ class ClientReference:
                 if placement.owner == "session" and wire in OWN_SESSION_ARG
                 else ""
             )
+            if note:
+                hidden = f" ({note}; `session_id` is this session's own)" if hidden else f" ({note})"
             out += [f"Takes no arguments{hidden}.", ""]
         if followed:
             out += [

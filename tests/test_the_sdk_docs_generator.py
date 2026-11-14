@@ -503,6 +503,34 @@ def test_a_method_with_no_arguments_says_so_and_its_own_session_is_noted(
     assert "Takes no arguments (`session_id` is this session's own)." in text
 
 
+def test_a_method_with_no_arguments_says_so_once_whoever_wrote_it_first(
+    client: ClientReference,
+) -> None:
+    for path in ("session.workflows.list", "session.plans.latest", "igni.models.list"):
+        placements = [p for p in client.placements.values() if p.path == path]
+        if not placements:
+            continue
+        assert _section(client, path).count("Takes no arguments") == 1, path
+    workflows = _section(client, "session.workflows.list")
+    # The contract's own note in brackets survives, once.
+    assert "Takes no arguments (any it is sent are ignored)." in workflows
+    assert workflows.count("Takes no arguments") == 1
+
+
+def test_the_text_igni_core_wrote_for_the_wire_names_the_python_attribute_and_call(
+    client: ClientReference,
+) -> None:
+    listed = _section(client, "session.workflows.list")
+    assert "`when_to_use`" in listed and "`whenToUse`" not in listed
+    cancelled = _section(client, "session.workflows.cancel")
+    assert "(from `session.workflows.run()`)" in cancelled
+    assert "`run_workflow`" not in cancelled.split("**On the wire**")[0]
+    # What the page says of the wire stays the wire's own.
+    assert "**On the wire** RPC method `cancel_workflow`" in cancelled
+    # A word that is a field and a method on the wire is left as it is.
+    assert client.prose("the `status` field") == "the `status` field"
+
+
 def test_the_wait_the_docs_state_is_the_wait_the_client_applies(client: ClientReference) -> None:
     """``The client waits up to N seconds`` is what ``igni_client`` does for that method."""
     src = str(ROOT / "packages" / "igni-client" / "src")
