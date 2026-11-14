@@ -268,7 +268,9 @@ class FakeAgents:
                             f"no handler for {item.type}" if item.state == "not_handled" else None
                         ),
                         "created_at": item.created_at.isoformat(),
-                        "expires_at": (item.expires_at or item.created_at + timedelta(days=14)).isoformat(),
+                        "expires_at": (
+                            item.expires_at or item.created_at + timedelta(days=14)
+                        ).isoformat(),
                         "delivered_at": None,
                         "updated_at": self._now().isoformat(),
                     },
