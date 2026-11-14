@@ -78,7 +78,7 @@ def test_a_limit_above_what_igni_answers_is_cut_to_it() -> None:
     assert query_of(limit="100000").limit == 500
 
 
-@pytest.mark.parametrize("limit", ["many", "1.5", "", "-", "1e3", " 7"])
+@pytest.mark.parametrize("limit", ["many", "1.5", "", "-", "--3", "1e3", "²", "٣", " 7"])
 def test_a_limit_that_is_not_a_whole_number_is_refused_with_its_value(limit: str) -> None:
     refused = MemberQuery.from_request(asked(limit=limit))
 
