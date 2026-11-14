@@ -144,3 +144,22 @@ def test_igni_client_s_approval_answers_are_one_list() -> None:
 
     for answer in ("`approve(choice)`", "`reject(remember=False)`", "`AccessRefused`", "`decide("):
         assert answer in block, answer
+
+
+def test_ui_react_s_quick_start_page_has_the_igni_root_class() -> None:
+    """With index.html as the Quick start described it — `<div id="root">` and
+    nothing on body — the page rendered unstyled: transparent, Times, an 8px
+    body margin. `igni-root` styles it, and connect() does not add it."""
+    readme = (REPO / "packages" / "ui-react" / "README.md").read_text(encoding="utf-8")
+    quick_start = readme[
+        readme.index("## Quick start") : readme.index("\n## ", readme.index("## Quick start") + 1)
+    ]
+    bridge = (REPO / "packages" / "extension-bridge" / "src").glob("*.ts")
+    css = (REPO / "clients" / "ui").rglob("*.css")
+
+    (html,) = quick_start.split("```html\n")[1:2]
+    assert '<body class="igni-root">' in html.split("```", 1)[0]
+    assert not any("igni-root" in f.read_text(encoding="utf-8") for f in bridge)
+    assert any(
+        ".igni-root" in f.read_text(encoding="utf-8") for f in css if "node_modules" not in f.parts
+    )

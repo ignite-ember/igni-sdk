@@ -59,8 +59,24 @@ async function main() {
 void main();
 ```
 
-The page's `index.html` holds `<div id="root"></div>` and loads the built
-script from a file (an extension's page may not run inline script).
+The page's `index.html` gives its body the `igni-root` class, holds
+`<div id="root"></div>` and loads the built script from a file (an
+extension's page may not run inline script):
+
+```html
+<!doctype html>
+<html>
+  <body class="igni-root">
+    <div id="root"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+`igni-root` is what puts the stylesheet's background, font and spacing on
+the page; neither `connect()` nor `AppShell` adds it. Without it the page
+renders unstyled — a transparent background, the browser's serif font, and
+its 8px body margin, so the frame scrolls by 8px.
 
 Three things to know before you write more:
 
