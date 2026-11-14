@@ -10,6 +10,15 @@ See the package README for the whole surface.
 from igni_service.agent_wire import ItemStatus
 from igni_service.agents import Agent, Attachment, Chat
 from igni_service.app import IgniApp
+from igni_service.callers import (
+    PEOPLE_ONLY,
+    App,
+    Caller,
+    CallerKind,
+    IgniCall,
+    Person,
+    Space,
+)
 from igni_service.cors import BearerCors
 from igni_service.directory import Directory, Member, Organisation
 from igni_service.errors import (
@@ -33,16 +42,7 @@ from igni_service.settings import IgniSettings
 from igni_service.sql_keystore import SqlKeyStore
 from igni_service.subjects import ExportSection, Subject
 from igni_service.tables import IgniTables
-from igni_service.tokens import (
-    PEOPLE_ONLY,
-    App,
-    Caller,
-    CallerKind,
-    IgniCall,
-    Person,
-    Space,
-    TokenRefused,
-)
+from igni_service.verified_claims import TokenRefused, VerifiedClaims
 from igni_service.vm_profiles import (
     AppVmProfile,
     EffectiveVmProfile,
@@ -111,6 +111,7 @@ __all__ = [
     "Subject",
     "Target",
     "TokenRefused",
+    "VerifiedClaims",
     "WebSession",
     "WebSessionStore",
     "WebSignIn",

@@ -133,7 +133,7 @@ async def test_an_app_and_a_space_are_revoked_by_kind(
     await feed.settle()
     with pytest.raises(Revoked):
         await igni.verifier.claims(app, use="app")
-    assert (await igni.verifier.claims(space, use="space"))["sub"] == "s-42"
+    assert (await igni.verifier.claims(space, use="space")).sub == "s-42"
 
 
 async def test_it_fails_closed_until_read_and_when_stale(

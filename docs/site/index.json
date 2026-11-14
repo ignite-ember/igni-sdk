@@ -4164,6 +4164,11 @@
         },
         {
           "level": 3,
+          "id": "app-is-named",
+          "title": "App.is_named"
+        },
+        {
+          "level": 3,
           "id": "app-from-claims",
           "title": "App.from_claims()"
         },
@@ -4204,6 +4209,11 @@
         },
         {
           "level": 3,
+          "id": "person-is-named",
+          "title": "Person.is_named"
+        },
+        {
+          "level": 3,
           "id": "person-from-claims",
           "title": "Person.from_claims()"
         },
@@ -4219,6 +4229,11 @@
         },
         {
           "level": 3,
+          "id": "space-is-named",
+          "title": "Space.is_named"
+        },
+        {
+          "level": 3,
           "id": "space-from-claims",
           "title": "Space.from_claims()"
         },
@@ -4226,6 +4241,26 @@
           "level": 2,
           "id": "tokenrefused",
           "title": "TokenRefused"
+        },
+        {
+          "level": 2,
+          "id": "verifiedclaims",
+          "title": "VerifiedClaims"
+        },
+        {
+          "level": 3,
+          "id": "verifiedclaims-read",
+          "title": "VerifiedClaims.read()"
+        },
+        {
+          "level": 3,
+          "id": "verifiedclaims-issued-ms",
+          "title": "VerifiedClaims.issued_ms"
+        },
+        {
+          "level": 3,
+          "id": "verifiedclaims-is-igni",
+          "title": "VerifiedClaims.is_igni"
         }
       ]
     },

@@ -24,7 +24,13 @@ PYTHON_AREAS: Mapping[str, list[Area]] = {
         Area(
             "callers",
             "Callers: Person, App, Space",
-            ("igni_service.tokens", "igni_service:Caller", "igni_service:PEOPLE_ONLY"),
+            (
+                "igni_service.tokens",
+                "igni_service.callers",
+                "igni_service.verified_claims",
+                "igni_service:Caller",
+                "igni_service:PEOPLE_ONLY",
+            ),
         ),
         Area(
             "web-sign-in",

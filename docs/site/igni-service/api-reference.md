@@ -291,12 +291,14 @@ class Person(BaseModel):       # frozen
     kind: CallerKind           # property: CallerKind.PERSON
     is_org_admin: bool         # property: org_role == "admin"
     display_name: str          # property: name, else email
+    is_named: bool             # property: the token named the person and the organisation
 
 class App(BaseModel):          # frozen
     app_id: str
     org_id: str
     name: str = ""
     kind: CallerKind           # property: CallerKind.APP
+    is_named: bool             # property: the token named the app and its organisation
 
 class Space(BaseModel):        # frozen
     space_id: str
@@ -304,6 +306,7 @@ class Space(BaseModel):        # frozen
     app_id: str                # the app the space belongs to
     external_id: str = ""      # the app's own name for its end user
     kind: CallerKind           # property: CallerKind.SPACE
+    is_named: bool             # property: the token named the space, its app and organisation
 
 Caller = Person | App | Space
 
@@ -321,10 +324,13 @@ class TokenRefused(IgniError):
     reason: str
 ```
 
-Each model has a `from_claims(claims: dict) -> Self` class method that
-reads a verified token's claims (`sub`, `org`, `org_name`, `org_role`,
-`email`, `name`, `super_admin`; `app` and `external_id` for a space).
-The dependencies call it for you.
+Each model has a `from_claims(claims: VerifiedClaims) -> Self` class
+method that reads a verified token's claims (`sub`, `org`, `org_name`,
+`org_role`, `email`, `name`, `super_admin`; `app` and `external_id` for a
+space). `VerifiedClaims` is the typed model of a checked token: a claim
+that is text is read as text (a missing or null one is empty), `exp` and
+`iat` are finite numbers, and `super_admin` is only ever the JSON `true`.
+The dependencies call both for you.
 
 `TokenRefused(reason)` is what `person_of` and `caller_of` raise. Its
 `reason` is said only in terms anybody holding the token could read from

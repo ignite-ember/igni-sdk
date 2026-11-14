@@ -8,7 +8,14 @@ import pytest
 
 from igni_service import App, CallerKind, IgniService, Person, Space
 from igni_service.testing import FakeIgni, ManualClock
-from igni_service.tokens import PEOPLE_ONLY, IgniCall, TokenRefused, TokenUse, TokenVerifier
+from igni_service.tokens import (
+    PEOPLE_ONLY,
+    IgniCall,
+    TokenRefused,
+    TokenUse,
+    TokenVerifier,
+    VerifiedClaims,
+)
 
 from .conftest import ORG
 
@@ -47,6 +54,12 @@ def mint_without(fake: FakeIgni, clock: ManualClock, claim: str) -> str:
     return fake.signer.keys.pair.sign_jwt(payload, kid=fake.signer.keys.kid)
 
 
+def verified(claims: dict[str, Any]) -> VerifiedClaims:
+    """Verified claims with the envelope filled in and `claims` on top."""
+    envelope = {"iss": "i", "aud": "a", "token_use": "user", "iat": 0, "exp": 1}
+    return VerifiedClaims.model_validate(envelope | claims)
+
+
 @pytest.fixture
 def verifier(fake: FakeIgni) -> TokenVerifier:
     return fake.service().verifier
@@ -76,13 +89,30 @@ class TestTheClaimsAToken:
 
         assert await reason(verifier, token) == "the token's exp or iat is not a number"
 
+    @pytest.mark.parametrize("bad", ["later", "1.5", [1], {}])
+    async def test_an_iat_ms_that_is_not_a_number_is_refused(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier, bad: object
+    ) -> None:
+        token = mint(fake, clock, iat_ms=bad)
+
+        assert await reason(verifier, token) == "the token's iat is not a number"
+
+    async def test_the_issue_time_in_milliseconds_is_iat_ms_else_the_start_of_iat(
+        self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
+    ) -> None:
+        now = int(clock.wall())
+        with_ms = await verifier.claims(mint(fake, clock, iat_ms=now * 1000 + 7), use="user")
+        without = await verifier.claims(mint(fake, clock, iat=str(now)), use="user")
+
+        assert (with_ms.issued_ms, without.issued_ms) == (now * 1000 + 7, now * 1000)
+
     async def test_a_token_expires_at_its_exp_not_after_it(
         self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
     ) -> None:
         token = mint(fake, clock)
 
         clock.advance(LIFETIME - 1)
-        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
+        assert (await verifier.claims(token, use="user")).sub == "u-ada"
         clock.advance(1)
         assert await reason(verifier, token) == "the token has expired"
 
@@ -93,7 +123,7 @@ class TestTheClaimsAToken:
         within = mint(fake, clock, iat=now + 60)
         beyond = mint(fake, clock, iat=now + 61)
 
-        assert (await verifier.claims(within, use="user"))["sub"] == "u-ada"
+        assert (await verifier.claims(within, use="user")).sub == "u-ada"
         assert "issued in the future" in await reason(verifier, beyond)
         assert TokenVerifier.LEEWAY == 60.0
 
@@ -103,14 +133,14 @@ class TestTheClaimsAToken:
         now = int(clock.wall())
         token = mint(fake, clock, exp=str(now + LIFETIME), iat=str(now))
 
-        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
+        assert (await verifier.claims(token, use="user")).sub == "u-ada"
 
     async def test_nbf_is_not_checked(
         self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
     ) -> None:
         token = mint(fake, clock, nbf=int(clock.wall()) + 100_000)
 
-        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
+        assert (await verifier.claims(token, use="user")).sub == "u-ada"
 
     @pytest.mark.parametrize("value", ["", "refresh", "USER", 1])
     async def test_a_token_use_that_is_not_the_kind_asked_for_is_the_wrong_kind(
@@ -135,7 +165,7 @@ class TestTheClaimsAToken:
         both = await verifier.claims(mint(fake, clock, token_use="app"), use=["user", "app"])
         said = await reason(verifier, mint(fake, clock, token_use="space"), use=["user", "app"])  # type: ignore[arg-type]
 
-        assert both["token_use"] == "app"
+        assert both.token_use == "app"
         assert said.endswith("and this takes app or user")
 
     @pytest.mark.parametrize("token", ["", "   ", "Bearer ", "Bearer    "])
@@ -151,14 +181,17 @@ class TestTheClaimsAToken:
     ) -> None:
         token = wrap.format(mint(fake, clock))
 
-        assert (await verifier.claims(token, use="user"))["sub"] == "u-ada"
+        assert (await verifier.claims(token, use="user")).sub == "u-ada"
 
     async def test_a_truncated_token_is_not_a_jwt(
         self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
     ) -> None:
         token = mint(fake, clock)
+        # Cut at the last dot: chopping a few characters off the signature
+        # still decodes as base64 for some signatures, and is then "not signed".
+        truncated = token[: token.rindex(".")]
 
-        assert await reason(verifier, token[:-8]) == "the token is not a JWT"
+        assert await reason(verifier, truncated) == "the token is not a JWT"
 
     async def test_a_token_with_no_kid_is_not_signed_by_igni(
         self, fake: FakeIgni, clock: ManualClock, verifier: TokenVerifier
@@ -286,8 +319,8 @@ class TestIgniCalling:
         class Revoked:
             seen: list[object] = []  # noqa: RUF012
 
-            async def check(self, claims: dict[str, Any]) -> None:
-                self.seen.append(claims["token_use"])
+            async def check(self, claims: VerifiedClaims) -> None:
+                self.seen.append(claims.token_use)
                 raise TokenRefused("revoked")
 
         verifier = fake.service().verifier
@@ -301,7 +334,7 @@ class TestIgniCalling:
 
 class TestTheModelsOfWhoCalls:
     def test_a_person_from_a_bare_token_has_defaults(self) -> None:
-        person = Person.from_claims({"sub": "u", "org": "o"})
+        person = Person.from_claims(verified({"sub": "u", "org": "o"}))
 
         assert person == Person(
             user_id="u",
@@ -317,14 +350,16 @@ class TestTheModelsOfWhoCalls:
 
     def test_missing_or_null_claims_are_empty_text_and_a_member(self) -> None:
         person = Person.from_claims(
-            {
-                "sub": None,
-                "org": None,
-                "org_name": None,
-                "org_role": None,
-                "email": None,
-                "name": None,
-            }
+            verified(
+                {
+                    "sub": None,
+                    "org": None,
+                    "org_name": None,
+                    "org_role": None,
+                    "email": None,
+                    "name": None,
+                }
+            )
         )
 
         assert person.model_dump() == {
@@ -340,14 +375,20 @@ class TestTheModelsOfWhoCalls:
     @pytest.mark.parametrize("value", ["true", 1, "yes", None, [True], 1.0])
     def test_super_admin_is_only_ever_true(self, value: object) -> None:
         assert (
-            Person.from_claims({"sub": "u", "org": "o", "super_admin": value}).super_admin is False
+            Person.from_claims(verified({"sub": "u", "org": "o", "super_admin": value})).super_admin
+            is False
         )
-        assert Person.from_claims({"sub": "u", "org": "o", "super_admin": True}).super_admin is True
+        assert (
+            Person.from_claims(verified({"sub": "u", "org": "o", "super_admin": True})).super_admin
+            is True
+        )
 
     def test_only_the_admin_role_is_an_org_admin(self) -> None:
-        assert Person.from_claims({"org_role": "admin"}).is_org_admin
-        assert not Person.from_claims({"org_role": "Admin"}).is_org_admin
-        assert not Person.from_claims({"org_role": "owner", "super_admin": True}).is_org_admin
+        assert Person.from_claims(verified({"org_role": "admin"})).is_org_admin
+        assert not Person.from_claims(verified({"org_role": "Admin"})).is_org_admin
+        assert not Person.from_claims(
+            verified({"org_role": "owner", "super_admin": True})
+        ).is_org_admin
 
     def test_a_display_name_is_the_name_else_the_email(self) -> None:
         assert Person(user_id="u", org_id="o", name="Ada", email="a@x").display_name == "Ada"
@@ -355,7 +396,7 @@ class TestTheModelsOfWhoCalls:
         assert Person(user_id="u", org_id="o").display_name == ""
 
     def test_claims_that_are_not_text_are_written_as_text(self) -> None:
-        person = Person.from_claims({"sub": 42, "org": 7, "name": "Zoë ✓", "email": 1.5})
+        person = Person.from_claims(verified({"sub": 42, "org": 7, "name": "Zoë ✓", "email": 1.5}))
 
         assert (person.user_id, person.org_id, person.name, person.email) == (
             "42",
@@ -365,12 +406,26 @@ class TestTheModelsOfWhoCalls:
         )
 
     def test_an_app_and_a_space_read_their_own_claims(self) -> None:
-        app = App.from_claims({"sub": "a", "org": "o", "name": None})
-        space = Space.from_claims({"sub": "s", "org": "o", "app": "a", "external_id": "ext"})
+        app = App.from_claims(verified({"sub": "a", "org": "o", "name": None}))
+        space = Space.from_claims(
+            verified({"sub": "s", "org": "o", "app": "a", "external_id": "ext"})
+        )
 
         assert app == App(app_id="a", org_id="o", name="")
         assert space == Space(space_id="s", org_id="o", app_id="a", external_id="ext")
-        assert Space.from_claims({}) == Space(space_id="", org_id="", app_id="")
+        assert Space.from_claims(verified({})) == Space(space_id="", org_id="", app_id="")
+
+    def test_a_caller_is_named_only_when_every_id_it_needs_is_there(self) -> None:
+        assert Person(user_id="u", org_id="o").is_named
+        assert not Person(user_id="", org_id="o").is_named
+        assert not Person(user_id="u", org_id="").is_named
+        assert App(app_id="a", org_id="o").is_named
+        assert not App(app_id="a", org_id="").is_named
+        assert not App(app_id="", org_id="o").is_named
+        assert Space(space_id="s", org_id="o", app_id="a").is_named
+        assert not Space(space_id="", org_id="o", app_id="a").is_named
+        assert not Space(space_id="s", org_id="", app_id="a").is_named
+        assert not Space(space_id="s", org_id="o", app_id="").is_named
 
     def test_who_calls_cannot_be_changed_afterwards(self) -> None:
         for model in (

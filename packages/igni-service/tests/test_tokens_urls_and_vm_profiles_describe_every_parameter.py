@@ -13,7 +13,7 @@ import re
 import pytest
 from pydantic import BaseModel
 
-from igni_service import tokens, urls, vm_profiles
+from igni_service import callers, tokens, urls, verified_claims, vm_profiles
 
 
 def _documented(doc: str) -> list[str]:
@@ -42,11 +42,12 @@ def _surface() -> list[tuple[str, object, str]]:
     for built in (tokens.TokenVerifier, vm_profiles.ServiceVmProfiles):
         surface.append((built.__name__, built.__init__, inspect.getdoc(built) or ""))
     classes: tuple[type, ...] = (
-        tokens.CallerKind,
-        tokens.TokenRefused,
-        tokens.Person,
-        tokens.App,
-        tokens.Space,
+        callers.CallerKind,
+        callers.Person,
+        callers.App,
+        callers.Space,
+        verified_claims.TokenRefused,
+        verified_claims.VerifiedClaims,
         tokens.TokenVerifier,
         urls.ServiceUrl,
         urls.IgniPaths,
@@ -96,6 +97,7 @@ def test_the_check_reads_the_methods_that_take_parameters() -> None:
         "ServiceVmProfiles",
         "ServiceVmProfiles.of",
         "Person.from_claims",
+        "VerifiedClaims.read",
         "refusal",
     }
 
@@ -108,7 +110,7 @@ def test_the_args_reader_tells_a_missing_entry_from_a_present_one() -> None:
 
 def _models() -> list[type[BaseModel]]:
     found: list[type[BaseModel]] = []
-    for module in (tokens, vm_profiles):
+    for module in (callers, verified_claims, tokens, vm_profiles):
         for value in vars(module).values():
             if (
                 inspect.isclass(value)
@@ -119,9 +121,17 @@ def _models() -> list[type[BaseModel]]:
     return found
 
 
-def test_the_check_reads_the_models_of_both_modules() -> None:
+def test_the_check_reads_the_models_of_every_module() -> None:
     names = {model.__name__ for model in _models()}
-    assert names >= {"Person", "App", "Space", "IgniCall", "VmProfileRequest", "ServiceVmProfile"}
+    assert names >= {
+        "Person",
+        "App",
+        "Space",
+        "IgniCall",
+        "VerifiedClaims",
+        "VmProfileRequest",
+        "ServiceVmProfile",
+    }
 
 
 @pytest.mark.parametrize("model", _models(), ids=lambda m: m.__name__)

@@ -22,7 +22,7 @@ from igni_service.revocations import (
 from igni_service.server import IgniServer
 from igni_service.testing import ManualClock
 from igni_service.token_endpoint import GrantRefused, IssuedTokens
-from igni_service.tokens import TokenRefused
+from igni_service.verified_claims import VerifiedClaims
 
 DAY_MS = 86_400_000
 
@@ -37,11 +37,14 @@ def revocation(
     return Revocation(kind=kind, org_id=org, subject_id=subject, not_before_ms=not_before_ms)
 
 
-def person(iat_ms: int | None = 5_000, **claims: Any) -> dict[str, Any]:
-    token: dict[str, Any] = {"token_use": "user", "sub": "u1", "org": "o1", **claims}
-    if iat_ms is not None:
-        token["iat_ms"] = iat_ms
-    return token
+def token(**claims: Any) -> VerifiedClaims:
+    """A verified token's claims: the envelope filled in, `claims` on top."""
+    envelope = {"iss": "i", "aud": "a", "token_use": "user", "iat": 0, "exp": 1}
+    return VerifiedClaims.model_validate(envelope | claims)
+
+
+def person(iat_ms: int | None = 5_000, **claims: Any) -> VerifiedClaims:
+    return token(**({"sub": "u1", "org": "o1", "iat_ms": iat_ms} | claims))
 
 
 @pytest.fixture
@@ -88,23 +91,6 @@ class TestAWatermarkCoversATokenIssuedAtOrBeforeIt:
         listing.check(person(None, iat=seconds + 0.5))
         listing.check(person(None, iat=seconds + 1))
 
-    @pytest.mark.parametrize(
-        "claims",
-        [
-            {},
-            {"iat": "yesterday"},
-            {"iat": None},
-            {"iat": [1]},
-            {"iat_ms": "later"},
-        ],
-        ids=["no iat", "words", "null", "list", "iat_ms words"],
-    )
-    def test_a_token_whose_issue_time_is_not_a_number_is_refused(
-        self, heard: RevocationList, claims: dict[str, Any]
-    ) -> None:
-        with pytest.raises(TokenRefused, match="iat is not a number"):
-            heard.check({"token_use": "user", "sub": "u1", "org": "o1", **claims})
-
     def test_an_organisation_watermark_does_not_cover_another_organisation(
         self, heard: RevocationList
     ) -> None:
@@ -127,14 +113,14 @@ class TestAWatermarkCoversATokenIssuedAtOrBeforeIt:
 
     def test_a_watermark_is_for_its_kind_and_its_subject(self, heard: RevocationList) -> None:
         heard.check(person(1, sub="u2"))
-        heard.check({"token_use": "app", "sub": "u1", "org": "o1", "iat_ms": 1})
-        heard.check({"token_use": "space", "sub": "u1", "org": "o1", "iat_ms": 1})
+        heard.check(person(1, token_use="app"))
+        heard.check(person(1, token_use="space"))
 
     @pytest.mark.parametrize(
         "claims",
         [
             {"token_use": "service", "sub": "u1", "org": "o1"},
-            {"sub": "u1", "org": "o1"},
+            {"token_use": "", "sub": "u1", "org": "o1"},
             {"token_use": "user", "org": "o1"},
             {"token_use": "user", "sub": "", "org": "o1"},
         ],
@@ -143,7 +129,7 @@ class TestAWatermarkCoversATokenIssuedAtOrBeforeIt:
     def test_a_token_that_names_no_kind_or_subject_is_checked_for_freshness_only(
         self, heard: RevocationList, claims: dict[str, Any]
     ) -> None:
-        heard.check({**claims, "iat_ms": 1})
+        heard.check(token(**claims, iat_ms=1))
 
 
 class TestWhatTheListKeeps:
