@@ -52,7 +52,7 @@ Token name → current value.
 ## readThemeTokens
 
 ```typescript
-function readThemeTokens(root: Element = document.documentElement,): ThemeTokens
+function readThemeTokens(root: Element = document.documentElement): ThemeTokens
 ```
 
 | Parameter | Type | Default | Meaning |

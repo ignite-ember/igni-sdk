@@ -563,7 +563,7 @@ class Module:
                 return None
             params_end = _match_bracket(after, open_paren, "(", ")")
             params = after[open_paren + 1 : params_end - 1]
-            params_text = _one_line(_strip_comments(params))
+            params_text = re.sub(r",\s*$", "", _one_line(_strip_comments(params)))
             tail = after[params_end:]
             returns = ""
             tail_match = re.match(r"\s*:\s*([^{;]+?)\s*(?=\{|;|\Z)", tail, re.S)

@@ -125,3 +125,16 @@ def test_a_regex_after_return_hides_its_brackets_but_a_division_does_not(
     assert parsed.declarations["g"].signature == (
         "function g(a = (n: number) => { return (n) / 2 }, b = 1): void"
     )
+
+
+def test_a_signature_written_with_a_trailing_comma_is_shown_without_it(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export function run(
+          a: number, // first
+          b = 2,
+        ): void {}
+        """,
+    )
+    assert parsed.declarations["run"].signature == "function run(a: number, b = 2): void"

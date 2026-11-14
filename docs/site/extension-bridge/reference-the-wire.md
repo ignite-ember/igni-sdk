@@ -391,7 +391,7 @@ Is this a message from the host, shaped the way the guest requires?
 ## methodAllowed
 
 ```typescript
-function methodAllowed(method: string, allow: readonly string[],): boolean
+function methodAllowed(method: string, allow: readonly string[]): boolean
 ```
 
 | Parameter | Type | Default | Meaning |
