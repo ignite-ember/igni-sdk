@@ -110,6 +110,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
     if (changed(before, now)) this.reset();
   }
 
+  /**
+   * Clears the error and renders the children again.
+   */
   reset = (): void => {
     this.setState({ error: null });
   };
