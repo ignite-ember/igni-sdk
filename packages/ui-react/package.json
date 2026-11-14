@@ -48,6 +48,12 @@
     "mermaid": "^11.0.0"
   },
   "peerDependenciesMeta": {
+    "react-markdown": {
+      "optional": true
+    },
+    "remark-gfm": {
+      "optional": true
+    },
     "mermaid": {
       "optional": true
     }

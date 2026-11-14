@@ -24,15 +24,21 @@ A page that fills its frame, with a toolbar, a scrolling list and a
 footer:
 
 ```tsx
+import { createRoot } from "react-dom/client";
 import { AppShell, Scroll, Toolbar, Button, Text, Empty } from "@ignite-ember/ui-react";
 import { connect } from "@ignite-ember/extension-bridge";
 import "@ignite-ember/ui-css";
+
+interface Note {
+  id: string;
+  title: string;
+}
 
 async function main() {
   const bridge = await connect();
   const notes = await bridge.rpc<Note[]>("ext.example.teamnotes.list");
 
-  return (
+  createRoot(document.getElementById("root")!).render(
     <AppShell
       header={<Toolbar>Notes</Toolbar>}
       footer={<Button variant="primary">New note</Button>}
@@ -46,10 +52,15 @@ async function main() {
           ))
         )}
       </Scroll>
-    </AppShell>
+    </AppShell>,
   );
 }
+
+void main();
 ```
+
+The page's `index.html` holds `<div id="root"></div>` and loads the built
+script from a file (an extension's page may not run inline script).
 
 Three things to know before you write more:
 
@@ -116,7 +127,8 @@ questions.
 `Dialog`, `Tabs`, `TabPanel`, `Heading`, `Text`, `Code`, `Divider`,
 `Spinner`, `Progress`. They are thin, they hold no state, and they make
 no decisions. Reach for one of these first — it is the thing that will
-still be here next release.
+still be here next release. `Chip` and `Badge` take a `tone` of
+`"neutral"`, `"success"`, `"warning"` or `"danger"`.
 
 **The composites** are the parts of a page that have to be a page:
 `AppShell` and `Scroll` (the frame), `DataTable`'s `SortableTh` and
@@ -163,7 +175,9 @@ Two things follow from sharing the stylesheet:
 ## Peer dependencies
 
 You already have `react` and `react-dom`. `react-markdown` and
-`remark-gfm` come with `Markdown` and `MarkdownInline`.
+`remark-gfm` are used only by `Markdown` and `MarkdownInline`; they are
+optional peers, so install them if your page renders Markdown and not
+otherwise.
 
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never

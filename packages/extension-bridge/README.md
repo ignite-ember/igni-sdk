@@ -50,7 +50,14 @@ async function main() {
   // The extension's own backend, as the person signed in to igni.
   const notes = await bridge.rpc("ext.example.teamnotes.search", { query: "" });
 
-  render(notes);
+  // Draw it however your page draws: plain DOM here, React with @ignite-ember/ui-react.
+  const list = document.createElement("ul");
+  for (const note of notes as { title: string }[]) {
+    const item = document.createElement("li");
+    item.textContent = note.title;
+    list.append(item);
+  }
+  document.body.append(list);
 }
 
 main().catch((error) => {
@@ -226,6 +233,18 @@ keystroke.
 
 `bridge.close()` tells the host this surface is finished. `bridge.navigate(to)`
 asks the host app to navigate; it decides whether to.
+
+## Putting a built page in the extension
+
+An extension's page is the `ui/` directory of its package, and its entry is
+`ui/index.html`. A page built with a bundler goes there as files: build to
+`ui/` (or copy the output into it), keep the script and stylesheet as files
+(the page's CSP is `script-src 'self'`, so nothing may be inline), and make
+the asset URLs relative. With Vite that is `base: "./"` in `vite.config`.
+`igni ext init` writes a no-build page in `ui/`; replace it with the build.
+
+With TypeScript 6 or later, `import "@ignite-ember/ui-css"` type-checks
+because the stylesheet package ships a declaration for it (0.2.0 and later).
 
 ## The floor
 
