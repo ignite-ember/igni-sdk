@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 import pytest
+from pydantic import BaseModel
 from websockets.asyncio.server import ServerConnection, serve
 from websockets.datastructures import Headers
 from websockets.exceptions import InvalidStatus
@@ -158,6 +159,29 @@ async def test_a_streamed_gateway_call_carries_the_token_it_is_given_and_the_cal
     assert seen[0].headers["X-Trace"] == "9"
 
 
+class _Body(BaseModel):
+    command: str
+
+
+async def test_a_gateway_call_sends_its_body_model_as_json_and_none_without_one() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200)
+
+    fleet = _fleet(http=_gateway(handler))
+
+    await fleet.request("POST", "/v1/x", body=_Body(command="ls"))
+    await fleet.request("GET", "/v1/me")
+    async with fleet.stream("POST", "/v1/commands", "t-given", body=_Body(command="pwd")) as reply:
+        await reply.aread()
+
+    assert json.loads(seen[0].content) == {"command": "ls"}
+    assert seen[1].content == b""
+    assert json.loads(seen[2].content) == {"command": "pwd"}
+
+
 async def test_closing_a_fleet_closes_only_the_http_client_it_made() -> None:
     mine = _fleet()
     theirs = _gateway(lambda request: httpx.Response(200))
@@ -190,12 +214,21 @@ def _lock(project: Path, content: str) -> None:
         '{"port": null}',
         "[1, 2]",
         '"port"',
+        '{"port": 8765, "ws_token": 7}',
     ],
 )
 async def test_a_lockfile_that_does_not_hold_a_port_is_not_an_igni_lockfile(
     tmp_path: Path, content: str
 ) -> None:
     _lock(tmp_path, content)
+
+    with pytest.raises(Unavailable, match="backend.lock is not an igni lockfile"):
+        await Local(tmp_path).open()
+
+
+async def test_a_lockfile_that_is_not_text_is_not_an_igni_lockfile(tmp_path: Path) -> None:
+    (tmp_path / ".igni").mkdir()
+    (tmp_path / ".igni" / "backend.lock").write_bytes(b"\xff\xfe\xfa")
 
     with pytest.raises(Unavailable, match="backend.lock is not an igni lockfile"):
         await Local(tmp_path).open()
