@@ -13,7 +13,7 @@ import textwrap
 from pathlib import Path
 
 from tools.reference_area import Area
-from tools.ts_reference import Module, TsReference
+from tools.ts_reference import Module, TsReference, object_pattern_properties
 
 
 def package(root: Path, files: dict[str, str]) -> Path:
@@ -217,3 +217,115 @@ def test_every_leading_modifier_of_a_constructor_parameter_is_dropped_from_its_n
     assert '| `name` | — | `"x"` | What. |' in section
     assert "readonly" not in section
     assert "Not documented yet." not in section
+
+
+def test_a_props_pattern_lists_each_prop_by_the_name_a_caller_writes(tmp_path: Path) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export interface ButtonProps {
+              variant: "a" | "b";
+              size?: string;
+              label?: string;
+            }
+
+            /**
+             * A button.
+             * @param variant Which look.
+             * @param size How big.
+             */
+            export function Button({ variant, size = "m", label: shown, ...rest }: ButtonProps) {}
+            """
+        },
+    )
+    assert '| `variant` | `"a" \\| "b"` | required | Which look. |' in page
+    assert '| `size` | `string` | `"m"` | How big. |' in page
+    assert "| `label` | `string` | optional | Not documented yet. |" in page
+    assert "| `rest` | — | optional | Not documented yet. |" in page
+    table = page.split("## Button\n")[1].split("A button.")[0].split("```\n")[1]
+    assert "shown" not in table
+
+
+def test_a_props_pattern_with_no_interface_has_no_types_and_only_a_default_makes_it_optional(
+    tmp_path: Path,
+) -> None:
+    page = page_of(
+        tmp_path,
+        {"index.ts": 'export function Tag({ text, tone = "plain" }: TagProps) {}\n'},
+    )
+    assert "| `text` | — | optional | Not documented yet. |" in page
+    assert '| `tone` | — | `"plain"` | Not documented yet. |' in page
+
+
+def test_the_parameter_table_says_type_default_required_optional_or_undocumented(
+    tmp_path: Path,
+) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            /**
+             * Does it.
+             * @param a The first one,
+             *   over two lines.
+             * @param c With a default.
+             */
+            export function run(
+              a: Record<string, number>,
+              b?: (x: number, y: string) => void, // a comment, with a comma
+              c: number = 3,
+              d,
+            ): void {}
+            """
+        },
+    )
+    assert (
+        "```typescript\nfunction run(a: Record<string, number>, b?: (x: number, y: string) => void, c: number = 3, d): void\n```"
+        in page
+    )
+    assert "| `a` | `Record<string, number>` | required | The first one, over two lines. |" in page
+    assert "| `b` | `(x: number, y: string) => void` | optional | Not documented yet. |" in page
+    assert "| `c` | `number` | `3` | With a default. |" in page
+    assert "| `d` | — | required | Not documented yet. |" in page
+    assert "@param" not in page
+
+
+def test_a_function_with_no_parameters_has_no_table(tmp_path: Path) -> None:
+    page = page_of(tmp_path, {"index.ts": "/** Go. */\nexport function go(): void {}\n"})
+    assert "| Parameter" not in page
+
+
+def test_a_class_page_has_a_table_of_parameters_for_each_method_that_takes_some(
+    tmp_path: Path,
+) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export class Box {
+              /**
+               * Puts it in.
+               * @param value What goes in.
+               */
+              put(value: string, at?: number): void {}
+              /** Takes it out. */
+              take(): string { return ""; }
+            }
+            """
+        },
+    )
+    assert "### Box.put()" in page
+    assert "| `value` | `string` | required | What goes in. |" in page
+    assert "| `at` | `number` | optional | Not documented yet. |" in page
+    assert "### Box.take()" not in page
+
+
+def test_an_object_pattern_names_the_property_not_its_local_rename() -> None:
+    assert object_pattern_properties("{ base: givenBase, n = 2, label: l = 'x', ...others }") == [
+        ("base", "", False),
+        ("n", "2", False),
+        ("label", "'x'", False),
+        ("others", "", True),
+    ]
+    assert object_pattern_properties("{}") == []
