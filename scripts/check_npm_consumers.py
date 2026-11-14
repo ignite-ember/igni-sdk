@@ -35,6 +35,10 @@ ROOT = Path(__file__).resolve().parent.parent
 #: (``clients/ui``) is CSS and has nothing to compile.
 PACKAGES = ("packages/extension-bridge", "packages/ui-react")
 
+#: The stylesheet, packed and installed too: a page imports it for its effect,
+#: and TypeScript 6 and later fail a side-effect import that resolves to no types.
+STYLESHEET = "clients/ui"
+
 #: Where the scratch consumer is built. Inside the repository: see the
 #: module's docstring.
 SCRATCH = ROOT / ".tmp" / "npm-consumer"
@@ -48,6 +52,7 @@ import { connect, HostError, type Bridge } from "@ignite-ember/extension-bridge"
 import { BRIDGE_VERSION, type HostMessage } from "@ignite-ember/extension-bridge/protocol";
 import { applyThemeTokens, type ThemeTokens } from "@ignite-ember/extension-bridge/tokens";
 import { AppShell, Button, type ButtonProps } from "@ignite-ember/ui-react";
+import "@ignite-ember/ui-css";
 
 export async function main(): Promise<void> {
   const bridge: Bridge = await connect({ timeoutMs: 1000 });
@@ -74,6 +79,7 @@ TSCONFIG = {
         "strict": True,
         "noEmit": True,
         "skipLibCheck": True,
+        "noUncheckedSideEffectImports": True,
         "types": [],
     },
     "include": ["consumer.ts"],
@@ -131,10 +137,10 @@ def build() -> None:
             raise ConsumerError(f"{package} does not build:\n{done.stdout}{done.stderr}")
 
 
-def pack(destination: Path) -> dict[str, Path]:
+def pack(destination: Path, packages: tuple[str, ...] = PACKAGES) -> dict[str, Path]:
     """Pack each package the way npm publishes it, and name the tarballs."""
     tarballs: dict[str, Path] = {}
-    for package in PACKAGES:
+    for package in packages:
         done = run(
             ["npm", "pack", "--silent", "--pack-destination", str(destination)],
             cwd=ROOT / package,
@@ -258,6 +264,7 @@ def check() -> None:
     tarballs = pack(tarballs_dir)
     for package, tarball in tarballs.items():
         check_the_build_is_in_the_tarball(package, tarball)
+    tarballs.update(pack(tarballs_dir, (STYLESHEET,)))
     consumer = SCRATCH / "consumer"
     consumer.mkdir(parents=True)
     (consumer / "package.json").write_text(

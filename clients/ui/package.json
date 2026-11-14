@@ -24,13 +24,20 @@
   "type": "module",
   "files": [
     "igni-ui.css",
+    "igni-ui.d.ts",
     "README.md",
     "LICENSE",
     "NOTICE"
   ],
   "exports": {
-    ".": "./igni-ui.css",
-    "./igni-ui.css": "./igni-ui.css"
+    ".": {
+      "types": "./igni-ui.d.ts",
+      "default": "./igni-ui.css"
+    },
+    "./igni-ui.css": {
+      "types": "./igni-ui.d.ts",
+      "default": "./igni-ui.css"
+    }
   },
   "sideEffects": [
     "*.css"
