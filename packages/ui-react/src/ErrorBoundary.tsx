@@ -53,6 +53,12 @@ interface State {
   error: Error | null;
 }
 
+// Anything can be thrown. The fallback and `onError` are typed to get an
+// Error, and `null` held as the error would read as "nothing thrown".
+function toError(thrown: unknown): Error {
+  return thrown instanceof Error ? thrown : new Error(String(thrown));
+}
+
 function changed(a: readonly unknown[], b: readonly unknown[]): boolean {
   return a.length !== b.length || a.some((value, i) => !Object.is(value, b[i]));
 }
@@ -75,7 +81,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
    * @param error — the error the subtree threw.
    */
   static getDerivedStateFromError(error: Error): State {
-    return { error };
+    return { error: toError(error) };
   }
 
   /**
@@ -86,7 +92,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
    *   stack.
    */
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    this.props.onError?.(error, info);
+    this.props.onError?.(toError(error), info);
   }
 
   /**
