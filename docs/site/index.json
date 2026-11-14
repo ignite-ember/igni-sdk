@@ -7143,7 +7143,7 @@
       "package": "ui-react",
       "slug": "peer-dependencies",
       "title": "Peer dependencies",
-      "description": "You already have react and react-dom. react-markdown and remark-gfm are used only by Markdown and MarkdownInline; they are optional peers, so install them if your page renders Markdown and not otherwise.",
+      "description": "You already have react and react-dom. react-markdown and remark-gfm are peers too, and not optional: Markdown and MarkdownInline import them, and the package's entry exports both, so every import from…",
       "category": "guide",
       "order": 5,
       "file": "ui-react/peer-dependencies.md",
