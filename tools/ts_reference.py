@@ -669,6 +669,10 @@ class Module:
                 # Marked internal: not part of the surface a reader is
                 # looking at, and nothing is owed about it.
                 continue
+            if re.search(r"(?:^|\s)(?:private|protected)\s", modifiers):
+                # Private and protected: a caller outside the class cannot
+                # reach it, so it is not the API.
+                continue
             if re.search(r"(?:^|\s)(get|set)\s+$", modifiers):
                 out.append(Member(name, "accessor", _accessor_type(rest, modifiers), doc))
             elif rest.lstrip().startswith("="):
@@ -811,6 +815,14 @@ _KEYWORDS = frozenset(
 def _method_type(rest: str) -> str:
     """A method's type: its parameters and what it returns."""
     text = rest.strip()
+    # A method's own type parameters come before its parenthesis, and a
+    # caller needs them: ``call<T>(name) => Promise<T>``.
+    try:
+        generics, after_generics = _generic(text, 0)
+    except ReferenceError_:
+        return ""
+    generics = _tight_generics(generics)
+    text = text[after_generics:].lstrip()
     open_paren = text.find("(")
     if open_paren < 0:
         return ""
@@ -818,7 +830,7 @@ def _method_type(rest: str) -> str:
         params_end = _match_bracket(text, open_paren, "(", ")")
     except ReferenceError_:
         return ""
-    params = text[open_paren + 1 : params_end - 1]
+    params = _public_parameters(text[open_paren + 1 : params_end - 1])
     tail = text[params_end:]
     returns = ""
     arrow = re.match(r"\s*=>\s*([^{;]+?)\s*(?=\{|;|\Z)", tail, re.S)
@@ -828,8 +840,28 @@ def _method_type(rest: str) -> str:
         tail_match = re.match(r"\s*:\s*([^{;]+?)\s*(?=\{|;|\Z)", tail, re.S)
         if tail_match:
             returns = tail_match.group(1).strip()
-    one = f"({re.sub(r',\s*$', '', _one_line(_strip_comments(params)))})"
+    one = f"{generics}({re.sub(r',\s*$', '', _one_line(_strip_comments(params)))})"
     return f"{one} => {returns}" if returns else one
+
+
+#: A parameter a constructor keeps for itself: ``private env``.
+_HIDDEN_PARAMETER = re.compile(
+    r"^(?:(?:public|readonly|override|static|declare|async)\s+)*(?:private|protected)\s"
+)
+
+
+def _public_parameters(text: str) -> str:
+    """A parameter list without the ``private`` and ``protected`` parameters.
+
+    A constructor's ``private env`` is a field of the class and not
+    something a caller passes.
+    """
+    parts = [
+        part.strip()
+        for part in _split_top_level(_strip_comments(text))
+        if part.strip() and not _HIDDEN_PARAMETER.match(part.strip())
+    ]
+    return ", ".join(parts)
 
 
 def _arrow_type(rest: str) -> str:
@@ -985,7 +1017,7 @@ def signature_parameters(
     out: list[Parameter] = []
     for part in _split_top_level(text):
         part = part.strip()
-        if not part:
+        if not part or _HIDDEN_PARAMETER.match(part):
             continue
         # The first top-level ``=`` is the default: what is left of it is
         # the name, and its type when it has one.
@@ -1028,6 +1060,11 @@ def signature_parameters(
 def member_parameters_text(member: Member) -> str:
     """The parameters of a member's signature, as its type spells them."""
     text = member.type.strip()
+    try:
+        _, start = _generic(text, 0)
+    except ReferenceError_:
+        return ""
+    text = text[start:].lstrip()
     if not text.startswith("("):
         return ""
     try:
@@ -1377,7 +1414,8 @@ class TsReference:
             summary = cell(_summary(member.doc))
             if summary:
                 documented = True
-            rows.append(f"| `{member.name}` | {member.kind} | {type_} | {summary} |")
+            name = f"{member.name}?" if member.optional else member.name
+            rows.append(f"| `{name}` | {member.kind} | {type_} | {summary} |")
         if not documented:
             # No member says what it is: no column to say it in.
             rows = [row.rsplit("|", 2)[0].rstrip() + " |" for row in rows]

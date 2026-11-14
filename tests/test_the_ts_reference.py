@@ -182,7 +182,7 @@ def test_a_method_written_with_a_trailing_comma_is_shown_without_it(tmp_path: Pa
     )
     types = {m.name: m.type for m in parsed.declarations["Link"].members}
     assert types == {
-        "constructor": "(readonly url: string, private readonly env: { now?: () => number } = {})",
+        "constructor": "(readonly url: string)",
         "open": "(a: number, b: string) => void",
     }
 
@@ -240,7 +240,7 @@ def test_every_leading_modifier_of_a_constructor_parameter_is_dropped_from_its_n
                * @param base Where.
                * @param name What.
                */
-              constructor(protected readonly link: Link, private override base?: string, public name = "x") {}
+              constructor(public readonly link: Link, public override base?: string, public name = "x") {}
             }
             """
         },
@@ -426,6 +426,7 @@ def test_each_member_says_whether_it_is_a_field_a_method_or_an_accessor(tmp_path
           get size(): number { return 1; }
           set size(value: number) {}
           private async run(a: string): Promise<void> {}
+          protected shared = 1;
           inner: { a: number; b: string };
           /** @internal */
           secret: string;
@@ -436,10 +437,9 @@ def test_each_member_says_whether_it_is_a_field_a_method_or_an_accessor(tmp_path
     assert rows == [
         ("name", "field", "string", False),
         ("count", "field", "number", True),
-        ("create", "method", "(x: T) => Thing", False),
+        ("create", "method", "<T>(x: T) => Thing", False),
         ("size", "accessor", "number", False),
         ("size", "accessor", "value: number", False),
-        ("run", "method", "(a: string) => Promise<void>", False),
         ("inner", "field", "{ a: number; b: string }", False),
     ]
 
@@ -1066,3 +1066,82 @@ def test_a_pattern_annotated_with_an_inline_type_takes_its_types_and_requirednes
         ("name", "string", "", False),
         ("size", "number", "18", True),
     ]
+
+
+def test_private_and_protected_members_and_constructor_parameters_are_not_listed(
+    tmp_path: Path,
+) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export class Link {
+              /**
+               * Opens.
+               * @param url Where.
+               * @param ask The question.
+               * @param env The environment.
+               */
+              constructor(
+                readonly url: string,
+                private readonly ask: () => void,
+                protected env: string = "x",
+              ) {}
+              private held = 1;
+              protected fetching(): void {}
+              private async fresh(): Promise<void> {}
+              open(): void {}
+            }
+            """
+        },
+    )
+    section = page.split("## Link\n")[1]
+    assert "| `url` | `string` | required | Where. |" in section
+    assert "`ask`" not in section
+    assert "`env`" not in section
+    for hidden in ("held", "fetching", "fresh"):
+        assert f"| `{hidden}`" not in section
+    assert "| `open` | method |" in section
+    assert "| `constructor` | method | `(readonly url: string)` |" in section
+
+
+def test_an_optional_field_is_marked_optional_in_the_member_table(tmp_path: Path) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export interface Signal<T> {
+              /** The payload. */
+              carries?: T;
+              /** The name. */
+              name: string;
+            }
+            """
+        },
+    )
+    assert "| `carries?` | field | `T` | The payload. |" in page
+    assert "| `name` | field | `string` | The name. |" in page
+
+
+def test_a_method_keeps_its_type_parameters_in_its_signature(tmp_path: Path) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export class HostObject {
+              /**
+               * Calls.
+               * @param name What.
+               * @param params With.
+               */
+              call<T>(name: string, params: object): Promise<T> {}
+              pick<K extends keyof X, V = string>(key: K): V {}
+            }
+            """
+        },
+    )
+    assert "| `call` | method | `<T>(name: string, params: object) => Promise<T>` |" in page
+    assert "`<K extends keyof X, V = string>(key: K) => V`" in page
+    # The parameter table is still read through the type parameters.
+    assert "### HostObject.call()" in page
+    assert "| `name` | `string` | required | What. |" in page
