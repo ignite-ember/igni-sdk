@@ -8,7 +8,9 @@ so the reader is tested here on small sheets whose answer is known.
 
 from __future__ import annotations
 
-from tools.css_reference import CssReference, Stylesheet
+import pytest
+
+from tools.css_reference import CssError, CssReference, Stylesheet
 from tools.param_docs import UNDOCUMENTED
 
 
@@ -21,6 +23,27 @@ def _classes(sheet: str) -> list[tuple[str, str, tuple[str, ...], str]]:
         (section.title, rule.selector, rule.properties, rule.note)
         for section, rule in Stylesheet(sheet).classes()
     ]
+
+
+def test_a_sheet_with_no_markers_has_one_section_named_for_its_header() -> None:
+    # A later rule with no comment of its own does not erase the header.
+    sheet = "/* The header. */\n:root { --a: 1; color: red; }\n.x { color: blue; }"
+    assert [(s.title, s.note, s.rules) for s in Stylesheet(sheet).sections] == [
+        ("The stylesheet", "The header.", [])
+    ]
+
+
+def test_a_semicolon_inside_a_string_or_a_url_is_part_of_the_value() -> None:
+    sheet = """/* ── A ── */
+:root { --f: "a;b"; --u: url(data:image/png;base64,xx); --after: 1; }
+.x { background: url(data:image/png;base64,yy); content: ';'; color: red; }"""
+    assert _tokens(sheet) == [
+        ("--f", '"a;b"', ""),
+        ("--u", "url(data:image/png;base64,xx)", ""),
+        ("--after", "1", ""),
+    ]
+    ((_, _, properties, _),) = _classes(sheet)
+    assert properties == ("background", "content", "color")
 
 
 def test_users_of_a_token_are_the_classes_that_read_it_once_each() -> None:
@@ -66,3 +89,15 @@ def test_exactly_six_users_show_no_ellipsis() -> None:
     ).tokens_page()
     assert "`.c5` |" in page
     assert "…" not in page
+
+
+@pytest.mark.parametrize(
+    "sheet",
+    [
+        '/* ── A ── */ .a[title="x',
+        "/* ── A ── */ .a[title='x",
+    ],
+)
+def test_a_string_that_is_never_closed_is_refused_as_a_css_error(sheet: str) -> None:
+    with pytest.raises(CssError, match="string"):
+        Stylesheet(sheet)
