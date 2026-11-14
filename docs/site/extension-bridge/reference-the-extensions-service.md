@@ -59,7 +59,7 @@ How a socket says who it is, once it is open.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `authFrame` | field | `(token: string) => string` | The first frame, carrying the token. A browser's WebSocket cannot set an `Authorization` header, and a token in the URL ends up in access logs, so the token goes in the first frame. |
-| `protocols` | field | `string | string[]` | Sub-protocols, passed to the WebSocket as they are. |
+| `protocols` | field | `string \| string[]` | Sub-protocols, passed to the WebSocket as they are. |
 
 ## ServiceBridge
 
@@ -71,7 +71,7 @@ interface ServiceBridge
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `url` | field | `string | null` | The service's URL, or `null` when this extension has none a page may reach — then every other member rejects with `no_service`. |
+| `url` | field | `string \| null` | The service's URL, or `null` when this extension has none a page may reach — then every other member rejects with `no_service`. |
 | `token` | method | `() => Promise<string>` | A bearer token for the service. Kept until shortly before it expires and fetched again then; concurrent asks share one fetch. |
 | `fetch` | method | `(path: string, init?: RequestInit) => Promise<Response>` | `fetch` against the service, with the token. `path` is relative to `url`. A `401` fetches a new token and is sent once more. |
 | `websocket` | method | `(path: string, options?: ServiceSocketOptions) => Promise<WebSocket>` | A WebSocket to `path` on the service (`https` → `wss`), resolved once it is open and has said who it is (see `ServiceSocketOptions.authFrame`). |
@@ -122,9 +122,9 @@ class ServiceLink implements ServiceBridge
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `held` | field | `{ token: string; expiresAt: number } | null` | The token this link is holding, and when it stops being valid. |
-| `fetching` | field | `Promise<string> | null` | The fetch in flight, so two asks share one request to the host. |
-| `constructor` | method | `(readonly url: string | null, private readonly ask: () => Promise<IssuedToken>, private readonly env: { now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; } = {},)` | One link, for one frame. |
+| `held` | field | `{ token: string; expiresAt: number } \| null` | The token this link is holding, and when it stops being valid. |
+| `fetching` | field | `Promise<string> \| null` | The fetch in flight, so two asks share one request to the host. |
+| `constructor` | method | `(readonly url: string \| null, private readonly ask: () => Promise<IssuedToken>, private readonly env: { now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; } = {},)` | One link, for one frame. |
 | `token` | method | `() => Promise<string>` | A bearer token for the service. |
 | `fetch` | method | `(path: string, init: RequestInit = {}) => Promise<Response>` | `fetch` against the service, with the token. |
 | `websocket` | method | `(path: string, options: ServiceSocketOptions = {},) => Promise<WebSocket>` | A socket to the service, with the token in the first frame. |

@@ -75,7 +75,7 @@ What a `Status` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `state` | field | `"READY" | "PREPARING" | "DISABLED" | "FAILED"` | The four states the health contract defines. |
+| `state` | field | `"READY" \| "PREPARING" \| "DISABLED" \| "FAILED"` | The four states the health contract defines. |
 | `children` | field | `ReactNode` | What to show beside the dot. Defaults to the state itself. |
 
 ## Status

@@ -762,7 +762,7 @@ What a `Heading` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `level` | field | `1 | 2 | 3 | 4` | The outline level. Also picks the size, so they cannot disagree. |
+| `level` | field | `1 \| 2 \| 3 \| 4` | The outline level. Also picks the size, so they cannot disagree. |
 
 ## Heading
 

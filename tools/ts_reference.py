@@ -27,7 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from tools.param_docs import UNDOCUMENTED, code, jsdoc_params, strip_jsdoc_params, table
+from tools.param_docs import UNDOCUMENTED, cell, code, jsdoc_params, strip_jsdoc_params, table
 from tools.reference_area import Area
 
 
@@ -1317,8 +1317,8 @@ class TsReference:
         rows = []
         documented = False
         for member in members:
-            type_ = f"`{member.type}`" if member.type else "—"
-            summary = _summary(member.doc)
+            type_ = code(member.type) if member.type else "—"
+            summary = cell(_summary(member.doc))
             if summary:
                 documented = True
             rows.append(f"| `{member.name}` | {member.kind} | {type_} | {summary} |")

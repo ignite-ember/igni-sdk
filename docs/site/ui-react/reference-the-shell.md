@@ -57,7 +57,7 @@ What a `Scroll` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `axis` | field | `"y" | "x"` | Scroll sideways instead. A wide table, not a long list. |
+| `axis` | field | `"y" \| "x"` | Scroll sideways instead. A wide table, not a long list. |
 
 ## Scroll
 

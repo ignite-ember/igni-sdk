@@ -89,7 +89,7 @@ What a toast says and how long it stays.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `tone` | field | `Tone` | How loud it is. `danger` interrupts; the rest wait for a pause. |
-| `duration` | field | `number | null` | Milliseconds before it goes. `null` keeps it until dismissed, which is the default when there is an `action`. |
+| `duration` | field | `number \| null` | Milliseconds before it goes. `null` keeps it until dismissed, which is the default when there is an `action`. |
 | `action` | field | `ReactNode` | One thing to do about it. Keeps the toast until dismissed. |
 
 ## Toast

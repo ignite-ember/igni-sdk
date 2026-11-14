@@ -32,7 +32,7 @@ What a `Split` takes.
 |---|---|---|---|
 | `aside` | field | `ReactNode` | The fixed-width pane. |
 | `children` | field | `ReactNode` | The pane that takes what is left. |
-| `side` | field | `"start" | "end"` | Which side `aside` is on. Defaults to the left. |
+| `side` | field | `"start" \| "end"` | Which side `aside` is on. Defaults to the left. |
 | `defaultWidth` | field | `number` | Starting width of `aside`, in pixels. |
 | `min` | field | `number` | The narrowest `aside` may be, in pixels. |
 | `max` | field | `number` | The widest `aside` may be, in pixels — and never more than 60% of the window. |
@@ -199,8 +199,8 @@ Usage:
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `Line` | method | `({ width = "100%", height = 12, style, }: { width?: number | string; height?: number | string; style?: CSSProperties; })` | A line of placeholder text, the size of the line it stands in for. |
-| `Block` | method | `({ height = 64, width = "100%", style, }: { height?: number | string; width?: number | string; style?: CSSProperties; })` | A block of placeholder content, the size of the content it stands in for. |
+| `Line` | method | `({ width = "100%", height = 12, style, }: { width?: number \| string; height?: number \| string; style?: CSSProperties; })` | A line of placeholder text, the size of the line it stands in for. |
+| `Block` | method | `({ height = 64, width = "100%", style, }: { height?: number \| string; width?: number \| string; style?: CSSProperties; })` | A block of placeholder content, the size of the content it stands in for. |
 | `Circle` | method | `({ size = 24, style }: { size?: number; style?: CSSProperties })` | A circle, the size of the thing it stands in for. |
 | `Rows` | method | `({ count = 4, style }: { count?: number; style?: CSSProperties })` | Several lines of placeholder text, the shape of the list they stand in for. |
 
