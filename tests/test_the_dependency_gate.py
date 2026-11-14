@@ -493,6 +493,22 @@ def test_every_via_of_a_package_is_its_own_finding(
     assert [f.advisory for f in NpmAudit(tmp_path).findings()] == ["A", "B"]
 
 
+@pytest.mark.parametrize(
+    "label, expected",
+    [("info", "low"), ("low", "low"), ("moderate", "moderate"), ("high", "high"),
+     ("critical", "critical"), ("catastrophic", "unknown"), (None, "unknown")],
+)  # fmt: skip
+def test_npm_s_severities_are_read_into_the_gate_s_and_none_crashes_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, label: str | None, expected: str
+) -> None:
+    """``info`` is a severity npm reports and the gate has no rank for."""
+    via = {"url": "https://x/GHSA-aaaa", "severity": label}
+    stand_in(tmp_path, monkeypatch, "npm", npm_report({"left-pad": {"via": [via]}}))
+    [found] = NpmAudit(tmp_path).findings()
+    assert found.severity == expected
+    assert found.rank() == audit.SEVERITIES.index(expected)
+
+
 def test_npm_saying_nothing_is_no_findings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     stand_in(tmp_path, monkeypatch, "npm", "", code=0)
     assert NpmAudit(tmp_path).findings() == []

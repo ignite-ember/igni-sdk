@@ -128,6 +128,12 @@ class NpmAudit:
     def __init__(self, directory: Path) -> None:
         self.directory = directory
 
+    @staticmethod
+    def severity(label: object) -> str:
+        """npm's severity as the gate's: ``info`` is low; one it does not know is unknown."""
+        label = "low" if label == "info" else label
+        return label if isinstance(label, str) and label in SEVERITIES else "unknown"
+
     def findings(self) -> list[Finding]:
         # npm exits non-zero whenever it finds anything; the JSON is the answer.
         run = subprocess.run(
@@ -159,7 +165,7 @@ class NpmAudit:
                         version=via.get("range", vuln.get("range", "?")),
                         advisory=url.rsplit("/", 1)[-1] or str(via.get("source")),
                         aliases=(url,) if url else (),
-                        severity=via.get("severity", "unknown"),
+                        severity=self.severity(via.get("severity")),
                         title=via.get("title", ""),
                     )
                 )
