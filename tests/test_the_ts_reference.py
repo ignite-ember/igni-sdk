@@ -375,3 +375,55 @@ def test_a_field_type_written_over_several_lines_as_a_union_is_one_type(tmp_path
         "plain": "string",
         "next": "number",
     }
+
+
+# ── What each name says it is: member kinds and the member table ──
+
+
+def test_each_member_says_whether_it_is_a_field_a_method_or_an_accessor(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export class Thing {
+          /** Name. */
+          readonly name: string;
+          count?: number = 0;
+          static create<T>(x: T): Thing { return new Thing(); }
+          get size(): number { return 1; }
+          set size(value: number) {}
+          private async run(a: string): Promise<void> {}
+          inner: { a: number; b: string };
+          /** @internal */
+          secret: string;
+        }
+        """,
+    )
+    rows = [(m.name, m.kind, m.type, m.optional) for m in parsed.declarations["Thing"].members]
+    assert rows == [
+        ("name", "field", "string", False),
+        ("count", "field", "number", True),
+        ("create", "method", "(x: T) => Thing", False),
+        ("size", "accessor", "number", False),
+        ("size", "accessor", "value: number", False),
+        ("run", "method", "(a: string) => Promise<void>", False),
+        ("inner", "field", "{ a: number; b: string }", False),
+    ]
+
+
+def test_the_member_table_drops_its_description_column_when_no_member_says_what_it_is(
+    tmp_path: Path,
+) -> None:
+    undocumented = page_of(
+        tmp_path / "a",
+        {"index.ts": "export interface Opts {\n  a: string;\n  b?: number;\n}\n"},
+    )
+    assert "| Member | Kind | Type |\n|---|---|---|\n| `a` | field | `string` |\n" in undocumented
+    assert "What it is |\n|---|---|---|---|\n| `a`" not in undocumented
+    documented = page_of(
+        tmp_path / "b",
+        {"index.ts": "export interface Opts {\n  /** The a. */\n  a: string;\n  b: number;\n}\n"},
+    )
+    assert (
+        "| Member | Kind | Type | What it is |\n|---|---|---|---|\n"
+        "| `a` | field | `string` | The a. |\n| `b` | field | `number` |  |\n"
+    ) in documented
