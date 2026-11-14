@@ -2,27 +2,23 @@
  * @ignite-ember/ui-react — the components an extension is allowed to build on.
  *
  * This list is not a guess at what an extension might want. It is
- * what the first two extensions actually import. CodeIndex needs
- * none of it — its only app dependency is the client type, which is
- * why porting its panel behind the bridge cost one line. Artifacts
- * is 7,737 lines and imports exactly seven of the app's components,
- * measured rather than estimated.
+ * what the extensions actually import, measured rather than estimated.
  *
- * Seven was never the whole floor, though. Artifacts also writes
+ * Those components were never the whole floor, though. An extension also writes
  * `className="btn btn-primary"` by hand, and so would every
- * extension — the primitives existed as CSS and not as an API, which
+ * other — the primitives existed as CSS and not as an API, which
  * is no autocomplete, no way to learn a variant name short of
  * reading `theme.css`, and nothing to stop `btn-primery` shipping as
  * an invisible bug. `./primitives` closes that: thin typed wrappers
  * over classes the app already uses.
  *
- * They are React, not web components, because six of the seven are
+ * They are React, not web components, because most of them are
  * worse as web components: `MarkdownInline` and `RichFences` are a
  * react-markdown pipeline with remark and rehype plugins, and
  * `Tooltip` and `OverflowMenu` are positioning behaviour that wants
  * the light DOM. Rewriting those inside a shadow root would mean
  * maintaining a second implementation of something the app already
- * has — the drift this repository has been bitten by twice.
+ * has — the drift this repository has been bitten by.
  *
  * An extension runs in its own frame and bundles its own React, so
  * consuming a React package costs it nothing it was not already

@@ -90,10 +90,8 @@ they point in opposite directions:
   in a way we would have to warn you about.
 
 The list is deliberately short. It is not "everything an extension might
-want" — it is what the first two extensions actually import, measured
-rather than estimated. `CodeIndex` needs none of it; its only app
-dependency is the client type. `Artifacts` is 7,737 lines and imports
-exactly seven of the app's components.
+want" — it is what the extensions actually import, measured rather
+than estimated.
 
 Two rules decide whether something joins the floor, and both are checked
 by tests:
