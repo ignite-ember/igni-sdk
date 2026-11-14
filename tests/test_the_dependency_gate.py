@@ -367,6 +367,16 @@ def test_a_version_4_vector_is_scored_as_version_4() -> None:
     assert CargoAudit.severity(v4) == "critical"
 
 
+@pytest.mark.parametrize(
+    "vector", ["CVSS:3.1/AV:N", "CVSS:4.0/AV:N", "not a vector", "CVSS:3.1/AV:X/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"]
+)  # fmt: skip
+def test_a_vector_that_cannot_be_scored_stops_the_audit_instead_of_passing_as_unknown(
+    vector: str,
+) -> None:
+    with pytest.raises(SystemExit, match="cannot score the CVSS vector"):
+        CargoAudit.severity(vector)
+
+
 # ── The tools, as stand-ins on PATH ───────────────────────────────────────────
 
 
@@ -705,6 +715,16 @@ def test_main_refuses_an_ecosystem_that_is_not_npm_or_cargo(
     with pytest.raises(SystemExit) as stopped:
         run_main(monkeypatch, capsys, "pip", tmp_path)
     assert stopped.value.code == 2
+
+
+def test_main_refuses_a_directory_that_is_not_there_before_auditing_any(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stand_in(tmp_path, monkeypatch, "npm", npm_report({}))
+    with pytest.raises(SystemExit) as stopped:
+        run_main(monkeypatch, capsys, "npm", tmp_path, tmp_path / "absent")
+    assert stopped.value.code == 2
+    assert "absent is not a directory" in capsys.readouterr().err
 
 
 def test_main_judges_the_findings_of_all_the_directories_together(

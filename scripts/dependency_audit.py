@@ -188,14 +188,17 @@ class CargoAudit:
     def severity(vector: str | None) -> str:
         if not vector:
             return "unknown"
-        if vector.startswith("CVSS:4"):
-            from cvss import CVSS4
+        from cvss import CVSS3, CVSS4, CVSSError
 
-            label = CVSS4(vector).severity
-        else:
-            from cvss import CVSS3
-
-            label = CVSS3(vector).severities()[0]
+        try:
+            if vector.startswith("CVSS:4"):
+                label = CVSS4(vector).severity
+            else:
+                label = CVSS3(vector).severities()[0]
+        except CVSSError as error:
+            # Reported, not read as unknown: unknown never gates, and a vector
+            # nobody can score must not pass as one nobody scored.
+            raise SystemExit(f"cannot score the CVSS vector {vector!r}: {error}") from None
         label = label.lower()
         return {"medium": "moderate", "none": "low"}.get(label, label)
 
@@ -279,6 +282,9 @@ def main() -> int:
     parser.add_argument("--fail-on", choices=SEVERITIES[1:], default="critical")
     parser.add_argument("--allowlist", type=Path, default=DEFAULT_ALLOWLIST)
     args = parser.parse_args()
+    for directory in args.directories:
+        if not directory.is_dir():
+            parser.error(f"{directory} is not a directory")
 
     gate = Gate(Allowlist.load(args.allowlist), args.fail_on, dt.date.today())
     auditor = {"npm": NpmAudit, "cargo": CargoAudit}[args.ecosystem]
