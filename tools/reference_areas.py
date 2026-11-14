@@ -57,6 +57,7 @@ PYTHON_AREAS: Mapping[str, list[Area]] = {
                 "igni_service.testing",
                 "igni_service.testing_notifications",
                 "igni_service.testing_items",
+                "igni_service.testing_item_records",
                 "igni_service.testing_vm_rules",
                 "igni_service.testing_vm_profiles",
                 "igni_service.testing_bundles",

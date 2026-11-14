@@ -17,73 +17,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 
-from igni_service.agent_wire import ChatAction, ItemKind, ItemState, ServiceItemRequest
-from igni_service.events import Producer, ServiceEventRequest
-
-ALL_GRANTS: frozenset[str] = frozenset({"messages", "attachments", "chats"})
-"""Every grant a service's extension may declare in `permissions.service`."""
-
-
-class SentEvent(BaseModel):
-    """One item a service sent for a producer, as igni stored it."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
-
-    event_id: str
-    """The id igni gave it."""
-    org_id: str
-    """The organisation the service token named."""
-    client_id: str
-    """The service that sent it."""
-    producer: Producer
-    """Whose igni it is for."""
-    kind: ItemKind = "event"
-    """`event`, `message`, `chat` or `action`."""
-    type: str
-    """An event's type; for the other kinds, the kind."""
-    payload: dict[str, object] = Field(default_factory=dict)
-    """An event's payload."""
-    thread: str | None = None
-    """The chat thread it belongs to, if any."""
-    text: str | None = None
-    """A message's text."""
-    title: str | None = None
-    """A chat's title, or an action's new one."""
-    start_run: bool = True
-    """Whether a message starts a run (`Chat.queue` sends `False`)."""
-    action: ChatAction | None = None
-    """What an `action` item does to the chat."""
-    attachments: list[str] = Field(default_factory=list)
-    """The ids of the files it names."""
-    event_key: str | None = None
-    """The key it was sent with, if any."""
-    state: ItemState = "pending"
-    """Where it stands; `fake.agents.settle` moves it."""
-    created_at: datetime
-    """When the fake stored it."""
-    expires_at: datetime | None = None
-    """What the service asked for; the fake stores the sooner of that and the 14-day limit."""
-
-
-class Upload(BaseModel):
-    """One file a service uploaded."""
-
-    model_config = ConfigDict(use_attribute_docstrings=True)
-
-    attachment_id: str
-    """The id igni gave the file."""
-    client_id: str
-    """The service that uploaded it."""
-    filename: str
-    """Its name."""
-    content_type: str
-    """Its media type."""
-    data: bytes
-    """Its bytes."""
-    event_id: str | None = None
-    """The item that names it, once one does."""
+from igni_service.agent_wire import AttachmentStored, ItemState, ItemStatus, ServiceItemRequest
+from igni_service.events import EventAccepted, ServiceEventRequest
+from igni_service.testing_item_records import ALL_GRANTS, SentEvent, Upload
+from igni_service.testing_wire import DetailError
 
 
 class FakeAgents:
@@ -148,7 +87,7 @@ class FakeAgents:
         try:
             event = ServiceEventRequest.model_validate_json(body)
         except ValidationError as exc:
-            return httpx.Response(422, json={"detail": str(exc)})
+            return DetailError(detail=str(exc), status=422).to_response()
         return self._store(
             client_id,
             org_id,
@@ -176,7 +115,7 @@ class FakeAgents:
         try:
             item = ServiceItemRequest.model_validate_json(body)
         except ValidationError as exc:
-            return httpx.Response(422, json={"detail": str(exc)})
+            return DetailError(detail=str(exc), status=422).to_response()
         return self._store(
             client_id,
             org_id,
@@ -216,11 +155,11 @@ class FakeAgents:
         if "attachments" not in self.grants:
             return self._refused("service.attachments")
         if not filename or "/" in filename or "\\" in filename:
-            return httpx.Response(400, json={"detail": "filename must be a file name, not a path"})
+            return DetailError(detail="filename must be a file name, not a path").to_response()
         if not data:
-            return httpx.Response(400, json={"detail": "an attachment has no bytes"})
+            return DetailError(detail="an attachment has no bytes").to_response()
         if len(data) > self.max_bytes:
-            return httpx.Response(413, json={"detail": "too large"})
+            return DetailError(detail="too large", status=413).to_response()
         upload = Upload(
             attachment_id=f"att-{len(self.uploads) + 1}",
             client_id=client_id,
@@ -229,17 +168,15 @@ class FakeAgents:
             data=data,
         )
         self.uploads[upload.attachment_id] = upload
-        return httpx.Response(
-            201,
-            json={
-                "attachment_id": upload.attachment_id,
-                "filename": upload.filename,
-                "content_type": upload.content_type,
-                "size": len(data),
-                "sha256": hashlib.sha256(data).hexdigest(),
-                "expires_at": (self._now() + timedelta(days=1)).isoformat(),
-            },
+        stored = AttachmentStored(
+            attachment_id=upload.attachment_id,
+            filename=upload.filename,
+            content_type=upload.content_type,
+            size=len(data),
+            sha256=hashlib.sha256(data).hexdigest(),
+            expires_at=self._now() + timedelta(days=1),
         )
+        return self._answer(201, stored)
 
     def status(self, event_id: str, client_id: str) -> httpx.Response:
         """Answer `GET /v1/service-events/{event_id}` as igni does. Called by the fake's router.
@@ -252,30 +189,8 @@ class FakeAgents:
         """
         for item in self.items:
             if item.event_id == event_id and item.client_id == client_id:
-                return httpx.Response(
-                    200,
-                    json={
-                        "event_id": item.event_id,
-                        "producer": item.producer.model_dump(),
-                        "kind": item.kind,
-                        "type": item.type,
-                        "thread": item.thread,
-                        "event_key": item.event_key,
-                        "state": item.state,
-                        "dropped_reason": None,
-                        "failed_reason": "undeliverable" if item.state == "failed" else None,
-                        "not_handled_reason": (
-                            f"no handler for {item.type}" if item.state == "not_handled" else None
-                        ),
-                        "created_at": item.created_at.isoformat(),
-                        "expires_at": (
-                            item.expires_at or item.created_at + timedelta(days=14)
-                        ).isoformat(),
-                        "delivered_at": None,
-                        "updated_at": self._now().isoformat(),
-                    },
-                )
-        return httpx.Response(404, json={"detail": "No such event from this service"})
+                return self._answer(200, self._status_of(item))
+        return DetailError(detail="No such event from this service", status=404).to_response()
 
     # ── igni's rules ────────────────────────────────────────────────
 
@@ -284,7 +199,9 @@ class FakeAgents:
         if missing:
             return self._refused(", ".join(f"service.{grant}" for grant in missing))
         if sent.producer.kind == "person" and not self._is_member(org_id, sent.producer.id):
-            return httpx.Response(404, json={"detail": "no such producer in this organisation"})
+            return DetailError(
+                detail="no such producer in this organisation", status=404
+            ).to_response()
         if sent.event_key:
             for held in self.items:
                 if (held.org_id, held.producer, held.event_key) == (
@@ -292,30 +209,42 @@ class FakeAgents:
                     sent.producer,
                     sent.event_key,
                 ):
-                    return httpx.Response(
-                        202,
-                        json={
-                            "event_id": held.event_id,
-                            "duplicate": True,
-                            "expires_at": held.expires_at.isoformat() if held.expires_at else None,
-                        },
-                    )
+                    return self._accepted(held, duplicate=True)
         files = [self.uploads.get(a) for a in sent.attachments]
         if any(f is None or f.client_id != client_id or f.event_id is not None for f in files):
-            return httpx.Response(400, json={"detail": "an attachment is not this service's"})
+            return DetailError(detail="an attachment is not this service's").to_response()
         stored = sent.model_copy(
             update={"event_id": f"ev-{len(self.items) + 1}", "expires_at": self._expiry(sent)}
         )
         for name in sent.attachments:
             self.uploads[name] = self.uploads[name].model_copy(update={"event_id": stored.event_id})
         self.items.append(stored)
-        return httpx.Response(
-            202,
-            json={
-                "event_id": stored.event_id,
-                "duplicate": False,
-                "expires_at": stored.expires_at.isoformat() if stored.expires_at else None,
-            },
+        return self._accepted(stored, duplicate=False)
+
+    def _accepted(self, held: SentEvent, *, duplicate: bool) -> httpx.Response:
+        """igni's 202 for a stored item: its id and the expiry `_store` kept for it."""
+        accepted = EventAccepted(
+            event_id=held.event_id, duplicate=duplicate, expires_at=held.expires_at
+        )
+        return self._answer(202, accepted)
+
+    def _status_of(self, item: SentEvent) -> ItemStatus:
+        """What igni reports of a stored item; `_store` always kept its expiry."""
+        return ItemStatus(
+            event_id=item.event_id,
+            producer=item.producer,
+            kind=item.kind,
+            type=item.type,
+            thread=item.thread,
+            event_key=item.event_key,
+            state=item.state,
+            failed_reason="undeliverable" if item.state == "failed" else None,
+            not_handled_reason=(
+                f"no handler for {item.type}" if item.state == "not_handled" else None
+            ),
+            created_at=item.created_at,
+            expires_at=item.expires_at,
+            updated_at=self._now(),
         )
 
     @staticmethod
@@ -342,9 +271,14 @@ class FakeAgents:
 
     @staticmethod
     def _refused(grants: str) -> httpx.Response:
-        return httpx.Response(
-            403, json={"detail": f"the extension does not declare {grants} in permissions.service"}
-        )
+        return DetailError(
+            detail=f"the extension does not declare {grants} in permissions.service", status=403
+        ).to_response()
+
+    @staticmethod
+    def _answer(status: int, body: BaseModel) -> httpx.Response:
+        """`body` as igni answers it, with `status`."""
+        return httpx.Response(status, json=body.model_dump(mode="json"))
 
     def _now(self) -> datetime:
         return datetime.fromtimestamp(self._clock(), UTC)

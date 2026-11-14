@@ -50,6 +50,11 @@ def upload(
     return fake.upload(client_id=client, filename=filename, content_type=content_type, data=data)
 
 
+def on_the_wire(moment: datetime) -> str:
+    """A UTC time as igni's JSON writes it: ISO 8601 with `Z`."""
+    return moment.isoformat().replace("+00:00", "Z")
+
+
 def detail(response: httpx.Response) -> tuple[int, str]:
     return response.status_code, response.json()["detail"]
 
@@ -70,7 +75,7 @@ def test_a_plain_event_is_stored_with_its_fields_and_answered_202() -> None:
 
     assert (answer.status_code, answer.json()) == (
         202,
-        {"event_id": "ev-1", "duplicate": False, "expires_at": "2023-11-28T22:13:20+00:00"},
+        {"event_id": "ev-1", "duplicate": False, "expires_at": "2023-11-28T22:13:20Z"},
     )
     (stored,) = fake.items
     assert (stored.event_id, stored.org_id, stored.client_id) == ("ev-1", ORG, "c-1")
@@ -235,7 +240,7 @@ def test_an_upload_is_kept_and_answered_with_its_id_size_digest_and_a_day_of_lif
         "content_type": "text/plain",
         "size": 5,
         "sha256": hashlib.sha256(b"hello").hexdigest(),
-        "expires_at": (datetime.fromtimestamp(NOW, UTC) + timedelta(days=1)).isoformat(),
+        "expires_at": on_the_wire(datetime.fromtimestamp(NOW, UTC) + timedelta(days=1)),
     }
     kept = fake.uploads["att-1"]
     assert (kept.client_id, kept.data, kept.content_type, kept.event_id) == (
@@ -349,10 +354,10 @@ def test_the_status_of_an_item_is_its_state_and_its_fourteen_days() -> None:
         "dropped_reason": None,
         "failed_reason": None,
         "not_handled_reason": None,
-        "created_at": created.isoformat(),
-        "expires_at": (created + timedelta(days=14)).isoformat(),
+        "created_at": on_the_wire(created),
+        "expires_at": on_the_wire(created + timedelta(days=14)),
         "delivered_at": None,
-        "updated_at": created.isoformat(),
+        "updated_at": on_the_wire(created),
     }
 
 

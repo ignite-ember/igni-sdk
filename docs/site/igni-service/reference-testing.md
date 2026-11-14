@@ -2,7 +2,7 @@
 
 # igni_service.testing
 
-Read from the code: every public name below, its signature and its docstring. Import `igni_service.testing` — defined in `igni_service.bundle.archive`, `igni_service.testing`, `igni_service.testing_bundles`, `igni_service.testing_claims`, `igni_service.testing_directory`, `igni_service.testing_items`, `igni_service.testing_notifications`, `igni_service.testing_seams`, `igni_service.testing_sessions`, `igni_service.testing_settings`, `igni_service.testing_vm_profiles`, `igni_service.testing_vm_rules`, `igni_service.testing_wire`, `igni_service.urls`.
+Read from the code: every public name below, its signature and its docstring. Import `igni_service.testing` — defined in `igni_service.bundle.archive`, `igni_service.testing`, `igni_service.testing_bundles`, `igni_service.testing_claims`, `igni_service.testing_directory`, `igni_service.testing_item_records`, `igni_service.testing_items`, `igni_service.testing_notifications`, `igni_service.testing_seams`, `igni_service.testing_sessions`, `igni_service.testing_settings`, `igni_service.testing_vm_profiles`, `igni_service.testing_vm_rules`, `igni_service.testing_wire`, `igni_service.urls`.
 
 | Name | What it is |
 |---|---|
