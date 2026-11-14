@@ -167,6 +167,16 @@ async def test_the_service_tool_asks_to_sign_in_when_nobody_is(
     assert reached == []
 
 
+async def test_the_service_tool_says_so_in_a_development_install_with_no_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _fresh({}, monkeypatch)  # a development install: igni gives it no service URL
+    async with HostHarness(module.ext) as host:
+        result = await host.call("ticket_from_service", {"ticket_id": "T-1001"}, caller=ADA)
+    assert not result.is_error
+    assert result.content[0].text == "The ticket service is not set up for this install."
+
+
 async def test_the_service_tool_fails_when_the_service_does(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
