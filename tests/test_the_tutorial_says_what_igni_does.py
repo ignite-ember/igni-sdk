@@ -119,3 +119,17 @@ def test_step_7_says_the_first_run_writes_igni_s_project_files() -> None:
     assert "it writes `igni.md` and a `.igni/` directory" in section
     assert "QUICKSTART.md#first-run" in section
     assert "`igni-service-bundle` reads only `extension/`" in section
+
+
+def test_the_example_s_readme_says_the_untrusted_notice_is_not_about_the_extension() -> None:
+    """Every run in the example's directory prints the untrusted-folder notice,
+    "… hooks … are off", while the extension's PostToolUse hook still runs: a
+    reader of 'Run it' took it to mean the audit hook did not."""
+    readme = (REPO / "examples" / "ticket-lookup" / "README.md").read_text(encoding="utf-8")
+    run_it = " ".join(readme[readme.index("## Run it") :].split("\n## ", 1)[0].split())
+    manifest = (REPO / "examples" / "ticket-lookup" / "extension" / "manifest.json").read_text()
+
+    assert "PostToolUse" in manifest
+    assert "is not trusted" in run_it
+    assert "`PostToolUse` audit hook" in run_it
+    assert "tool-audit.log" in run_it

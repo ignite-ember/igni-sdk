@@ -42,6 +42,15 @@ IGNI_DEV_EXTENSIONS=1 igni ext install extension   # installs a copy (--replace 
 IGNI_DEV_EXTENSIONS=1 igni --read-only -m "What is the status of ticket T-1001?"
 ```
 
+Each run here starts with a line like *"igni: …/ticket-lookup is not
+trusted — its project tools, hooks, … are off"*. That is about this folder's
+own `.igni/` settings, not the extension: the extension's tools and its
+`PostToolUse` audit hook are the installed extension's, and they run — the
+hook's lines land in `~/.igni/extensions/.data/acme.tickets/tool-audit.log`.
+The first run also writes `igni.md` and a `.igni/` directory here, as igni's
+first run in any folder does; they are igni's, not the example's, and
+`igni-service-bundle` never reads them (delete them before committing).
+
 Shipped the way it reaches other people — bundled, uploaded by its
 service, approved and switched on in igni's portal, synced — it needs
 igni server: the tutorial's steps
