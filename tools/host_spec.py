@@ -51,10 +51,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, model_validator
 
 #: A member or object name: lowercase, underscores.
-NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 
 #: An object path: names joined by dots (``chat.approvals``).
-PATH = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$")
+PATH = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*\Z")
 
 #: The scalar type words.
 SCALARS = frozenset({"str", "int", "float", "bool", "None", "json"})
@@ -112,7 +112,7 @@ class TypeSpec(Strict):
 
     @model_validator(mode="after")
     def _named(self) -> TypeSpec:
-        if not re.match(r"^[A-Z][A-Za-z0-9]*$", self.name):
+        if not re.match(r"[A-Z][A-Za-z0-9]*\Z", self.name):
             raise ValueError(f"type {self.name!r} must be PascalCase")
         return self
 
@@ -317,10 +317,11 @@ class HostSchema(Strict):
                 check_type(f"{t.name}.{f.name}", f.type)
 
         for spec in self.objects:
+            owner = spec.path or "the root object"
             if spec.path and not PATH.match(spec.path):
                 problems.append(f"object path {spec.path!r} is not dotted lowercase")
             if spec.permission is not None and spec.permission not in permissions:
-                problems.append(f"{spec.path}: permission {spec.permission!r} is not declared")
+                problems.append(f"{owner}: permission {spec.permission!r} is not declared")
             seen: set[str] = set()
             signal_names = {s.name for s in spec.signals}
             for group in (spec.properties, spec.signals, spec.methods):
@@ -337,7 +338,7 @@ class HostSchema(Strict):
                     if own is not None and own not in permissions:
                         problems.append(f"{where}: permission {own!r} is not declared")
             for prop in spec.properties:
-                where = f"{spec.path}.{prop.name}"
+                where = f"{spec.path}.{prop.name}" if spec.path else prop.name
                 check_type(where, prop.type)
                 if not prop.constant and not prop.changed_by:
                     problems.append(
@@ -362,9 +363,9 @@ class HostSchema(Strict):
                     problems.append(f"{where}: wire name {wire!r} also used by {wires[wire]}")
                 wires[wire] = where
             if spec.per_window and spec.per_session:
-                problems.append(f"{spec.path}: belongs to a window or a session, not both")
+                problems.append(f"{owner}: belongs to a window or a session, not both")
             for method in spec.methods:
-                where = f"{spec.path}.{method.name}"
+                where = f"{spec.path}.{method.name}" if spec.path else method.name
                 check_type(where, method.result)
                 if method.elsewhere is not None:
                     if not spec.per_session:
