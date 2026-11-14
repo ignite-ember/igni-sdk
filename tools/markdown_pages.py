@@ -73,15 +73,15 @@ def strip_comments(text: str) -> str:
     lines = text.split("\n")
     in_comment = False
     for line, code in fenced(lines):
-        if code and not in_comment:
-            out.append(line)
-            continue
         if in_comment:
-            if "-->" in line:
-                in_comment = False
-                rest = line.split("-->", 1)[1]
-                if rest.strip():
-                    out.append(rest)
+            if "-->" not in line:
+                continue
+            in_comment = False
+            line = line.split("-->", 1)[1]
+            if not line.strip():
+                continue
+        elif code:
+            out.append(line)
             continue
         line = re.sub(r"<!--.*?-->", "", line)
         if "<!--" in line:

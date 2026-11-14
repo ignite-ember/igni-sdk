@@ -167,3 +167,7 @@ def test_trailing_hashes_of_a_heading_are_not_part_of_its_text() -> None:
     pages = ReadmePages("# Title #\n\n## One ##\n\n### Deep ###  \n", "p/README.md")
     assert pages.title == "Title"
     assert [h.text for h in pages.headings] == ["Title", "One", "Deep"]
+
+
+def test_a_comment_closing_and_opening_again_on_one_line_is_all_removed() -> None:
+    assert strip_comments("a <!-- x\ny --> b <!-- z --> c <!-- w\nv --> d") == "a \n b  c \n d"
