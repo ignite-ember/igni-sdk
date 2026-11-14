@@ -8,7 +8,14 @@ the shapes a docstring can take.
 
 from __future__ import annotations
 
-from tools.param_docs import UNDOCUMENTED, python_args, strip_python_args
+from tools.param_docs import (
+    UNDOCUMENTED,
+    jsdoc_lines,
+    jsdoc_params,
+    python_args,
+    strip_jsdoc_params,
+    strip_python_args,
+)
 
 # ── Python: the Args: section ──
 
@@ -77,3 +84,56 @@ def test_stripping_args_at_the_end_or_the_start_or_twice() -> None:
 
 def test_what_the_table_says_of_a_parameter_nothing_documents() -> None:
     assert UNDOCUMENTED == "Not documented yet."
+
+
+# ── TypeScript: the @param lines ──
+
+
+def test_jsdoc_lines_drop_the_comment_marks() -> None:
+    doc = "/**\n * One.\n *\n * @param a — two.\n */"
+    assert jsdoc_lines(doc) == ["", "One.", "", "@param a — two.", " "]
+    assert jsdoc_lines("/* one */") == [" one "]
+    assert jsdoc_lines("/** one") == [" one"]
+    assert jsdoc_lines("bare\n * text") == ["bare", "text"]
+
+
+def test_param_names_the_parameter_and_what_it_is_with_or_without_a_dash() -> None:
+    doc = "/**\n * @param a — em dash.\n * @param b – en dash.\n * @param c - hyphen.\n * @param d none.\n */"
+    assert jsdoc_params(doc) == {
+        "a": "em dash.",
+        "b": "en dash.",
+        "c": "hyphen.",
+        "d": "none.",
+    }
+
+
+def test_param_reads_a_type_and_names_with_dollars_and_underscores() -> None:
+    doc = "/**\n * @param {string} $el - Element.\n * @param {Map<string, number>} _x - Map.\n */"
+    assert jsdoc_params(doc) == {"$el": "Element.", "_x": "Map."}
+
+
+def test_a_param_runs_over_until_a_blank_line_or_the_next_tag() -> None:
+    doc = (
+        "/**\n * @param a - one\n *   and two\n * @param b - three\n * @returns r\n"
+        " * more of returns\n * @param c - four\n *\n * after blank\n */"
+    )
+    assert jsdoc_params(doc) == {"a": "one and two", "b": "three", "c": "four"}
+
+
+def test_the_same_param_twice_says_both_and_a_doc_with_none_says_nothing() -> None:
+    assert jsdoc_params("/** @param a - x\n * @param a - y */") == {"a": "x y"}
+    assert jsdoc_params("/** Text only. */") == {}
+    assert jsdoc_params("") == {}
+
+
+def test_stripping_params_leaves_the_description_and_the_other_tags() -> None:
+    doc = (
+        "/**\n * Does it.\n *\n * @param a - one\n *   and more\n * @param b - two\n"
+        " * @returns The result.\n */"
+    )
+    assert strip_jsdoc_params(doc) == "Does it.\n\n@returns The result."
+
+
+def test_stripping_params_keeps_prose_after_a_blank_line() -> None:
+    doc = "/**\n * Top.\n * @param a - one\n *\n * Later prose.\n */"
+    assert strip_jsdoc_params(doc) == "Top.\n\nLater prose."
