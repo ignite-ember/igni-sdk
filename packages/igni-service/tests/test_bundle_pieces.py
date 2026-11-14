@@ -443,7 +443,10 @@ class TestFillingTheWheelhouse:
         extension = write_extension(tmp_path / "extension", dependencies=[])
 
         assert wheelhouse(extension, index).platform_notes() == []
-        assert wheelhouse(extension, index, platforms=reversed(PLATFORMS)).platform_notes() == []
+        assert (
+            wheelhouse(extension, index, platforms=tuple(reversed(PLATFORMS))).platform_notes()
+            == []
+        )
 
     def test_some_platforms_only_are_named_and_the_others_said_unable(
         self, tmp_path: Path, index: Path
