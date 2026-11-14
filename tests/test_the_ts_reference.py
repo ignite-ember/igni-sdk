@@ -175,3 +175,45 @@ def test_a_method_written_with_a_trailing_comma_is_shown_without_it(tmp_path: Pa
         "constructor": "(readonly url: string, private readonly env: { now?: () => number } = {})",
         "open": "(a: number, b: string) => void",
     }
+
+
+# ── Parameters: modifiers, patterns, the table ──
+
+
+def page_of(root: Path, files: dict[str, str], link: object = None) -> str:
+    src = package(root, files)
+    reference = TsReference(
+        "p",
+        src,
+        [Area("all", "All", ("index.ts",))],
+        link=link,  # type: ignore[arg-type]
+    )
+    page, _ = reference.page(reference.areas[0])
+    return page
+
+
+def test_every_leading_modifier_of_a_constructor_parameter_is_dropped_from_its_name(
+    tmp_path: Path,
+) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            export class Client {
+              /**
+               * Connects.
+               * @param link The link.
+               * @param base Where.
+               * @param name What.
+               */
+              constructor(protected readonly link: Link, private override base?: string, public name = "x") {}
+            }
+            """
+        },
+    )
+    section = page.split("### Client.constructor()")[1]
+    assert "| `link` | `Link` | required | The link. |" in section
+    assert "| `base` | `string` | optional | Where. |" in section
+    assert '| `name` | — | `"x"` | What. |' in section
+    assert "readonly" not in section
+    assert "Not documented yet." not in section
