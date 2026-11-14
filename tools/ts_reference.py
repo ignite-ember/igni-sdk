@@ -79,13 +79,18 @@ class Declaration:
 _IDENT = re.compile(r"[A-Za-z_$][\w$]*")
 
 #: A member of an interface or a class: a name, and a ``(``, a ``<`` or a
-#: ``:`` after it, at the start of a line.
+#: ``:`` after it, at the start of a line — or an ``=`` giving it a value,
+#: which is a member only when the value is an arrow function.
 _MEMBER_START = re.compile(
     r"^[ \t]*((?:(?:public|private|protected|readonly|static|abstract|declare|override"
     r"|async|get|set)\s+)*)"
-    r"([A-Za-z_$][\w$]*)\s*\??\s*(?=[(:<])",
+    r"([A-Za-z_$][\w$]*)\s*\??\s*(?=[(:<]|=(?![=>]))",
     re.M,
 )
+
+#: What an arrow function written as a field's value starts with: ``async``,
+#: type parameters, then a parenthesis — or a lone parameter and the arrow.
+_ARROW_START = re.compile(r"=\s*(?:async\s+)?(?:<|\(|[A-Za-z_$][\w$]*\s*=>)")
 
 
 #: The characters a regular expression literal can follow: an expression
@@ -653,6 +658,12 @@ class Module:
                 continue
             if line < len(depths) and depths[line] != 0:
                 continue
+            if body[match.end() :].lstrip().startswith("=") and not _is_arrow_value(
+                body[match.end() :]
+            ):
+                # A field given a plain value — ``static readonly PATH = "/x"`` —
+                # is a constant, not something to call.
+                continue
             seen_lines.add(line)
             starts.append(match)
         out: list[Member] = []
@@ -676,7 +687,7 @@ class Module:
             if re.search(r"(?:^|\s)(get|set)\s+$", modifiers):
                 out.append(Member(name, "accessor", _accessor_type(rest, modifiers), doc))
             elif rest.lstrip().startswith("="):
-                out.append(Member(name, "field", _arrow_type(rest), doc))
+                out.append(Member(name, "method", _arrow_type(rest), doc))
             elif rest.lstrip().startswith("(") or rest.lstrip().startswith("<"):
                 out.append(Member(name, "method", _method_type(rest), doc))
             else:
@@ -864,12 +875,78 @@ def _public_parameters(text: str) -> str:
     return ", ".join(parts)
 
 
+def _is_arrow_value(rest: str) -> bool:
+    """Whether ``= ...`` gives a field an arrow function, and not another value."""
+    text = rest.lstrip()
+    if not _ARROW_START.match(text):
+        return False
+    text = text[1:].lstrip()
+    if text.startswith("async"):
+        text = text[5:].lstrip()
+    if not text.startswith(("(", "<")):
+        return True
+    try:
+        generics, after = _generic(text, 0)
+        text = text[after:].lstrip()
+        if not text.startswith("("):
+            return False
+        text = text[_match_bracket(text, 0, "(", ")") :]
+    except ReferenceError_:
+        return False
+    return _top_level_arrow(text) >= 0
+
+
+def _top_level_arrow(text: str) -> int:
+    """Where the ``=>`` that ends an arrow function's head is: right after the
+    parameters, or after the ``: Type`` that follows them. ``-1`` when none."""
+    stripped = text.lstrip()
+    offset = len(text) - len(stripped)
+    if stripped.startswith("=>"):
+        return offset
+    if not stripped.startswith(":"):
+        return -1
+    depth = 0
+    for index, char in enumerate(stripped):
+        if char in "([{<":
+            depth += 1
+        elif char in ")]}" or char == ">" and stripped[index - 1 : index] != "=":
+            depth -= 1
+        elif depth == 0 and stripped[index : index + 2] == "=>":
+            return offset + index
+        elif depth == 0 and char in ";\n":
+            return -1
+    return -1
+
+
 def _arrow_type(rest: str) -> str:
-    """A field's own arrow function: ``= (value: T) => void``."""
+    """A field's own arrow function: ``= (value: T) => void``.
+
+    Its parameters and the return type it declares. What follows the arrow
+    is the function's body, which is not a type.
+    """
     text = rest.strip()
     if text.startswith("="):
         text = text[1:].strip()
-    return _method_type(text)
+    if text.startswith("async"):
+        text = text[5:].lstrip()
+    lone = re.match(r"([A-Za-z_$][\w$]*)\s*=>", text)
+    if lone:
+        return f"({lone.group(1)})"
+    try:
+        generics, after_generics = _generic(text, 0)
+        text = text[after_generics:].lstrip()
+        params_end = _match_bracket(text, 0, "(", ")")
+    except ReferenceError_:
+        return ""
+    params = _public_parameters(text[1 : params_end - 1])
+    tail = text[params_end:]
+    arrow = _top_level_arrow(tail)
+    returns = ""
+    if arrow >= 0:
+        head = tail[:arrow].strip()
+        returns = head[1:].strip() if head.startswith(":") else ""
+    one = f"{_tight_generics(generics)}({re.sub(r',\s*$', '', _one_line(_strip_comments(params)))})"
+    return f"{one} => {returns}" if returns else one
 
 
 def _accessor_type(rest: str, modifiers: str) -> str:

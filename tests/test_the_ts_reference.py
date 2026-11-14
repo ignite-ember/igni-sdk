@@ -444,6 +444,38 @@ def test_each_member_says_whether_it_is_a_field_a_method_or_an_accessor(tmp_path
     ]
 
 
+def test_a_field_given_an_arrow_function_is_a_method_and_a_constant_is_not_listed(
+    tmp_path: Path,
+) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export class Button {
+          static readonly PATH = "/button";
+          static readonly LIMIT = (2 + 3) * 4;
+          readonly cache = new Map<string, number>();
+          /** Clicked. */
+          onClick = () => this.count++;
+          handle = async (x: Item, y?: number): Promise<Result> => {
+            return run(x);
+          };
+          wrap = <T,>(value: T): T => value;
+          pick = item => item.id;
+          label: string = "x";
+        }
+        """,
+    )
+    rows = [(m.name, m.kind, m.type) for m in parsed.declarations["Button"].members]
+    assert rows == [
+        ("onClick", "method", "()"),
+        ("handle", "method", "(x: Item, y?: number) => Promise<Result>"),
+        ("wrap", "method", "<T,>(value: T) => T"),
+        ("pick", "method", "(item)"),
+        ("label", "field", "string"),
+    ]
+    assert "Clicked." in parsed.declarations["Button"].members[0].doc
+
+
 def test_the_member_table_drops_its_description_column_when_no_member_says_what_it_is(
     tmp_path: Path,
 ) -> None:
