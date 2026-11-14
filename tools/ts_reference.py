@@ -370,7 +370,7 @@ def _summary(doc: str) -> str:
         return out
     cut = out[:200]
     end = max(cut.rfind(". "), cut.rfind("; "))
-    return cut[: end + 1] if end > 60 else cut.rsplit(" ", 1)[0] + "…"
+    return cut[: end + 1] if end > 40 else cut.rsplit(" ", 1)[0] + "…"
 
 
 def _one_line(text: str) -> str:
@@ -597,7 +597,7 @@ class Module:
         elif kind == "type":
             end = _type_end(after, generics_end)
             value = after[generics_end:end].strip().lstrip("=").strip().rstrip(";").strip()
-            signature = f"type {name}{generics} = {_one_line(value).lstrip('| ')}"
+            signature = f"type {name}{generics} = {_one_line(_strip_comments(value)).lstrip('| ')}"
         else:
             end = _statement_end(after, 0)
             text = after[:end].strip().rstrip(";").strip()
