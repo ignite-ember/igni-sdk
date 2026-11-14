@@ -6,6 +6,7 @@ each test decides what igni answers, call by call.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -251,6 +252,19 @@ def test_a_payload_may_be_exactly_the_limit_as_json_and_not_one_more() -> None:
 
     with pytest.raises(ValidationError, match="at most 65536 bytes"):
         event(payload={"a": "x" * (MAX_PAYLOAD_BYTES - 8)})
+
+
+def test_a_payload_is_measured_as_igni_measures_it_with_non_ascii_escaped() -> None:
+    # json.dumps writes a CJK character as a six-character escape, `\\u4e2d`,
+    # and igni server measures len(json.dumps(payload)) the same way.
+    chars = (MAX_PAYLOAD_BYTES - 9) // 6  # 10921 CJK characters, 65526 escaped
+    assert len(json.dumps({"a": "中"})) == 15
+    event(payload={"a": "中" * chars + "x"})  # exactly 65536
+
+    with pytest.raises(ValidationError, match="at most 65536 bytes"):
+        event(payload={"a": "中" * chars + "xx"})
+    # Counted as UTF-8 (3 bytes each) the refused text would be well under the limit.
+    assert len(("中" * chars + "xx").encode()) < MAX_PAYLOAD_BYTES
 
 
 @pytest.mark.parametrize(

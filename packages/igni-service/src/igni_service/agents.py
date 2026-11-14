@@ -125,7 +125,8 @@ class Agent:
             type: The extension's own word for what happened, as its
                 handler names it: ``claim.created``.
             payload: The event's data, as the handler reads it: at most
-                65536 bytes as JSON.
+                65536 bytes as JSON, measured as igni server measures it,
+                with non-ASCII text escaped (a CJK character counts 6).
             event_key: The key that makes a retry exact: igni stores one
                 item per key and producer, so a retry after a lost reply
                 is answered with the item already stored.
