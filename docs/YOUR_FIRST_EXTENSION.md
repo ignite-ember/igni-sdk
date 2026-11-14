@@ -9,8 +9,8 @@ About thirty minutes, most of it starting things.
 What you build is in this repository as
 [`examples/ticket-lookup/`](../examples/ticket-lookup/), and every file
 this page shows is that file — a test holds them to each other, and CI
-runs the example's tests. Copy it rather than retyping it (from your igni
-checkout, as every command until *1. Write the extension* is):
+runs the example's tests. Copy it rather than retyping it (from this
+repository's checkout):
 
 ```bash
 cp -R examples/ticket-lookup ~/ticket-lookup
@@ -21,7 +21,7 @@ cp -R examples/ticket-lookup ~/ticket-lookup
 > `tests/`, and a `pyproject.toml` for one dev environment — and its README
 > says what to run. This page follows the copy.
 
-How the pieces fit — [EXTENSIBILITY.md](EXTENSIBILITY.md) is the
+How the pieces fit — [EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) (in igni-core) is the
 contract, and the two SDK READMEs are the reference:
 
 ```
@@ -35,9 +35,9 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
 
 ## Before you start
 
-- **igni**, from this checkout: `uv sync`, then put it on your `PATH` for
-  this shell — every command below says `igni`, and most run in another
-  directory:
+- **igni**, from the igni-core checkout: `uv sync`, then put it on your
+  `PATH` for this shell — every command below says `igni`, and most run in
+  another directory:
 
   ```bash
   alias igni="$PWD/.venv/bin/igni"
@@ -660,11 +660,11 @@ Three tests, no igni and no igni server.
 - **Faster loops** — a development install runs a directory straight from
   disk, with no service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`,
   and start igni with `IGNI_DEV_EXTENSIONS=1` too
-  ([EXTENSIBILITY.md §9](EXTENSIBILITY.md#9-developing-one)).
+  ([EXTENSIBILITY.md §9](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md#9-developing-one)).
 
 ## Where next
 
 - [`packages/igni-extension/README.md`](../packages/igni-extension/README.md) — the extension SDK: the host object model, notifications, signals, prompt contributions.
 - [`packages/igni-service/README.md`](../packages/igni-service/README.md) — the service SDK: people, apps, the directory, notifications, reaching a producer's agent.
 - [`packages/extension-bridge/README.md`](../packages/extension-bridge/README.md) — the page's bridge, typed.
-- [EXTENSIBILITY.md](EXTENSIBILITY.md) — the contract, and what igni promises not to break.
+- [EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) (in igni-core) — the contract, and what igni promises not to break.
