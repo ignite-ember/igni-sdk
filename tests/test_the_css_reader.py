@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools.css_reference import CssError, CssReference, Stylesheet
+from tools.css_reference import CssError, CssReference, Rule, Stylesheet
 from tools.param_docs import UNDOCUMENTED
 
 
@@ -91,6 +91,20 @@ def test_an_empty_sheet_has_nothing_and_its_pages_say_so() -> None:
     assert "| Token | Fallback | Used by | Meaning |" in tokens
 
 
+def test_rules_before_any_section_marker_are_dropped() -> None:
+    sheet = ".early { color: red; }\n/* ── A ── */\n.late { color: blue; }"
+    assert _classes(sheet) == [("A", ".late", ("color",), "")]
+
+
+def test_a_block_that_mixes_properties_and_declarations_is_a_rule_not_tokens() -> None:
+    sheet = "/* ── A ── */ .x { --gap: 4px; margin: var(--gap); }"
+    reading = Stylesheet(sheet)
+    assert reading.tokens() == []
+    assert [(r.selector, r.properties) for r in reading.sections[0].rules] == [
+        (".x", ("--gap", "margin"))
+    ]
+
+
 def test_a_token_defined_twice_keeps_the_first_definition() -> None:
     sheet = """/* ── A ── */
 :root { --a: 1; }
@@ -119,6 +133,67 @@ def test_a_semicolon_inside_a_string_or_a_url_is_part_of_the_value() -> None:
     ]
     ((_, _, properties, _),) = _classes(sheet)
     assert properties == ("background", "content", "color")
+
+
+def test_a_brace_or_comment_opener_inside_a_string_is_text() -> None:
+    sheet = """/* ── A ── */
+.a[data-x="}"]::after { content: "/* }"; color: red; }
+.b { color: blue; }"""
+    assert _classes(sheet) == [
+        ("A", '.a[data-x="}"]::after', ("content", "color"), ""),
+        ("A", ".b", ("color",), ""),
+    ]
+
+
+def test_a_comma_selector_is_split_and_repeats_and_classless_rules_are_dropped() -> None:
+    sheet = """/* ── A ── */
+.a, .b   .c { color: red; }
+.a { color: red; }
+.a { color: red; }
+a { color: red; }
+:root { --x: 1; }"""
+    assert _classes(sheet) == [
+        ("A", ".a", ("color",), ""),
+        ("A", ".b .c", ("color",), ""),
+    ]
+
+
+def test_a_rule_is_listed_again_only_when_its_properties_differ() -> None:
+    sheet = """/* ── A ── */
+.a { color: red; }
+.a { color: blue; }
+.a { color: red; margin: 0; }"""
+    assert [(c[1], c[2]) for c in _classes(sheet)] == [
+        (".a", ("color",)),
+        (".a", ("color", "margin")),
+    ]
+
+
+def test_rules_in_at_rules_belong_to_the_section_and_name_the_at_rule() -> None:
+    sheet = """/* ── A ── */
+/* Wide screens. */
+@media (min-width: 40em) {
+  .a { color: red; }
+  @supports (display: grid) {
+    .b { display: grid; }
+  }
+}
+@font-face { font-family: x; src: y; }
+@import "x";
+@keyframes spin { from { opacity: 0; } to { opacity: 1; } }
+.after { color: blue; }"""
+    assert [(c[0], c[1], c[3]) for c in _classes(sheet)] == [
+        ("A", ".a", "Wide screens. @media (min-width: 40em)"),
+        ("A", ".b", "Wide screens. @supports (display: grid)"),
+        ("A", ".after", ""),
+    ]
+
+
+def test_a_rule_names_its_classes_once_in_order_and_its_properties() -> None:
+    rule = Rule(".b .a.b:hover > .c, div", (("color", "red"), ("margin", "0")))
+    assert rule.classes == ("b", "a", "c")
+    assert rule.properties == ("color", "margin")
+    assert Rule("div", ()).classes == ()
 
 
 def test_users_of_a_token_are_the_classes_that_read_it_once_each() -> None:
@@ -183,6 +258,21 @@ def test_the_classes_page_groups_by_section_and_counts_every_class() -> None:
     assert "| `.field` | `.field` | `padding` |" in page
 
 
+def test_an_unclosed_comment_is_refused() -> None:
+    with pytest.raises(CssError, match="comment"):
+        Stylesheet("/* ── A ── */ .a { color: red; } /* never closed")
+
+
+def test_an_unclosed_rule_is_refused() -> None:
+    with pytest.raises(CssError, match="never closed"):
+        Stylesheet("/* ── A ── */ .a { color: red;")
+
+
+def test_an_unclosed_rule_inside_an_at_rule_is_refused() -> None:
+    with pytest.raises(CssError, match="never closed"):
+        Stylesheet("/* ── A ── */ @media (x) { .a { color: red; }")
+
+
 @pytest.mark.parametrize(
     "sheet",
     [
@@ -193,3 +283,12 @@ def test_the_classes_page_groups_by_section_and_counts_every_class() -> None:
 def test_a_string_that_is_never_closed_is_refused_as_a_css_error(sheet: str) -> None:
     with pytest.raises(CssError, match="string"):
         Stylesheet(sheet)
+
+
+def test_non_ascii_text_in_comments_and_selectors_is_kept() -> None:
+    sheet = "/* ── Größe ── Fläche… */\n/* Ünïcode. */\n.größe { content: '✓'; }"
+    reading = Stylesheet(sheet)
+    assert reading.sections[0].title == "Größe"
+    assert reading.sections[0].note == "Fläche…"
+    ((_, selector, properties, note),) = _classes(sheet)
+    assert (selector, properties, note) == (".größe", ("content",), "Ünïcode.")
