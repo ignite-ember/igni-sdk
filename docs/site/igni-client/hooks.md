@@ -24,9 +24,10 @@ async def list(self) -> list[HookEntryView]
 ```
 
 Returns one row per hook: the `event` it runs
-on, its `type` (a shell `command` or an HTTP `url`), the
-`matcher` that narrows it, its timeout, whether it runs in the
-background, and the HTTP headers it sends.
+on, its `type` (`command`, `http`, `prompt` or `mcp_tool`)
+and the `command` or `url` it runs, the `matcher` that narrows
+it, its timeout, whether it runs in the background, and the HTTP
+headers it sends.
 
 Takes no arguments.
 

@@ -1269,6 +1269,11 @@
           "title": "ModelRegistryResult"
         },
         {
+          "level": 3,
+          "id": "modelswitched",
+          "title": "ModelSwitched"
+        },
+        {
           "level": 2,
           "id": "workspace-trust",
           "title": "Workspace trust"

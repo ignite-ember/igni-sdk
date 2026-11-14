@@ -12,7 +12,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 |---|---|
 | [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted) | Forget one interrupted run, so it is not offered again. |
 | [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted) | List a session's runs that stopped before they finished. |
-| [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages) | List a session's messages that were received but never answered. |
+| [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages) | List a session's messages whose run started but never finished. |
 
 ## session.runs.discard_interrupted()
 
@@ -61,9 +61,10 @@ async def interrupted(self) -> list[InterruptedRun]
 ```
 
 Returns one row per run that was
-cancelled or failed: the `message_id` and text of the message that
-started it, when it arrived and when it stopped, why (`cancelled`
-or `errored`) and the last error. A client offers to retry,
+cancelled, failed or never finished: the `message_id` and text of
+the message that started it, when it arrived and when it stopped, why
+(`cancelled`, `errored`, or `abandoned` when igni stopped while
+it ran) and the last error. A client offers to retry,
 discard or edit each. A storage failure answers an empty list.
 
 Takes no arguments (`session_id` is this session's own).
@@ -88,7 +89,7 @@ for interrupted_run in await session.runs.interrupted():
 
 ## session.runs.pending_messages()
 
-List a session's messages that were received but never answered.
+List a session's messages whose run started but never finished.
 
 ```python
 async def pending_messages(self) -> list[PendingMessage]

@@ -390,7 +390,7 @@ belonging to that outcome are set, the rest keep their defaults:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `auto_extended` | `bool` | `False` | True on the first iteration after an open-ended loop was resumed past the safety limit. |
+| `auto_extended` | `bool` | `False` | True on the first iteration after an open-ended loop's safety budget rolled over (it is extended every 30 iterations, up to 200). |
 | `cap_explicit` | `bool` | `False` | True when the user gave an explicit iteration count; false for an open-ended loop that runs until stopped or the safety limit. |
 | `completed` | `bool` | `False` | True when `kind` is `completed`. |
 | `display_prompt` | `str` | `''` | The user's own prompt text, for showing in the chat. Set only when `kind` is `step`. |
@@ -415,7 +415,7 @@ over several iterations).
 | `cap_explicit` | `bool` | required | `true` when the user gave the iteration count (`/loop N <prompt>`), so the loop ends at the cap. `false`: the cap is a safety net that extends automatically. |
 | `iteration_index` | `int` | required | Number of iterations started so far (1-based); `0` when idle. |
 | `iterations_remaining` | `int` | required | Iterations left before the loop's cap is reached; `0` when idle. |
-| `paused` | `bool` | required | `true` when the loop stopped early (it hit the hard iteration cap or an iteration failed) and waits to be resumed. |
+| `paused` | `bool` | required | `true` when the loop is paused and waits to be resumed: paused by hand, stopped at the hard iteration cap, or restored paused after igni restarted. |
 | `prompt` | `str` | required | The prompt being looped; empty when no loop is active. |
 
 **Returned by** [`session.loop.status()`](/docs/sdk/igni-client/loop#session-loop-status).
@@ -489,6 +489,16 @@ The models a user can pick from, and which one is the default.
 | `registry` | `dict[str, `[`ModelRegistryEntryView`](/docs/sdk/igni-client/models-reference#modelregistryentryview)`]` | required | Every configured model, keyed by the name used to pick it. |
 
 **Returned by** [`session.models.list()`](/docs/sdk/igni-client/models#session-models-list).
+
+### ModelSwitched
+
+What a successful `switch_model` answers.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Says the model switched, with a note for any part of the choice that could not be saved. |
+
+**Returned by** [`session.models.switch()`](/docs/sdk/igni-client/models#session-models-switch).
 
 ## Workspace trust
 

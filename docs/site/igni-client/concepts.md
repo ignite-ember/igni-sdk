@@ -15,24 +15,25 @@ A **target** says where the igni is and how to reach it.
 - **`Local(project_dir)`** — the igni the desktop app runs for that
   project on this machine, found from the lockfile it writes there
   (`<project>/.igni/backend.lock`), which carries the token a
-  program attaches with when the desktop app launched it. A backend started
-  by hand writes the lockfile with its port and no token, and then
-  `standing` is `"unknown"`.
+  program attaches with. A backend started by hand publishes the same
+  lockfile, so `Local(project_dir=...)` attaches to it too, as a program
+  (`standing` is `"program"`; it approves nothing).
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
-  one started by hand with `--ws-port`. A hand-started backend takes no
-  token and does not check one, so it has no access control: any program
-  that reaches its port may call it, and a wrong or missing approver token
-  does not refuse (the `AuthError` and `NotAllowed` below come from the
-  desktop app's igni). It prints `{"status": "ready", "ws_url": ...}` on
-  stdout once it listens: read that line to know it is ready, and pass
-  `--project-dir` so sessions have a folder.
+  one started by hand with `--ws-port`. A hand-started backend mints its
+  own window token, prints it once to stderr and requires it:
+  `Local(url=..., token="<the printed token>")` connects as igni's window.
+  The development opt-out `IGNI_DEV_NO_WS_TOKEN=1` (igni warns) starts one
+  that takes no token, where every connection is the window. It prints
+  `{"status": "ready", "ws_url": ...}` on stdout once it listens: read that
+  line to know it is ready, and pass `--project-dir` so sessions have a
+  folder.
 
 ```python
 from igni_client import Fleet, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
 here = Local(project_dir="~/code/payments")          # the desktop app's igni for that project
-by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m igni_core.backend --ws-port 8765`
+by_hand = Local(url="ws://127.0.0.1:8765", token="<the printed token>")  # `python -m igni_core.backend --ws-port 8765`
 ```
 
 Both speak the same protocol once open, so everything above the target is
