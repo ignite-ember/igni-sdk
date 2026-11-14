@@ -11,6 +11,16 @@ them yourself. (They were optional peers, and a
 Vite build without them succeeded and then threw `Could not resolve
 "react-markdown"` when the page loaded, before anything rendered.)
 
+Type-checking a page takes three more, as dev dependencies:
+`typescript`, `@types/react` and `@types/react-dom`. The package's
+declarations import React's types, and without `@types/react` `tsc`
+stops in them with `TS7016: Could not find a declaration file for module
+'react'`, then reports every component's props as missing:
+
+```bash
+npm install --save-dev typescript @types/react @types/react-dom
+```
+
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never
 renders one does not need the dependency at all. Install it only if

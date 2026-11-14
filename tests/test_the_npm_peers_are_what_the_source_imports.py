@@ -61,3 +61,19 @@ def test_a_statically_imported_module_is_a_dependency_or_a_required_peer(package
         f"{name} (imported by {where})" for name, where in imported.items() if name not in required
     )
     assert not wrong, f"{manifest['name']} imports {wrong} statically, but needs none of them"
+
+
+def test_ui_react_s_readme_names_the_type_packages_its_declarations_need() -> None:
+    """With only the tarballs, react, react-dom and vite, `tsc` failed in
+    ui-react's .d.ts with TS7016 for 'react'; the README never said that
+    TypeScript and @types/react are needed."""
+    package = ROOT / "packages" / "ui-react"
+    readme = (package / "README.md").read_text(encoding="utf-8")
+    declarations = [
+        p.read_text(encoding="utf-8")
+        for p in _published_sources(package)
+        if p.suffix == ".tsx" or p.name.endswith(".ts")
+    ]
+    assert any(re.search(r'from "react(/[\w-]+)?"', d) for d in declarations)
+
+    assert "npm install --save-dev typescript @types/react @types/react-dom" in readme
