@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from igni_client import (
@@ -20,7 +23,7 @@ from igni_client import (
     UnexpectedAnswer,
     UnknownMethod,
 )
-from igni_client.errors import _REFUSALS
+from igni_client.errors import _BY_CODE, _REFUSALS
 from igni_client.models import Requirement
 
 
@@ -118,3 +121,40 @@ def test_an_approval_required_names_the_tools_it_waits_for() -> None:
     assert str(both) == "the run is waiting for approval of Run a command, write"
     assert str(none) == "the run is waiting for approval of a tool" and none.requirements == []
     assert [r.tool_name for r in both.requirements] == ["shell", "write"]
+
+
+@pytest.mark.parametrize(
+    ("code", "kind"),
+    [
+        ("forbidden", AccessRefused),
+        ("unknown_method", UnknownMethod),
+        ("invalid", InvalidArguments),
+        ("not_found", MethodFailed),
+        ("refused", MethodFailed),
+        ("unavailable", MethodFailed),
+        ("cancelled", MethodFailed),
+        ("failed", MethodFailed),
+    ],
+)
+def test_a_code_decides_the_kind_whatever_the_sentence_says(code: str, kind: type) -> None:
+    error = RpcError.of("m", "igni reworded this entirely", code)
+
+    assert type(error) is kind and error.message == "igni reworded this entirely"
+
+
+def test_the_code_wins_over_a_sentence_that_says_something_else() -> None:
+    assert type(RpcError.of("m", "only igni's window", "failed")) is MethodFailed
+    assert type(RpcError.of("m", "Unknown RPC method: m", "forbidden")) is AccessRefused
+
+
+def test_a_reply_with_no_code_is_still_read_from_its_sentence() -> None:
+    assert type(RpcError.of("m", "m: only igni's window may", None)) is AccessRefused
+    assert type(RpcError.of("m", "Unknown RPC method: m", None)) is UnknownMethod
+    assert type(RpcError.of("m", "pid is a required argument")) is InvalidArguments
+
+
+def test_every_code_the_contract_defines_is_classified_on_purpose() -> None:
+    contract = json.loads((Path(__file__).parents[3] / "contracts/rpc-contract.json").read_text())
+    codes = set(contract["defs"]["RpcErrorCode"]["enum"])
+
+    assert set(_BY_CODE) <= codes

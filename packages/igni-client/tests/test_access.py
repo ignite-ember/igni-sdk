@@ -155,3 +155,13 @@ def test_an_unknown_standing_never_refuses_even_what_nothing_reaches() -> None:
 def test_a_standing_that_does_not_exist_is_a_programming_error() -> None:
     with pytest.raises(KeyError):
         check("m", "client", "stranger")  # type: ignore[arg-type]
+
+
+async def test_a_reply_that_carries_a_code_is_classified_by_it_not_by_its_words() -> None:
+    async with FakeIgni(local_token="whose") as fake:
+        fake.methods.answers["login"] = lambda args: RpcResponse(
+            error="login: not for this connection", code="forbidden"
+        )
+        async with IgniClient(Local(url=fake.socket.url, token="whose")) as igni:
+            with pytest.raises(AccessRefused, match="not for this connection"):
+                await igni.auth.login()
