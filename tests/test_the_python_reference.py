@@ -13,6 +13,7 @@ import importlib
 import sys
 import textwrap
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -486,3 +487,60 @@ def test_a_constant_is_its_name_type_and_value_with_the_docstring_that_follows_i
 
 def test_a_set_constant_is_shown_sorted(page: str) -> None:
     assert "TAGS: frozenset = frozenset({'a', 'b'})" in section(page, "## TAGS")
+
+
+# ── C8: comments are comments, and a constant's docstring is found across the package ──
+
+
+def test_a_constant_re_exported_from_testing_has_the_docstring_its_defining_module_gives(
+    package: str,
+) -> None:
+    ref = reference(package)
+    body, _ = ref.page(ref.areas[1])
+    secret = section(body, "## SECRET")
+    assert "SECRET: str = 's'" in secret
+    assert secret.strip().endswith("A typed constant, documented.")
+    assert "| [`SECRET`](#secret) | A typed constant, documented. |" in body.split("\n")
+
+
+def test_a_string_in_a_comment_after_a_constant_is_not_its_docstring(page: str) -> None:
+    assert section(page, "## TAGS").strip().endswith("```")
+    assert section(page, "## BARE").strip().endswith("```")
+    assert "not a docstring" not in page and "neither is this" not in page
+
+
+def test_a_constant_with_no_docstring_is_counted_and_not_invented(package: str) -> None:
+    ref = reference(package)
+    _, undocumented = ref.page(ref.areas[0])
+    _, documented_only = ref.page(ref.areas[1])
+    assert undocumented >= 2 and documented_only == 0
+
+
+def test_a_source_that_cannot_be_read_does_not_stop_the_lookup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pkg = tmp_path / "docs_broken"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(
+        "from docs_broken.zz import GOOD, PLAIN\n__all__ = ['GOOD', 'PLAIN']\n", encoding="utf-8"
+    )
+    (pkg / "a_syntax.py").write_text("def broken(:\n", encoding="utf-8")
+    (pkg / "b_bytes.py").write_bytes(b"\xff\xfe\x00 not utf-8 \x80")
+    (pkg / "zz.py").write_text(
+        'GOOD = 1\n"""Found past two bad files."""\nPLAIN = 2\nb"bytes are not a docstring"\n',
+        "utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    try:
+        ref = PythonReference(
+            "docs_broken",
+            ("docs_broken",),
+            [Area("only", "Only", ("docs_broken:GOOD", "docs_broken:PLAIN"))],
+            lambda name: None,
+        )
+        body, undocumented = ref.page(ref.areas[0])
+    finally:
+        for name in [m for m in sys.modules if m.startswith("docs_broken")]:
+            del sys.modules[name]
+    assert "Found past two bad files." in section(body, "## GOOD")
+    assert undocumented == 1
