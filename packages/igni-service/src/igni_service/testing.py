@@ -36,10 +36,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 
+from igni_service.agent_wire import AgentWire
 from igni_service.app import IgniApp
 from igni_service.bundle.archive import BundleArchive
 from igni_service.clock import Clock
 from igni_service.crypto import RsaKeyPair
+from igni_service.events import EventSender
 from igni_service.keystore import KeyStore, MemoryKeyStore, StoredKey
 from igni_service.notifications import Notifier
 from igni_service.registration import ExtensionBundle
@@ -217,6 +219,8 @@ class FakeIgni:
             accepted_callers=accepted_callers,
         )
         service.notifier = Notifier(service.tokens, sleep=no_sleep)
+        service.events = EventSender(service.tokens, sleep=no_sleep)
+        service.agents = AgentWire(service.tokens, service.events)
         return service
 
     def app(self, app_id: str, *, org_id: str, name: str = "") -> IgniApp:

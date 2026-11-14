@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 import pytest
 
 from igni_service import IgniService
+from igni_service.errors import IgniUnavailable
+from igni_service.events import Producer
 from igni_service.keystore import MemoryKeyStore
 from igni_service.testing import FakeIgni, ManualClock, SettingsOverrides
 from igni_service.testing_wire import IgniAddresses
@@ -210,3 +215,15 @@ async def test_require_approval_is_the_verifiers(approval: bool) -> None:
     fake = FakeIgni(require_approval=approval)
 
     assert fake.oauth.verifier.require_approval is approval
+
+
+class TestRetriesWithoutWaiting:
+    async def test_events_and_agent_items_retry_without_sleeping(self, fake: FakeIgni) -> None:
+        igni = fake.service()
+        assert igni.events._sleep is not asyncio.sleep
+        assert igni.agents._sender is igni.events
+        fake.traffic.fail("/v1/service-events", 503)
+        started = time.monotonic()
+        with pytest.raises(IgniUnavailable):
+            await igni.host(ORG).send_event(Producer.person("u-ada"), "claim.created")
+        assert time.monotonic() - started < 0.4, "the default backoff would take 1.5 seconds"
