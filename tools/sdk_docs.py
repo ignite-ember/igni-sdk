@@ -1778,18 +1778,18 @@ def npm_pages(package: Package, start: int, report: dict[str, Any], root: Path) 
     reference.place()
 
     def link(name: str) -> str | None:
-        anchors = reference.anchors()
-        if name not in anchors:
+        anchor = reference.anchors().get(name)
+        if anchor is None:
             return None
-        slug, anchor = anchors[name]
-        return url(package.site, f"reference-{slug}", anchor)
+        return url(package.site, f"reference-{anchor.slug}", anchor.anchor)
 
     reference.link = link
     pages: list[Page] = []
     undocumented = 0
     for index, area in enumerate(areas):
-        body, missing = reference.page(area)
-        undocumented += missing
+        page = reference.page(area)
+        body = page.body
+        undocumented += page.undocumented
         entries = reference.placed[area.slug]
         names = ", ".join(e.name for e in entries[:6])
         more = "…" if len(entries) > 6 else ""

@@ -29,32 +29,16 @@ from __future__ import annotations
 import importlib
 from collections.abc import Callable
 
-from pydantic import BaseModel
-
 from tools.py_constant_docs import ConstantDocs
 from tools.py_docstring import docstring_markdown
 from tools.py_entry import Entry
 from tools.py_render import EntryRenderer
 from tools.py_signature import CallableSignature, annotation_text, stable_repr
-from tools.reference_area import Area
+from tools.reference_area import Anchor, Area, ReferencePage
 
 
 class ReferenceError_(ValueError):
     """A public name has no page, or a page names a module with no public name."""
-
-
-class Anchor(BaseModel):
-    """Where a documented name is: the slug of its page and the anchor of its heading."""
-
-    slug: str
-    anchor: str
-
-
-class ReferencePage(BaseModel):
-    """A page's Markdown body (no title), and how many names on it have no docstring."""
-
-    body: str
-    undocumented: int
 
 
 def _public_names(modules: tuple[str, ...]) -> list[Entry]:

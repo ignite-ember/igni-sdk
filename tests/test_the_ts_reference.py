@@ -14,16 +14,20 @@ from pathlib import Path
 
 import pytest
 
-from tools.reference_area import Area
+from tools.reference_area import Anchor, Area
+from tools.ts_member_types import ArrowFunction, CallableHead
+from tools.ts_model import Declaration, Member, PatternProperty, PropertyType, PropTypes
+from tools.ts_parameters import (
+    inline_object_properties,
+    object_pattern_properties,
+    signature_parameters,
+)
 from tools.ts_reference import (
     Module,
     ReferenceError_,
     TsReference,
-    _prev_significant_index,
-    member_parameters_text,
-    object_pattern_properties,
-    signature_parameters,
 )
+from tools.ts_text import TsText
 
 
 def package(root: Path, files: dict[str, str]) -> Path:
@@ -95,7 +99,7 @@ def test_a_rest_parameter_is_optional_in_the_table_and_loses_its_dots(tmp_path: 
         },
     )
     reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     assert "| `sep` | `string` | required | Not documented yet. |" in page
     assert "| `parts` | `string[]` | optional | Not documented yet. |" in page
 
@@ -113,7 +117,7 @@ def test_a_parameter_with_a_default_and_no_type_is_its_name_and_its_default(
         },
     )
     reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     assert '| `name` | — | `"a, b"` | Not documented yet. |' in page
     assert "| `count` | — | `2` | Not documented yet. |" in page
     assert "| `fn` | — | `(x: number) => x` | Not documented yet. |" in page
@@ -163,7 +167,7 @@ def test_a_union_type_in_a_member_table_cannot_end_its_cell(tmp_path: Path) -> N
         },
     )
     reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     assert '| `mode` | field | `"a" \\| "b"` | One of a \\| b. |' in page
 
 
@@ -198,7 +202,7 @@ def page_of(root: Path, files: dict[str, str], link: object = None) -> str:
         [Area("all", "All", ("index.ts",))],
         link=link,  # type: ignore[arg-type]
     )
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     return page
 
 
@@ -357,10 +361,10 @@ def test_a_class_page_has_a_table_of_parameters_for_each_method_that_takes_some(
 
 def test_an_object_pattern_names_the_property_not_its_local_rename() -> None:
     assert object_pattern_properties("{ base: givenBase, n = 2, label: l = 'x', ...others }") == [
-        ("base", "", False),
-        ("n", "2", False),
-        ("label", "'x'", False),
-        ("others", "", True),
+        PatternProperty(name="base", default="", rest=False),
+        PatternProperty(name="n", default="2", rest=False),
+        PatternProperty(name="label", default="'x'", rest=False),
+        PatternProperty(name="others", default="", rest=True),
     ]
     assert object_pattern_properties("{}") == []
 
@@ -516,7 +520,7 @@ def test_a_name_exported_under_another_is_documented_as_the_package_names_it(
     assert wait is not None and near is not None
     assert (wait.name, wait.signature) == ("Wait", "const Wait = 30")
     assert (near.name, near.signature) == ("Near", "function Near(): void")
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     assert "| [`Wait`](#wait) | const | `time.ts` | How long to wait. |" in page
     assert "| [`Near`](#near) | function | `index.ts` | Close by. |" in page
     assert "Timeout" not in page and "Local" not in page
@@ -544,11 +548,11 @@ def test_a_name_whose_reexport_leaves_the_package_or_is_never_declared_resolves_
 
 
 def test_the_character_before_an_index_skips_spaces_and_comments() -> None:
-    assert _prev_significant_index("a /* c */ b", 10) == 0
-    assert _prev_significant_index("  \n ", 4) == -1
-    assert _prev_significant_index("/* c */ b", 8) == -1
+    assert TsText("a /* c */ b").prev_significant_index(10) == 0
+    assert TsText("  \n ").prev_significant_index(4) == -1
+    assert TsText("/* c */ b").prev_significant_index(8) == -1
     # A comment end with no start: the `/` itself is the last significant character.
-    assert _prev_significant_index("*/ b", 3) == 1
+    assert TsText("*/ b").prev_significant_index(3) == 1
 
 
 # ── A package read into pages ──
@@ -609,8 +613,9 @@ def small(root: Path, link: object = None) -> TsReference:
 
 def test_a_page_is_its_note_a_table_of_names_and_a_section_for_each(tmp_path: Path) -> None:
     reference = small(tmp_path)
-    page, missing = reference.page(reference.areas[0])
-    assert missing == 0
+    rendered = reference.page(reference.areas[0])
+    assert rendered.undocumented == 0
+    page = rendered.body
     assert page == textwrap.dedent(
         """\
         About greeting.
@@ -666,11 +671,11 @@ def test_a_name_is_documented_where_it_is_declared_through_every_way_it_is_expor
         "rest": ["Colour", "SIZE", "Timeout"],
     }
     assert reference.anchors() == {
-        "Options": ("hello", "options"),
-        "greet": ("hello", "greet"),
-        "Colour": ("rest", "colour"),
-        "SIZE": ("rest", "size"),
-        "Timeout": ("rest", "timeout"),
+        "Options": Anchor(slug="hello", anchor="options"),
+        "greet": Anchor(slug="hello", anchor="greet"),
+        "Colour": Anchor(slug="rest", anchor="colour"),
+        "SIZE": Anchor(slug="rest", anchor="size"),
+        "Timeout": Anchor(slug="rest", anchor="timeout"),
     }
 
 
@@ -726,7 +731,7 @@ def test_an_unclosed_bracket_in_a_member_leaves_its_type_empty_and_hides_what_fo
     members = parsed.declarations["C"].members
     # The line after the open bracket is inside it, so it is no member.
     assert [(m.name, m.type) for m in members] == [("go", "")]
-    assert member_parameters_text(members[0]) == ""
+    assert CallableHead.parse(members[0].type) is None
 
 
 # ── Exports: lists, stars, specifiers, cycles ──
@@ -858,7 +863,7 @@ def summary_of(root: Path, doc: str) -> str:
     """The cell a table shows for a declaration documented by ``doc``."""
     src = package(root, {"index.ts": f"{doc}\nexport const A = 1;\n"})
     reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     return page.split("| [`A`](#a) | const | `index.ts` | ")[1].split(" |\n")[0]
 
 
@@ -885,8 +890,9 @@ def test_a_name_with_no_summary_is_a_dash_and_is_counted(tmp_path: Path) -> None
         {"index.ts": "/** Has one. */\nexport const A = 1;\nexport const B = 2;\n"},
     )
     reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
-    page, missing = reference.page(reference.areas[0])
-    assert missing == 1
+    rendered = reference.page(reference.areas[0])
+    assert rendered.undocumented == 1
+    page = rendered.body
     assert "| [`A`](#a) | const | `index.ts` | Has one. |" in page
     assert "| [`B`](#b) | const | `index.ts` | — |" in page
 
@@ -919,7 +925,7 @@ def test_a_jsdoc_loses_its_marks_keeps_its_paragraphs_and_rewrites_links(tmp_pat
         },
     )
     reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
-    page, _ = reference.page(reference.areas[0])
+    page = reference.page(reference.areas[0]).body
     body = page.split("| `x` | `number` | required | The x. |\n\n")[1]
     assert body == (
         "Title line.\n\nBody with `Other` in it.\n  indented line\n@returns Ignored here.\n"
@@ -953,7 +959,7 @@ def test_windows_line_endings_read_like_unix_ones(tmp_path: Path) -> None:
         src.mkdir(parents=True)
         (src / "index.ts").write_bytes(text.encode())
         reference = TsReference("p", src, [Area("a", "A", ("index.ts",))])
-        pages.append(reference.page(reference.areas[0])[0])
+        pages.append(reference.page(reference.areas[0]).body)
     assert pages[0] == pages[1].replace("\r", "")
     assert "\r" not in pages[1]
 
@@ -1177,3 +1183,62 @@ def test_a_method_keeps_its_type_parameters_in_its_signature(tmp_path: Path) -> 
     # The parameter table is still read through the type parameters.
     assert "### HostObject.call()" in page
     assert "| `name` | `string` | required | What. |" in page
+
+
+# ── The parts the reader is built from ──
+
+
+def test_an_arrow_value_is_parsed_once_for_whether_it_is_one_and_its_type() -> None:
+    """``= (a) => ...`` is a method; ``= (a)`` and ``= 1`` are values, not functions."""
+    typed = ArrowFunction.parse(
+        "= async <T>(value: T, private env: E): Map<string, () => T> => go()"
+    )
+    assert typed is not None
+    assert typed.type() == "<T>(value: T) => Map<string, () => T>"
+    lone = ArrowFunction.parse("= x => x")
+    assert lone is not None and lone.type() == "(x)"
+    assert ArrowFunction.parse("= (a)") is None
+    assert ArrowFunction.parse("= 1") is None
+    assert ArrowFunction.parse("= (a: number {") is None
+
+
+def test_a_callable_head_is_its_generics_its_parameters_and_what_follows() -> None:
+    head = CallableHead.parse("<T>(a: T, b = 2): T {")
+    assert head is not None
+    assert (head.generics, head.params, head.tail) == ("<T>", "a: T, b = 2", ": T {")
+    assert CallableHead.parse("string") is None
+
+
+def test_a_statement_ends_at_a_newline_but_a_type_alias_runs_to_its_semicolon() -> None:
+    text = TsText("= A\n  | B;\nnext")
+    assert text.statement_end(0) == 3
+    assert text.statement_end(0, newline_ends=False) == 10
+
+
+def test_an_inline_object_type_gives_each_property_its_type_and_requiredness() -> None:
+    assert inline_object_properties("{ name: string, size?: number }") == {
+        "name": PropertyType(type="string", optional=False),
+        "size": PropertyType(type="number", optional=True),
+    }
+
+
+def test_prop_types_are_the_fields_of_the_module_s_interfaces_only() -> None:
+    props = Declaration(
+        name="Props",
+        kind="interface",
+        signature="interface Props",
+        doc="",
+        members=[Member(name="size", kind="field", type="number", doc="", optional=True)],
+    )
+    alias = Declaration(name="Alias", kind="type", signature="type Alias = 1", doc="")
+    types = PropTypes.of([props, alias])
+    assert types.fields("Props") == {"size": PropertyType(type="number", optional=True)}
+    assert types.fields("Alias") == {}
+    assert list(types.interfaces) == ["Props"]
+
+
+def test_a_renamed_declaration_names_itself_as_the_package_does() -> None:
+    found = Declaration(name="A", kind="function", signature="function A(a: A): A", doc="")
+    renamed = found.renamed("B")
+    assert (renamed.name, renamed.signature) == ("B", "function B(a: A): A")
+    assert found.name == "A"
