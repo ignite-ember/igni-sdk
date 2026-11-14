@@ -47,7 +47,7 @@ class MemberQuery(BaseModel):
             return DetailError(detail=f"limit must be a whole number, not {limit!r}", status=422)
         return cls(
             query=seen.first("query").casefold(),
-            limit=min(int(limit), MAX_PEOPLE),
+            limit=max(1, min(int(limit), MAX_PEOPLE)),
             include_former=seen.first("include_former", "false") == "true",
         )
 
