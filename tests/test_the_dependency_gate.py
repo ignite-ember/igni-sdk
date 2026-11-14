@@ -183,6 +183,18 @@ def test_an_entry_with_a_blank_reason_is_refused(tmp_path: Path, reason: str) ->
         Allowlist.load(path)
 
 
+@pytest.mark.parametrize("review_by", ['"2027-01-31"', "2027-01-31T10:00:00", "20270131", "true"])
+def test_an_entry_whose_review_by_is_not_a_date_is_refused(tmp_path: Path, review_by: str) -> None:
+    """A quoted date would load, then crash the gate comparing it with today."""
+    path = tmp_path / "allow.toml"
+    path.write_text(
+        '[[allow]]\necosystem = "npm"\nadvisory = "GHSA-aaaa"\npackage = "left-pad"\n'
+        f'reason = "because"\nreview_by = {review_by}\n'
+    )
+    with pytest.raises(SystemExit, match="GHSA-aaaa has a review_by that is not a date"):
+        Allowlist.load(path)
+
+
 def test_the_repository_s_own_allowlist_loads() -> None:
     loaded = Allowlist.load(audit.DEFAULT_ALLOWLIST)
     for e in loaded.entries:
