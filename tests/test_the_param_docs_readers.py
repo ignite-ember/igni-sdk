@@ -10,11 +10,14 @@ from __future__ import annotations
 
 from tools.param_docs import (
     UNDOCUMENTED,
+    cell,
+    code,
     jsdoc_lines,
     jsdoc_params,
     python_args,
     strip_jsdoc_params,
     strip_python_args,
+    table,
 )
 
 # ── Python: the Args: section ──
@@ -137,3 +140,26 @@ def test_stripping_params_leaves_the_description_and_the_other_tags() -> None:
 def test_stripping_params_keeps_prose_after_a_blank_line() -> None:
     doc = "/**\n * Top.\n * @param a - one\n *\n * Later prose.\n */"
     assert strip_jsdoc_params(doc) == "Top.\n\nLater prose."
+
+
+# ── the table ──
+
+
+def test_a_cell_is_one_line_and_its_pipes_are_escaped() -> None:
+    assert cell("a  b\n\tc | d") == "a b c \\| d"
+    assert cell("") == ""
+
+
+def test_code_is_backticked_and_its_pipes_escaped() -> None:
+    assert code("str | None") == "`str \\| None`"
+    assert code("int") == "`int`"
+
+
+def test_a_table_has_a_header_and_a_row_a_parameter_and_none_without_rows() -> None:
+    assert table([]) == []
+    assert table([("a", "`int`", "required", "The  first\n| one.")]) == [
+        "| Parameter | Type | Default | Meaning |",
+        "|---|---|---|---|",
+        "| `a` | `int` | required | The first \\| one. |",
+        "",
+    ]
