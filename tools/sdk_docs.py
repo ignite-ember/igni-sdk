@@ -280,7 +280,8 @@ def cell(text: str) -> str:
 
 def _npm_source(data: dict[str, Any]) -> str:
     """The repository an npm package's source is in, as a URL."""
-    url = data.get("repository", {}).get("url", "")
+    repository = data.get("repository", {})
+    url = repository if isinstance(repository, str) else repository.get("url", "")
     if url.startswith("git+"):
         url = url[len("git+") :]
     if url.endswith(".git"):
@@ -1418,14 +1419,12 @@ def check_example(
         raise DocsError(f"the example of {placement.path}() does not call it")
     for call in calls:
         for keyword in call.keywords:
-            if keyword.arg not in names:
+            if keyword.arg is not None and keyword.arg not in names:
                 raise DocsError(
                     f"the example of {placement.path}() passes {keyword.arg}=, which it does not take"
                 )
-        if len(call.args) > 1 + (0 if message else 0):
-            positional = sum(1 for p in params if p.annotation)
-            if len(call.args) > positional:
-                raise DocsError(f"the example of {placement.path}() passes too many arguments")
+        if len(call.args) > len(names):
+            raise DocsError(f"the example of {placement.path}() passes too many arguments")
 
 
 def _dotted(node: ast.expr) -> str:
