@@ -30,7 +30,11 @@ class ServiceUrl:
         if parts.query or parts.fragment:
             raise ValueError(f"{url!r} must not have a query or a fragment")
         host = parts.hostname.lower()
-        netloc = f"{host}:{parts.port}" if parts.port else host
+        if ":" in host:
+            # An IPv6 address is written in brackets; without them the port
+            # cannot be told from the address.
+            host = f"[{host}]"
+        netloc = f"{host}:{parts.port}" if parts.port is not None else host
         return urlunsplit((parts.scheme.lower(), netloc, parts.path.rstrip("/"), "", ""))
 
 

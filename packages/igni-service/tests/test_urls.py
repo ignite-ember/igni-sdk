@@ -31,6 +31,21 @@ def test_a_url_is_written_the_one_way_igni_writes_it(given: str, written: str) -
 
 
 @pytest.mark.parametrize(
+    ("given", "written"),
+    [
+        ("http://[::1]", "http://[::1]"),
+        ("http://[::1]:8080/", "http://[::1]:8080"),
+        ("HTTPS://[2001:DB8::1]:9443/base/", "https://[2001:db8::1]:9443/base"),
+    ],
+)
+def test_an_ipv6_host_keeps_its_brackets_so_the_port_can_be_told_from_the_address(
+    given: str, written: str
+) -> None:
+    assert ServiceUrl.normalise(given) == written
+    assert ServiceUrl.normalise(written) == written
+
+
+@pytest.mark.parametrize(
     "given",
     [
         "",
