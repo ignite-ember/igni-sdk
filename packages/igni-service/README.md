@@ -1800,6 +1800,8 @@ one in the portal (*Services*).
 A route that serves the extension takes the person from their token:
 
 ```python
+import json
+
 from fastapi import Depends, FastAPI, WebSocket
 
 from igni_service import IgniError, Person, TokenRefused
@@ -1830,9 +1832,11 @@ async def wipe(admin: Person = Depends(igni.org_admin)) -> None:
 async def room(socket: WebSocket, room: str) -> None:
     """A socket from the extension's page proves itself with its token in the first frame."""
     await socket.accept()
-    token = await socket.receive_text()
+    # `bridge.service.websocket` sends {"type": "auth", "token": …} first, unless
+    # the page passes its own `authFrame`.
+    first = json.loads(await socket.receive_text())
     try:
-        person = await igni.person_of(token)
+        person = await igni.person_of(str(first.get("token", "")))
     except TokenRefused as refused:
         await socket.close(code=4401, reason=refused.reason)
         return
