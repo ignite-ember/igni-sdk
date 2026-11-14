@@ -1086,8 +1086,16 @@ class TsReference:
                 return candidate
         return ""
 
-    def exported_names(self, module: Module) -> list[str]:
-        """The names a module exports, in the order it exports them."""
+    def exported_names(self, module: Module, seen: set[str] | None = None) -> list[str]:
+        """The names a module exports, in the order it exports them.
+
+        Two modules that export each other whole are a cycle, not a
+        reason to recurse for ever: each is read once.
+        """
+        seen = seen if seen is not None else set()
+        if module.name in seen:
+            return []
+        seen.add(module.name)
         out: list[str] = []
         for name in [*module.exported, *module.reexports]:
             if name not in out:
@@ -1096,7 +1104,7 @@ class TsReference:
             target = self.target(module.name, specifier)
             if not target or target not in self.modules:
                 continue
-            for name in self.exported_names(self.modules[target]):
+            for name in self.exported_names(self.modules[target], seen):
                 if name not in out:
                     out.append(name)
         return out
