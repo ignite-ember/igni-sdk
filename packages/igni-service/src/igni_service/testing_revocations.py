@@ -51,7 +51,7 @@ class FakeRevocations:
     def page(self, call: RoutedCall) -> httpx.Response:
         """Every served organisation's revocations after `since` — at once, never held."""
         since = call.seen.first("since", "0") or "0"
-        if not since.isdigit():
+        if not (since.isascii() and since.isdigit()):
             return DetailError(
                 detail=f"since must be a cursor, not {since!r}", status=422
             ).to_response()
