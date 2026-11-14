@@ -177,7 +177,7 @@ async def test_login_adds_to_an_endpoint_that_already_has_a_query(
     async def endpoint() -> str:
         return "https://igni.test/portal/authorize?tenant=7"
 
-    monkeypatch.setattr(igni.server, "authorization_endpoint", endpoint)
+    monkeypatch.setattr(igni.connection.server, "authorization_endpoint", endpoint)
 
     login = await browser.get("/auth/login")
 

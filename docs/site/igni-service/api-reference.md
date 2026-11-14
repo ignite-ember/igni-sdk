@@ -239,7 +239,8 @@ Closes the service's HTTP client and the database engine
 | `igni.settings` | the `IgniSettings` it was made with |
 | `igni.web` | the [`WebSignIn`](#websignin-sign-in-to-the-service-s-own-pages) for the service's own pages |
 | `igni.accepted_callers` | the `frozenset[CallerKind]` `igni.caller` accepts |
-| `igni.clock` | its clock |
+| `igni.connection` | its standing at igni server: `server`, `clock`, `key`, `registration` and the `revocation_feed` |
+| `igni.outbound` | the calls it makes to igni for any organisation; `igni.host(org_id)` is one organisation's |
 
 ## IgniSettings
 

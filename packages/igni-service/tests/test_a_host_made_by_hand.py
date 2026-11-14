@@ -15,7 +15,7 @@ from .conftest import ORG
 
 
 def bare_host(igni: IgniService) -> Host:
-    return Host(ORG, notifier=igni.notifier, directory=igni.directory)
+    return Host(ORG, notifier=igni.outbound.notifier, directory=igni.outbound.directory)
 
 
 async def test_without_the_vm_profiles_client_the_extension_profile_cannot_be_asked(
@@ -54,4 +54,4 @@ async def test_send_event_passes_its_expiry_on(igni: IgniService, fake: FakeIgni
 
 def test_a_host_for_no_organisation_is_refused(igni: IgniService) -> None:
     with pytest.raises(ValueError, match="one organisation"):
-        Host("", notifier=igni.notifier, directory=igni.directory)
+        Host("", notifier=igni.outbound.notifier, directory=igni.outbound.directory)

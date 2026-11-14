@@ -163,7 +163,9 @@ class TestUploadingAFile:
     async def test_the_bytes_go_with_their_name_and_type_under_the_orgs_token(
         self, igni: IgniService, fake: FakeIgni
     ) -> None:
-        stored = await igni.agents.upload(ORG, Attachment.from_bytes("é à.png", b"\x89PNG"))
+        stored = await igni.outbound.agents.upload(
+            ORG, Attachment.from_bytes("é à.png", b"\x89PNG")
+        )
 
         [seen] = fake.traffic.requests_to(IgniPaths.SERVICE_ATTACHMENTS)
         assert (seen.method, seen.query["filename"], seen.body) == ("POST", ["é à.png"], b"\x89PNG")
@@ -176,12 +178,12 @@ class TestUploadingAFile:
     ) -> None:
         files = [Attachment.from_bytes(f"{n}.txt", n.encode()) for n in ("b", "a", "c")]
 
-        ids = await igni.agents.uploaded(ORG, files)
+        ids = await igni.outbound.agents.uploaded(ORG, files)
 
         seen = fake.traffic.requests_to(IgniPaths.SERVICE_ATTACHMENTS)
         assert [s.query["filename"][0] for s in seen] == ["b.txt", "a.txt", "c.txt"]
         assert ids == ["att-1", "att-2", "att-3"]
-        assert await igni.agents.uploaded(ORG, []) == []
+        assert await igni.outbound.agents.uploaded(ORG, []) == []
 
     @pytest.mark.parametrize("status", [200, 201])
     async def test_both_success_statuses_are_read(
@@ -193,7 +195,7 @@ class TestUploadingAFile:
             lambda: httpx.Response(status, json=STORED),
         )
 
-        stored = await igni.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
+        stored = await igni.outbound.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
 
         assert stored.attachment_id == "att-9"
 
@@ -204,7 +206,7 @@ class TestUploadingAFile:
         fake.traffic.fail(IgniPaths.SERVICE_ATTACHMENTS, status)
 
         with pytest.raises(EventRefused) as refused:
-            await igni.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
+            await igni.outbound.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
 
         assert refused.value.status == status
         assert "failing on purpose" in refused.value.detail
@@ -216,7 +218,7 @@ class TestUploadingAFile:
         fake.traffic.fail(IgniPaths.SERVICE_ATTACHMENTS, status)
 
         with pytest.raises(IgniUnavailable, match=str(status)):
-            await igni.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
+            await igni.outbound.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
 
     @pytest.mark.parametrize(
         "reply",
@@ -237,7 +239,7 @@ class TestUploadingAFile:
         answer(monkeypatch, IgniPaths.SERVICE_ATTACHMENTS, reply)
 
         with pytest.raises(IgniUnavailable, match="something else"):
-            await igni.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
+            await igni.outbound.agents.upload(ORG, Attachment.from_bytes("a.png", b"x"))
 
 
 class TestReadingAStatus:
@@ -247,7 +249,7 @@ class TestReadingAStatus:
         accepted = await igni.host(ORG).agent(MAX).send_message("hi", thread="t-1")
         fake.agents.settle(accepted.event_id, "delivered")
 
-        status = await igni.agents.status(ORG, accepted.event_id)
+        status = await igni.outbound.agents.status(ORG, accepted.event_id)
 
         [seen] = fake.traffic.requests_to(IgniPaths.service_event(accepted.event_id))
         assert seen.method == "GET" and seen.headers["authorization"].startswith("Bearer service-")
@@ -262,7 +264,7 @@ class TestReadingAStatus:
         fake.traffic.fail(IgniPaths.SERVICE_EVENTS, status)
 
         with pytest.raises(EventRefused) as refused:
-            await igni.agents.status(ORG, "ev-1")
+            await igni.outbound.agents.status(ORG, "ev-1")
 
         assert refused.value.status == status
 
@@ -272,7 +274,7 @@ class TestReadingAStatus:
         fake.traffic.fail(IgniPaths.SERVICE_EVENTS, 429)
 
         with pytest.raises(IgniUnavailable, match="429"):
-            await igni.agents.status(ORG, "ev-1")
+            await igni.outbound.agents.status(ORG, "ev-1")
 
     @pytest.mark.parametrize("status", [500, 502, 503])
     async def test_a_5xx_is_unavailable(
@@ -281,7 +283,7 @@ class TestReadingAStatus:
         fake.traffic.fail(IgniPaths.SERVICE_EVENTS, status)
 
         with pytest.raises(IgniUnavailable, match=str(status)):
-            await igni.agents.status(ORG, "ev-1")
+            await igni.outbound.agents.status(ORG, "ev-1")
 
     @pytest.mark.parametrize(
         "reply",
@@ -302,7 +304,7 @@ class TestReadingAStatus:
         answer(monkeypatch, IgniPaths.SERVICE_EVENTS, reply)
 
         with pytest.raises(IgniUnavailable, match="something else"):
-            await igni.agents.status(ORG, "ev-1")
+            await igni.outbound.agents.status(ORG, "ev-1")
 
     async def test_unknown_fields_in_igni_s_answer_are_ignored(
         self, igni: IgniService, fake: FakeIgni, monkeypatch: pytest.MonkeyPatch
@@ -313,25 +315,25 @@ class TestReadingAStatus:
             lambda: httpx.Response(200, json={**STATUS, "newer": True}),
         )
 
-        assert (await igni.agents.status(ORG, "ev-1")).event_id == "ev-1"
+        assert (await igni.outbound.agents.status(ORG, "ev-1")).event_id == "ev-1"
 
 
 class TestPostingAnItem:
     async def test_an_item_is_retried_when_igni_could_not_take_it_and_not_when_it_refused(
         self, igni: IgniService, fake: FakeIgni
     ) -> None:
-        igni.events._sleep = _no_sleep
+        igni.outbound.events._sleep = _no_sleep
         item = ServiceItemRequest(producer=MAX, kind="message", text="hi")
 
         fake.traffic.fail(IgniPaths.SERVICE_ITEMS, 503)
         with pytest.raises(IgniUnavailable):
-            await igni.agents.item(ORG, item)
+            await igni.outbound.agents.item(ORG, item)
         assert len(fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS)) == 3
 
         fake.traffic.reset()
         fake.traffic.fail(IgniPaths.SERVICE_ITEMS, 403)
         with pytest.raises(EventRefused):
-            await igni.agents.item(ORG, item)
+            await igni.outbound.agents.item(ORG, item)
         assert len(fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS)) == 1
 
     async def test_an_item_goes_to_the_items_path_and_an_event_to_the_events_path(
@@ -339,8 +341,12 @@ class TestPostingAnItem:
     ) -> None:
         from igni_service.events import ServiceEventRequest
 
-        await igni.agents.item(ORG, ServiceItemRequest(producer=MAX, kind="chat", title="T"))
-        await igni.agents.event(ORG, ServiceEventRequest(producer=MAX, type="claim.created"))
+        await igni.outbound.agents.item(
+            ORG, ServiceItemRequest(producer=MAX, kind="chat", title="T")
+        )
+        await igni.outbound.agents.event(
+            ORG, ServiceEventRequest(producer=MAX, type="claim.created")
+        )
 
         assert [i.kind for i in fake.agents.items] == ["chat", "event"]
         assert len(fake.traffic.requests_to(IgniPaths.SERVICE_ITEMS)) == 1

@@ -61,7 +61,7 @@ async def test_the_web_sign_in_callback_comes_first_and_every_address_once(
         SettingsOverrides(redirect_uris=["https://b.test/cb", callback, "https://b.test/cb"])
     )
 
-    await fake.service(settings).registration.register()
+    await fake.service(settings).connection.registration.register()
 
     [body] = [seen.json_body() for seen in fake.traffic.requests_to(IgniPaths.CLIENTS)]
     assert body["redirect_uris"] == [callback, "https://b.test/cb"]
@@ -78,7 +78,7 @@ async def test_a_given_key_store_is_used_and_no_database_is_opened(fake: FakeIgn
 
     igni = IgniService.from_settings(fake.settings(), key_store=store, http=fake.http_client())
 
-    assert igni.key.store is store
+    assert igni.connection.key.store is store
     assert isinstance(igni.web.store, MemoryWebSessionStore)
     await igni.aclose()
 
@@ -94,7 +94,7 @@ async def test_closing_disposes_the_engine_the_service_made_and_may_be_repeated(
         )
     )
     igni = IgniService.from_settings(settings)
-    engine: AsyncEngine = igni.key.store.engine  # type: ignore[attr-defined]
+    engine: AsyncEngine = igni.connection.key.store.engine  # type: ignore[attr-defined]
     await igni.thumbprint()
     pool = engine.pool
 
@@ -110,7 +110,7 @@ async def test_closing_closes_the_http_client_it_made_but_not_one_it_was_given(
     fake: FakeIgni,
 ) -> None:
     mine = IgniService(fake.settings(), key_store=MemoryKeyStore())
-    first = mine.server.http
+    first = mine.connection.server.http
     await mine.aclose()
     assert first.is_closed
 
@@ -141,6 +141,14 @@ async def test_leaving_the_lifespan_stops_the_background_tasks_even_mid_retry(
         assert len(ours()) == 2, "registration and revocations are both running"
 
     assert ours() == []
+
+
+def test_every_token_is_checked_against_the_revocation_feed_from_the_start(
+    fake: FakeIgni,
+) -> None:
+    igni = fake.service()
+
+    assert igni.verifier.revocations is igni.connection.revocation_feed
 
 
 async def test_install_puts_igni_s_routes_sign_in_and_cors_on_the_app(igni: IgniService) -> None:

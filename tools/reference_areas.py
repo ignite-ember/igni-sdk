@@ -19,7 +19,12 @@ PYTHON_AREAS: Mapping[str, list[Area]] = {
         Area(
             "igni-service-class",
             "IgniService and its settings",
-            ("igni_service.service", "igni_service.settings", "igni_service.tables"),
+            (
+                "igni_service.service",
+                "igni_service.bearer",
+                "igni_service.settings",
+                "igni_service.tables",
+            ),
         ),
         Area(
             "callers",

@@ -18,75 +18,41 @@ await igni.host(person.org_id).notify(Notification(...))
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
-import logging
 from collections.abc import AsyncIterator, Collection
-from typing import Annotated, Any
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from igni_service.agent_wire import AgentWire
+from igni_service.bearer import BearerDependencies
+from igni_service.callbacks import IgniCallbacks
 from igni_service.clock import Clock
+from igni_service.connection import IgniConnection
 from igni_service.cors import BearerCors
-from igni_service.directory import DirectoryClient
-from igni_service.errors import ConfigurationError, IgniUnavailable
-from igni_service.events import EventSender
+from igni_service.errors import ConfigurationError
 from igni_service.host import Host
 from igni_service.jwks import IgniKeys
 from igni_service.keystore import KeyCipher, KeyStore
 from igni_service.logs import ServiceLogs
-from igni_service.notifications import Notifier
-from igni_service.organisations import (
-    OrganisationDeletedHandler,
-    OrganisationHandlers,
-    OrganisationRoutes,
-)
-from igni_service.registration import ServiceRegistration
-from igni_service.revocations import RevocationFeed, RevocationList
-from igni_service.server import IgniServer
-from igni_service.service_tokens import ServiceTokens
+from igni_service.organisations import OrganisationDeletedHandler
+from igni_service.outbound import IgniOutbound
 from igni_service.settings import IgniSettings
-from igni_service.signing import SigningKey
 from igni_service.sql_keystore import SqlKeyStore
-from igni_service.subjects import (
-    EraseHandler,
-    ExportHandler,
-    SubjectHandlers,
-    SubjectRoutes,
-)
-from igni_service.token_endpoint import TokenEndpoint
-from igni_service.tokens import (
-    PEOPLE_ONLY,
-    Caller,
-    CallerKind,
-    IgniCall,
-    Person,
-    TokenRefused,
-    TokenVerifier,
-)
-from igni_service.vm_profiles import ServiceVmProfiles
+from igni_service.subjects import EraseHandler, ExportHandler
+from igni_service.tokens import PEOPLE_ONLY, CallerKind, TokenVerifier
 from igni_service.web import WebSignIn
 from igni_service.web_sessions import MemoryWebSessionStore, SqlWebSessionStore, WebSessionStore
 
-logger = logging.getLogger(__name__)
 
-#: Lifts the bearer off a request. `auto_error=False` so a missing header
-#: is refused with the same 401 as a bad one.
-_BEARER = HTTPBearer(auto_error=False)
-
-#: The body of every refusal. Why is in the RFC 6750 challenge and the
-#: log, and only in the terms `TokenRefused` allows: what anybody holding
-#: the token could read from it (expired, another audience, the wrong
-#: kind), never which signature check failed.
-_REFUSAL = "Not authenticated"
-
-
-class IgniService:
+class IgniService(BearerDependencies):
     """A service's place in an igni deployment.
+
+    Composed of its connection to igni server (`connection`), the calls it
+    makes to igni (`outbound`), sign-in to its own pages (`web`) and the
+    handlers for igni's calls to it; the FastAPI dependencies that read a
+    request's bearer token (`person`, `caller`, `igni_call`, ...) come from
+    `BearerDependencies`.
 
     Args:
         settings: The service's settings: where igni server is, what this
@@ -116,93 +82,36 @@ class IgniService:
         retry_min: float | None = None,
         accepted_callers: Collection[CallerKind] = PEOPLE_ONLY,
     ) -> None:
-        missing = [
-            name
-            for name, value in (
-                ("IGNI_SERVER_URL", settings.igni_server_url),
-                ("PUBLIC_BASE_URL", settings.public_base_url),
-                ("SERVICE_NAME", settings.service_name),
-            )
-            if not value.strip()
-        ]
-        if missing:
-            raise ConfigurationError(f"igni: {', '.join(missing)} must be set")
-        try:
-            self.server = IgniServer(
-                base_url=settings.igni_server_url,
-                own_url=settings.public_base_url,
-                timeout=settings.timeout,
-                http=http,
-            )
-            """igni server as this service reaches it: its address, this service's own URL, the HTTP client."""
-        except ValueError as exc:
-            raise ConfigurationError(f"igni: PUBLIC_BASE_URL: {exc}") from exc
+        connection = IgniConnection(
+            settings, key_store=key_store, http=http, clock=clock, retry_min=retry_min
+        )
+        super().__init__(
+            TokenVerifier(
+                connection.server,
+                IgniKeys(connection.server, clock=connection.clock),
+                clock=connection.clock,
+                revocations=connection.revocation_feed,
+            ),
+            accepted_callers,
+        )
         self.settings = settings
         """The settings the service was made with."""
-        self.clock = clock or Clock()
-        """The clock every token's age and expiry is read from; tests pass a `ManualClock`."""
-        self.key = SigningKey(key_store, clock=self.clock)
-        """This deployment's signing key: its identity at igni. `await igni.thumbprint()` is its thumbprint."""
-        self.keys = IgniKeys(self.server, clock=self.clock)
-        """igni server's public keys (its JWKS), fetched and cached, that people's tokens are checked against."""
-        self.revocations = RevocationList(
-            max_staleness=settings.revocations_max_staleness, clock=self.clock
-        )
-        """What igni has revoked, kept fresh by `lifespan` (`igni_service.revocations`)."""
-        self.verifier = TokenVerifier(self.server, self.keys, clock=self.clock)
-        """Checks the tokens igni signed for this service; what `person`, `caller` and `igni_call` use."""
-        self.accepted_callers: frozenset[CallerKind] = frozenset(
-            CallerKind(kind) for kind in accepted_callers
-        )
-        """Who `caller` lets in: people only unless the service says more
-        (an app, an app's spaces — igni's service-identity §9.2, §17).
-        """
-        self.registration = ServiceRegistration(
-            self.server,
-            self.key,
-            service_name=settings.service_name,
-            kind=settings.client_kind,
-            redirect_uris=list(
-                dict.fromkeys(
-                    [WebSignIn.redirect_uri_for(self.server.own_url), *settings.redirect_uris]
-                )
-            ),
-            bundle_path=settings.extension_bundle_path,
-            retry_min=retry_min,
-        )
-        """This service's registration with igni and the shipping of its extension (`ServiceRegistration`)."""
-        self.tokens = ServiceTokens(self.server, self.registration, self.key, clock=self.clock)
-        """This service's own tokens for igni, one per organisation (`ServiceTokens`)."""
-        self.revocation_feed = RevocationFeed(
-            self.server,
-            TokenEndpoint(self.server, self.registration, self.key),
-            self.revocations,
-            clock=self.clock,
-        )
-        """Keeps `revocations` fresh while `lifespan` runs (`igni_service.revocations`)."""
-        self.verifier.revocations = self.revocation_feed
-        self.directory = DirectoryClient(self.tokens, clock=self.clock)
-        """igni's directory for any organisation; `igni.host(org_id).directory` is one organisation's."""
-        self.notifier = Notifier(self.tokens)
-        """Sends notifications; `igni.host(org_id).notify` is the way to use it."""
-        self.events = EventSender(self.tokens)
-        """Sends events to an extension; `igni.host(org_id).agent(producer)` is the way to use it."""
-        self.agents = AgentWire(self.tokens, self.events)
-        """The calls behind `Agent`: uploads, items and statuses."""
-        self.vm_profiles = ServiceVmProfiles(self.tokens)
-        """The extension's VM profile request; `igni.host(org_id).extension_vm_profile()` reads it."""
+        self.connection = connection
+        """This service's standing at igni server (`IgniConnection`): `server`, `clock`, `key`,
+        `registration` and the `revocation_feed`."""
+        self.outbound = IgniOutbound(connection)
+        """Every call to igni (`IgniOutbound`); `igni.host(org_id)` is one organisation's."""
         self.web = WebSignIn(
-            self.server,
-            self.registration,
-            self.key,
+            connection.server,
+            connection.registration,
+            connection.key,
             self.verifier,
-            web_store or MemoryWebSessionStore(clock=self.clock),
-            clock=self.clock,
+            web_store or MemoryWebSessionStore(clock=connection.clock),
+            clock=connection.clock,
         )
-        """Sign-in to the service's own pages, with cookies (`WebSignIn`): `igni.web.person`, `igni.web.router`."""
-        self._handlers = SubjectHandlers()
-        self._organisations = OrganisationHandlers()
-        self._router: APIRouter | None = None
+        """Sign-in to the service's own pages, with cookies (`WebSignIn`):
+        `igni.web.person`, `igni.web.router`."""
+        self._callbacks = IgniCallbacks(self.outbound.directory, self.igni_call)
         self._owned_engine: AsyncEngine | None = None
 
     @classmethod
@@ -252,7 +161,7 @@ class IgniService:
     # ── The FastAPI surface ─────────────────────────────────────────
 
     @contextlib.asynccontextmanager
-    async def lifespan(self, app: Any = None) -> AsyncIterator[None]:
+    async def lifespan(self, app: FastAPI | None = None) -> AsyncIterator[None]:
         """Register with igni, and keep its revocation list, for as long as the app runs.
 
         Usable as `FastAPI(lifespan=igni.lifespan)`, or entered inside the
@@ -265,25 +174,15 @@ class IgniService:
                 igni does not use it.
         """
         ServiceLogs.make_visible()
-        stop = asyncio.Event()
-        background = [
-            asyncio.create_task(self.registration.keep_trying(stop)),
-            asyncio.create_task(self.revocation_feed.run(stop)),
-        ]
         try:
-            yield
+            async with self.connection.running():
+                yield
         finally:
-            stop.set()
-            for task in background:
-                task.cancel()
-            for task in background:
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
             await self.aclose()
 
     async def aclose(self) -> None:
         """Close what this object opened: its HTTP client, and its database engine."""
-        await self.server.aclose()
+        await self.connection.aclose()
         if self._owned_engine is not None:
             await self._owned_engine.dispose()
             self._owned_engine = None
@@ -307,14 +206,7 @@ class IgniService:
     def router(self) -> APIRouter:
         """The routes igni calls: erasure and export of one person, and a
         deleted organisation."""
-        if self._router is None:
-            router = APIRouter()
-            router.include_router(
-                SubjectRoutes(self._handlers, self.directory, self.igni_call).router()
-            )
-            router.include_router(OrganisationRoutes(self._organisations, self.igni_call).router())
-            self._router = router
-        return self._router
+        return self._callbacks.router
 
     def on_erase(self, handler: EraseHandler) -> EraseHandler:
         """Register what erases one person's data in one organisation.
@@ -325,7 +217,7 @@ class IgniService:
                 `Subject`, and must be idempotent, as igni repeats it until
                 every service confirms.
         """
-        return self._handlers.on_erase(handler)
+        return self._callbacks.on_erase(handler)
 
     def on_export(self, handler: ExportHandler) -> ExportHandler:
         """Register what lists one person's data in one organisation.
@@ -335,7 +227,7 @@ class IgniService:
                 about one person in one organisation; it is given a
                 `Subject` and answers with the sections of rows.
         """
-        return self._handlers.on_export(handler)
+        return self._callbacks.on_export(handler)
 
     def on_organisation_deleted(
         self, handler: OrganisationDeletedHandler
@@ -350,224 +242,20 @@ class IgniService:
                 deleted; it is given the organisation's id, and must be
                 idempotent.
         """
-        return self._organisations.on_deleted(handler)
-
-    async def person(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> Person:
-        """FastAPI dependency: the person a request's token names.
-
-        401 for a missing or refused token; 503 when igni's keys cannot be
-        had to check it — nothing is wrong with the token, and signing in
-        again would not help.
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        token = self._bare(credentials)
-        try:
-            return await self.verifier.person(token)
-        except TokenRefused as refused:
-            raise self._refused(refused) from None
-        except IgniUnavailable as exc:
-            raise self._cannot_check(exc) from exc
-
-    async def caller(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> Caller:
-        """FastAPI dependency: whoever a request's token names — a `Person`, an
-        `App` or a `Space` — among the kinds this service accepts
-        (`accepted_callers`, people only by default). 401 for anybody else.
-
-        A bearer route like `person`'s: the extension's page may call it
-        (`BearerCors`).
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        token = self._bare(credentials)
-        try:
-            return await self.verifier.caller(token, accept=self.accepted_callers)
-        except TokenRefused as refused:
-            raise self._refused(refused) from None
-        except IgniUnavailable as exc:
-            raise self._cannot_check(exc) from exc
-
-    async def caller_of(self, token: str) -> Caller:
-        """`caller` for a bare token, outside an HTTP request (see `person_of`).
-
-        Args:
-            token: The caller's bearer token, on its own: a leading
-                `Bearer ` is stripped when there is one.
-        """
-        return await self.verifier.caller(token, accept=self.accepted_callers)
-
-    async def optional_person(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> Person | None:
-        """FastAPI dependency: the person, or `None` when no token was sent.
-
-        For routes that serve everybody and do more for somebody signed in
-        (a public link that also shows the reader's own comments). A token
-        that *was* sent and is refused is still a 401: a broken session
-        should be noticed, not quietly treated as anonymous.
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        if credentials is None:
-            return None
-        return await self.person(credentials)
-
-    async def token(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> str:
-        """FastAPI dependency: the bearer token itself, not yet checked; 401
-        when none was sent.
-
-        For a route that checks it later with `person_of` — one that turns
-        an unusable token into an anonymous reader instead of a 401, say.
-        It is a person's token route all the same: the extension's page may
-        call it (`BearerCors`).
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        return self._bare(credentials)
-
-    async def optional_token(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> str | None:
-        """FastAPI dependency: the bearer token, not yet checked, or `None`.
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token; a scheme other than
-                `Bearer` counts as no token.
-        """
-        if credentials is None or credentials.scheme.lower() != "bearer":
-            return None
-        return credentials.credentials
-
-    async def person_of(self, token: str) -> Person:
-        """The person a bare token names, outside an HTTP request.
-
-        For a WebSocket greeting, a queued job, anything that holds a token
-        but no `Authorization` header. Raises `TokenRefused` or
-        `IgniUnavailable` rather than an HTTP error, so the caller answers in
-        its own protocol.
-
-        Args:
-            token: The person's bearer token, on its own: a leading
-                `Bearer ` is stripped when there is one.
-        """
-        return await self.verifier.person(token)
-
-    async def org_admin(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> Person:
-        """FastAPI dependency: the person, if they are an admin of the organisation
-        their token is for (`org_role == "admin"`); 403 for anybody else.
-
-        Being a super admin does not make somebody an organisation's admin.
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        person = await self.person(credentials)
-        if not person.is_org_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Organisation admins only"
-            )
-        return person
-
-    async def igni_call(
-        self, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)]
-    ) -> IgniCall:
-        """FastAPI dependency: igni itself, for the organisation its token names.
-
-        Args:
-            credentials: The request's bearer credentials: the
-                `Authorization` header's scheme and token, or `None` when
-                the request sent no bearer token.
-        """
-        token = self._bare(credentials)
-        try:
-            return await self.verifier.igni_call(token)
-        except TokenRefused as refused:
-            raise self._refused(refused) from None
-        except IgniUnavailable as exc:
-            raise self._cannot_check(exc) from exc
+        return self._callbacks.on_organisation_deleted(handler)
 
     # ── Talking to igni ─────────────────────────────────────────────
 
     def host(self, org_id: str) -> Host:
-        """igni for one organisation: `notify`, `agent(producer)`, `send_event`, `extension_vm_profile`, and its `directory`.
+        """igni for one organisation: `notify`, `agent(producer)`, `send_event`,
+        `extension_vm_profile`, and its `directory`.
 
         Args:
             org_id: The organisation's id in igni, the one every call this
                 host makes is for.
         """
-        return Host(
-            org_id,
-            notifier=self.notifier,
-            directory=self.directory,
-            agents=self.agents,
-            vm_profiles=self.vm_profiles,
-        )
+        return self.outbound.host(org_id)
 
     async def thumbprint(self) -> str:
         """The key's RFC 7638 thumbprint: what a super admin compares."""
-        return await self.key.thumbprint()
-
-    @staticmethod
-    def _bare(credentials: HTTPAuthorizationCredentials | None) -> str:
-        if credentials is None or credentials.scheme.lower() != "bearer":
-            # No token at all: RFC 6750 §3.1 — a challenge with no error.
-            raise IgniService._refused()
-        return credentials.credentials
-
-    @staticmethod
-    def challenge(refused: TokenRefused | None = None) -> str:
-        """The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise.
-
-        Args:
-            refused: The refusal to say in the challenge, in words safe to
-                show whoever holds the token; `None` when no token was sent,
-                and the challenge is bare.
-        """
-        if refused is None:
-            return "Bearer"
-        said = " ".join(refused.reason.replace('"', "'").replace("\\", "/").split())
-        return f'Bearer error="invalid_token", error_description="{said}"'
-
-    @staticmethod
-    def _refused(refused: TokenRefused | None = None) -> HTTPException:
-        if refused is not None:
-            # Visible under uvicorn (`igni_service.logs`): the line the
-            # extension's author looks for when their call is a 401.
-            logger.info("igni: refused a token: %s", refused.reason)
-        return HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=_REFUSAL,
-            headers={"WWW-Authenticate": IgniService.challenge(refused)},
-        )
-
-    @staticmethod
-    def _cannot_check(exc: Exception) -> HTTPException:
-        logger.error("igni: cannot check a token: %s", exc)
-        return HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="igni server cannot be reached to check this token",
-        )
+        return await self.connection.key.thumbprint()

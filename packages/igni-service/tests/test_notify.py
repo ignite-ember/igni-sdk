@@ -117,7 +117,7 @@ async def test_a_call_igni_could_not_take_is_retried(igni: IgniService, fake: Fa
         pauses.append(seconds)
         fake.traffic.heal()
 
-    igni.notifier = Notifier(igni.tokens, sleep=recover)
+    igni.outbound.notifier = Notifier(igni.outbound.tokens, sleep=recover)
 
     delivered = await igni.host(ORG).notify(comment())
 
@@ -138,8 +138,8 @@ async def test_igni_staying_away_is_raised_after_the_retries(
 
 
 async def test_a_refusal_is_not_retried(igni: IgniService, fake: FakeIgni, tmp_path: Path) -> None:
-    igni.registration._bundle_path = str(write_bundle(tmp_path))
-    await igni.registration.start()
+    igni.connection.registration._bundle_path = str(write_bundle(tmp_path))
+    await igni.connection.registration.start()
 
     with pytest.raises(NotificationRefused) as refused:
         await igni.host(ORG).notify(comment(target=Target(page="someone-elses.page")))
@@ -205,7 +205,7 @@ async def test_the_wait_between_tries_doubles_and_none_follows_the_last(
     async def note(seconds: float) -> None:
         pauses.append(seconds)
 
-    igni.notifier = Notifier(igni.tokens, attempts=4, backoff=0.25, sleep=note)
+    igni.outbound.notifier = Notifier(igni.outbound.tokens, attempts=4, backoff=0.25, sleep=note)
 
     with pytest.raises(IgniUnavailable):
         await igni.host(ORG).notify(comment())
@@ -224,7 +224,7 @@ async def test_fewer_than_one_attempt_still_makes_one(
     async def note(seconds: float) -> None:
         pauses.append(seconds)
 
-    igni.notifier = Notifier(igni.tokens, attempts=attempts, sleep=note)
+    igni.outbound.notifier = Notifier(igni.outbound.tokens, attempts=attempts, sleep=note)
 
     with pytest.raises(IgniUnavailable):
         await igni.host(ORG).notify(comment())

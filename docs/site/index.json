@@ -4011,11 +4011,66 @@
       "package": "igni-service",
       "slug": "reference-igni-service-class",
       "title": "IgniService and its settings",
-      "description": "Reference: IgniService, IgniSettings, IgniTables — signatures and docstrings, read from the code.",
+      "description": "Reference: BearerDependencies, IgniService, IgniSettings, IgniTables — signatures and docstrings, read from the code.",
       "category": "reference",
       "order": 8,
       "file": "igni-service/reference-igni-service-class.md",
       "sections": [
+        {
+          "level": 2,
+          "id": "bearerdependencies",
+          "title": "BearerDependencies"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-person",
+          "title": "BearerDependencies.person()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-caller",
+          "title": "BearerDependencies.caller()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-caller-of",
+          "title": "BearerDependencies.caller_of()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-optional-person",
+          "title": "BearerDependencies.optional_person()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-token",
+          "title": "BearerDependencies.token()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-optional-token",
+          "title": "BearerDependencies.optional_token()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-person-of",
+          "title": "BearerDependencies.person_of()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-org-admin",
+          "title": "BearerDependencies.org_admin()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-igni-call",
+          "title": "BearerDependencies.igni_call()"
+        },
+        {
+          "level": 3,
+          "id": "bearerdependencies-challenge",
+          "title": "BearerDependencies.challenge()"
+        },
         {
           "level": 2,
           "id": "igniservice",
@@ -4063,51 +4118,6 @@
         },
         {
           "level": 3,
-          "id": "igniservice-person",
-          "title": "IgniService.person()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-caller",
-          "title": "IgniService.caller()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-caller-of",
-          "title": "IgniService.caller_of()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-optional-person",
-          "title": "IgniService.optional_person()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-token",
-          "title": "IgniService.token()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-optional-token",
-          "title": "IgniService.optional_token()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-person-of",
-          "title": "IgniService.person_of()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-org-admin",
-          "title": "IgniService.org_admin()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-igni-call",
-          "title": "IgniService.igni_call()"
-        },
-        {
-          "level": 3,
           "id": "igniservice-host",
           "title": "IgniService.host()"
         },
@@ -4115,11 +4125,6 @@
           "level": 3,
           "id": "igniservice-thumbprint",
           "title": "IgniService.thumbprint()"
-        },
-        {
-          "level": 3,
-          "id": "igniservice-challenge",
-          "title": "IgniService.challenge()"
         },
         {
           "level": 2,

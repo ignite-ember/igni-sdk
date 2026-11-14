@@ -2,18 +2,200 @@
 
 # IgniService and its settings
 
-Read from the code: every public name below, its signature and its docstring. Import `igni_service` — defined in `igni_service.service`, `igni_service.settings`, `igni_service.tables`.
+Read from the code: every public name below, its signature and its docstring. Import `igni_service` — defined in `igni_service.bearer`, `igni_service.service`, `igni_service.settings`, `igni_service.tables`.
 
 | Name | What it is |
 |---|---|
+| [`BearerDependencies`](#bearerdependencies) | The dependencies a service's routes take their caller from. |
 | [`IgniService`](#igniservice) | A service's place in an igni deployment. |
 | [`IgniSettings`](#ignisettings) | Read from the environment. Every field can also be passed directly. |
 | [`IgniTables`](#ignitables) | The SDK's own tables in the service's database, on one `MetaData`. |
 
+## BearerDependencies
+
+```python
+class BearerDependencies
+BearerDependencies(verifier: TokenVerifier, accepted_callers: Collection[CallerKind])
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `verifier` | `TokenVerifier` | required | Checks the tokens igni signed for this service. |
+| `accepted_callers` | `Collection[CallerKind]` | required | The kinds of caller `caller` lets in. |
+
+The dependencies a service's routes take their caller from.
+
+401 for a missing or refused token; 503 when igni's keys cannot be had
+to check it — nothing is wrong with the token then, and signing in
+again would not help.
+
+### BearerDependencies.person()
+
+```python
+async def person(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: the person a request's token names.
+
+401 for a missing or refused token; 503 when igni's keys cannot be
+had to check it — nothing is wrong with the token, and signing in
+again would not help.
+
+### BearerDependencies.caller()
+
+```python
+async def caller(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Caller
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: whoever a request's token names — a `Person`, an
+`App` or a `Space` — among the kinds this service accepts
+(`accepted_callers`, people only by default). 401 for anybody else.
+
+A bearer route like `person`'s: the extension's page may call it
+(`BearerCors`).
+
+### BearerDependencies.caller_of()
+
+```python
+async def caller_of(token: str) -> Caller
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `str` | required | The caller's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
+
+`caller` for a bare token, outside an HTTP request (see `person_of`).
+
+### BearerDependencies.optional_person()
+
+```python
+async def optional_person(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person | None
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: the person, or `None` when no token was sent.
+
+For routes that serve everybody and do more for somebody signed in
+(a public link that also shows the reader's own comments). A token
+that *was* sent and is refused is still a 401: a broken session
+should be noticed, not quietly treated as anonymous.
+
+### BearerDependencies.token()
+
+```python
+async def token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> str
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: the bearer token itself, not yet checked; 401
+when none was sent.
+
+For a route that checks it later with `person_of` — one that turns
+an unusable token into an anonymous reader instead of a 401, say.
+It is a person's token route all the same: the extension's page may
+call it (`BearerCors`).
+
+### BearerDependencies.optional_token()
+
+```python
+async def optional_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> str | None
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token; a scheme other than `Bearer` counts as no token. |
+
+FastAPI dependency: the bearer token, not yet checked, or `None`.
+
+### BearerDependencies.person_of()
+
+```python
+async def person_of(token: str) -> Person
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `token` | `str` | required | The person's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
+
+The person a bare token names, outside an HTTP request.
+
+For a WebSocket greeting, a queued job, anything that holds a token
+but no `Authorization` header. Raises `TokenRefused` or
+`IgniUnavailable` rather than an HTTP error, so the caller answers in
+its own protocol.
+
+### BearerDependencies.org_admin()
+
+```python
+async def org_admin(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> Person
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: the person, if they are an admin of the organisation
+their token is for (`org_role == "admin"`); 403 for anybody else.
+
+Being a super admin does not make somebody an organisation's admin.
+
+### BearerDependencies.igni_call()
+
+```python
+async def igni_call(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
+) -> IgniCall
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
+
+FastAPI dependency: igni itself, for the organisation its token names.
+
+### BearerDependencies.challenge()
+
+```python
+@staticmethod
+def challenge(refused: TokenRefused | None = None) -> str
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `refused` | `TokenRefused \| None` | `None` | The refusal to say in the challenge, in words safe to show whoever holds the token; `None` when no token was sent, and the challenge is bare. |
+
+The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise.
+
 ## IgniService
 
 ```python
-class IgniService
+class IgniService(BearerDependencies)
 IgniService(
     settings: IgniSettings,
     *,
@@ -36,7 +218,15 @@ IgniService(
 | `retry_min` | `float \| None` | `None` | Seconds before the first retry of the registration with igni server, when it fails. |
 | `accepted_callers` | `Collection[CallerKind]` | `frozenset({CallerKind.PERSON})` | The kinds of caller `caller` lets in: people only, unless the service says more. |
 
+Based on [`BearerDependencies`](/docs/sdk/igni-service/reference-igni-service-class#bearerdependencies).
+
 A service's place in an igni deployment.
+
+Composed of its connection to igni server (`connection`), the calls it
+makes to igni (`outbound`), sign-in to its own pages (`web`) and the
+handlers for igni's calls to it; the FastAPI dependencies that read a
+request's bearer token (`person`, `caller`, `igni_call`, ...) come from
+`BearerDependencies`.
 
 ### IgniService.from_settings()
 
@@ -68,12 +258,12 @@ directly to pass a `web_store` too.
 ### IgniService.lifespan()
 
 ```python
-def lifespan(app: Any = None) -> AsyncIterator[None]
+def lifespan(app: FastAPI | None = None) -> AsyncIterator[None]
 ```
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `app` | `Any` | `None` | The app the lifespan runs for, as FastAPI passes it in; igni does not use it. |
+| `app` | `FastAPI \| None` | `None` | The app the lifespan runs for, as FastAPI passes it in; igni does not use it. |
 
 Register with igni, and keep its revocation list, for as long as the app runs.
 
@@ -158,156 +348,6 @@ Register what stops routing to an organisation igni deleted.
 Receives the organisation's id. Must be idempotent: igni repeats it
 until the service confirms.
 
-### IgniService.person()
-
-```python
-async def person(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> Person
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: the person a request's token names.
-
-401 for a missing or refused token; 503 when igni's keys cannot be
-had to check it — nothing is wrong with the token, and signing in
-again would not help.
-
-### IgniService.caller()
-
-```python
-async def caller(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> Caller
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: whoever a request's token names — a `Person`, an
-`App` or a `Space` — among the kinds this service accepts
-(`accepted_callers`, people only by default). 401 for anybody else.
-
-A bearer route like `person`'s: the extension's page may call it
-(`BearerCors`).
-
-### IgniService.caller_of()
-
-```python
-async def caller_of(token: str) -> Caller
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `token` | `str` | required | The caller's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
-
-`caller` for a bare token, outside an HTTP request (see `person_of`).
-
-### IgniService.optional_person()
-
-```python
-async def optional_person(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> Person | None
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: the person, or `None` when no token was sent.
-
-For routes that serve everybody and do more for somebody signed in
-(a public link that also shows the reader's own comments). A token
-that *was* sent and is refused is still a 401: a broken session
-should be noticed, not quietly treated as anonymous.
-
-### IgniService.token()
-
-```python
-async def token(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> str
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: the bearer token itself, not yet checked; 401
-when none was sent.
-
-For a route that checks it later with `person_of` — one that turns
-an unusable token into an anonymous reader instead of a 401, say.
-It is a person's token route all the same: the extension's page may
-call it (`BearerCors`).
-
-### IgniService.optional_token()
-
-```python
-async def optional_token(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> str | None
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token; a scheme other than `Bearer` counts as no token. |
-
-FastAPI dependency: the bearer token, not yet checked, or `None`.
-
-### IgniService.person_of()
-
-```python
-async def person_of(token: str) -> Person
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `token` | `str` | required | The person's bearer token, on its own: a leading `Bearer ` is stripped when there is one. |
-
-The person a bare token names, outside an HTTP request.
-
-For a WebSocket greeting, a queued job, anything that holds a token
-but no `Authorization` header. Raises `TokenRefused` or
-`IgniUnavailable` rather than an HTTP error, so the caller answers in
-its own protocol.
-
-### IgniService.org_admin()
-
-```python
-async def org_admin(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> Person
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: the person, if they are an admin of the organisation
-their token is for (`org_role == "admin"`); 403 for anybody else.
-
-Being a super admin does not make somebody an organisation's admin.
-
-### IgniService.igni_call()
-
-```python
-async def igni_call(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_BEARER)],
-) -> IgniCall
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `credentials` | `Annotated[HTTPAuthorizationCredentials \| None, Depends(_BEARER)]` | required | The request's bearer credentials: the `Authorization` header's scheme and token, or `None` when the request sent no bearer token. |
-
-FastAPI dependency: igni itself, for the organisation its token names.
-
 ### IgniService.host()
 
 ```python
@@ -318,7 +358,8 @@ def host(org_id: str) -> Host
 |---|---|---|---|
 | `org_id` | `str` | required | The organisation's id in igni, the one every call this host makes is for. |
 
-igni for one organisation: `notify`, `agent(producer)`, `send_event`, `extension_vm_profile`, and its `directory`.
+igni for one organisation: `notify`, `agent(producer)`, `send_event`,
+`extension_vm_profile`, and its `directory`.
 
 ### IgniService.thumbprint()
 
@@ -327,19 +368,6 @@ async def thumbprint() -> str
 ```
 
 The key's RFC 7638 thumbprint: what a super admin compares.
-
-### IgniService.challenge()
-
-```python
-@staticmethod
-def challenge(refused: TokenRefused | None = None) -> str
-```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `refused` | `TokenRefused \| None` | `None` | The refusal to say in the challenge, in words safe to show whoever holds the token; `None` when no token was sent, and the challenge is bare. |
-
-The `WWW-Authenticate` value for a 401: bare for no token, RFC 6750's error otherwise.
 
 ## IgniSettings
 

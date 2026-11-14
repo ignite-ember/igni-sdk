@@ -112,7 +112,7 @@ class TestTheService:
         service = fake.service()
 
         assert service.settings == fake.settings()
-        assert service.clock is fake.clock
+        assert service.connection.clock is fake.clock
         assert service.accepted_callers == frozenset({CallerKind.PERSON})
         token = fake.signer.person_token("u-ada", org_id=ORG)
         assert (await service.person_of(token)).user_id == "u-ada"
@@ -123,9 +123,9 @@ class TestTheService:
         store, clock = MemoryKeyStore(), ManualClock()
 
         service = fake.service(key_store=store, clock=clock)
-        await service.registration.register()
+        await service.connection.registration.register()
 
-        assert service.clock is clock
+        assert service.connection.clock is clock
         assert await store.get() is not None
 
     async def test_two_services_of_one_fake_keep_separate_keys_and_registrations(
@@ -133,7 +133,10 @@ class TestTheService:
     ) -> None:
         one, two = fake.service(), fake.service()
 
-        assert await one.registration.client_id() != await two.registration.client_id()
+        assert (
+            await one.connection.registration.client_id()
+            != await two.connection.registration.client_id()
+        )
 
     async def test_settings_the_test_gives_are_the_services(self, fake: FakeIgni) -> None:
         settings = fake.settings(SettingsOverrides(service_name="Mine"))
@@ -145,7 +148,7 @@ class TestWhatAResetKeeps:
     async def test_issued_service_tokens_still_hold_after_a_reset(
         self, fake: FakeIgni, igni: IgniService
     ) -> None:
-        token = await igni.tokens.token(ORG)
+        token = await igni.outbound.tokens.token(ORG)
 
         fake.reset()
 
@@ -168,7 +171,7 @@ class TestWhatAResetKeeps:
     async def test_used_jtis_are_remembered_after_a_reset(
         self, fake: FakeIgni, igni: IgniService
     ) -> None:
-        await igni.tokens.token(ORG)
+        await igni.outbound.tokens.token(ORG)
         used = set(fake.oauth.verifier.jtis)
         assert used
 
@@ -179,7 +182,7 @@ class TestWhatAResetKeeps:
     async def test_registered_clients_and_the_signing_keys_stay(
         self, fake: FakeIgni, igni: IgniService
     ) -> None:
-        await igni.registration.register()
+        await igni.connection.registration.register()
         clients = dict(fake.clients.clients)
         kids = set(fake.signer.keys.published)
 
@@ -191,11 +194,11 @@ class TestWhatAResetKeeps:
     async def test_the_fake_is_still_usable_after_a_reset(
         self, fake: FakeIgni, igni: IgniService
     ) -> None:
-        await igni.tokens.token(ORG)
+        await igni.outbound.tokens.token(ORG)
         fake.reset()
-        igni.tokens.forget()
+        igni.outbound.tokens.forget()
 
-        assert await igni.tokens.token(ORG)
+        assert await igni.outbound.tokens.token(ORG)
 
 
 def test_the_addresses_default_to_the_published_constants() -> None:
@@ -220,8 +223,8 @@ async def test_require_approval_is_the_verifiers(approval: bool) -> None:
 class TestRetriesWithoutWaiting:
     async def test_events_and_agent_items_retry_without_sleeping(self, fake: FakeIgni) -> None:
         igni = fake.service()
-        assert igni.events._sleep is not asyncio.sleep
-        assert igni.agents._sender is igni.events
+        assert igni.outbound.events._sleep is not asyncio.sleep
+        assert igni.outbound.agents._sender is igni.outbound.events
         fake.traffic.fail("/v1/service-events", 503)
         started = time.monotonic()
         with pytest.raises(IgniUnavailable):

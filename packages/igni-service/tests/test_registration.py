@@ -44,7 +44,7 @@ async def run_lifespan(igni: IgniService) -> None:
     """Start the app as uvicorn would, wait for the registration, stop."""
     app = FastAPI(lifespan=igni.lifespan)
     async with app.router.lifespan_context(app):
-        await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
+        await asyncio.wait_for(igni.connection.registration.registered.wait(), timeout=5)
         await asyncio.sleep(0.05)
 
 
@@ -67,8 +67,8 @@ async def test_starting_registers_the_service_with_its_own_public_key(fake: Fake
     assert key["kty"] == "RSA" and key["alg"] == "RS256"
     assert "d" not in key
     assert key["kid"] == await igni.thumbprint()
-    assert igni.registration.current is not None
-    assert igni.registration.current.state == "pending"
+    assert igni.connection.registration.current is not None
+    assert igni.connection.registration.current.state == "pending"
 
 
 async def test_the_thumbprint_is_logged_for_the_super_admin_to_compare(
@@ -90,7 +90,10 @@ async def test_a_restart_with_the_same_key_finds_the_same_registration(fake: Fak
     await run_lifespan(second)
 
     assert len(fake.clients.clients) == 1
-    assert await first.registration.client_id() == await second.registration.client_id()
+    assert (
+        await first.connection.registration.client_id()
+        == await second.connection.registration.client_id()
+    )
 
 
 async def test_registration_retries_until_igni_answers(fake: FakeIgni) -> None:
@@ -101,9 +104,9 @@ async def test_registration_retries_until_igni_answers(fake: FakeIgni) -> None:
     async with app.router.lifespan_context(app):
         while len(fake.traffic.requests_to(IgniPaths.CLIENTS)) < 2:
             await asyncio.sleep(0.01)
-        assert not igni.registration.registered.is_set()
+        assert not igni.connection.registration.registered.is_set()
         fake.traffic.heal()
-        await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
+        await asyncio.wait_for(igni.connection.registration.registered.wait(), timeout=5)
 
     assert len(fake.clients.clients) == 1
 
@@ -119,7 +122,7 @@ async def test_the_bundle_is_uploaded_signed_and_only_when_it_changed(
 
     await run_lifespan(igni)
 
-    client_id = await igni.registration.client_id()
+    client_id = await igni.connection.registration.client_id()
     [upload] = [
         s for s in fake.traffic.requests_to(IgniPaths.extension(client_id)) if s.method == "PUT"
     ]
@@ -155,15 +158,18 @@ async def test_a_refused_bundle_is_logged_and_not_retried(
 ) -> None:
     bundle = write_bundle(tmp_path)
     shipper = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))))
-    await shipper.registration.keep_trying()
-    fake.clients.approve(await shipper.registration.client_id())
+    await shipper.connection.registration.keep_trying()
+    fake.clients.approve(await shipper.connection.registration.client_id())
     bundle.unlink()
     rival = fake.service(
         fake.settings(SettingsOverrides(extension_bundle_path=str(write_bundle(tmp_path))))
     )
 
     with caplog.at_level(logging.ERROR, logger="igni_service"):
-        assert await asyncio.wait_for(rival.registration.keep_trying(), timeout=5) is not None
+        assert (
+            await asyncio.wait_for(rival.connection.registration.keep_trying(), timeout=5)
+            is not None
+        )
 
     assert "refused extension acme.example" in caplog.text
     assert "409" in caplog.text
@@ -178,7 +184,7 @@ async def test_an_unreadable_bundle_leaves_the_registration_standing(
     igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(broken))))
 
     with caplog.at_level(logging.ERROR, logger="igni_service"):
-        registration = await asyncio.wait_for(igni.registration.keep_trying(), timeout=5)
+        registration = await asyncio.wait_for(igni.connection.registration.keep_trying(), timeout=5)
 
     assert registration is not None
     assert "unreadable" in caplog.text
@@ -210,9 +216,9 @@ async def test_callers_during_start_up_share_the_one_registration(fake: FakeIgni
     )
 
     ids = await asyncio.gather(
-        igni.registration.start(),
-        igni.registration.client_id(),
-        igni.registration.client_id(),
+        igni.connection.registration.start(),
+        igni.connection.registration.client_id(),
+        igni.connection.registration.client_id(),
     )
 
     assert len(fake.traffic.requests_to(IgniPaths.CLIENTS)) == 1
@@ -300,7 +306,7 @@ def test_its_lines_show_under_uvicorn_which_configures_only_its_own_loggers(
                 igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path={str(bundle)!r})))
                 app = FastAPI(lifespan=igni.lifespan)
                 async with app.router.lifespan_context(app):
-                    await asyncio.wait_for(igni.registration.registered.wait(), 5)
+                    await asyncio.wait_for(igni.connection.registration.registered.wait(), 5)
                     await asyncio.sleep(0.2)
 
             asyncio.run(main())

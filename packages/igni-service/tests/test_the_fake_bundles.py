@@ -298,7 +298,7 @@ class TestUploadingAPath:
 
         assert held.pages == ["panel"]
         assert held.version == "3"
-        assert held.client_id == await igni.registration.client_id()
+        assert held.client_id == await igni.connection.registration.client_id()
         assert held.archive == BundleSource(path=directory).bundle().archive
 
     async def test_an_extension_the_fake_holds_back_is_published_with_its_reason(

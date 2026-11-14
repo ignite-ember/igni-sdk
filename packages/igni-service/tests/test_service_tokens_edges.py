@@ -68,20 +68,20 @@ def unauthorised() -> httpx.Response:
 async def test_a_token_is_replaced_exactly_a_minute_before_it_expires(
     igni: IgniService, fake: FakeIgni, clock: ManualClock
 ) -> None:
-    first = await igni.tokens.token(ORG)
+    first = await igni.outbound.tokens.token(ORG)
     clock.advance(600 - ServiceTokens.RENEW_BEFORE - 0.5)
-    assert await igni.tokens.token(ORG) == first
+    assert await igni.outbound.tokens.token(ORG) == first
 
     clock.advance(0.5)
 
-    assert await igni.tokens.token(ORG) != first
+    assert await igni.outbound.tokens.token(ORG) != first
     assert ServiceTokens.RENEW_BEFORE == 60.0
 
 
 async def test_callers_asking_at_once_for_one_organisation_cause_one_grant(
     service: IgniService, wire: Wire
 ) -> None:
-    tokens = await asyncio.gather(*(service.tokens.token(ORG) for _ in range(6)))
+    tokens = await asyncio.gather(*(service.outbound.tokens.token(ORG) for _ in range(6)))
 
     assert len(set(tokens)) == 1
     assert len(wire.grants()) == 1
@@ -90,7 +90,9 @@ async def test_callers_asking_at_once_for_one_organisation_cause_one_grant(
 async def test_callers_asking_at_once_for_two_organisations_get_a_grant_each(
     service: IgniService, wire: Wire
 ) -> None:
-    here, there = await asyncio.gather(service.tokens.token(ORG), service.tokens.token(OTHER_ORG))
+    here, there = await asyncio.gather(
+        service.outbound.tokens.token(ORG), service.outbound.tokens.token(OTHER_ORG)
+    )
 
     assert here != there
     assert len(wire.grants()) == 2
@@ -99,34 +101,34 @@ async def test_callers_asking_at_once_for_two_organisations_get_a_grant_each(
 async def test_no_lock_is_kept_for_an_organisation_once_its_grant_is_done(
     service: IgniService,
 ) -> None:
-    await asyncio.gather(*(service.tokens.token(f"org-{n}") for n in range(5)))
+    await asyncio.gather(*(service.outbound.tokens.token(f"org-{n}") for n in range(5)))
 
-    assert len(service.tokens._locks) == 0  # noqa: SLF001 — what is kept is the point
+    assert len(service.outbound.tokens._locks) == 0  # noqa: SLF001 — what is kept is the point
 
 
 async def test_forgetting_one_organisation_leaves_the_others_kept(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    here = await igni.tokens.token(ORG)
-    there = await igni.tokens.token(OTHER_ORG)
+    here = await igni.outbound.tokens.token(ORG)
+    there = await igni.outbound.tokens.token(OTHER_ORG)
 
-    igni.tokens.forget(ORG)
-    igni.tokens.forget("org-never-held")
+    igni.outbound.tokens.forget(ORG)
+    igni.outbound.tokens.forget("org-never-held")
 
-    assert await igni.tokens.token(OTHER_ORG) == there
-    assert await igni.tokens.token(ORG) != here
+    assert await igni.outbound.tokens.token(OTHER_ORG) == there
+    assert await igni.outbound.tokens.token(ORG) != here
     assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 3
 
 
 async def test_forgetting_without_an_organisation_forgets_every_one(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    await igni.tokens.token(ORG)
-    await igni.tokens.token(OTHER_ORG)
+    await igni.outbound.tokens.token(ORG)
+    await igni.outbound.tokens.token(OTHER_ORG)
 
-    igni.tokens.forget()
-    await igni.tokens.token(ORG)
-    await igni.tokens.token(OTHER_ORG)
+    igni.outbound.tokens.forget()
+    await igni.outbound.tokens.token(ORG)
+    await igni.outbound.tokens.token(OTHER_ORG)
 
     assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 4
 
@@ -137,7 +139,7 @@ async def test_a_second_401_in_a_row_is_igni_refusing_this_service(
     wire.always = unauthorised()
 
     with pytest.raises(IgniUnavailable, match=f"refused this service for organisation {ORG}"):
-        await service.tokens.request("GET", DIRECTORY, org_id=ORG)
+        await service.outbound.tokens.request("GET", DIRECTORY, org_id=ORG)
 
     assert len(wire.to_directory()) == 2, "one retry with a new token, and no more"
     first, second = (r.headers["authorization"] for r in wire.to_directory())
@@ -149,7 +151,7 @@ async def test_a_401_the_second_time_is_not_asked_a_third_time_but_forgets_the_t
 ) -> None:
     wire.answers = [unauthorised()]
 
-    response = await service.tokens.request("GET", DIRECTORY, org_id=ORG)
+    response = await service.outbound.tokens.request("GET", DIRECTORY, org_id=ORG)
 
     assert response.status_code == 200
     assert len(fake.traffic.requests_to(IgniPaths.TOKEN)) == 2
@@ -161,7 +163,7 @@ async def test_any_other_error_status_is_answered_as_it_came(
 ) -> None:
     wire.always = httpx.Response(status, json={"detail": "x"})
 
-    response = await service.tokens.request("GET", DIRECTORY, org_id=ORG)
+    response = await service.outbound.tokens.request("GET", DIRECTORY, org_id=ORG)
 
     assert response.status_code == status
     assert len(wire.to_directory()) == 1
@@ -177,7 +179,7 @@ async def test_a_call_that_cannot_reach_igni_names_only_the_kind_of_failure(
     wire.always = error
 
     with pytest.raises(IgniUnavailable) as raised:
-        await service.tokens.request("GET", DIRECTORY, org_id=ORG)
+        await service.outbound.tokens.request("GET", DIRECTORY, org_id=ORG)
 
     assert str(raised.value) == f"could not reach igni server: {type(error).__name__}"
     assert "secret-host" not in str(raised.value)
@@ -186,7 +188,7 @@ async def test_a_call_that_cannot_reach_igni_names_only_the_kind_of_failure(
 async def test_the_callers_headers_travel_but_never_replace_the_service_token(
     service: IgniService, wire: Wire
 ) -> None:
-    await service.tokens.request(
+    await service.outbound.tokens.request(
         "GET",
         DIRECTORY,
         org_id=ORG,
@@ -195,11 +197,13 @@ async def test_the_callers_headers_travel_but_never_replace_the_service_token(
 
     [sent] = wire.to_directory()
     assert sent.headers["x-request-id"] == "r-1"
-    assert sent.headers.get_list("authorization") == [f"Bearer {await service.tokens.token(ORG)}"]
+    assert sent.headers.get_list("authorization") == [
+        f"Bearer {await service.outbound.tokens.token(ORG)}"
+    ]
 
 
 async def test_a_request_passes_its_other_arguments_on(service: IgniService, wire: Wire) -> None:
-    await service.tokens.request(
+    await service.outbound.tokens.request(
         "GET", f"{IgniPaths.DIRECTORY}/members", org_id=ORG, params={"query": "ada"}
     )
 

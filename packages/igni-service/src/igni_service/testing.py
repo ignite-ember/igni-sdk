@@ -218,9 +218,9 @@ class FakeIgni:
             retry_min=0.01,
             accepted_callers=accepted_callers,
         )
-        service.notifier = Notifier(service.tokens, sleep=no_sleep)
-        service.events = EventSender(service.tokens, sleep=no_sleep)
-        service.agents = AgentWire(service.tokens, service.events)
+        service.outbound.notifier = Notifier(service.outbound.tokens, sleep=no_sleep)
+        service.outbound.events = EventSender(service.outbound.tokens, sleep=no_sleep)
+        service.outbound.agents = AgentWire(service.outbound.tokens, service.outbound.events)
         return service
 
     def app(self, app_id: str, *, org_id: str, name: str = "") -> IgniApp:
@@ -276,8 +276,8 @@ class FakeIgni:
         """
         if not isinstance(bundle, ExtensionBundle):
             bundle = BundleSource(path=Path(bundle)).bundle()
-        await service.registration.ship(bundle)
-        return self.extensions.latest(await service.registration.client_id())
+        await service.connection.registration.ship(bundle)
+        return self.extensions.latest(await service.connection.registration.client_id())
 
     # ── The wire ────────────────────────────────────────────────────
 

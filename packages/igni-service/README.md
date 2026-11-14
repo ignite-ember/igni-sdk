@@ -673,7 +673,8 @@ Closes the service's HTTP client and the database engine
 | `igni.settings` | the `IgniSettings` it was made with |
 | `igni.web` | the [`WebSignIn`](#websignin-sign-in-to-the-services-own-pages) for the service's own pages |
 | `igni.accepted_callers` | the `frozenset[CallerKind]` `igni.caller` accepts |
-| `igni.clock` | its clock |
+| `igni.connection` | its standing at igni server: `server`, `clock`, `key`, `registration` and the `revocation_feed` |
+| `igni.outbound` | the calls it makes to igni for any organisation; `igni.host(org_id)` is one organisation's |
 
 ### IgniSettings
 
@@ -2460,7 +2461,7 @@ fake.extensions.hold("it adds chat.post")    # igni will hold a version that ask
 
 manifest.write_text(json.dumps({"id": "acme.example", "version": "1.1.0"}))
 latest = await fake.upload(extension, igni)  # the service logs a warning with the reason
-client_id = (await igni.registration.client_id())
+client_id = (await igni.connection.registration.client_id())
 assert latest.version == "1.1.0"
 assert fake.extensions.shipped(client_id).version == "1.0.0"   # devices keep the approved one
 ```

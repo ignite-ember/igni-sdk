@@ -872,7 +872,7 @@ fake.extensions.hold("it adds chat.post")    # igni will hold a version that ask
 
 manifest.write_text(json.dumps({"id": "acme.example", "version": "1.1.0"}))
 latest = await fake.upload(extension, igni)  # the service logs a warning with the reason
-client_id = (await igni.registration.client_id())
+client_id = (await igni.connection.registration.client_id())
 assert latest.version == "1.1.0"
 assert fake.extensions.shipped(client_id).version == "1.0.0"   # devices keep the approved one
 ```
