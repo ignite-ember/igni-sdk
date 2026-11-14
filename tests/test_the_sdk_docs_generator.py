@@ -527,6 +527,12 @@ def test_the_text_igni_core_wrote_for_the_wire_names_the_python_attribute_and_ca
     assert "`run_workflow`" not in cancelled.split("**On the wire**")[0]
     # What the page says of the wire stays the wire's own.
     assert "**On the wire** RPC method `cancel_workflow`" in cancelled
+    # A `Session` is one session: the wire's `session_id` is not a parameter.
+    history = _section(client, "session.history.get")
+    assert "names the session" not in history and "`session_id`" in history
+    truncate = _section(client, "session.history.truncate")
+    assert "names the session" not in truncate
+    assert "`session_id` is this session's own, so it is not a parameter." in truncate
     # A word that is a field and a method on the wire is left as it is.
     assert client.prose("the `status` field") == "the `status` field"
 

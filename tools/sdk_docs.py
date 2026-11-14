@@ -565,7 +565,7 @@ class ClientReference:
             self._wire_properties = names
         return self._wire_properties
 
-    def prose(self, text: str) -> str:
+    def prose(self, text: str, wire: str | None = None) -> str:
         """The contract's prose for a Python page: it names the Python call or attribute.
 
         igni-core writes its docs for the wire: ``whenToUse`` is the field
@@ -574,6 +574,10 @@ class ClientReference:
         font is said the way the Python API says it.
         """
         text = rst(text)
+        if wire is not None and self._own_session(wire):
+            # The wire names the session in `session_id`; a `Session` is one
+            # session, and its methods do not take it.
+            text = re.sub(r"`session_id` names the session[.;]\s*", "", text)
         fields = self.wire_properties()
 
         def name(match: re.Match[str]) -> str:
@@ -587,15 +591,19 @@ class ClientReference:
 
         return re.sub(r"`([A-Za-z_][A-Za-z0-9_]*)`", name, text)
 
+    def _own_session(self, wire: str) -> bool:
+        placement = self.placements.get(wire)
+        return placement is not None and placement.owner == "session" and wire in OWN_SESSION_ARG
+
     def meaning(self, wire: str, prop: str, schema: dict[str, Any], doc: str) -> str:
         """What a parameter is: its own description, else what the method's doc says of it."""
         if schema.get("description"):
-            return self.prose(schema["description"])
+            return self.prose(schema["description"], wire)
         text = " ".join(doc.split())
         sentences = re.split(r"(?<=[.;:])\s+(?=[A-Z`(*])", text)
         for sentence in sentences:
             if f"``{prop}``" in sentence:
-                return self.prose(sentence)
+                return self.prose(sentence, wire)
         self.missing_meanings.append(f"{wire}.{prop}")
         return "—"
 
@@ -621,8 +629,8 @@ class ClientReference:
         else:
             code = signature(f"async def {placement.name}", sig, f" -> {result}")
         doc_paragraphs = method.doc.strip().split("\n\n")
-        summary = self.prose(doc_paragraphs[0].replace("\n", " "))
-        rest = [self.prose(p) for p in doc_paragraphs[1:]]
+        summary = self.prose(doc_paragraphs[0].replace("\n", " "), wire)
+        rest = [self.prose(p, wire) for p in doc_paragraphs[1:]]
         # igni-core's text may open with "Takes no arguments."; the page says
         # it once, in the place a parameter table would be.
         note = ""
@@ -649,12 +657,10 @@ class ClientReference:
                     f"| {self.default_text(p.default)} | {cell(meaning)} |"
                 )
             out.append("")
+            if self._own_session(wire):
+                out += ["`session_id` is this session's own, so it is not a parameter.", ""]
         else:
-            hidden = (
-                " (`session_id` is this session's own)"
-                if placement.owner == "session" and wire in OWN_SESSION_ARG
-                else ""
-            )
+            hidden = " (`session_id` is this session's own)" if self._own_session(wire) else ""
             if note:
                 hidden = (
                     f" ({note}; `session_id` is this session's own)" if hidden else f" ({note})"
