@@ -252,8 +252,8 @@ agent — what you want for a tool only your page calls. To see what the
 code implies, run `python -m igni_extension.manifest acme_example` (your
 module), or call `ext.tools.manifest()`.
 
-A tool that raises reaches the model as an error result, with the
-exception's message as its text. igni's `PostToolUse` hooks are not asked
+A tool that raises reaches the model as an error result whose text is
+`Error executing tool <name>: ` and the exception's message. igni's `PostToolUse` hooks are not asked
 about it, and `PostToolUseFailure` is told.
 
 ### One tool, five names
@@ -1166,8 +1166,8 @@ unchanged, with `manifest_name` set on it.
 The input schema comes from the function's parameters. A parameter typed
 `Caller` (or `Caller | None`) is filled from the call and left out of the
 schema. A plain `def` runs in a worker thread. An exception the tool
-raises reaches igni, and the model, as an error result whose text is the
-exception's message.
+raises reaches igni, and the model, as an error result whose text is
+`Error executing tool <name>: ` and the exception's message.
 
 **`@ext.on(signal)`**
 
