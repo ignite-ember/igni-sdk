@@ -9,11 +9,15 @@ one message, and what its lookups answer.
 
 from __future__ import annotations
 
+import ast
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
+from tools.host_codegen import HOST_SCHEMA, SCHEMA_FILE
 from tools.host_spec import (
     HostSchema,
     ObjectSpec,
@@ -23,6 +27,7 @@ from tools.host_spec import (
     method,
     param,
     prop,
+    schema_json,
     signal,
     typedef,
 )
@@ -77,6 +82,43 @@ def _tree() -> HostSchema:
 
 
 # ── The published schema ──
+
+
+def test_the_published_schema_reads_back_with_frozen_models_that_forbid_extras() -> None:
+    raw = json.loads(SCHEMA_FILE.read_text(encoding="utf-8"))
+    assert schema_json(HOST_SCHEMA) == raw
+    with pytest.raises(ValidationError):
+        HostSchema.model_validate({**raw, "surprise": 1})
+    with pytest.raises(ValidationError):
+        HostSchema.model_validate(
+            {**raw, "types": [{**raw["types"][0], "surprise": 1}, *raw["types"][1:]]}
+        )
+    with pytest.raises(ValidationError):
+        HOST_SCHEMA.version = "9"  # type: ignore[misc]
+    with pytest.raises(ValidationError):
+        HOST_SCHEMA.objects[0].doc = "x"  # type: ignore[misc]
+
+
+def test_the_grammar_is_this_repositorys_own_and_imports_nothing_of_igni_core() -> None:
+    """Codegen reads igni-core's published JSON; it does not import igni-core."""
+    tools = Path(__file__).resolve().parent.parent / "tools"
+    for name in ("host_spec.py", "host_codegen.py"):
+        tree = ast.parse((tools / name).read_text(encoding="utf-8"))
+        imported = {
+            part
+            for node in ast.walk(tree)
+            for part in (
+                [alias.name for alias in node.names]
+                if isinstance(node, ast.Import)
+                else [node.module or ""]
+                if isinstance(node, ast.ImportFrom)
+                else []
+            )
+        }
+        assert not [m for m in imported if m.split(".")[0] == "igni_core"], name
+
+
+# ── What the validator refuses ──
 
 
 def test_a_type_defined_twice_or_not_in_pascal_case_is_refused() -> None:
