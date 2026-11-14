@@ -82,8 +82,10 @@ uv pip install ~/ticket-lookup/wheels/*.whl uvicorn aiosqlite pytest anyio
 ```
 
 (Run those from the checkout; the `cd ~/ticket-lookup` above is for the
-commands after them. A project made by `igni ext init` points here for the
-same reason: its `pyproject.toml` installs from `--find-links wheels`.)
+commands after them. A project made by `igni ext init` needs the same
+wheels: its `pyproject.toml` names no wheel directory, and says to run
+`uv sync --find-links <the directory holding them>` instead of a plain
+`uv sync`, which would look on the index.)
 
 ## 1. Write the extension
 
