@@ -154,9 +154,13 @@ export function MarkdownInline({
     // Cut back to a space so the preview does not end mid-word.
     const cut = body.slice(0, limit);
     const space = cut.lastIndexOf(" ");
-    return (
-      closeOpenMarks(space > limit * 0.6 ? cut.slice(0, space) : cut) + "…"
-    );
+    const kept = space > limit * 0.6 ? cut.slice(0, space) : cut;
+    // Inside an unclosed fence the ellipsis goes in before the repair:
+    // after it, the closing fence would read "```…", which is not one.
+    if ((kept.match(/^```/gm) ?? []).length % 2 === 1) {
+      return closeOpenMarks(kept + "…");
+    }
+    return closeOpenMarks(kept) + "…";
   }, [text, name, limit]);
 
   if (!source.trim()) return null;
