@@ -9,9 +9,11 @@ not fit its areas raises.
 
 from __future__ import annotations
 
+import enum
 import importlib
 import sys
 import textwrap
+import typing
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -20,6 +22,10 @@ import pytest
 from tools.py_reference import (
     PythonReference,
     ReferenceError_,
+    annotation_text,
+    docstring_markdown,
+    signature_text,
+    stable_repr,
 )
 from tools.reference_area import Area
 
@@ -544,3 +550,106 @@ def test_a_source_that_cannot_be_read_does_not_stop_the_lookup(
             del sys.modules[name]
     assert "Found past two bad files." in section(body, "## GOOD")
     assert undocumented == 1
+
+
+# ── the readers, on their own ──
+
+
+class Colour(enum.Enum):
+    RED = 1
+
+
+def test_stable_repr_sorts_sets_and_never_prints_an_address() -> None:
+    assert stable_repr({"b", "a"}) == "set({'a', 'b'})"
+    assert stable_repr(frozenset({3, 1, 2})) == "frozenset({1, 2, 3})"
+    many = {f"k{i}" for i in range(40)}
+    items = sorted(repr(v) for v in many)
+    assert stable_repr(many) == "set({" + ", ".join(items) + "})"
+    assert stable_repr(set()) == "set()" and stable_repr(frozenset()) == "frozenset()"
+    assert stable_repr(object).startswith("<class 'object'>")
+    assert stable_repr(lambda: 0).startswith("<function ")
+    assert " at 0x" not in stable_repr(lambda: 0)
+
+
+def test_stable_repr_names_an_enum_member_by_type_and_name() -> None:
+    assert stable_repr(Colour.RED) == "Colour.RED"
+
+
+def test_stable_repr_drops_the_module_a_class_is_qualified_by() -> None:
+    person = type("Person", (), {"__module__": "igni_service.tokens"})
+    assert stable_repr(person) == "<class 'Person'>"
+    assert stable_repr([person, 1]) == "[<class 'Person'>, 1]"
+    assert stable_repr(Path) == "<class 'pathlib.Path'>"
+    assert stable_repr("a.B") == "'a.B'"
+
+
+def test_annotation_text_is_what_the_source_spells() -> None:
+    assert annotation_text("list[int] | None") == "list[int] | None"
+    assert annotation_text(int) == "int"
+    assert annotation_text(Path) == "Path"
+    assert annotation_text(typing.Optional[int]) == "Optional[int]"  # noqa: UP045
+    assert annotation_text(typing.Literal["a"]) == "Literal['a']"
+    assert annotation_text(list[int]) == "list[int]"
+    assert annotation_text(__import__("inspect").Parameter.empty) == ""
+
+
+def test_signature_text_marks_keyword_only_positional_only_and_star_parameters() -> None:
+    def f(a, b: int = 1, /, c: str = "x", *args: int, d: bool, e: float = 0.5, **kw: str) -> None:  # type: ignore[no-untyped-def]
+        pass
+
+    params, returns = signature_text(f)
+    assert (
+        params == "a, b: int = 1, /, c: str = 'x', *args: int, d: bool, e: float = 0.5, **kw: str"
+    )
+    assert returns == "None"
+
+
+def test_signature_text_puts_a_bare_star_before_keyword_only_parameters() -> None:
+    def f(a: int, *, b: int = 2, c) -> int:  # type: ignore[no-untyped-def]
+        return a
+
+    assert signature_text(f) == ("a: int, *, b: int = 2, c", "int")
+
+
+def test_signature_text_skips_self_or_cls_only_when_asked() -> None:
+    class C:
+        def m(self, x: int) -> None: ...
+
+        @classmethod
+        def k(cls, x: int) -> None: ...
+
+    assert signature_text(C.m, skip_self=True) == ("x: int", "None")
+    assert signature_text(C.m) == ("self, x: int", "None")
+    assert signature_text(C.k.__func__, skip_self=True) == ("x: int", "None")  # type: ignore[attr-defined]
+
+
+def test_signature_text_of_what_has_no_signature_is_an_ellipsis() -> None:
+    assert signature_text(1) == ("…", "")
+
+
+def test_a_default_without_an_annotation_is_written_without_spaces() -> None:
+    def f(a=1, b: int = 2):  # type: ignore[no-untyped-def]
+        pass
+
+    assert signature_text(f)[0] == "a=1, b: int = 2"
+
+
+def test_docstring_markdown_turns_roles_and_double_backticks_into_code() -> None:
+    assert docstring_markdown("See :class:`~pkg.Thing` and :meth:`go` and ``x``.") == (
+        "See `pkg.Thing` and `go` and `x`."
+    )
+
+
+def test_docstring_markdown_turns_an_indented_block_after_a_blank_line_into_python() -> None:
+    doc = "Example:\n\n    x = 1\n\n    y = 2\n\nAfter."
+    assert docstring_markdown(doc) == "Example:\n\n```python\nx = 1\n\ny = 2\n```\n\nAfter."
+
+
+def test_docstring_markdown_leaves_an_indented_list_continuation_alone() -> None:
+    doc = "Things:\n\n- one\n\n    continues here\n- two"
+    assert docstring_markdown(doc) == doc
+    assert "```" not in docstring_markdown("1. first\n\n    more of first\n2. second")
+
+
+def test_docstring_markdown_of_nothing_is_nothing() -> None:
+    assert docstring_markdown(None) == "" and docstring_markdown("") == ""
