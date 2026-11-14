@@ -506,6 +506,14 @@ def test_npm_reporting_an_error_stops_the_audit_with_its_words(
         NpmAudit(tmp_path).findings()
 
 
+def test_npm_not_answering_in_json_stops_the_audit_with_what_it_said(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stand_in(tmp_path, monkeypatch, "npm", "Bad gateway", stderr="npm ERR! network")
+    with pytest.raises(SystemExit, match="(?s)npm audit failed in .*Bad gateway.*npm ERR! network"):
+        NpmAudit(tmp_path).findings()
+
+
 def cargo_report(vulnerabilities: list[dict], warnings: dict | None = None) -> str:
     return json.dumps({"vulnerabilities": {"list": vulnerabilities}, "warnings": warnings or {}})
 

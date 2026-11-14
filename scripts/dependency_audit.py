@@ -137,7 +137,13 @@ class NpmAudit:
             text=True,
             check=False,
         )
-        report = json.loads(run.stdout or "{}")
+        try:
+            report = json.loads(run.stdout or "{}")
+        except json.JSONDecodeError:
+            raise SystemExit(
+                f"npm audit failed in {self.directory}: it did not answer in JSON:\n"
+                f"{run.stdout}{run.stderr}"
+            ) from None
         if "error" in report:
             raise SystemExit(f"npm audit failed in {self.directory}: {report['error']}")
         found = []
