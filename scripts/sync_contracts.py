@@ -41,14 +41,20 @@ def main(argv: list[str]) -> int:
     if not (CORE / "docs").is_dir():
         print(f"no igni-core checkout at {CORE} (set IGNI_CORE_DIR)", file=sys.stderr)
         return 2
+    for original in COPIES.values():
+        if not (CORE / original).is_file():
+            print(f"igni-core at {CORE} has no {original}", file=sys.stderr)
+            return 2
     stale = []
     for copy, original in COPIES.items():
         text = (CORE / original).read_text(encoding="utf-8")
-        if (ROOT / copy).read_text(encoding="utf-8") == text:
+        local = ROOT / copy
+        if local.is_file() and local.read_text(encoding="utf-8") == text:
             continue
         stale.append(copy)
         if "--check" not in argv:
-            (ROOT / copy).write_text(text, encoding="utf-8")
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(text, encoding="utf-8")
     for copy in stale:
         print(("stale: " if "--check" in argv else "refreshed: ") + copy)
     return 1 if stale and "--check" in argv else 0

@@ -35,6 +35,10 @@ ROOT = Path(__file__).resolve().parent.parent
 #: (``clients/ui``) is CSS and has nothing to compile.
 PACKAGES = ("packages/extension-bridge", "packages/ui-react")
 
+#: The stylesheet, packed and installed too: a page imports it for its effect,
+#: and TypeScript 6 and later fail a side-effect import that resolves to no types.
+STYLESHEET = "clients/ui"
+
 #: Where the scratch consumer is built. Inside the repository: see the
 #: module's docstring.
 SCRATCH = ROOT / ".tmp" / "npm-consumer"
@@ -48,6 +52,7 @@ import { connect, HostError, type Bridge } from "@ignite-ember/extension-bridge"
 import { BRIDGE_VERSION, type HostMessage } from "@ignite-ember/extension-bridge/protocol";
 import { applyThemeTokens, type ThemeTokens } from "@ignite-ember/extension-bridge/tokens";
 import { AppShell, Button, type ButtonProps } from "@ignite-ember/ui-react";
+import "@ignite-ember/ui-css";
 
 export async function main(): Promise<void> {
   const bridge: Bridge = await connect({ timeoutMs: 1000 });
@@ -74,6 +79,7 @@ TSCONFIG = {
         "strict": True,
         "noEmit": True,
         "skipLibCheck": True,
+        "noUncheckedSideEffectImports": True,
         "types": [],
     },
     "include": ["consumer.ts"],
@@ -86,13 +92,34 @@ class ConsumerError(Exception):
 
 def run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     """Run a command in a directory."""
-    return subprocess.run(  # noqa: S603 — our own commands, on our own files
-        command,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        return subprocess.run(  # noqa: S603 — our own commands, on our own files
+            command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise ConsumerError(f"cannot run {command[0]}: {error}") from None
+
+
+def manifest_of(package: str, *keys: str) -> dict:
+    """The package's ``package.json``, which must have ``keys``."""
+    manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
+    missing = [key for key in keys if key not in manifest]
+    if missing:
+        raise ConsumerError(f"{package}'s package.json has no {missing}")
+    return manifest
+
+
+def targets(value: object) -> set[str]:
+    """Every file path an ``exports`` value names, however deep its conditions nest."""
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        return set().union(*(targets(inner) for inner in value.values()))
+    return set()
 
 
 def build() -> None:
@@ -110,17 +137,20 @@ def build() -> None:
             raise ConsumerError(f"{package} does not build:\n{done.stdout}{done.stderr}")
 
 
-def pack(destination: Path) -> dict[str, Path]:
+def pack(destination: Path, packages: tuple[str, ...] = PACKAGES) -> dict[str, Path]:
     """Pack each package the way npm publishes it, and name the tarballs."""
     tarballs: dict[str, Path] = {}
-    for package in PACKAGES:
+    for package in packages:
         done = run(
             ["npm", "pack", "--silent", "--pack-destination", str(destination)],
             cwd=ROOT / package,
         )
         if done.returncode != 0:
             raise ConsumerError(f"{package} does not pack:\n{done.stdout}{done.stderr}")
-        name = done.stdout.strip().splitlines()[-1]
+        lines = done.stdout.strip().splitlines()
+        if not lines:
+            raise ConsumerError(f"{package} packed, and npm named no tarball")
+        name = lines[-1]
         tarballs[package] = destination / name
     return tarballs
 
@@ -132,7 +162,7 @@ def install(tarballs: dict[str, Path], into: Path) -> None:
     own manifest, its files, and nothing else.
     """
     for package, tarball in tarballs.items():
-        manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
+        manifest = manifest_of(package, "name")
         target = into / "node_modules" / manifest["name"]
         target.mkdir(parents=True, exist_ok=True)
         with tarfile.open(tarball) as archive:
@@ -161,10 +191,8 @@ def check_the_build_is_in_the_tarball(package: str, tarball: Path) -> None:
     installs it. This is where that is caught.
     """
     names = tarball_contents(tarball)
-    manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
-    wanted = {manifest["main"], manifest["types"]}
-    for entry in manifest["exports"].values():
-        wanted.update(entry.values())
+    manifest = manifest_of(package, "main", "types", "exports")
+    wanted = {manifest["main"], manifest["types"], *targets(manifest["exports"])}
     missing = sorted(name for name in wanted if name.lstrip("./") not in names)
     if missing:
         raise ConsumerError(f"{package}'s tarball does not carry {missing}")
@@ -236,6 +264,7 @@ def check() -> None:
     tarballs = pack(tarballs_dir)
     for package, tarball in tarballs.items():
         check_the_build_is_in_the_tarball(package, tarball)
+    tarballs.update(pack(tarballs_dir, (STYLESHEET,)))
     consumer = SCRATCH / "consumer"
     consumer.mkdir(parents=True)
     (consumer / "package.json").write_text(

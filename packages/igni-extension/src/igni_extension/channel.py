@@ -4,7 +4,7 @@ igni starts an extension's process with `IGNI_HOST_URL` and
 `IGNI_HOST_SECRET`: a WebSocket on the host's loopback interface and the
 secret that says which process this is. Every `get`, `set` and `call` on
 `ext.host` is one request on it, and every signal the extension handles
-arrives on it. The protocol is igni's `docs/HOST_MODEL_PROTOCOL.md`, its
+arrives on it. The protocol is igni-core's `docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md), its
 messages `igni_extension.wire`; an extension author never sees it.
 
 A process started without those variables has no socket: its `ext.host`
@@ -56,7 +56,8 @@ class HostConnection:
       `permissions.host` grants this extension holds, and the version of
       its object model. Empty until the first connection.
     - `await connect()` — connect, and subscribe to every handled signal.
-      Idempotent. Raises `HostUnavailable` when the host does not answer.
+      Idempotent. Raises `NotConfigured` when igni gave the process no host
+      address, and `HostUnavailable` when the host does not answer.
     - `await serve_forever()` — stay connected, reconnecting every
       `RETRY_SECONDS`, until cancelled; returns at once when not
       `configured`. `ext.run()` runs it.
@@ -160,6 +161,11 @@ class HostConnection:
         async with self._lock:
             if self._socket is not None:
                 return
+            if not self.configured:
+                raise NotConfigured(
+                    "igni did not give this process the host's address "
+                    "(IGNI_HOST_URL, IGNI_HOST_SECRET) — it is not running inside igni"
+                )
             try:
                 socket = await connect(
                     self._endpoint.url,
@@ -218,10 +224,11 @@ class HostConnection:
             await socket.send(request.numbered(request_id).frame())
             limit = None if request.waits_on_the_person else self.TIMEOUT
             return await asyncio.wait_for(future, limit)
+        except TimeoutError as exc:
+            # Before `OSError`, which a `TimeoutError` is.
+            raise HostUnavailable(f"host.{request.path} got no answer") from exc
         except (OSError, WebSocketException) as exc:
             raise HostUnavailable(f"the igni host went away: {exc}") from exc
-        except TimeoutError as exc:
-            raise HostUnavailable(f"host.{request.path} got no answer") from exc
         finally:
             self._waiting.pop(request_id, None)
 
@@ -256,6 +263,9 @@ class HostConnection:
         finally:
             if self._socket is socket:
                 self._socket = None
+            if self._hello is not None and not self._hello.done():
+                # Hung up before saying hello: connect() need not wait out TIMEOUT.
+                self._hello.set_exception(HostUnavailable("the igni host went away"))
             for waiter in self._waiting.values():
                 if not waiter.done():
                     waiter.set_exception(HostUnavailable("the igni host went away"))

@@ -125,7 +125,8 @@ class Agent:
             type: The extension's own word for what happened, as its
                 handler names it: ``claim.created``.
             payload: The event's data, as the handler reads it: at most
-                65536 bytes as JSON.
+                65536 bytes as JSON, measured as igni server measures it,
+                with non-ASCII text escaped (a CJK character counts 6).
             event_key: The key that makes a retry exact: igni stores one
                 item per key and producer, so a retry after a lost reply
                 is answered with the item already stored.
@@ -203,8 +204,9 @@ class Agent:
           `dropped_reason` says why.
         - `failed` — the platform gave up; `failed_reason` says why.
 
-        Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
-        `IgniUnavailable` otherwise.
+        Raises `EventRefused` for a 4xx other than 429 (an unknown
+        `event_id`, say) and `IgniUnavailable` otherwise, a 429 included:
+        igni is busy, and asking again later may work.
 
         Args:
             event_id: The item's id, as ``EventAccepted.event_id`` gave it.
@@ -248,6 +250,9 @@ class Agent:
             expires_at: When igni stops waiting to deliver it: igni keeps
                 an item for at most 14 days.
         """
+        files = list(attachments or [])
+        # Made before anything is uploaded, with a stand-in id per file, so an item igni would
+        # refuse (too many files, a text too long) is caught before a single file is sent.
         item = ServiceItemRequest(
             producer=self._producer,
             kind=kind,
@@ -256,11 +261,11 @@ class Agent:
             title=title,
             start_run=start_run,
             action=action,
-            attachments=[],
+            attachments=[str(n) for n in range(len(files))],
             event_key=event_key,
             expires_at=expires_at,
         )
-        ids = await self._wire.uploaded(self._org_id, list(attachments or []))
+        ids = await self._wire.uploaded(self._org_id, files)
         return await self._wire.item(self._org_id, item.model_copy(update={"attachments": ids}))
 
 

@@ -22,13 +22,15 @@
  *
  * ## What does not work yet
  *
- * This compiles, is type-checked in CI, and is written against the
- * real published surface. It cannot run, for two reasons that are
- * tracked and neither of which is about this file:
+ * This compiles, is type-checked and tested in CI, and is written
+ * against the real published surface. It cannot run as it stands, for
+ * two reasons that are tracked and neither of which is about this file:
  *
- *   1. `@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` are not
- *      published packages — they are a tsconfig alias inside
- *      `clients/web`.
+ *   1. It is not bundled: there is no build config here, and
+ *      `igni-ui.css` (from `@ignite-ember/ui-css`) has to be copied in
+ *      beside the source. The two packages it imports,
+ *      `@ignite-ember/extension-bridge` and `@ignite-ember/ui-react`,
+ *      are published on npm.
  *   2. Nothing installs an extension. `ExtensionRegistry` takes a
  *      validated manifest and `ExtensionRpc.bind` takes a service,
  *      but nothing starts a sidecar or registers an endpoint, and
@@ -371,6 +373,7 @@ export function CompliancePanel({ client }: { client: ScannerClient }) {
           setOpen(violation);
         }}
         onScan={() => void startScan()}
+        onRetry={() => void refresh().catch(() => undefined)}
         onClearFilter={() => setSeverity("all")}
       />
 
@@ -436,6 +439,7 @@ function Body({
   busy,
   onReview,
   onScan,
+  onRetry,
   onClearFilter,
 }: {
   load: Load;
@@ -446,6 +450,7 @@ function Body({
   busy: boolean;
   onReview: (violation: Violation, button: HTMLButtonElement) => void;
   onScan: () => void;
+  onRetry: () => void;
   onClearFilter: () => void;
 }) {
   if (load.state === "loading") {
@@ -454,7 +459,7 @@ function Body({
 
   if (load.state === "failed") {
     return (
-      <Empty action={<Button size="sm" onClick={onScan}>Try again</Button>}>
+      <Empty action={<Button size="sm" onClick={onRetry}>Try again</Button>}>
         {load.message}
       </Empty>
     );

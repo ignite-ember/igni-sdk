@@ -26,7 +26,7 @@ Read a session's conversation, turn by turn, as a client draws it.
 async def get(self) -> list[ChatTurn]
 ```
 
-`session_id` names the session. Returns the conversation in
+Returns the conversation in
 order, one entry per item, told apart by `role`: the person's
 message (`user`), the agent's answer (`assistant`), its
 reasoning (`thinking`), a tool call and its result (`tool`), a
@@ -61,16 +61,18 @@ Find text in a session's conversation.
 async def search(self, query: str, *, limit: int = 50) -> list[ChatSearchHit]
 ```
 
-`session_id` names the session; `query` is the text to find
+`query` is the text to find
 (case-insensitive; blank finds nothing); `limit` caps the hits
 (default 50). Returns one hit per match, in conversation order:
-its index in `get_chat_history`, its role and run, a snippet
+its index in `session.history.get()`, its role and run, a snippet
 around it, and where the match sits in the snippet.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `limit` | `int` | `50` | Maximum number of hits to return. |
 | `query` | `str` | required | Text to find, case-insensitive; blank finds nothing. |
+
+`session_id` is this session's own, so it is not a parameter.
 
 **Returns** `list[`[`ChatSearchHit`](/docs/sdk/igni-client/models-reference#chatsearchhit)`]`.
 
@@ -98,15 +100,17 @@ Drop a run from a session's history, with every run after it.
 async def truncate(self, run_id: str) -> TruncateHistoryResult
 ```
 
-`session_id` names the session; `run_id` the first run to drop
-(a top-level run, as `get_chat_history` carries it). Use it to
+`run_id` the first run to drop
+(a top-level run, as `session.history.get()` carries it). Use it to
 edit and resend a message. Returns how many runs were `removed`,
 or `error` when the session or the run is not found or the
 history could not be saved.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `run_id` | `str` | required | Id of the first run to drop: a top-level run, as `get_chat_history` carries it. |
+| `run_id` | `str` | required | Id of the first run to drop: a top-level run, as `session.history.get()` carries it. |
+
+`session_id` is this session's own, so it is not a parameter.
 
 **Returns** [`TruncateHistoryResult`](/docs/sdk/igni-client/models-reference#truncatehistoryresult).
 
@@ -123,7 +127,7 @@ The client waits up to 30 seconds.
 
 ```python
 cut = await session.history.truncate("run_42")
-print(f"removed {cut.removed} turn(s)")
+print(f"removed {cut.removed} run(s)")
 ```
 
 ## session.context.breakdown()
@@ -134,7 +138,7 @@ Split this session's context into what compaction can shrink and what it cannot.
 async def breakdown(self) -> ContextBreakdown
 ```
 
-Takes no arguments. Returns the `total` tokens, the part taken by
+Returns the `total` tokens, the part taken by
 the conversation's runs (`runs`, which `/compact` can shrink),
 and the `floor` — instructions, tools and the rest that stays.
 Zeros when it cannot be measured.
@@ -195,7 +199,7 @@ status = await session.status()
 cleared = await session.context.compact(
     ctx_tokens=status.context_tokens, max_ctx=status.max_context
 )
-if cleared is not None:
+if cleared.compacted:
     print("compacted into", cleared.new_session_id)
 ```
 
@@ -207,9 +211,9 @@ Estimate how many tokens this session's conversation takes up.
 async def tokens(self) -> int
 ```
 
-Takes no arguments. Returns the estimate (`0` when it cannot be
+Returns the estimate (`0` when it cannot be
 read); a positive estimate also becomes the context size
-`get_status` reports.
+`session.status()` reports.
 
 Takes no arguments.
 

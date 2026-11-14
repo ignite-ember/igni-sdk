@@ -8,7 +8,7 @@ On purpose, and not backwards compatible:
   `session.rpc(...)` are gone: every one of igni's methods is a Python
   method on `IgniClient` or `Session`, its arguments checked before
   sending and its result a model. `session.use_model(name)` is
-  `session.models.switch(name)` (an `InfoMessage`); `igni.models.list()`
+  `session.models.switch(name)` (a `ModelSwitched`); `igni.models.list()`
   is `session.models.list()` (a `ModelRegistryResult`; `ModelCatalogue`
   and `ModelEntry` are gone); `session.history()` is
   `session.history.get()`, a list of `ChatTurn` — `UserTurn`,
@@ -16,9 +16,10 @@ On purpose, and not backwards compatible:
   where it was `HistoryTurn` (gone). `session.cancel()` calls igni's
   `cancel_run`, which answers, instead of sending `cancel`.
 - **Every message is generated from igni's contract**, field for field.
-  The models igni sends are required where the contract requires them:
-  `Requirement(…)` built by hand needs `tool_args` and `agent_path`,
-  `RunPaused(…)` its `requirements`, `PushNotification(…)` its `payload`.
+  A result is required where the contract requires it
+  (`DiscardEphemeralResult(…)` built by hand needs `name` and `ok`); every
+  field of a message has the contract's default, so `Requirement(…)`,
+  `RunPaused(…)` and `PushNotification(…)` need none.
   `HitlDecision.action` and `.choice` are strings, as igni types them;
   `Decision` still holds the values igni knows.
 - **A frame on the wire** is its `type` and the fields given a value; a

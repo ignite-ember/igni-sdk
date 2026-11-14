@@ -5,7 +5,7 @@
 The React components an igni extension is allowed to build on.
 Everything exported here is under the compatibility floor: removing
 one, renaming it, or changing a prop's meaning is a breaking change
-under `docs/EXTENSIBILITY.md` §8.
+under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8.
 
 From npm, with the stylesheet it is drawn with:
 

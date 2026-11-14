@@ -64,8 +64,8 @@ unchanged, with `manifest_name` set on it.
 The input schema comes from the function's parameters. A parameter typed
 `Caller` (or `Caller | None`) is filled from the call and left out of the
 schema. A plain `def` runs in a worker thread. An exception the tool
-raises reaches igni, and the model, as an error result whose text is the
-exception's message.
+raises reaches igni, and the model, as an error result whose text is
+`Error executing tool <name>: ` and the exception's message.
 
 **`@ext.on(signal)`**
 
@@ -103,7 +103,7 @@ Connects to the igni backend's socket now rather than on the first
 `ext.host` call, and subscribes to the signals that have handlers. `run()`
 does this itself; a test or script that drives the extension without
 `run()` calls it so that signals, hooks and service events arrive.
-Idempotent. Raises `HostUnavailable` if the host does not answer.
+Idempotent. Raises `NotConfigured` outside igni, where igni gave the process no host address, and `HostUnavailable` if the host does not answer.
 
 **`await ext.aclose() -> None`**
 
@@ -162,7 +162,7 @@ and the first `ext.host` call opens it, so an extension rarely needs it.
 | `connected` | Whether the socket is open now. |
 | `granted` | Once connected, the `permissions.host` grants the host says this extension holds. Empty before. |
 | `schema_version` | Once connected, the version of the host's object model. Empty before. |
-| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `HostUnavailable`. |
+| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `NotConfigured` when not `configured`, `HostUnavailable` if the host does not answer. |
 | `await serve_forever()` | Stays connected, connecting again every two seconds after the host goes away, until cancelled. Returns at once when not `configured`. `run()` runs it; run it as a task in a test that needs signals, hooks and service events to keep arriving. |
 | `await close()` | Closes the socket. `ext.aclose()` calls it. |
 
@@ -376,7 +376,7 @@ seconds; dialogs wait indefinitely), or `NotConfigured` (no socket).
 ### The host objects
 
 Each object needs the matching grant in `permissions.host`. igni's
-`docs/HOST_OBJECT_MODEL.md` describes every member in full.
+[`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) describes every member in full.
 
 | Object | What it is | Some members |
 |---|---|---|
@@ -427,7 +427,7 @@ models are frozen and refuse unknown fields.
 | `body` | One line; whitespace is collapsed; at most 1,000 characters. |
 | `target` | Where opening it goes: one of this extension's pages. Required; igni shows nothing it cannot open. |
 | `event_key` | The same event is shown once, however often it is sent; 1–200 characters. Required. |
-| `Target.page` | The page's kind; 1–200 characters. igni checks it is one of this extension's pages. |
+| `Target.page` | The page's id, as the manifest declares it; 1–200 characters. igni checks it is one of this extension's pages. |
 | `Target.params` | Strings only (a page reads them from its location); at most 32, at most 2,048 bytes as JSON. |
 
 A value outside these rules raises `pydantic.ValidationError` where you

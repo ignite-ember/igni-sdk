@@ -30,7 +30,7 @@ async def connect(self, server_name: str) -> InfoMessage
 Returns an `info` message, sent in place of an `rpc_response`,
 once it is connected. Fails with the reason when it did not connect
 (not configured, refused by policy, no tools, approval denied); the
-reason is also `get_mcp_server_details`'s `error` for it.
+reason is also `session.mcp.server_details()`'s `error` for it.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
@@ -96,7 +96,7 @@ Connect this session's configured MCP servers, once.
 async def ensure(self) -> McpInitResult
 ```
 
-Takes no arguments. The first call connects every configured server
+The first call connects every configured server
 and rebuilds the agent with their tools; later calls do nothing.
 Returns the servers `connected`, the ones that `failed` with
 their errors, whether the agent was `rebuilt`, and, when nothing
@@ -131,7 +131,7 @@ Describe each of this session's MCP servers in full.
 async def server_details(self) -> list[McpServerSnapshot]
 ```
 
-Takes no arguments. Returns one row per server: whether it is
+Returns one row per server: whether it is
 connected, its transport, its tools (names, descriptions, the ones
 switched off), its resources and prompts, the last error connecting
 it, and whether policy blocks it. Each server is asked in turn, so
@@ -165,7 +165,7 @@ List this session's configured MCP servers, in configuration order.
 async def servers(self) -> list[McpServerSummary]
 ```
 
-Takes no arguments. Returns one `{name, connected}` row per
+Returns one `{name, connected}` row per
 server.
 
 Takes no arguments.
@@ -240,7 +240,7 @@ List this session's MCP servers and whether each is connected.
 async def status(self) -> list[McpServerStatus]
 ```
 
-Takes no arguments. Returns one `{name, connected}` row per
+Returns one `{name, connected}` row per
 server, in no particular order.
 
 Takes no arguments.

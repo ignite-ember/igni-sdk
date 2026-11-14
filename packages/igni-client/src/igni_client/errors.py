@@ -47,8 +47,10 @@ class RpcError(IgniClientError):
     """A call igni answered with an error, or whose answer could not be read.
 
     `method` is the wire method, `message` what igni said. igni answers an
-    error as a sentence; `RpcError.of` reads which kind it is, and each kind
-    is a subclass a caller can catch on its own.
+    error with a sentence and, on a call's reply, a `code` word;
+    `RpcError.of` reads which kind it is from the code, and each kind is a
+    subclass a caller can catch on its own. A reply with no code is read from
+    its sentence instead.
     """
 
     def __init__(self, method: str, message: str) -> None:
@@ -57,8 +59,23 @@ class RpcError(IgniClientError):
         self.message = message
 
     @staticmethod
-    def of(method: str, message: str) -> RpcError:
-        """The kind of error igni's `message` for `method` is."""
+    def of(method: str, message: str, code: str | None = None) -> RpcError:
+        """The kind of error igni's `message` for `method` is.
+
+        `code` is the word igni sent beside the sentence (`forbidden`,
+        `unknown_method`, `invalid`, ...), and decides the kind when there is
+        one. Without it, as with an `error` message or an igni that sends no
+        code, the kind is read from the sentence.
+        """
+        if code in _BY_CODE:
+            return _BY_CODE[code](method, message)
+        if code is None:
+            return RpcError._of_sentence(method, message)
+        return MethodFailed(method, message)
+
+    @staticmethod
+    def _of_sentence(method: str, message: str) -> RpcError:
+        """The kind of error from igni's words alone, for a reply that has no code."""
         if any(marker in message for marker in _REFUSALS):
             return AccessRefused(method, message)
         if message.startswith("Unknown RPC method"):
@@ -94,6 +111,13 @@ class UnexpectedAnswer(RpcError):
 class MethodFailed(RpcError):
     """The method ran and failed; `message` is igni's reason."""
 
+
+#: The kind of error each `code` igni sends names; every other code is a failure.
+_BY_CODE: dict[str, type[RpcError]] = {
+    "forbidden": AccessRefused,
+    "unknown_method": UnknownMethod,
+    "invalid": InvalidArguments,
+}
 
 #: What igni says when it refuses a call for the connection it came on
 #: (igni-core's `backend/standing_policy.py` and `message_admission.py`).

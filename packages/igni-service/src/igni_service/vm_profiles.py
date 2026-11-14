@@ -95,7 +95,7 @@ class VmProfileRequest(BaseModel):
     setup_script: str | None = Field(default=None, max_length=MAX_SETUP_SCRIPT)
     """Run as root when the profile's layer is built, after the packages."""
     volume_gib: int | None = Field(default=None, ge=1)
-    """A new VM's volume, and how far an admin may grow it, in GiB."""
+    """The volume a new VM gets, in GiB (igni server's default is 10)."""
     volume_max_gib: int | None = Field(default=None, ge=1)
     """The largest an admin may grow the volume to, in GiB."""
     erase_after_idle_days: int | None = Field(default=None, ge=1, le=3650)
@@ -298,7 +298,11 @@ class ServiceVmProfile(BaseModel):
 
 
 def refusal(response: httpx.Response) -> VmProfileRefused:
-    """igni's own words for a refusal: its `detail`, or the body."""
+    """igni's own words for a refusal: its `detail`, or the body.
+
+    Args:
+        response: igni's refusing answer.
+    """
     detail: object = response.text
     with contextlib.suppress(ValueError, AttributeError):
         detail = response.json().get("detail", detail)
@@ -306,13 +310,23 @@ def refusal(response: httpx.Response) -> VmProfileRefused:
 
 
 class ServiceVmProfiles:
-    """`GET /v1/service-vm-profile`, with this service's token for one organisation."""
+    """`GET /v1/service-vm-profile`, with this service's token for one organisation.
+
+    Args:
+        tokens: The service's token client, which signs each read.
+    """
 
     def __init__(self, tokens: ServiceTokens) -> None:
         self._tokens = tokens
 
     async def of(self, org_id: str) -> ServiceVmProfile:
-        """Raises `IgniUnavailable`."""
+        """The VM profile this service has in one organisation.
+
+        Args:
+            org_id: The organisation to read it in.
+
+        Raises `IgniUnavailable`.
+        """
         response = await self._tokens.request("GET", IgniPaths.SERVICE_VM_PROFILE, org_id=org_id)
         if response.status_code != 200:
             raise IgniUnavailable(f"igni answered the VM profile read {response.status_code}")

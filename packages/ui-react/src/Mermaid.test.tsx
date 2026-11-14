@@ -7,7 +7,7 @@
  * what is under test is what this module asks of it and does with
  * the answer, not mermaid's drawing.
  */
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -84,6 +84,35 @@ describe("loadMermaid", () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     document.documentElement.dataset.theme = "light";
     await loadMermaid();
+    expect(themeAt(0)).toBe("default");
+  });
+
+  it("draws in the default theme with no document at all", async () => {
+    // Server-side: nothing to read a theme from.
+    vi.stubGlobal("document", undefined);
+    try {
+      await loadMermaid();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(themeAt(0)).toBe("default");
+  });
+
+  it("falls through to the system when the page names a theme it does not know", async () => {
+    document.documentElement.dataset.theme = "sepia";
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    await loadMermaid();
+    expect(themeAt(0)).toBe("dark");
+  });
+
+  it("asks the system about dark mode, and is default when it is not", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("matchMedia", (query: string) => {
+      asked.push(query);
+      return { matches: false };
+    });
+    await loadMermaid();
+    expect(asked).toEqual(["(prefers-color-scheme: dark)"]);
     expect(themeAt(0)).toBe("default");
   });
 
@@ -181,5 +210,34 @@ describe("MermaidBlock", () => {
     await act(async () => finishOld({ svg: '<svg id="stale"></svg>' }));
     expect(container.querySelector("#stale")).toBeNull();
     expect(drawn(container)?.id).toBe(renderIds()[1]);
+  });
+
+  it("shows the diagram again once a source that did not parse is replaced", async () => {
+    mermaid.render.mockRejectedValueOnce(new Error("Parse error"));
+    const { container, rerender } = render(<MermaidBlock source="graph TD; A--" />);
+    await waitFor(() =>
+      expect(container.querySelector("pre.mermaid-error")).not.toBeNull(),
+    );
+    rerender(<MermaidBlock source="graph TD; A-->B" />);
+    await waitFor(() => expect(drawn(container)).not.toBeNull());
+    expect(container.querySelector("pre.mermaid-error")).toBeNull();
+    expect(mermaid.render.mock.calls[1][1]).toBe("graph TD; A-->B");
+  });
+
+  it("hands mermaid the source as it is, even an empty one", async () => {
+    render(<MermaidBlock source="" />);
+    await waitFor(() => expect(mermaid.render).toHaveBeenCalledTimes(1));
+    expect(mermaid.render.mock.calls[0][1]).toBe("");
+  });
+
+  it("copies its own source from the button beside the drawing", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const { container } = render(<MermaidBlock source="graph TD; A-->B" />);
+    await waitFor(() => expect(drawn(container)).not.toBeNull());
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy source" }));
+    });
+    expect(writeText).toHaveBeenCalledWith("graph TD; A-->B");
   });
 });

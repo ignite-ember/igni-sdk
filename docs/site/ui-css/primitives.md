@@ -4,10 +4,10 @@
 
 `ui-row`, `ui-actions`, `ui-list`, `ui-toolbar`, `ui-card`, `ui-item`, `ui-badge`, `ui-empty`, `ui-table`.
 
-These were decided, not extracted. There was very little duplication to extract: the 231 classes named `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`, and deduplicating all fourteen patterns saved 84 declarations out of 17,789 lines. They did not repeat, they diverged, each feature choosing its own gaps and paddings because there was no scale to choose from.
+These were decided, not extracted. There was very little duplication to extract: the classes named `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`. They did not repeat, they diverged, each feature choosing its own gaps and paddings because there was no scale to choose from.
 
-So where the existing uses agreed, the agreement became the value. Where they split, the split is resolved once with a reason rather than per feature. `ui-empty` is the clearest: its colour was split exactly eight and eight between `--fg-faint` and `--fg-muted`. Both clear WCAG AA since F138, so the tie breaks on meaning — an empty state is text you must read to know what to do next, which makes it content rather than de-emphasised chrome.
+So where the existing uses agreed, the agreement became the value. Where they split, the split is resolved once with a reason rather than per feature. `ui-empty` is the clearest: its colour was split evenly between `--fg-faint` and `--fg-muted`. Both clear WCAG AA, so the tie breaks on meaning — an empty state is text you must read to know what to do next, which makes it content rather than de-emphasised chrome.
 
 There is deliberately **no `ui-title`**. Titles varied across four type steps, and that variation is the design — a heading level, not drift. Use the type scale and a weight.
 
-**Remaining:** igni's own 231 feature classes still carry their own copies. The primitives exist and are what an extension builds against; migrating the app onto them moves pixels in 64 files, and is worth doing behind the visual suite rather than blind.
+**Remaining:** igni's own feature classes still carry their own copies. The primitives exist and are what an extension builds against; migrating the app onto them moves pixels, and is worth doing behind the visual suite rather than blind.

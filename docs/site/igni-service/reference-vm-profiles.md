@@ -239,7 +239,7 @@ pausing, which the platform's caps may refuse.
 | `idle_before_pause_s` | `int \| None` | `None` | Seconds idle before the VM is paused; `None` is never. |
 | `packages` | `VmPackages \| None` | `None` | What the profile's read-only layer is built with. |
 | `setup_script` | `str \| None` | `None` | Run as root when the profile's layer is built, after the packages. |
-| `volume_gib` | `int \| None` | `None` | A new VM's volume, and how far an admin may grow it, in GiB. |
+| `volume_gib` | `int \| None` | `None` | The volume a new VM gets, in GiB (igni server's default is 10). |
 | `volume_max_gib` | `int \| None` | `None` | The largest an admin may grow the volume to, in GiB. |
 | `erase_after_idle_days` | `int \| None` | `None` | Days unwoken after which the app's VM is erased; `None` is never. |
 | `internet` | `bool \| None` | `None` | Whether the VM may reach the internet. Left out (or False): internal only — igni and the deployment's own allowed addresses. True asks the org admin for internet egress, a security grant they see as such; a node that is air-gapped, or not allowed to grant internet, still starts the VM internal-only. |

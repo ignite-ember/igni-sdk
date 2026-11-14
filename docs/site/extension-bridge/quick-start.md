@@ -27,7 +27,14 @@ async function main() {
   // The extension's own backend, as the person signed in to igni.
   const notes = await bridge.rpc("ext.example.teamnotes.search", { query: "" });
 
-  render(notes);
+  // Draw it however your page draws: plain DOM here, React with @ignite-ember/ui-react.
+  const list = document.createElement("ul");
+  for (const note of notes as { title: string }[]) {
+    const item = document.createElement("li");
+    item.textContent = note.title;
+    list.append(item);
+  }
+  document.body.append(list);
 }
 
 main().catch((error) => {

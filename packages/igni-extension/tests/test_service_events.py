@@ -304,3 +304,18 @@ async def test_only_a_validation_error_is_answered_not_an_event() -> None:
     handlers.on()(lambda event: None)
     with pytest.raises(RuntimeError, match="cannot read it"):
         await handlers.answer("h-1", _Unreadable())
+
+
+@pytest.mark.parametrize("cancelled", [asyncio.CancelledError, KeyboardInterrupt])
+async def test_a_handler_ended_by_cancellation_is_not_swallowed_as_a_failure(
+    cancelled: type[BaseException],
+) -> None:
+    handlers = ServiceEventHandlers()
+
+    async def interrupted(event: ServiceEvent) -> None:
+        raise cancelled()
+
+    handlers.on("index.ready")(interrupted)
+
+    with pytest.raises(cancelled):
+        await handlers.answer("h-1", EVENT)

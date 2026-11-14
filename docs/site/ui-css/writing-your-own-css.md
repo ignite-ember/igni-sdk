@@ -2,9 +2,12 @@
 
 # Writing your own CSS
 
-The stylesheet is the vocabulary, not the layout. It has no page shell,
-no split pane, no scroll container — those are shapes, and a shape is
-cheap to write and expensive to promise.
+The stylesheet is the vocabulary, not your layout. It has three layout
+shapes — `ui-shell` (a column that fills the frame), `ui-split` (two
+panes with a handle) and `ui-scroll` (a scroll container that scrolls
+inside a flex column) — and nothing for the page beyond them; the rest
+is shaped by your own content, and a shape is cheap to write and
+expensive to promise.
 
 Write your own on top, in your own file, against the tokens:
 

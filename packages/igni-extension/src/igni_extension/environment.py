@@ -155,7 +155,12 @@ class Assets(BaseModel):
                 "or it is not running in igni"
             )
         where = self.root / name
-        if not where.is_dir():
+        if (
+            Path(os.path.normpath(where)).parent != Path(os.path.normpath(self.root))
+            or not where.is_dir()
+        ):
+            # An asset is one directory of the root: `..`, `a/b` or an absolute
+            # path names nothing igni laid out.
             raise NotConfigured(f"no asset named {name!r} was laid out at {self.root}")
         return where
 
@@ -166,8 +171,12 @@ class Assets(BaseModel):
             name: The asset's name as the manifest declares it: `neo4j`.
             file: The file's name within that asset: `neo4j.conf`.
         """
-        where = self.path(name) / file
-        if not where.is_file():
+        asset = self.path(name)
+        where = asset / file
+        if not Path(os.path.normpath(where)).is_relative_to(os.path.normpath(asset)) or not (
+            where.is_file()
+        ):
+            # A file of the asset: `../other/x` or an absolute path is not one.
             raise NotConfigured(f"asset {name!r} has no file {file!r}")
         return where
 

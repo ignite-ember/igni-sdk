@@ -70,7 +70,7 @@ Read whether this session's project folder is trusted.
 async def trust(self) -> WorkspaceTrustStatus
 ```
 
-Takes no arguments. Returns the folder's trust `state`
+Returns the folder's trust `state`
 (`trusted`, `untrusted`, or `ask` when the person has not
 decided), whether it `can_trust` it under the organisation's
 policy and, if not, the `reason`, plus where the decision came

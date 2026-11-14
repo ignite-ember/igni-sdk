@@ -23,8 +23,8 @@ What an `AppShell` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `header` | field | `ReactNode` | Fixed at the top. A `Toolbar`, usually. |
-| `footer` | field | `ReactNode` | Fixed at the bottom. Status, or a form's actions. |
+| `header?` | field | `ReactNode` | Fixed at the top. A `Toolbar`, usually. |
+| `footer?` | field | `ReactNode` | Fixed at the bottom. Status, or a form's actions. |
 
 ## AppShell
 
@@ -57,7 +57,7 @@ What a `Scroll` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `axis` | field | `"y" | "x"` | Scroll sideways instead. A wide table, not a long list. |
+| `axis?` | field | `"y" \| "x"` | Scroll sideways instead. A wide table, not a long list. |
 
 ## Scroll
 

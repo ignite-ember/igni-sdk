@@ -122,4 +122,52 @@ describe("CopySource", () => {
     await click();
     expect(screen.getByRole("button").dataset.state).toBe("failed");
   });
+
+  it("copies the source as it is, empty or not", async () => {
+    // Not the drawing, and not a trimmed or escaped copy: what
+    // somebody pastes is what was in the fence.
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    const { rerender } = render(<CopySource source="" />);
+    await click();
+    rerender(<CopySource source={"  ä → 😀\n\tA-->B  "} />);
+    await click();
+    expect(writeText.mock.calls).toEqual([[""], ["  ä → 😀\n\tA-->B  "]]);
+  });
+
+  it("gives a second click its own full feedback time", async () => {
+    // The first click's timer must not reset the button while the
+    // second click's answer is still being shown.
+    vi.useFakeTimers();
+    stubClipboard(() => Promise.resolve());
+    render(<CopySource source="x" />);
+    await click();
+    act(() => vi.advanceTimersByTime(1000));
+    await click();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.getByRole("button").dataset.state).toBe("copied");
+    act(() => vi.advanceTimersByTime(300));
+    expectIdle();
+  });
+
+  it("leaves no timer behind when it is removed while showing feedback", async () => {
+    vi.useFakeTimers();
+    stubClipboard(() => Promise.resolve());
+    const { unmount } = render(<CopySource source="x" />);
+    await click();
+    expect(vi.getTimerCount()).toBe(1);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("starts no timer when it was removed before the clipboard answered", async () => {
+    vi.useFakeTimers();
+    let answer: () => void = () => {};
+    stubClipboard(() => new Promise<void>((resolve) => (answer = resolve)));
+    const { unmount } = render(<CopySource source="x" />);
+    await click();
+    unmount();
+    await act(async () => answer());
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });

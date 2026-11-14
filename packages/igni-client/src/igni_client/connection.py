@@ -192,7 +192,7 @@ class Connection:
                 if reply_frame.error == UNBOUND:
                     await asyncio.sleep(self.UNBOUND_RETRY_SECONDS)
                     continue
-                raise RpcError.of(method, reply_frame.error)
+                raise RpcError.of(method, reply_frame.error, reply_frame.code)
             return reply_frame
         raise Unavailable(f"{self.target.describe()} was not bound to its producer in time")
 

@@ -32,6 +32,8 @@ from __future__ import annotations
 
 import re
 
+from pydantic import BaseModel
+
 #: What the table says of a parameter no docstring documents.
 UNDOCUMENTED = "Not documented yet."
 
@@ -50,19 +52,36 @@ def code(text: str) -> str:
     return f"`{text.replace('|', chr(92) + '|')}`"
 
 
-def table(rows: list[tuple[str, str, str, str]]) -> list[str]:
+class ParameterRow(BaseModel):
+    """One parameter's row in the table: its name, type, default and meaning.
+
+    ``type`` and ``default`` are cells already (code, ``required``, ``—``);
+    ``meaning`` is prose, fit to a cell when the row is written.
+    """
+
+    name: str
+    type: str
+    default: str
+    meaning: str
+
+    def line(self) -> str:
+        """The row as a line of the Markdown table."""
+        return f"| `{self.name}` | {self.type} | {self.default} | {cell(self.meaning)} |"
+
+
+def table(rows: list[ParameterRow]) -> list[str]:
     """The table of a method's parameters, as the reference pages show it.
 
-    Each row is the parameter's name, its type, its default and what it
-    means. A method with no parameters has no table at all.
+    A method with no parameters has no table at all.
     """
     if not rows:
         return []
-    out = ["| Parameter | Type | Default | Meaning |", "|---|---|---|---|"]
-    for name, type_, default, meaning in rows:
-        out.append(f"| `{name}` | {type_} | {default} | {cell(meaning)} |")
-    out.append("")
-    return out
+    return [
+        "| Parameter | Type | Default | Meaning |",
+        "|---|---|---|---|",
+        *(row.line() for row in rows),
+        "",
+    ]
 
 
 # ── Python ────────────────────────────────────────────────────────
@@ -180,6 +199,10 @@ def jsdoc_lines(doc: str) -> list[str]:
     return [re.sub(r"^\s*\*\s?", "", line) for line in body.split("\n")]
 
 
+#: A JSDoc inline link, ``{@link Name}``: shown as the name in code.
+_JSDOC_LINK = re.compile(r"\{@link\s+([^}]+)\}")
+
+
 def jsdoc_params(doc: str) -> dict[str, str]:
     """What each parameter is, from a JSDoc's ``@param`` lines.
 
@@ -204,7 +227,10 @@ def jsdoc_params(doc: str) -> dict[str, str]:
             continue
         if name:
             texts[name].append(stripped)
-    return {key: " ".join(part for part in texts[key] if part).strip() for key in order}
+    return {
+        key: _JSDOC_LINK.sub(r"`\1`", " ".join(part for part in texts[key] if part).strip())
+        for key in order
+    }
 
 
 def strip_jsdoc_params(doc: str) -> str:
@@ -231,6 +257,7 @@ def strip_jsdoc_params(doc: str) -> str:
 
 __all__ = [
     "UNDOCUMENTED",
+    "ParameterRow",
     "cell",
     "code",
     "jsdoc_params",

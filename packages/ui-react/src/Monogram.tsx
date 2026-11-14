@@ -23,8 +23,13 @@ export function initialsOf(name: string): string {
   const local = cleaned.includes("@") ? cleaned.split("@")[0] : cleaned;
   const words = local.split(/[\s._-]+/).filter(Boolean);
   if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  // By code point: slicing by UTF-16 unit cuts an emoji in half.
+  const letters = (word: string) => Array.from(word);
+  if (words.length === 1) {
+    return letters(words[0]).slice(0, 2).join("").toUpperCase();
+  }
+  const last = words[words.length - 1];
+  return (letters(words[0])[0] + letters(last)[0]).toUpperCase();
 }
 
 /** A stable hue for a name. Same person, same colour, every time. */
@@ -77,9 +82,10 @@ export function hexOf(
 /**
  * Two letters standing in for a face.
  *
- * See the note at the top of this file. The colour comes from the
- * name, so the same person is the same colour on every machine and
- * across restarts.
+ * Not an avatar: nothing stores an uploaded picture, so the two
+ * letters come from the name. The colour comes from the name too, so
+ * the same person is the same colour on every machine and across
+ * restarts.
  *
  * @param name — the name the initials and the colour are derived from.
  * @param size — the width and height of the square, in pixels.

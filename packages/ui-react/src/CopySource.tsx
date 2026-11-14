@@ -9,7 +9,7 @@
  * appears to work and leaves nothing to paste is worse than one
  * that admits it failed.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MenuIcon } from "./MenuIcon.js";
 
@@ -27,6 +27,19 @@ const LABEL: Record<CopyState, string> = {
 export function CopySource({ source }: { source: string }) {
   const [state, setState] = useState<CopyState>("idle");
 
+  const timer = useRef<number | undefined>(undefined);
+
+  // A pending reset must not outlive the button, nor cut a later
+  // click's feedback short.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      window.clearTimeout(timer.current);
+    };
+  }, []);
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(source);
@@ -34,7 +47,9 @@ export function CopySource({ source }: { source: string }) {
     } catch {
       setState("failed");
     }
-    window.setTimeout(() => setState("idle"), FEEDBACK_MS);
+    if (!alive.current) return;
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setState("idle"), FEEDBACK_MS);
   };
 
   return (

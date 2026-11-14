@@ -135,10 +135,20 @@ A **target** says where the igni is and how to reach it.
   sees a pause, not an error.
 - **`Local(project_dir)`** — the igni the desktop app runs for that
   project on this machine, found from the lockfile it writes there
-  (`<project>/.igni/backend.lock`), which also carries the token a
-  program attaches with.
+  (`<project>/.igni/backend.lock`), which carries the token a
+  program attaches with. A backend started by hand publishes the same
+  lockfile, so `Local(project_dir=...)` attaches to it too, as a program
+  (`standing` is `"program"` once the client is open — it is
+  `"unknown"` until the lockfile is read, at open; it approves nothing).
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
-  one started by hand with `--ws-port`.
+  one started by hand with `--ws-port`. A hand-started backend mints its
+  own window token, prints it once to stderr and requires it:
+  `Local(url=..., token="<the printed token>")` connects as igni's window.
+  The development opt-out `IGNI_DEV_NO_WS_TOKEN=1` (igni warns) starts one
+  that takes no token, where every connection is the window. It prints
+  `{"status": "ready", "ws_url": ...}` on stdout once it listens: read that
+  line to know it is ready, and pass `--project-dir` so sessions have a
+  folder.
 
 <!-- illustrative -->
 ```python
@@ -146,7 +156,7 @@ from igni_client import Fleet, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
 here = Local(project_dir="~/code/payments")          # the desktop app's igni for that project
-by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m igni_core.backend --ws-port 8765`
+by_hand = Local(url="ws://127.0.0.1:8765", token="<the printed token>")  # `python -m igni_core.backend --ws-port 8765`
 ```
 
 Both speak the same protocol once open, so everything above the target is
@@ -222,14 +232,14 @@ from igni_client.testing import FakeIgni
 
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create(project_dir="/workspace/payments")
-    again = await igni.sessions.open(session.id)     # the same Session object
+    again = await igni.sessions.open(session.id)     # the same Session object; an id igni does not know is opened new, not an error
     default = await igni.sessions.default()          # the one igni opened at start
     for entry in await igni.sessions.list():
         print(entry.session_id, entry.name, entry.run_count)
 
     registry = await session.models.list()           # a ModelRegistryResult
     print(registry.default, list(registry.registry))
-    notice = await session.models.switch("igni-1")   # an InfoMessage
+    notice = await session.models.switch("igni-1")   # a ModelSwitched
     print(notice.text)
 ```
 
@@ -383,19 +393,32 @@ async with FakeIgni() as fake:
 - `approve(choice)` lets every call of the pause run: `"once"`, or
   `"always"` / `"similar"` to save a permission rule (igni's window only).
 - `reject(remember=False)` refuses them; `remember=True` saves a rule
-  refusing such calls from now on.
+  refusing such calls from now on (igni's window only).
+- From an approver, an answer that saves a rule raises `AccessRefused`
+  before it is sent, and the pause stays open for an answer of `"once"`.
 - `decide({requirement_id: Decision, ...})` answers each call on its own,
   with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
+A refused call never starts, so the resumed run sends no `ToolStarted`,
+`ToolCompleted` or `ToolError` for it: the model reads the refusal as the
+call's result, and the run goes on to its answer. A program counting
+tool events counts only the calls that ran. (`FakeIgni` plays it so.)
+
 igni asks about every call of one pause together and counts a call left
-out as refused, so every answer covers them all. A loop that ends without
+out as refused, so every answer covers them all: `decide()` raises
+`ValueError` for a call it leaves out, and `RuntimeError` when the pause
+was already answered. A loop that ends without
 answering leaves the run waiting on igni's side; the next time the
 session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
-A program without an approver token cannot answer: igni refuses, and
-`approve()` raises `NotAllowed` (see [Who may call what](#who-may-call-what)).
+A program without an approver token cannot answer: `approve()`,
+`reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
+anything is sent, and the run keeps waiting (see
+[Who may call what](#who-may-call-what)). Where igni-client does not know
+the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
+refusal comes as `NotAllowed` from the `send()` loop.
 
 ### The whole answer at once
 
@@ -501,15 +524,14 @@ These calls are followed, each by what igni's events carry:
 | `session.plan.approve(run_id)`, `.dismiss(run_id)` | `plan_decided` of that run | that push, or the answer when `ok` is false |
 | `session.visualization_action(...)` | `visualization_action_dispatched` of this session, action and params | that push |
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
-| `igni.auth.login()` | `login_status` | `login_result` |
-
-A few methods make igni send events that carry nothing to tell this
-call's from another's — a shell command moved to the background is
-reported by pid, but the answer does not say which pid. Those return
-their result only, and their reference entry says why and where to watch
-instead: `attach`, `cancel`, `run_shell`, `scheduler.execute`,
-`auth.sign_out`, `notifications.list`, `notifications.mark_read`,
-`workspace.set_trust` and `window.model`.
+| `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
+| `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
+| `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
+| `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
+| `session.workspace.set_trust(...)` | `workspace_trust_required` of that path | the answer |
+| `igni.window.model(...)` | `window_model_changed` carrying this call's token | the answer |
 
 ### Watching an igni
 
@@ -556,12 +578,12 @@ from igni_client.testing import FakeIgni
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create()
     result = await session.command("/help")
-    print(result.kind, result.content)
+    print(result.kind, result.content)   # against a real igni, /help is an action for the window: kind "action", content empty
     await session.typing("half a tho")              # every client sees the draft
 ```
 
-The commands that switch approvals off or change whom igni signs in to
-(`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
+The commands that switch approvals off, change what igni loads or whom it
+signs in to (`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
 an `error` to anything but igni's window.
 
 ### Commands in a Fleet VM
@@ -686,7 +708,7 @@ socket again after Fleet said busy or the line dropped.
 | `open(session_id, project_dir=None)` | that `Session` |
 | `default()` | the `Session` igni opened at start |
 | `list()` | `list[SessionListEntry]`, every session of igni's own project, newest first |
-| `attach(session_id="", project_dir="")` | igni's own call underneath: an `AttachSessionResult` |
+| `attach(*, project_dir="", session_id="")` | igni's own call underneath: an `AttachSessionResult` |
 
 A `Session`:
 
@@ -725,7 +747,10 @@ entering one twice.
 
 Each has `standing` — what igni stands the connection as (`"window"`,
 `"approver"`, `"program"` or `"unknown"`; see
-[Who may call what](#who-may-call-what)) — and `describe()`. `Local.approves`
+[Who may call what](#who-may-call-what)) — and `describe()`. A
+`Local(project_dir)` reads its lockfile when the client opens, so until
+then its `standing` is `"unknown"` (or `"approver"`, with an approver
+token); read it inside `async with IgniClient(...)`. `Local.approves`
 says whether it has an approver token; `IGNI_APPROVER_TOKEN` gives it one.
 
 ### Credentials: Person, App, Space
@@ -799,7 +824,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
 | `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
 | `UnknownMethod` (`RpcError`) | igni is older than this igni-client | upgrade igni |
-| `InvalidArguments` (`RpcError`, `ValueError`) | the arguments are not what the method takes; checked before sending | fix the call |
+| `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
 | `RunFailed` | a run ended with `run_error` | read the message |
@@ -860,9 +885,14 @@ by the token it offers:
   also answers approval requests and calls `approve_plan`, each
   time once — no saved rule, no permission-mode change. It still
   reaches no `window` call.
-* **Local client, igni started without a secret** (by hand, or with
-  the development switch): every connection stands as the window, so
-  it reaches `client`, `approver` and `window` calls.
+* **Local client, igni started by hand.** With no launcher to give it
+  a secret, igni mints its own window token and prints it once to the
+  terminal; the connection that offers it stands as the window, and
+  the lockfile's program token makes a program, as on the desktop.
+* **Local client, igni started with the development switch**
+  (`IGNI_DEV_NO_WS_TOKEN=1`): no token at all, so every connection
+  stands as the window and reaches `client`, `approver` and
+  `window` calls.
 * **Through Fleet's gateway** (a cloud VM): the gateway authenticates
   the client — with a person's key or an app's — and igni on the VM
   takes no token, so every connection stands as the window and
@@ -1053,11 +1083,12 @@ Wire method `set_server` · access `window`
 
 Choose the igni server to sign in to, and remember it for the next launch.
 
-`api_url` is the server's API address (`https` only);
-`portal_url` its portal, empty to derive it from `api_url`.
-Returns the server as stored, or, when the choice is refused (an
-empty or non-`https` address), `error` saying why and nothing
-stored. Fails when the user configuration file cannot be read or
+`api_url` is the server's API address: `https`, or `http` to
+`localhost`, `127.0.0.1` or `::1` for a local deployment;
+`portal_url` its portal, empty to derive it from `api_url`, and
+held to the same rule when given. Returns the server as stored, or,
+when the choice is refused (an empty `api_url`, or an address that
+breaks that rule), `error` saying why and nothing stored. Fails when the user configuration file cannot be read or
 written.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
@@ -1292,7 +1323,10 @@ Bind to a session — an existing one, or a new one in a project folder.
 `session_id` names the session to resume; `project_dir` the folder
 it works in. Neither: the default session. Only `project_dir`: a new
 session locked to that folder. Both: that session, which must belong
-to that folder. The session is made live if it is not.
+to that folder. The session is made live if it is not. An id igni has
+no session by is not an error: a new, empty session starts under that
+id, so check `session_id` against the session list first when it
+must already exist.
 
 Returns the `session_id` and `project_dir` actually bound; send
 later requests for that session with this `session_id` on the
@@ -1915,9 +1949,10 @@ Wire method `get_hooks_details` · access `client`
 List the hooks this session runs.
 
 Takes no arguments. Returns one row per hook: the `event` it runs
-on, its `type` (a shell `command` or an HTTP `url`), the
-`matcher` that narrows it, its timeout, whether it runs in the
-background, and the HTTP headers it sends.
+on, its `type` (`command`, `http`, `prompt` or `mcp_tool`)
+and the `command` or `url` it runs, the `matcher` that narrows
+it, its timeout, whether it runs in the background, and the HTTP
+headers it sends.
 
 </details>
 
@@ -2125,7 +2160,7 @@ name, with its provider and settings.
 </details>
 
 <details>
-<summary><code>await session.models.switch(model_name: str)</code> → <code>InfoMessage</code></summary>
+<summary><code>await session.models.switch(model_name: str)</code> → <code>ModelSwitched</code></summary>
 
 Wire method `switch_model` · access `client`
 
@@ -2133,10 +2168,9 @@ Make another model the one this session's agent runs on.
 
 `model_name` is a name from the model registry
 (`get_model_registry`). The choice is also saved as the default
-for new sessions. Returns an `info` message, sent in place of an
-`rpc_response`, saying the model switched, with a note for any
-part of the choice that could not be saved. Fails when the model is
-not in the registry.
+for new sessions. Returns `text`, saying the model switched, with a
+note for any part of the choice that could not be saved. Fails when
+the model is not in the registry.
 
 </details>
 
@@ -2376,9 +2410,10 @@ Wire method `get_interrupted_runs` · access `client`
 List a session's runs that stopped before they finished.
 
 `session_id` names the session. Returns one row per run that was
-cancelled or failed: the `message_id` and text of the message that
-started it, when it arrived and when it stopped, why (`cancelled`
-or `errored`) and the last error. A client offers to retry,
+cancelled, failed or never finished: the `message_id` and text of
+the message that started it, when it arrived and when it stopped, why
+(`cancelled`, `errored`, or `abandoned` when igni stopped while
+it ran) and the last error. A client offers to retry,
 discard or edit each. A storage failure answers an empty list.
 
 </details>
@@ -2388,7 +2423,7 @@ discard or edit each. A storage failure answers an empty list.
 
 Wire method `get_pending_messages` · access `client`
 
-List a session's messages that were received but never answered.
+List a session's messages whose run started but never finished.
 
 `session_id` names the session. Returns the user messages still
 pending at least a minute after they arrived — typically left by a
@@ -2638,12 +2673,13 @@ permission rule, a trusted folder, a plugin) or changes whom igni acts
 for. Make the change in igni's window, or run the program through Fleet,
 where every connection is the window.
 
-**`AccessRefused: … approver token`, or `NotAllowed` from `approve()`.**
+**`AccessRefused: … approver token` from `approve()`, or `NotAllowed` from the `send()` loop (or `ask()`) after it.**
 A program answers approvals only with an approver token: `/programs` in
 igni's window makes one; pass it as `Local(approver_token=...)` or
 `IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,
 `Decision.deny(remember=True)` and switching the permission mode stay the
-window's.
+window's, and igni-client refuses them from an approver before sending
+(`AccessRefused: … an approver answers once`).
 
 **`AuthError: igni at … refused the approver token`.** igni forgets
 approver tokens when it quits, and `/programs` can revoke them: make a new
@@ -2652,10 +2688,14 @@ one.
 **`Unavailable: no igni is running for …`.** `Local(project_dir)` found no
 lockfile: open the project in igni, or pass `url=`.
 
-**`Unavailable: … got no answer`.** A call waits 60 seconds
-(`Connection.RPC_TIMEOUT`); the slow ones — installing a plugin,
-compacting a conversation, a shell command — longer, and a scheduled
-task's run as long as it takes (`igni_client.calls.TIMEOUTS`).
+**`Unavailable: … got no answer`.** A call waits as long as igni's
+contract allows its method: 10 seconds for an `instant` one, 30 for `io`,
+60 for `network`, 600 for `long` — installing a plugin, compacting a
+conversation, a shell command, a scheduled task's run. Only a method that
+waits for the person (`session.files.pick_dir()`) waits without limit.
+Each method's entry says its wait; `igni_client.calls.timeout_of(wire)`
+gives it, and `Connection.RPC_TIMEOUT` (60 seconds) is for a call the
+contract does not time.
 
 **`UnknownMethod`.** igni is older than this igni-client and lacks the
 method. igni-client is generated from one version of igni's contract,
@@ -2666,8 +2706,9 @@ new.
 return: igni and igni-client disagree about the contract. Align their
 versions; report it if they match.
 
-**`InvalidArguments`.** An argument is not of the method's type, or is
-one it does not take. Nothing was sent.
+**`InvalidArguments`.** An argument is not of the method's type. Nothing was
+sent. A keyword the method does not take, or a required one left out, is
+Python's `TypeError`, raised by the method's signature before anything else.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read
@@ -2695,7 +2736,7 @@ On purpose, and not backwards compatible:
   `session.rpc(...)` are gone: every one of igni's methods is a Python
   method on `IgniClient` or `Session`, its arguments checked before
   sending and its result a model. `session.use_model(name)` is
-  `session.models.switch(name)` (an `InfoMessage`); `igni.models.list()`
+  `session.models.switch(name)` (a `ModelSwitched`); `igni.models.list()`
   is `session.models.list()` (a `ModelRegistryResult`; `ModelCatalogue`
   and `ModelEntry` are gone); `session.history()` is
   `session.history.get()`, a list of `ChatTurn` — `UserTurn`,
@@ -2703,9 +2744,10 @@ On purpose, and not backwards compatible:
   where it was `HistoryTurn` (gone). `session.cancel()` calls igni's
   `cancel_run`, which answers, instead of sending `cancel`.
 - **Every message is generated from igni's contract**, field for field.
-  The models igni sends are required where the contract requires them:
-  `Requirement(…)` built by hand needs `tool_args` and `agent_path`,
-  `RunPaused(…)` its `requirements`, `PushNotification(…)` its `payload`.
+  A result is required where the contract requires it
+  (`DiscardEphemeralResult(…)` built by hand needs `name` and `ok`); every
+  field of a message has the contract's default, so `Requirement(…)`,
+  `RunPaused(…)` and `PushNotification(…)` need none.
   `HitlDecision.action` and `.choice` are strings, as igni types them;
   `Decision` still holds the values igni knows.
 - **A frame on the wire** is its `type` and the fields given a value; a

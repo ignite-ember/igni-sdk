@@ -180,7 +180,7 @@ One call's answer, and how long it took.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `call` | `ConcurrentCall` | required | The call it answers. |
-| `result` | `Any` | `None` | The tool's result: its structured content, or its text. |
+| `result` | `Any` | `None` | The tool's result: its structured content, or, when it has none, its content blocks (a list, as MCP returns them). |
 | `is_error` | `bool` | `False` | Whether the tool raised. |
 | `took` | `float` | `0.0` | Seconds from sending the call to its answer. |
 
@@ -208,7 +208,7 @@ FakeHost(
 
 igni's host object model for one extension process, on a loopback socket.
 
-Speaks the protocol igni does (`docs/HOST_MODEL_PROTOCOL.md` in igni).
+Speaks the protocol igni does (igni-core's `docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md)).
 What it answers is up to the test:
 
 * `values` — `path -> value` for `get`; a `set` stores into it;
@@ -231,7 +231,7 @@ def environment(**extra: str) -> dict[str, str]
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
+| `**extra` | `str` | — | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
 
 The variables igni starts the process with, for its host.
 
@@ -372,7 +372,7 @@ def environment(**extra: str) -> dict[str, str]
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `extra` | `str` | required | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
+| `**extra` | `str` | — | More variables to hand the process, as igni set them: `IGNI_EXTENSION_DATA`. |
 
 The variables igni starts the process with, for its service.
 

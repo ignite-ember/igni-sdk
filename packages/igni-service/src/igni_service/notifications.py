@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 from collections.abc import Awaitable, Callable, Iterable
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
@@ -57,6 +58,8 @@ class Target(BaseModel):
     @field_validator("params")
     @classmethod
     def _small(cls, value: dict[str, ParamValue]) -> dict[str, ParamValue]:
+        if any(isinstance(v, float) and not math.isfinite(v) for v in value.values()):
+            raise ValueError("target params may not hold NaN or infinity: JSON has neither")
         if len(json.dumps(value)) > MAX_TARGET_BYTES:
             raise ValueError(f"target params may be at most {MAX_TARGET_BYTES} bytes as JSON")
         return value

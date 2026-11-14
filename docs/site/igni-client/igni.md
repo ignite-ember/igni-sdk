@@ -21,7 +21,7 @@ Ask whether a newer igni release is available.
 async def check_for_update(self) -> UpdateAvailable | None
 ```
 
-Takes no arguments. Returns the newer release — its version, the
+Returns the newer release — its version, the
 version installed, where to get it — or `null` when there is none
 (or update checks are switched off). Fails when the check could not
 reach an answer (network, HTTP status, an unreadable reply), so a
@@ -56,7 +56,7 @@ Read which organisation group's policy igni follows.
 async def group_policy(self) -> GroupPolicyPackResult
 ```
 
-Takes no arguments. Returns the group's id and name, when its
+Returns the group's id and name, when its
 policy pack was fetched, how many entries it has and the default
 model it sets; nulls and zero when igni follows no group.
 

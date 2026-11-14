@@ -87,7 +87,7 @@ async def test_login_sends_the_browser_to_igni_with_pkce_and_a_state(
         == fake.addresses.authorization_endpoint
     )
     assert query["response_type"] == "code"
-    assert query["client_id"] == await igni.registration.client_id()
+    assert query["client_id"] == await igni.connection.registration.client_id()
     assert query["redirect_uri"] == f"{SERVICE}/auth/callback"
     assert query["code_challenge_method"] == "S256"
     assert len(query["code_challenge"]) == 43
@@ -118,7 +118,7 @@ async def test_the_callback_opens_a_session_and_the_browser_never_holds_a_token(
 async def test_the_registration_names_the_callback_without_being_told(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    await igni.registration.register()
+    await igni.connection.registration.register()
 
     [body] = [seen.json_body() for seen in fake.traffic.requests_to(IgniPaths.CLIENTS)]
     assert body["redirect_uris"] == [f"{SERVICE}/auth/callback"]
@@ -294,7 +294,9 @@ async def test_logout_ends_the_sign_in_at_igni_too(
     assert fake.oauth.revoked == [refresh]
     [revocation] = fake.traffic.requests_to(IgniPaths.REVOKE)
     assert revocation.form().token_type_hint == "refresh_token"
-    endpoint = TokenEndpoint(igni.server, igni.registration, igni.key)
+    endpoint = TokenEndpoint(
+        igni.connection.server, igni.connection.registration, igni.connection.key
+    )
     with pytest.raises(GrantRefused):
         await endpoint.grant(RefreshTokenGrant(refresh_token=refresh))
 

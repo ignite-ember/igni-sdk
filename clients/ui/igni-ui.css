@@ -20,15 +20,14 @@
  * each component's `className=` expressions and fails on the first
  * name this file does not define, and the fallback values below are
  * checked against `theme.css` rather than copied by hand. Both exist
- * because both had already gone wrong: seven components named
- * thirty-two classes nothing here defined, and eighteen of these
- * fallbacks were a different value from the theme they claim to
- * match.
+ * because both had already gone wrong: components named classes
+ * nothing here defined, and fallbacks were a different value from the
+ * theme they claim to match.
  *
- * What it does not cover is layout. There is no page shell, no
- * split pane, no scroll container: those are shapes, and a shape is
- * cheap to write and expensive to promise. Write them yourself,
- * against the tokens below.
+ * Layout is covered only as far as the floor goes: a page shell
+ * (`.ui-shell`), a scroll container (`.ui-scroll`) and a resizable
+ * split pane (`.ui-split`). Anything past those shapes is yours to
+ * write, against the tokens below.
  */
 
 /* ── The tokens, as fallbacks ──────────────────────────────────────
@@ -161,10 +160,9 @@
    The shapes this app keeps making, named once.
 
    They were not extracted from duplication, because there was very
-   little: the 231 classes called `-row`, `-card`, `-actions` share
-   almost nothing — `*-row` agreed only on `display: flex`, and
-   deduplicating all fourteen patterns saved 84 declarations out of
-   17,789 lines. They did not repeat. They diverged, each feature
+   little: the classes called `-row`, `-card`, `-actions` share
+   almost nothing — `*-row` agreed only on `display: flex`. They did
+   not repeat. They diverged, each feature
    picking its own gaps and paddings because there was no scale to
    pick from.
 
@@ -234,8 +232,8 @@
 
 /* An empty state is text the reader has to read to know what to do
    next, so it is content rather than de-emphasised chrome. The
-   existing uses split exactly eight and eight between --fg-faint and
-   --fg-muted; both clear WCAG AA since F138, so the tie is broken on
+   existing uses split evenly between --fg-faint and
+   --fg-muted; both clear WCAG AA, so the tie is broken on
    meaning rather than contrast. */
 .ui-empty {
   color: var(--fg-muted);
@@ -1255,6 +1253,15 @@ body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+
+/* A React page mounts the shell into an element of its own
+   (`<div id="root">`), and `height: 100%` of a parent with no height is
+   no height: the ui-react Quick start's shell was 70px tall in a 600px
+   frame, its footer right under the list. The element between the body
+   and a shell fills the body too, whatever it is called. */
+body > :has(> .ui-shell) {
+  height: 100%;
 }
 
 .ui-shell-header,

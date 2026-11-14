@@ -58,7 +58,7 @@ List the agents this session can hand work to.
 async def list(self) -> list[AgentInfo]
 ```
 
-Takes no arguments. Returns each agent's name, description, tools,
+Returns each agent's name, description, tools,
 model, MCP servers, tags, system prompt, where it was defined, and
 whether it is ephemeral (made during this session, not yet saved).
 

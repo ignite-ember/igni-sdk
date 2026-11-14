@@ -25,7 +25,7 @@ def cancel(
 ) -> Call[WorkflowCancelResponse, CancelWorkflowEvent]
 ```
 
-`workflow_run_id` is the run (from `run_workflow`). The
+`workflow_run_id` is the run (from `session.workflows.run()`). The
 workflow is asked to stop, then terminated after a grace period;
 its last `workflow_event` says it was cancelled. Returns
 `cancelled: true` when a live run was stopped, `false` when
@@ -68,13 +68,13 @@ List the workflows this session's project can run.
 async def list(self) -> list[WorkflowListItem]
 ```
 
-Takes no arguments (any it is sent are ignored). Returns each workflow in
+Returns each workflow in
 `.igni/workflows/*.mjs` (a project's shadowing the person's own
 of the same name), sorted by name: its `name`, `description`,
-`whenToUse`, `phases` and `path`. A file whose metadata cannot
+`when_to_use`, `phases` and `path`. A file whose metadata cannot
 be read is left out.
 
-Takes no arguments.
+Takes no arguments (any it is sent are ignored).
 
 **Returns** `list[`[`WorkflowListItem`](/docs/sdk/igni-client/models-reference#workflowlistitem)`]`.
 
@@ -107,7 +107,7 @@ def run(
 ) -> Call[WorkflowRunResponse, RunWorkflowEvent]
 ```
 
-`name` is the workflow (from `list_workflows`); `args` its
+`name` is the workflow (from `session.workflows.list()`); `args` its
 input, a JSON object the workflow reads as it defines. Returns the
 `workflow_run_id` and `name`. The run goes on in the
 background: each step it takes is pushed as `workflow_event`

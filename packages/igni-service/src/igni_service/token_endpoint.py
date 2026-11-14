@@ -30,9 +30,13 @@ class IssuedTokens(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
     access_token: str
+    """The bearer token."""
     expires_in: int = 600
+    """Seconds it is good for."""
     refresh_token: str = ""
+    """What renews it; empty for a grant that has none."""
     token_type: str = "Bearer"  # noqa: S105 — the OAuth token type, not a token
+    """The OAuth token type: `Bearer`."""
 
 
 class OAuthRefusal(BaseModel):
@@ -49,12 +53,19 @@ class OAuthRefusal(BaseModel):
     model_config = ConfigDict(extra="ignore", use_attribute_docstrings=True)
 
     error: str = ""
+    """RFC 6749's error code, such as `invalid_client`; empty when the body named none."""
     error_description: str = ""
+    """igni's words for why; empty when the body gave none."""
     client_state: str | None = None
+    """`pending` or `revoked` when the client's registration is why; none otherwise."""
 
     @classmethod
     def read(cls, body: str) -> OAuthRefusal:
-        """The refusal in `body`; an empty one when `body` is not RFC 6749's JSON."""
+        """The refusal in `body`; an empty one when `body` is not RFC 6749's JSON.
+
+        Args:
+            body: The body of igni's refusal, as text.
+        """
         try:
             return cls.model_validate(json.loads(body))
         except (ValueError, ValidationError):
@@ -66,6 +77,10 @@ class GrantRefused(IgniError):
 
     `detail` is the body as igni sent it; `refusal` is the same body read
     (`error`, `error_description`, `client_state`).
+
+    Args:
+        status: The HTTP status igni refused with: 400, 401 or 403.
+        detail: The body of the refusal, as igni sent it.
     """
 
     def __init__(self, status: int, detail: str) -> None:
@@ -83,7 +98,14 @@ class ClientIdentity(Protocol):
 
 
 class TokenEndpoint:
-    """`POST /v1/oauth/token` and `POST /v1/oauth/revoke`, authenticated as this client."""
+    """`POST /v1/oauth/token` and `POST /v1/oauth/revoke`, authenticated as this client.
+
+    Args:
+        igni: igni's address, its issuer (what each assertion is addressed to) and the
+            HTTP client every call goes through.
+        registration: Whatever knows the client id to authenticate as.
+        key: The key each client assertion is signed with.
+    """
 
     def __init__(self, igni: IgniServer, registration: ClientIdentity, key: SigningKey) -> None:
         self._igni = igni
@@ -91,7 +113,11 @@ class TokenEndpoint:
         self._key = key
 
     async def grant(self, grant: Grant) -> IssuedTokens:
-        """Ask for tokens. Raises `GrantRefused` or `IgniUnavailable`."""
+        """Ask for tokens. Raises `GrantRefused` or `IgniUnavailable`.
+
+        Args:
+            grant: The grant to ask for: its form is sent with the client assertion.
+        """
         response = await self._post(IgniPaths.TOKEN, grant.form(), what="a token request")
         try:
             return IssuedTokens.model_validate(response.json())
@@ -106,6 +132,9 @@ class TokenEndpoint:
         Every refresh token of that sign-in stops renewing at igni. A token
         igni no longer considers valid is not an error. Raises
         `GrantRefused` or `IgniUnavailable`.
+
+        Args:
+            refresh_token: The refresh token of the sign-in to end.
         """
         await self._post(
             IgniPaths.REVOKE,

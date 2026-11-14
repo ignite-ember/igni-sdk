@@ -6,15 +6,21 @@ A page that fills its frame, with a toolbar, a scrolling list and a
 footer:
 
 ```tsx
+import { createRoot } from "react-dom/client";
 import { AppShell, Scroll, Toolbar, Button, Text, Empty } from "@ignite-ember/ui-react";
 import { connect } from "@ignite-ember/extension-bridge";
 import "@ignite-ember/ui-css";
+
+interface Note {
+  id: string;
+  title: string;
+}
 
 async function main() {
   const bridge = await connect();
   const notes = await bridge.rpc<Note[]>("ext.example.teamnotes.list");
 
-  return (
+  createRoot(document.getElementById("root")!).render(
     <AppShell
       header={<Toolbar>Notes</Toolbar>}
       footer={<Button variant="primary">New note</Button>}
@@ -28,10 +34,31 @@ async function main() {
           ))
         )}
       </Scroll>
-    </AppShell>
+    </AppShell>,
   );
 }
+
+void main();
 ```
+
+The page's `index.html` gives its body the `igni-root` class, holds
+`<div id="root"></div>` and loads the built script from a file (an
+extension's page may not run inline script):
+
+```html
+<!doctype html>
+<html>
+  <body class="igni-root">
+    <div id="root"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+`igni-root` is what puts the stylesheet's background, font and spacing on
+the page; neither `connect()` nor `AppShell` adds it. Without it the page
+renders unstyled — a transparent background, the browser's serif font, and
+its 8px body margin, so the frame scrolls by 8px.
 
 Three things to know before you write more:
 

@@ -68,7 +68,7 @@ class Person:
             raise AuthError("no igni session on this machine; run `igni login`")
         try:
             stored = StoredCredentials.model_validate_json(stored_at.read_text())
-        except (OSError, ValidationError) as exc:
+        except (OSError, UnicodeDecodeError, ValidationError) as exc:
             raise AuthError(f"{stored_at} is not an igni credentials file") from exc
         if stored.expired():
             raise AuthError(f"the session in {stored_at} has expired; run `igni login`")

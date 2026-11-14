@@ -95,7 +95,7 @@ async def test_an_authenticated_path_no_handler_takes_is_the_directorys(
     status: int,
     body: dict[str, str],
 ) -> None:
-    token = await igni.tokens.token(ORG)
+    token = await igni.outbound.tokens.token(ORG)
     async with fake.http_client() as http:
         response = await http.request(method, f"{FakeIgni.BASE}{path}", headers=bearer(token))
 
@@ -105,7 +105,7 @@ async def test_an_authenticated_path_no_handler_takes_is_the_directorys(
 async def test_an_organisation_the_directory_lacks_is_said(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    token = await igni.tokens.token("org-nowhere")
+    token = await igni.outbound.tokens.token("org-nowhere")
     async with fake.http_client() as http:
         response = await http.get(
             f"{FakeIgni.BASE}{IgniPaths.SERVICE_EVENTS}", headers=bearer(token)
@@ -199,7 +199,7 @@ def test_a_bundle_without_a_manifest_is_refused_in_igni_s_words() -> None:
 async def test_a_query_igni_cannot_read_is_a_422_not_a_crash(
     igni: IgniService, fake: FakeIgni, path: str, query: dict[str, str], said: str
 ) -> None:
-    token = await igni.tokens.token(ORG)
+    token = await igni.outbound.tokens.token(ORG)
     async with fake.http_client() as http:
         response = await http.get(f"{FakeIgni.BASE}{path}", params=query, headers=bearer(token))
 
@@ -269,7 +269,7 @@ async def test_addresses_a_test_puts_in_the_fakes_place_are_the_ones_reached(
 async def test_who_holds_a_token_is_asked_of_the_registry_and_bearers_the_fake_has_now(
     igni: IgniService, fake: FakeIgni, replaced: str
 ) -> None:
-    token = await igni.tokens.token(ORG)
+    token = await igni.outbound.tokens.token(ORG)
     if replaced == "clients":
         fake.clients = FakeClientRegistry()
     else:
@@ -286,7 +286,7 @@ async def test_who_holds_a_token_is_asked_of_the_registry_and_bearers_the_fake_h
 async def test_a_service_path_no_route_takes_falls_back_to_the_directory_the_fake_has_now(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    token = await igni.tokens.token(ORG)
+    token = await igni.outbound.tokens.token(ORG)
     fake.directory = FakeDirectory()
 
     async with fake.http_client() as http:
@@ -300,7 +300,7 @@ async def test_a_service_path_no_route_takes_falls_back_to_the_directory_the_fak
 async def test_a_revoked_services_token_is_not_authenticated(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    token = await igni.tokens.token(ORG)
+    token = await igni.outbound.tokens.token(ORG)
     fake.clients.revoke()
 
     async with fake.http_client() as http:
@@ -324,8 +324,8 @@ async def test_a_revoked_services_token_is_not_authenticated(
 async def test_a_token_for_no_organisation_reaches_only_revocations_and_served(
     igni: IgniService, fake: FakeIgni, method: str, path: str, status: int
 ) -> None:
-    await igni.tokens.token(ORG)
-    client_id = await igni.registration.client_id()
+    await igni.outbound.tokens.token(ORG)
+    client_id = await igni.connection.registration.client_id()
     token = fake.oauth.bearers.issue_service(TokenHolder(client_id=client_id), "service")
 
     async with fake.http_client() as http:

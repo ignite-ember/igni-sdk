@@ -76,7 +76,7 @@ List the background processes igni is tracking, in every session.
 async def list(self) -> list[ProcessRow]
 ```
 
-Takes no arguments. Returns each process's `pid`, command, how
+Returns each process's `pid`, command, how
 long it has run, whether it is still running, and its exit code
 once it has ended.
 

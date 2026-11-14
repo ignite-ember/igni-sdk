@@ -418,3 +418,17 @@ async def test_promote_takes_the_target_the_slash_command_does() -> None:
             {"name": "helper", "target": "project"},
         ]
         await ext.aclose()
+
+
+def test_the_names_0_1_0_had_still_resolve_to_the_generated_model() -> None:
+    """`igni_extension.host` re-exports the model's root, and `Notifications` is the very
+    class `ext.host.notifications` is, not a copy."""
+    from igni_extension import host as host_module
+    from igni_extension import host_model
+
+    assert host_module.Host is host_model.Host
+    assert host_module.Notifications is host_model.HostNotifications
+    assert sorted(host_module.__all__) == ["Host", "Notifications"]
+    ext = IgniExtension("acme.example", environ={})
+    assert isinstance(ext.host, host_module.Host)
+    assert isinstance(ext.host.notifications, host_module.Notifications)

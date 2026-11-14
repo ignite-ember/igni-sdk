@@ -46,8 +46,8 @@ from igni_service.clock import Clock
 from igni_service.errors import IgniUnavailable
 from igni_service.grants import ClientCredentialsGrant
 from igni_service.token_endpoint import GrantRefused
-from igni_service.tokens import TokenRefused
 from igni_service.urls import IgniPaths
+from igni_service.verified_claims import TokenRefused, VerifiedClaims
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -157,33 +157,20 @@ class RevocationList:
         heard = self._heard_at
         return heard is None or self._clock.monotonic() - heard > self.max_staleness
 
-    def check(self, claims: dict[str, Any]) -> None:
+    def check(self, claims: VerifiedClaims) -> None:
         """Raise `Revoked` for a token a watermark covers, `RevocationsStale`
         when the watermarks are not fresh."""
         if self.stale:
             raise RevocationsStale(
                 f"igni's revocations are not fresh (bound {self.max_staleness:g}s)"
             )
-        kind = self._KIND.get(str(claims.get("token_use") or ""))
-        subject = str(claims.get("sub") or "")
-        if kind is None or not subject:
+        kind = self._KIND.get(claims.token_use)
+        if kind is None or not claims.sub:
             return
-        issued_ms = self._issued_ms(claims)
-        org = str(claims.get("org") or "") or None
-        for scope in (org, None):
-            watermark = self._watermarks.get((kind, scope, subject))
-            if watermark is not None and issued_ms <= watermark:
+        for scope in (claims.org or None, None):
+            watermark = self._watermarks.get((kind, scope, claims.sub))
+            if watermark is not None and claims.issued_ms <= watermark:
                 raise Revoked()
-
-    @staticmethod
-    def _issued_ms(claims: dict[str, Any]) -> int:
-        """``iat_ms``; a token without it counts from the start of its ``iat`` second."""
-        try:
-            if claims.get("iat_ms") is not None:
-                return int(claims["iat_ms"])
-            return int(float(claims["iat"]) * 1000)
-        except (KeyError, TypeError, ValueError):
-            raise TokenRefused("the token's iat is not a number") from None
 
     def __len__(self) -> int:
         return len(self._watermarks)
@@ -239,7 +226,7 @@ class RevocationFeed:
             with contextlib.suppress(asyncio.CancelledError):
                 await follow
 
-    async def check(self, claims: dict[str, Any]) -> None:
+    async def check(self, claims: VerifiedClaims) -> None:
         """The verifier's check: wait for the first read if need be, then ask the list."""
         if not self.running:
             return

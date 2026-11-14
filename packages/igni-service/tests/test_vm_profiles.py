@@ -200,12 +200,12 @@ async def shipped(fake: FakeIgni, bundle: Path) -> IgniService:
     igni = fake.service(fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))))
     app = FastAPI(lifespan=igni.lifespan)
     async with app.router.lifespan_context(app):
-        await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
+        await asyncio.wait_for(igni.connection.registration.registered.wait(), timeout=5)
         await asyncio.sleep(0.05)
     fake.clients.approve()
     return fake.service(
         fake.settings(SettingsOverrides(extension_bundle_path=str(bundle))),
-        key_store=igni.key.store,
+        key_store=igni.connection.key.store,
     )
 
 

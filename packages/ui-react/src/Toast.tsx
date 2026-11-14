@@ -34,7 +34,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { Tone } from "./primitives.js";
+import type { Tone } from "./controls.js";
 
 function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");

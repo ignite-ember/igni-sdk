@@ -1,6 +1,6 @@
 """`@ext.hook`: the extension answering igni's hook events.
 
-Against `FakeHost`, which asks as igni asks (`docs/HOST_MODEL_PROTOCOL.md`).
+Against `FakeHost`, which asks as igni asks (`docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md)).
 """
 
 from __future__ import annotations
@@ -387,3 +387,138 @@ class TestAPlansTasks:
         items = PlanSubmit.model_json_schema()["properties"]["tasks"]["items"]
 
         assert items == {"$ref": "#/$defs/JsonValue"}
+
+
+def test_every_hook_event_is_listed_with_igni_s_name_and_whether_it_decides() -> None:
+    assert {event.name: event.decides for event in Hooks.all()} == {
+        "PreToolUse": True,
+        "PostToolUse": True,
+        "UserPromptSubmit": True,
+        "Stop": True,
+        "PlanSubmit": True,
+        "PostToolUseFailure": False,
+        "SessionStart": False,
+        "SessionEnd": False,
+        "SubagentStart": False,
+        "SubagentStop": False,
+        "Notification": False,
+        "PreCompact": False,
+        "PostCompact": False,
+        "InstructionsLoaded": False,
+        "TaskCreated": False,
+        "TaskCompleted": False,
+        "StopFailure": False,
+        "PermissionRequest": False,
+        "PermissionDenied": False,
+    }
+    assert repr(Hooks.PRE_TOOL_USE) == "HookEvent('PreToolUse')"
+
+
+def test_the_handled_events_are_listed_by_name_in_order() -> None:
+    handlers = HookHandlers()
+    assert handlers.events() == []
+    handlers.on(Hooks.STOP)(lambda event: None)
+    handlers.on(Hooks.PLAN_SUBMIT)(lambda event: None)
+    handlers.on(Hooks.PRE_TOOL_USE)(lambda event: None)
+    assert handlers.events() == ["PlanSubmit", "PreToolUse", "Stop"]
+
+
+def test_an_event_reads_what_igni_sent_and_refuses_what_it_cannot() -> None:
+    plan = Hooks.PLAN_SUBMIT.parse({"plan": "Do it.", "tasks": [{"a": [1, None]}, "b"], "x": 1})
+    assert plan.session_id == "" and plan.attempt == 0
+    assert plan.tasks == [{"a": [1, None]}, "b"]
+    assert plan.model_extra == {"x": 1}
+    assert Hooks.STOP.parse({}).response == ""
+    with pytest.raises(ValidationError):
+        Hooks.USER_PROMPT_SUBMIT.parse({"session_id": "s-1"})
+    with pytest.raises(ValidationError):
+        Hooks.PLAN_SUBMIT.parse({"plan": "x", "attempt": "first"})
+    with pytest.raises(ValidationError):
+        Hooks.PLAN_SUBMIT.parse("not an object")
+
+
+def test_each_answer_goes_to_igni_as_its_hook_id_and_outcome() -> None:
+    allowed = Allow().for_hook("h-1").model_dump(mode="json")
+    rejected = Reject("no").for_hook("h-2").model_dump(mode="json")
+    changed = Modify({"plan": "better"}).for_hook("h-3").model_dump(mode="json")
+    assert allowed == {"hook": "h-1", "outcome": "allow", "reason": "", "value": None}
+    assert rejected == {"hook": "h-2", "outcome": "reject", "reason": "no", "value": None}
+    assert changed == {
+        "hook": "h-3",
+        "outcome": "modify",
+        "reason": "",
+        "value": {"plan": "better"},
+    }
+
+
+@pytest.mark.parametrize("value", [None, "", 0, [], {"plan": "x"}])
+def test_a_modify_sends_whatever_value_it_was_given(value: object) -> None:
+    answer = Modify(value).for_hook("h-1")
+    assert answer.outcome == "modify" and answer.value == value
+
+
+def test_a_reject_with_no_reason_is_still_a_reject() -> None:
+    answer = Reject("").for_hook("h-1")
+    assert (answer.outcome, answer.reason) == ("reject", "")
+
+
+async def test_an_event_igni_sent_malformed_is_answered_failed_for_a_decision() -> None:
+    handlers = HookHandlers()
+    ran: list[object] = []
+    handlers.on(Hooks.USER_PROMPT_SUBMIT)(lambda event: ran.append(event))
+
+    answer = await handlers.answer("h-1", "UserPromptSubmit", {"session_id": "s-1"})
+
+    assert answer.hook == "h-1" and answer.outcome == "failed"
+    assert "message" in answer.reason
+    assert ran == []
+
+
+async def test_an_event_igni_sent_malformed_is_logged_and_swallowed_when_only_told(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    handlers = HookHandlers()
+    ran: list[object] = []
+    handlers.on(Hooks.POST_TOOL_USE)(lambda event: ran.append(event))
+
+    with caplog.at_level(logging.ERROR):
+        await handlers.tell("PostToolUse", {"tool_name": "sum"})
+
+    assert ran == []
+    assert "the handler of PostToolUse failed" in caplog.text
+
+
+async def test_an_asked_event_nothing_hooks_is_allowed_and_the_log_says_how_to_fix_it(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    handlers = HookHandlers()
+    with caplog.at_level(logging.WARNING):
+        answer = await handlers.answer("h-9", "Stop", {"response": "done"})
+        await handlers.tell("SessionStart", {})
+
+    assert (answer.hook, answer.outcome) == ("h-9", "allow")
+    assert "nothing here hooks" in caplog.text and "permissions.hooks" in caplog.text
+    assert caplog.text.count("igni:") == 1
+
+
+async def test_a_plain_def_handler_runs_off_the_loop_and_a_raising_one_says_why() -> None:
+    import threading
+
+    handlers = HookHandlers()
+    where: list[int] = []
+
+    def decide(event: PlanSubmit) -> Reject:
+        where.append(threading.get_ident())
+        return Reject(f"attempt {event.attempt}")
+
+    handlers.on(Hooks.PLAN_SUBMIT)(decide)
+    answer = await handlers.answer("h-1", "PlanSubmit", {"plan": "p", "attempt": 2})
+    assert (answer.outcome, answer.reason) == ("reject", "attempt 2")
+    assert where and where[0] != threading.get_ident()
+
+    def broken(event: Stop) -> None:
+        raise ValueError("no reason given")
+
+    handlers.on(Hooks.STOP)(broken)
+    failed = await handlers.answer("h-2", "Stop", {})
+    assert (failed.outcome, failed.reason) == ("failed", "no reason given")

@@ -14,7 +14,7 @@ repository, which is public under Apache-2.0:
 | `@ignite-ember/ui-react` | npmjs | `packages/ui-react` | the React components under the compatibility floor |
 | `@ignite-ember/ui-css` | npmjs | `clients/ui` | the stylesheet `@ignite-ember/ui-react` is drawn with |
 
-`@ignite-ember/ui-css` is the fifth because `@ignite-ember/ui-react`'s README
+`@ignite-ember/ui-css` is the sixth because `@ignite-ember/ui-react`'s README
 tells every extension to install it beside it, and a component package whose
 stylesheet cannot be installed is not installable either.
 
@@ -23,13 +23,16 @@ there is not ours. The Python names are the import names' (`igni_service`,
 `igni_extension`, `igni_client`).
 
 Every release is also a GitHub Release of this repository, `sdk-v<version>`,
-carrying the same wheels, sdists and npm tarballs and their `SHA256SUMS`: what
-the offline bundle and an air-gapped build take instead of a registry.
+carrying the same wheels, sdists and npm tarballs, a CycloneDX SBOM for each
+Python package (`<package>-<version>.cdx.json`), their `SHA256SUMS`, the GitHub
+build-provenance bundle (`igni-sdk-<version>.provenance.sigstore.json`) and, when the repository has a
+cosign key, `SHA256SUMS.sig`: what the offline bundle and an air-gapped build
+take instead of a registry.
 
 ## Versions
 
 **One version for all six (lockstep), semver.** §8 of
-[EXTENSIBILITY.md](EXTENSIBILITY.md) versions the floor independently of the
+[EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) versions the floor independently of the
 product, as semver, declared as a range — and the six packages *are* the
 floor's code: the bridge's protocol is the host's, `@ignite-ember/ui-react` is drawn
 with `@ignite-ember/ui-css`, `igni-service` builds the bundles `igni-extension` runs
@@ -162,13 +165,13 @@ publishing*), and only from the GitHub environment named for each.
 |---|---|---|
 | Authorize | both | stops unless the actor is a repository admin (as `release.yml` does) |
 | Resolve | both | a tag is a **release**, a manual run a **rehearsal**; checks a tag names the manifests' version (`make sdk-version-check VERSION=…`) and the six agree; picks the npm dist-tag (`next` for a pre-release, `latest` otherwise) |
-| Verify Python / Verify npm | both | `make packages-check`; `clients/web`'s typecheck and vitest, which cover `packages/` — what ci.yml's `packages` and `web` jobs run, on the released commit |
-| Build | both | `make sdk-build`, `twine check --strict`, `SHA256SUMS`, and each tarball's file list in the run summary; kept as a workflow artifact for 30 days |
+| Verify Python / Verify npm | both | `make packages-check`; the workspace's build, typecheck, the outside-a-bundler consumer check and vitest — what ci.yml's `packages` and `npm` jobs run, on the released commit |
+| Build | both | `make sdk-build`, `twine check --strict`, a CycloneDX SBOM per Python package (`uv export`, from its own `uv.lock`; the npm packages declare no dependencies, so they get none), `SHA256SUMS` (wheels, sdists, tarballs and SBOMs), and each tarball's file list in the run summary; kept as a workflow artifact for 30 days |
 | Rehearse on TestPyPI | rehearsal | environment `testpypi`: uploads the wheels and sdists to test.pypi.org (`pypa/gh-action-pypi-publish`, trusted publishing) |
 | Rehearse npm (dry run) | rehearsal | `npm publish --dry-run --provenance --access public` for each tarball, under the dist-tag a release would use, and the tarballs as an artifact (`npm-tarballs-<v>`) |
 | Publish to PyPI | release | environment `pypi`: uploads to pypi.org (trusted publishing; PEP 740 attestations) |
 | Publish to npmjs | release | environment `npm`: `npm publish --provenance --access public --tag <dist-tag>` for each tarball (trusted publishing; `NPM_TOKEN` only until it is configured — below) |
-| Attach to the GitHub Release | release | creates the `sdk-v<v>` release (a pre-release for `-rc.N` and the like; never marked *latest*, which the desktop app's updater reads) and uploads every file plus `SHA256SUMS` |
+| Attach to the GitHub Release | release | creates the `sdk-v<v>` release (a pre-release for `-rc.N` and the like; never marked *latest*, which the desktop app's updater reads) and uploads the wheels, sdists, npm tarballs, the SBOMs (`*.cdx.json`) and `SHA256SUMS`, plus `igni-sdk-<v>.provenance.sigstore.json` (one build-provenance attestation, made with `actions/attest-build-provenance`, for every file `SHA256SUMS` lists; release only) and `SHA256SUMS.sig` (a cosign signature over `SHA256SUMS`, only once the `COSIGN_PRIVATE_KEY`, `COSIGN_PASSWORD` and `COSIGN_PUBLIC_KEY` are configured; without them the release is unsigned and says so in the run) |
 
 **Re-running is safe.** PyPI files already there are skipped
 (`skip-existing`), an npm version already in the registry is skipped, and the

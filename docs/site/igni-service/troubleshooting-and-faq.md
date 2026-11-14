@@ -14,8 +14,8 @@ admin.
 
 **The service was approved, but nobody has the extension.** Approval
 installs it nowhere. An org admin must switch the extension on for a
-group (portal, *Extensions*). Each person's igni installs it at its next
-sync.
+group (portal, the group's *Extensions* tab). Each person's igni installs
+it at its next sync.
 
 **A new version does not reach anybody, and the log says it is held for
 a super admin.** The new version asks for more than the approved one: a

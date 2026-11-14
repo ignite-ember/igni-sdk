@@ -4,7 +4,7 @@
 
 Everything this package exports is under igni's **compatibility floor**:
 removing a name, renaming it, or changing the meaning of one of its
-members is a breaking change under `docs/EXTENSIBILITY.md` §8.
+members is a breaking change under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8.
 
 Two versions of that floor are worth knowing about:
 

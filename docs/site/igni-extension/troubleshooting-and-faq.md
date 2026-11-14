@@ -5,8 +5,8 @@
 **`NotConfigured: … was not started with its service's URL (IGNI_SERVICE_URL)`.**
 igni gave the process no service. A bundle igni distributed always has
 one. A development install needs a `serviceUrl` setting in
-`contributes.settings`, set; a plain-`http` URL only for `localhost` and
-only with `IGNI_DEV_EXTENSIONS=1`. In a test, pass
+`contributes.settings`, set. A sandboxed process reaches a plain-`http` service only with
+`IGNI_DEV_EXTENSIONS=1`. In a test, pass
 `environ=FakeHostTokenEndpoint().environment()`.
 
 **`NotConfigured: host.…: igni did not give this process the host's address`.**

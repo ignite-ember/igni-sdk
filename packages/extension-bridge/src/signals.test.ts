@@ -124,3 +124,72 @@ describe("SignalSubscriptions", () => {
     expect(asked.map(({ op }) => op)).toEqual(["subscribe", "unsubscribe"]);
   });
 });
+
+describe("SignalSubscriptions through a handler's whole life", () => {
+  it("asks the host again when a signal is handled anew after its last handler left", () => {
+    const { asked, subscriptions } = stubHost();
+    const off = subscriptions.on(completed, () => {});
+    off();
+    subscriptions.on(completed, () => {});
+
+    expect(asked.map(({ op }) => op)).toEqual(["subscribe", "unsubscribe", "subscribe"]);
+  });
+
+  it("holds the same function once: one off lets it go and unsubscribes", () => {
+    const { asked, subscriptions } = stubHost();
+    const seen: unknown[] = [];
+    const fn = (value: { run: string }) => seen.push(value);
+    const offFirst = subscriptions.on(completed, fn);
+    subscriptions.on(completed, fn);
+
+    subscriptions.deliver(signal("chat.run_completed", { run: "r1" }));
+    expect(seen).toEqual([{ run: "r1" }]);
+
+    offFirst();
+    expect(asked.map(({ op }) => op)).toEqual(["subscribe", "unsubscribe"]);
+    subscriptions.deliver(signal("chat.run_completed", { run: "r2" }));
+    expect(seen).toEqual([{ run: "r1" }]);
+  });
+
+  it("stops at a handler that throws, and tells the ones before it", () => {
+    const { subscriptions } = stubHost();
+    const seen: string[] = [];
+    subscriptions.on(completed, () => seen.push("first"));
+    subscriptions.on(completed, () => {
+      throw new Error("broken handler");
+    });
+    subscriptions.on(completed, () => seen.push("third"));
+
+    expect(() =>
+      subscriptions.deliver(signal("chat.run_completed", { run: "r" })),
+    ).toThrow("broken handler");
+    expect(seen).toEqual(["first"]);
+  });
+
+  it("does not tell a handler that left while an earlier one was being told", () => {
+    const { subscriptions } = stubHost();
+    const seen: string[] = [];
+    let offSecond = () => {};
+    subscriptions.on(completed, () => {
+      seen.push("first");
+      offSecond();
+    });
+    offSecond = subscriptions.on(completed, () => seen.push("second"));
+
+    subscriptions.deliver(signal("chat.run_completed", { run: "r" }));
+
+    expect(seen).toEqual(["first"]);
+  });
+
+  it("gives onRefused the host's own error, and keeps the console quiet", async () => {
+    const { asked, subscriptions } = stubHost();
+    const refused: HostError[] = [];
+    subscriptions.on(completed, () => {}, (error) => refused.push(error));
+    const error = new HostError("not_granted", "chat is not granted");
+
+    asked[0].refuse(error);
+
+    await vi.waitFor(() => expect(refused).toEqual([error]));
+    expect(warn).not.toHaveBeenCalled();
+  });
+});

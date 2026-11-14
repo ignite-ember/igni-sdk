@@ -73,9 +73,8 @@ export const PUBLISHED_TOKENS = {
   /**
    * The type scale. Nine steps, by role rather than by ratio.
    *
-   * It replaced twenty-two hardcoded sizes that included every
-   * half-step from 9px to 15px — 11.5px, 12px and 12.5px between
-   * them accounted for 272 declarations, which is one size written
+   * It replaced hardcoded sizes that included every half-step from
+   * 9px to 15px — 11.5px, 12px and 12.5px were one size written
    * three ways. Build against the role, not the pixel.
    */
   type: [

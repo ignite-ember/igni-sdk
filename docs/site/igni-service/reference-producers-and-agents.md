@@ -84,7 +84,7 @@ async def send_event(
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `type` | `str` | required | The extension's own word for what happened, as its handler names it: ``claim.created``. |
-| `payload` | `dict[str, object] \| None` | `None` | The event's data, as the handler reads it: at most 65536 bytes as JSON. |
+| `payload` | `dict[str, object] \| None` | `None` | The event's data, as the handler reads it: at most 65536 bytes as JSON, measured as igni server measures it, with non-ASCII text escaped (a CJK character counts 6). |
 | `event_key` | `str \| None` | `None` | The key that makes a retry exact: igni stores one item per key and producer, so a retry after a lost reply is answered with the item already stored. |
 | `expires_at` | `datetime \| None` | `None` | When igni stops waiting to deliver it: igni keeps an item for at most 14 days. |
 
@@ -153,8 +153,9 @@ Where an item igni accepted stands, as igni holds it now.
   `dropped_reason` says why.
 - `failed` — the platform gave up; `failed_reason` says why.
 
-Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
-`IgniUnavailable` otherwise.
+Raises `EventRefused` for a 4xx other than 429 (an unknown
+`event_id`, say) and `IgniUnavailable` otherwise, a 429 included:
+igni is busy, and asking again later may work.
 
 ### Agent.send_item()
 

@@ -42,7 +42,7 @@ class WebSession(BaseModel):
     access_expires_at: float
     """Wall-clock second the access token stops working."""
     expires_at: float
-    """Wall-clock second the session is dead: the refresh token's life."""
+    """Wall-clock second the session is dead: `WebSignIn.SESSION_TTL` (30 days) after the sign-in or its last renewal."""
 
 
 class LoginAttempt(BaseModel):

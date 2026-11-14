@@ -79,6 +79,8 @@ class ServiceEventRequest(BaseModel):
     type: str = Field(min_length=1, max_length=MAX_TYPE)
     """The extension's own word for what happened: `claim.created`."""
     payload: dict[str, object] = Field(default_factory=dict)
+    """The event's data: at most 65536 bytes as JSON, measured as igni server
+    measures it, with non-ASCII text escaped (a CJK character counts 6)."""
     event_key: str | None = Field(default=None, min_length=1, max_length=MAX_KEY)
     expires_at: datetime | None = None
     """Not delivered after this; igni keeps at most 14 days."""

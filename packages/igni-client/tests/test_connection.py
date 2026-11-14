@@ -22,7 +22,9 @@ from igni_client import (
     Backoff,
     IgniClient,
     Local,
+    MethodFailed,
     NotAllowed,
+    NotSupported,
     Person,
     RunInterrupted,
     Unavailable,
@@ -32,7 +34,7 @@ from igni_client import connection as connection_module
 from igni_client.api import NOT_FOR_CLIENTS
 from igni_client.connection import REFUSED_METHODS, Connection
 from igni_client.events import ContentDelta, PushNotification, RpcResponse, parse_event
-from igni_client.frames import RpcRequest
+from igni_client.frames import RpcRequest, Typing
 from igni_client.lifecycle import Lifecycle, Link, Phase
 from igni_client.routing import Interruption, Router
 from igni_client.testing import Delay, FakeGateway, FakeIgni, Steps
@@ -338,6 +340,12 @@ def test_a_backoff_is_fixed_once_made_and_counts_whole_attempts() -> None:
     assert igni_client.Backoff is backoff_module.Backoff and "Backoff" in igni_client.__all__
 
 
+def test_reply_is_a_public_name_of_the_package() -> None:
+    from igni_client.replies import Reply
+
+    assert igni_client.Reply is Reply and "Reply" in igni_client.__all__
+
+
 def test_a_client_is_paced_by_a_backoff_not_a_count_of_attempts() -> None:
     with pytest.raises(TypeError):
         IgniClient(Local(url="ws://127.0.0.1:1"), reconnect_attempts=5)  # type: ignore[call-arg]
@@ -453,6 +461,23 @@ async def test_a_call_igni_never_answers_is_unavailable() -> None:
             await igni.processes.list()
 
 
+async def test_a_call_with_no_timeout_given_waits_the_connection_s_own_timeout() -> None:
+    async def slowly(args: dict[str, Any]) -> list[Any]:
+        await asyncio.sleep(0.15)
+        return []
+
+    async with FakeIgni() as fake:
+        fake.methods.answers["list_background_processes"] = slowly
+        async with IgniClient(fake.local()) as igni:
+            igni._conn.RPC_TIMEOUT = 5.0
+            # Left out, the timeout is RPC_TIMEOUT (not the -1 sentinel itself).
+            assert await igni._conn.ask("list_background_processes") is not None
+            # `None` waits as long as it takes; a number is that many seconds.
+            assert await igni._conn.ask("list_background_processes", timeout=None) is not None
+            with pytest.raises(Unavailable, match="got no answer"):
+                await igni._conn.ask("list_background_processes", timeout=0.01)
+
+
 async def test_closing_ends_every_call_in_flight() -> None:
     async with _igni_that(welcomes=True) as target:
         igni = await IgniClient(target).connect()
@@ -490,6 +515,15 @@ async def test_a_send_while_opening_waits_for_the_welcome() -> None:
     lifecycle.opened()
 
     assert await asyncio.wait_for(sending, 1) is link.socket
+
+
+async def test_an_open_socket_is_given_even_when_there_is_no_time_to_wait() -> None:
+    lifecycle = Lifecycle()
+    link = Link(_StubSocket())  # type: ignore[arg-type]
+    lifecycle.opening(link)
+    lifecycle.opened()
+
+    assert await lifecycle.socket(0, "igni") is link.socket
 
 
 async def test_a_second_reply_and_a_message_without_an_id_go_no_further() -> None:
@@ -585,3 +619,96 @@ async def test_the_fake_answers_a_call_to_the_client_that_made_it_alone() -> Non
             assert [seen.get_nowait().type] == ["push_notification"], (
                 "igni answers a call to its caller; only a broadcast reaches the rest"
             )
+
+
+async def test_a_vm_that_stays_unbound_is_unavailable_after_its_retries() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        igni._conn.UNBOUND_RETRY_SECONDS = 0.001
+        igni._conn.UNBOUND_RETRIES = 4
+        fake.methods.unbound_for(100)
+
+        with pytest.raises(Unavailable, match="was not bound to its producer in time"):
+            await igni.processes.list()
+
+    asked = [c for c in fake.methods.calls if c.method == "list_background_processes"]
+    assert len(asked) == 4, "one ask per retry, then it gives up"
+    assert len({c.id for c in asked}) == 4, "each ask has an id of its own"
+
+
+async def test_a_vm_is_asked_thirty_times_a_second_apart_before_it_is_given_up_on() -> None:
+    assert Connection.UNBOUND_RETRIES == 30
+    assert Connection.UNBOUND_RETRY_SECONDS == 1.0
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        igni._conn.UNBOUND_RETRY_SECONDS = 0.0
+        fake.methods.answers["list_background_processes"] = lambda args: []
+        fake.methods.unbound_for(29)
+        assert await igni.processes.list() == [], "the thirtieth ask is answered"
+        fake.methods.calls.clear()
+        fake.methods.unbound_for(100)
+        with pytest.raises(Unavailable, match="was not bound to its producer in time"):
+            await igni.processes.list()
+
+    asked = [c for c in fake.methods.calls if c.method == "list_background_processes"]
+    assert len(asked) == 30
+
+
+async def test_a_vm_unbound_and_then_failing_raises_the_failure_not_the_wait() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        igni._conn.UNBOUND_RETRY_SECONDS = 0.001
+        fake.methods.answers["list_background_processes"] = lambda args: RpcResponse(
+            error="the disk is full"
+        )
+        fake.methods.unbound_for(2)
+
+        with pytest.raises(MethodFailed, match="the disk is full"):
+            await igni.processes.list()
+
+
+def test_a_backoff_that_starts_above_its_ceiling_or_at_nothing() -> None:
+    assert list(Backoff(attempts=3, first=10.0, most=4.0).delays()) == [10.0, 4.0, 4.0]
+    assert list(Backoff(attempts=3, first=0.0).delays()) == [0.0, 0.0, 0.0]
+    with pytest.raises(ValidationError):
+        Backoff(attempts=2.5)  # type: ignore[arg-type]
+
+
+async def test_a_client_not_yet_open_has_no_name_and_closing_twice_is_harmless() -> None:
+    async with FakeIgni() as fake:
+        igni = IgniClient(fake.local())
+        assert igni.client_id == ""
+        with pytest.raises(Unavailable, match="not connected"):
+            igni._conn.WELCOME_TIMEOUT = 0.01
+            await igni._conn.send(Typing(text="x", client_id=""))
+        await igni.connect()
+        assert igni.client_id != ""
+        await igni.close()
+        await igni.close()
+
+
+async def test_a_call_on_a_closed_client_fails_at_once_not_after_the_welcome_wait() -> None:
+    async with FakeIgni() as fake:
+        igni = await IgniClient(fake.local()).connect()
+        session = await igni.sessions.create()
+        await igni.close()
+        igni._conn.WELCOME_TIMEOUT = 30  # a wait would outlast the test's own limit
+        with pytest.raises(Unavailable, match="was closed"):
+            await asyncio.wait_for(session.status(), 2)
+
+
+async def test_me_on_a_local_igni_names_itself_not_commands() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with pytest.raises(NotSupported, match=r"^me needs Fleet"):
+            await igni.me()
+
+
+async def test_a_local_igni_has_neither_commands_nor_an_identity_and_gateway_ones_are_cached() -> (
+    None
+):
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with pytest.raises(NotSupported):
+            _ = igni.commands
+        with pytest.raises(NotSupported):
+            await igni.me()
+
+    async with FakeIgni(gateway=FakeGateway(TOKENS)) as fake:
+        client = IgniClient(fake.fleet(Person("t-ada")))
+        assert client.commands is client.commands

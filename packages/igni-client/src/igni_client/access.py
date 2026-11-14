@@ -20,16 +20,20 @@ decides, and a refusal comes back as the same `AccessRefused`.
   stands every connection as its window: `client`, `approver` and `window`.
 * `Local(project_dir)` attaches with the token in igni's lockfile — a
   program's: `client` only. When the lockfile has no token, igni was started
-  without a launch secret and every connection is its window.
+  with the development opt-out (`IGNI_DEV_NO_WS_TOKEN=1`) and every
+  connection is its window.
 * `Local(..., approver_token=...)` (or `IGNI_APPROVER_TOKEN`) is an
   approver: `client` and `approver`.
-* `Local(url=...)` with no token reaches an igni started without a launch
-  secret: its window. With a `token`, it offers whatever it was given —
-  igni's window's own launch secret, or the lockfile's — so it is not known.
+* `Local(url=...)` with no token reaches an igni started with
+  `IGNI_DEV_NO_WS_TOKEN=1`: its window; any other igni refuses it. With a
+  `token`, it offers whatever it was given — the window's token (the
+  launch secret, or the one a backend started by hand prints once to
+  stderr), or the lockfile's — so it is not known.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Literal
 
 from igni_client.errors import AccessRefused
@@ -62,4 +66,30 @@ def check(method: str, access: str, standing: Standing) -> None:
     raise AccessRefused(method, _WHY.get(access, f"a {access} call"))
 
 
-__all__ = ["REACHES", "Access", "Standing", "check"]
+#: The message an approval's answer travels in, as igni names it when it refuses.
+ANSWER = "hitl_response_batch"
+
+
+def check_answer(standing: Standing, choices: Iterable[str] = ()) -> None:
+    """Raise `AccessRefused` when a connection of `standing` cannot send this answer.
+
+    Answering is an `approver` act, and saving a rule with it (any `choice`
+    but `once`: `always`, `similar`, a remembered `deny`) a `window` one. Both
+    were sent regardless, and igni's refusal came back as `NotAllowed` from
+    the next turn of the `send()` loop, after `approve()` had returned as if
+    it had answered.
+    """
+    reached = REACHES[standing]
+    if reached is None:
+        return
+    if "approver" not in reached:
+        raise AccessRefused(
+            ANSWER,
+            "a program answers approval requests only with an approver token, which "
+            "the person makes in igni's window (Local(approver_token=...))",
+        )
+    if "window" not in reached and any(choice != "once" for choice in choices):
+        raise AccessRefused(ANSWER, "an approver answers once; only igni's window saves a rule")
+
+
+__all__ = ["ANSWER", "REACHES", "Access", "Standing", "check", "check_answer"]

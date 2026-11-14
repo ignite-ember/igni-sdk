@@ -9,8 +9,10 @@
  * somebody on a keyboard. That is not an explanation, it is a
  * consolation prize.
  *
- * **It replaces ``title``, it does not sit beside it.** Leaving both
- * on gives two tooltips saying the same thing a second apart.
+ * **It replaces ``title``, it does not sit beside it.** A ``title`` left
+ * on the control would give two tooltips saying the same thing a second
+ * apart, so the Tooltip takes it off the control while it is in charge,
+ * and says it itself when it was given no ``text``.
  *
  * **Focus shows it immediately; hover waits.** A pointer crossing a
  * row of buttons on its way somewhere else should not leave a trail
@@ -38,7 +40,10 @@ interface At {
 
 /** What a {@link Tooltip} takes. */
 export interface TooltipProps {
-  /** The word. Nothing is rendered when it is empty. */
+  /**
+   * The word. When it is empty, the control's own `title` is used
+   * instead; nothing is rendered when there is neither.
+   */
   text: string;
   /** The control the word is about. */
   children: React.ReactNode;
@@ -47,18 +52,35 @@ export interface TooltipProps {
 /**
  * What an icon means, on hover and on focus.
  *
- * See the note at the top of this file. It replaces the browser's own
- * `title` rather than sitting beside it.
+ * It replaces the browser's own `title` rather than sitting beside it:
+ * a `title` on the control is removed from it, so the browser never
+ * shows a second tooltip, and is the word when `text` is empty. Focus
+ * shows it at once; hover waits 350 ms.
  *
- * @param text — the word; nothing is rendered when it is empty.
+ * @param text — the word; when it is empty the control's `title` is
+ *   used, and nothing is rendered when there is neither.
  * @param children — the control the word is about.
  */
 export function Tooltip({ text, children }: TooltipProps) {
+  const [fromTitle, setFromTitle] = useState("");
+  const label = text || fromTitle;
   const wrap = useRef<HTMLSpanElement>(null);
   const bubble = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
   const [at, setAt] = useState<At | null>(null);
   const id = useId();
+
+  // The control's own ``title`` is taken off it, and kept as the word
+  // for when none was given. Run after every render, because React
+  // writes the attribute back whenever the control's ``title`` prop
+  // changes.
+  useEffect(() => {
+    const control = wrap.current?.firstElementChild;
+    const title = control?.getAttribute("title");
+    if (title === null || title === undefined) return;
+    control?.removeAttribute("title");
+    setFromTitle(title);
+  });
 
   const hide = useCallback(() => {
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -82,7 +104,7 @@ export function Tooltip({ text, children }: TooltipProps) {
 
   const show = useCallback(
     (immediately: boolean) => {
-      if (!text) return;
+      if (!label) return;
       if (timer.current !== null) window.clearTimeout(timer.current);
       if (immediately) {
         place();
@@ -90,7 +112,7 @@ export function Tooltip({ text, children }: TooltipProps) {
       }
       timer.current = window.setTimeout(place, DWELL_MS);
     },
-    [text, place],
+    [label, place],
   );
 
   useEffect(
@@ -182,7 +204,7 @@ export function Tooltip({ text, children }: TooltipProps) {
               transform: `translate(-50%, ${at.below ? "0" : "-100%"})`,
             }}
           >
-            {text}
+            {label}
           </div>,
           document.body,
         )}

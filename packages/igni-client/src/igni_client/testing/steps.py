@@ -12,7 +12,6 @@ from igni_client.models import (
     Requirement,
     RunCompleted,
     RunStarted,
-    ToolCompleted,
 )
 from igni_client.wire import Event
 
@@ -71,11 +70,15 @@ class Steps:
 
     @staticmethod
     def rejected() -> list[Step]:
-        """How a run resumes when its call was refused: the call never ran, and it says so."""
-        return [
-            ToolCompleted(run_id=Steps.RUN_ID, summary="rejected", is_rejected=True),
-            *Steps.answer("I did not run it."),
-        ]
+        """How a run resumes when its call was refused: the call never ran, and it says so.
+
+        As igni does it: a refused call starts nothing, so no tool event
+        is sent for it; the model reads the refusal as the call's result
+        and answers. (This played a `ToolCompleted(is_rejected=True)`, which
+        igni does not send, so a program tested here counted a tool event
+        that never comes.)
+        """
+        return Steps.answer("I did not run it.")
 
 
 __all__ = ["Delay", "Pause", "Script", "Step", "Steps"]

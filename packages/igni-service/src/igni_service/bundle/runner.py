@@ -26,5 +26,11 @@ class CommandRunner:
         env = {**os.environ, "SOURCE_DATE_EPOCH": self.SOURCE_DATE_EPOCH, **dict(extra_env)}
         # uv and pip, with an argv list and no shell.
         return subprocess.run(  # noqa: S603
-            list(command), cwd=cwd, env=env, capture_output=True, text=True, check=False
+            list(command),
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            check=False,
         )

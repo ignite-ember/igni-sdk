@@ -23,7 +23,7 @@ IgniClientError
 
 ## What igni answers with
 
-igni names its refusals and failures with a code, and says what each means; igni-client raises `MethodFailed` with igni's own sentence, and these are the codes igni's contract defines.
+igni names its refusals and failures with a code (`RpcResponse.code`), and says what each means. igni-client does not branch on the code: it reads igni's own sentence and raises the `RpcError` kind that sentence names (`MethodFailed` when it names none). These are the codes igni's contract defines.
 
 | Code | What it means |
 |---|---|
@@ -92,8 +92,10 @@ class RpcError(IgniClientError)
 A call igni answered with an error, or whose answer could not be read.
 
 `method` is the wire method, `message` what igni said. igni answers an
-error as a sentence; `RpcError.of` reads which kind it is, and each kind
-is a subclass a caller can catch on its own.
+error with a sentence and, on a call's reply, a `code` word;
+`RpcError.of` reads which kind it is from the code, and each kind is a
+subclass a caller can catch on its own. A reply with no code is read from
+its sentence instead.
 
 ## AccessRefused
 

@@ -72,19 +72,32 @@ async with FakeIgni() as fake:
 - `approve(choice)` lets every call of the pause run: `"once"`, or
   `"always"` / `"similar"` to save a permission rule (igni's window only).
 - `reject(remember=False)` refuses them; `remember=True` saves a rule
-  refusing such calls from now on.
+  refusing such calls from now on (igni's window only).
+- From an approver, an answer that saves a rule raises `AccessRefused`
+  before it is sent, and the pause stays open for an answer of `"once"`.
 - `decide({requirement_id: Decision, ...})` answers each call on its own,
   with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
+A refused call never starts, so the resumed run sends no `ToolStarted`,
+`ToolCompleted` or `ToolError` for it: the model reads the refusal as the
+call's result, and the run goes on to its answer. A program counting
+tool events counts only the calls that ran. (`FakeIgni` plays it so.)
+
 igni asks about every call of one pause together and counts a call left
-out as refused, so every answer covers them all. A loop that ends without
+out as refused, so every answer covers them all: `decide()` raises
+`ValueError` for a call it leaves out, and `RuntimeError` when the pause
+was already answered. A loop that ends without
 answering leaves the run waiting on igni's side; the next time the
 session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
-A program without an approver token cannot answer: igni refuses, and
-`approve()` raises `NotAllowed` (see [Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)).
+A program without an approver token cannot answer: `approve()`,
+`reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
+anything is sent, and the run keeps waiting (see
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Where igni-client does not know
+the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
+refusal comes as `NotAllowed` from the `send()` loop.
 
 ## The whole answer at once
 
@@ -186,15 +199,14 @@ These calls are followed, each by what igni's events carry:
 | `session.plan.approve(run_id)`, `.dismiss(run_id)` | `plan_decided` of that run | that push, or the answer when `ok` is false |
 | `session.visualization_action(...)` | `visualization_action_dispatched` of this session, action and params | that push |
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
-| `igni.auth.login()` | `login_status` | `login_result` |
-
-A few methods make igni send events that carry nothing to tell this
-call's from another's — a shell command moved to the background is
-reported by pid, but the answer does not say which pid. Those return
-their result only, and their reference entry says why and where to watch
-instead: `attach`, `cancel`, `run_shell`, `scheduler.execute`,
-`auth.sign_out`, `notifications.list`, `notifications.mark_read`,
-`workspace.set_trust` and `window.model`.
+| `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
+| `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
+| `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
+| `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
+| `session.workspace.set_trust(...)` | `workspace_trust_required` of that path | the answer |
+| `igni.window.model(...)` | `window_model_changed` carrying this call's token | the answer |
 
 ## Watching an igni
 
@@ -241,12 +253,12 @@ from igni_client.testing import FakeIgni
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create()
     result = await session.command("/help")
-    print(result.kind, result.content)
+    print(result.kind, result.content)   # against a real igni, /help is an action for the window: kind "action", content empty
     await session.typing("half a tho")              # every client sees the draft
 ```
 
-The commands that switch approvals off or change whom igni signs in to
-(`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
+The commands that switch approvals off, change what igni loads or whom it
+signs in to (`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
 an `error` to anything but igni's window.
 
 ## Commands in a Fleet VM

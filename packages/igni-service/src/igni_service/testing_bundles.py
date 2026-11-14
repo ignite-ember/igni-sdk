@@ -143,10 +143,17 @@ class BundleSource(BaseModel):
     path: Path
 
     def bundle(self) -> ExtensionBundle:
-        """The bundle: `manifest.json`, `README.md`, `plugin/` and `ui/`, with no wheelhouse."""
+        """The bundle: `manifest.json`, `README.md`, `plugin/` and `ui/`, with no wheelhouse.
+
+        Raises `ValueError` when the path is a file that is not a bundle, or
+        a directory with no `manifest.json`.
+        """
         path = self.path
         if path.is_file() and path.name != "manifest.json":
-            found = ExtensionBundle.at(path)
+            try:
+                found = ExtensionBundle.at(path)
+            except BundleError as exc:
+                raise ValueError(f"{path} is not an extension bundle: {exc}") from exc
             if found is None:
                 raise ValueError(f"{path} is not an extension bundle")
             return found

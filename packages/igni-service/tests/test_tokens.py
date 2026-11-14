@@ -187,7 +187,7 @@ async def test_the_audience_is_the_service_url_as_igni_normalises_it(fake: FakeI
     person = await igni.verifier.person(fake.signer.person_token("u-max", org_id=ORG))
 
     assert person.user_id == "u-max"
-    assert igni.server.own_url == "http://service.test"
+    assert igni.connection.server.own_url == "http://service.test"
 
 
 async def test_igni_calling_is_an_igni_token_naming_igni_as_its_subject(

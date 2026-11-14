@@ -73,7 +73,9 @@ def test_a_grant_missing_what_it_needs_is_refused_before_anything_is_sent() -> N
 async def test_the_endpoint_posts_the_grant_form_then_the_assertion(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    endpoint = TokenEndpoint(igni.server, igni.registration, igni.key)
+    endpoint = TokenEndpoint(
+        igni.connection.server, igni.connection.registration, igni.connection.key
+    )
 
     await endpoint.grant(ClientCredentialsGrant(organisation=ORG))
 
@@ -85,7 +87,9 @@ async def test_the_endpoint_posts_the_grant_form_then_the_assertion(
 async def test_the_endpoint_takes_a_grant_not_the_dict_it_used_to(
     igni: IgniService, fake: FakeIgni
 ) -> None:
-    endpoint = TokenEndpoint(igni.server, igni.registration, igni.key)
+    endpoint = TokenEndpoint(
+        igni.connection.server, igni.connection.registration, igni.connection.key
+    )
 
     with pytest.raises(AttributeError, match="'dict' object has no attribute 'form'"):
         await endpoint.grant({"grant_type": "client_credentials"})  # type: ignore[arg-type]

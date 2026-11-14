@@ -70,7 +70,7 @@ function moveFocus(root: HTMLElement | null, key: string): boolean {
 /**
  * A row of actions collapsed behind one button.
  *
- * See the note at the top of this file. Everything that made the
+ * For actions that are real but secondary. Everything that made the
  * buttons usable as buttons survives the move: focus, the keyboard,
  * and the names screen readers announce.
  *
@@ -227,7 +227,9 @@ function Submenu({
       // Hover opens it, the way a desktop menu does. `onMouseLeave`
       // rather than a timer: a submenu that lingers after the pointer
       // has gone covers the items below the one that opened it.
-      onMouseEnter={() => setOpen(true)}
+      onMouseEnter={() => {
+        if (!action.disabled) setOpen(true);
+      }}
       onMouseLeave={() => setOpen(false)}
     >
       <button

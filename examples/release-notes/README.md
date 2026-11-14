@@ -12,11 +12,18 @@ This is the opposite of all four: a two-pane browser over editable
 documents with comments. Its job is to find what that costs.
 
 ```
-manifest.json      what it is and what it may do
-prompts/style.md   a file-sourced prompt fragment
-src/notes.ts       the backend, typed — RPC names and wire checking
-src/panel.tsx      the UI
-ui/panel.css       everything the floor made it style itself
+manifest.json          what it is and what it may do
+prompts/style.md       a file-sourced prompt fragment
+src/notes.ts           the backend, typed — RPC names and wire checking
+src/panel.tsx          the UI's entry point: the two panes and the selection
+src/useReleases.ts     the release list, loaded and refreshed after a publish
+src/ReleaseList.tsx    the left pane
+src/NoteView.tsx       the right pane: one note, its tabs and the editor
+src/editor.ts          the editor's state machine (one save phase)
+src/useNoteEditor.ts   autosave and the unsaved-work warning
+src/PublishDialog.tsx  the confirmation and the publish
+src/CommentList.tsx    a note's comments
+ui/panel.css           everything the floor made it style itself
 ```
 
 ## What it found
@@ -100,15 +107,17 @@ workaround. The fix is an envelope kind, additive like `params` and
 
 ## What does not work yet
 
-One thing, and it is not about this code:
-`@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` are a tsconfig alias
-inside `clients/web` rather than an install, so `ui/panel.js` is not
-built here.
+One thing, and it is not about this code: `ui/panel.js` is not built
+here. There is no build config, and `igni-ui.css` (from
+`@ignite-ember/ui-css`) has to be copied in beside `ui/index.html`.
+`@ignite-ember/extension-bridge` and `@ignite-ember/ui-react`, which
+`src/` imports, are published on npm. Everything in `src/` is
+type-checked and tested in CI (`src/notes.test.ts`,
+`src/editor.test.ts`, `src/panel.test.tsx`).
 
-The **backend** runs. `server.py` is a real MCP server and
-`tests/test_a_second_extension_shape_works.py` installs this bundle
-and calls it, including the revision conflict — which is the part
-worth copying.
+The **backend** is `server.py`, a real MCP server. It keeps the
+revision check that is worth copying: a save carrying a stale revision
+is answered with `{"conflict": "<their revision>"}`, not overwritten.
 
 ```bash
 igni ext doctor examples/release-notes

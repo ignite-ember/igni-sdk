@@ -15,9 +15,9 @@ from igni_client.models import (
     AttachSessionParams,
     AttachSessionResult,
     ChatTurn,
-    InfoMessage,
     ModelRegistryEntryView,
     ModelRegistryResult,
+    ModelSwitched,
     RpcRequest,
     RpcResponse,
     SessionIdArgs,
@@ -147,7 +147,9 @@ class FakeMethods:
 
     def _switch_model(self, call: RpcRequest) -> Event:
         args = SwitchModelArgs.model_validate(call.args)
-        return self.reply(call, InfoMessage(text=f"Switched to {args.model_name}"))
+        if args.model_name not in self.models:
+            return self._reply(call, error=f"Unknown model: {args.model_name}")
+        return self.reply(call, ModelSwitched(text=f"Switched to {args.model_name}"))
 
     def _get_status(self, call: RpcRequest) -> Event:
         return self.reply(call, StatusUpdate(model=next(iter(self.models), "")))

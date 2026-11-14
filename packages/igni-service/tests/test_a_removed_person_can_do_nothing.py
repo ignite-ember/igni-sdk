@@ -40,14 +40,14 @@ class Feed:
             self.polls += 1
             await asyncio.sleep(0.001)
 
-        igni.revocation_feed = RevocationFeed(
-            igni.server,
-            igni.revocation_feed._endpoint,
-            igni.revocations,
-            clock=igni.clock,
+        igni.connection.revocation_feed = RevocationFeed(
+            igni.connection.server,
+            igni.connection.revocation_feed._endpoint,
+            igni.connection.revocation_feed.revocations,
+            clock=igni.connection.clock,
             sleep=sleep,
         )
-        igni.verifier.revocations = igni.revocation_feed
+        igni.verifier.revocations = igni.connection.revocation_feed
 
     async def settle(self) -> None:
         """Until the feed has asked igni twice more since now."""
@@ -61,9 +61,9 @@ class Feed:
 
 @pytest.fixture
 async def feed(igni: IgniService) -> AsyncIterator[Feed]:
-    await igni.registration.start()
+    await igni.connection.registration.start()
     running = Feed(igni)
-    task = asyncio.create_task(igni.revocation_feed.run(running.stop))
+    task = asyncio.create_task(igni.connection.revocation_feed.run(running.stop))
     await asyncio.sleep(0)
     yield running
     running.stop.set()
@@ -133,7 +133,7 @@ async def test_an_app_and_a_space_are_revoked_by_kind(
     await feed.settle()
     with pytest.raises(Revoked):
         await igni.verifier.claims(app, use="app")
-    assert (await igni.verifier.claims(space, use="space"))["sub"] == "s-42"
+    assert (await igni.verifier.claims(space, use="space")).sub == "s-42"
 
 
 async def test_it_fails_closed_until_read_and_when_stale(
@@ -141,10 +141,10 @@ async def test_it_fails_closed_until_read_and_when_stale(
 ) -> None:
     ada = fake.signer.person_token("u-ada", org_id=ORG)
     fake.traffic.fail("/v1/revocations", 503)
-    igni.revocations.max_staleness = 0.05
-    await igni.registration.start()
+    igni.connection.revocation_feed.revocations.max_staleness = 0.05
+    await igni.connection.registration.start()
     feed = Feed(igni)
-    task = asyncio.create_task(igni.revocation_feed.run(feed.stop))
+    task = asyncio.create_task(igni.connection.revocation_feed.run(feed.stop))
     await asyncio.sleep(0)
     with pytest.raises(RevocationsStale):
         await igni.verifier.person(ada)  # never read: refused
@@ -169,9 +169,9 @@ async def test_waiting_for_approval_is_said_once_not_every_poll(
     starts and when it ends, the retries in between are DEBUG."""
     caplog.set_level(logging.DEBUG, logger="igni_service.revocations")
     fake.oauth.verifier.require_approval = True
-    await igni.registration.start()
+    await igni.connection.registration.start()
     feed = Feed(igni)
-    task = asyncio.create_task(igni.revocation_feed.run(feed.stop))
+    task = asyncio.create_task(igni.connection.revocation_feed.run(feed.stop))
     for _ in range(3):
         await feed.settle()
 
@@ -204,7 +204,7 @@ async def test_a_service_that_does_not_run_the_feed_checks_nothing(
 
 def test_the_bound_is_configurable(fake: FakeIgni) -> None:
     service = fake.service(fake.settings(SettingsOverrides(revocations_max_staleness=5)))
-    assert service.revocations.max_staleness == 5
+    assert service.connection.revocation_feed.revocations.max_staleness == 5
 
 
 async def test_one_long_poll_for_every_organisation_and_a_304_when_nothing_is_new(
@@ -214,7 +214,7 @@ async def test_one_long_poll_for_every_organisation_and_a_304_when_nothing_is_ne
     pulls = fake.traffic.requests_to("/v1/revocations")
     assert pulls and all(p.query.get("scope") == ["served"] for p in pulls)
     assert any(p.headers.get("if-none-match") for p in pulls[1:]), "asked with its cursor"
-    assert {o.org_id for o in igni.revocation_feed.served} == {ORG, OTHER_ORG}
+    assert {o.org_id for o in igni.connection.revocation_feed.served} == {ORG, OTHER_ORG}
 
 
 async def test_it_follows_from_start_up_with_a_token_for_no_organisation(
@@ -233,10 +233,11 @@ async def test_it_follows_from_start_up_with_a_token_for_no_organisation(
 
 
 async def test_that_token_reads_nothing_else(fake: FakeIgni, igni: IgniService) -> None:
-    await igni.registration.start()
-    await igni.revocation_feed.pull()
-    token = igni.revocation_feed._token
-    response = await igni.server.http.get(
-        igni.server.url("/v1/directory/users"), headers={"Authorization": f"Bearer {token}"}
+    await igni.connection.registration.start()
+    await igni.connection.revocation_feed.pull()
+    token = igni.connection.revocation_feed._token
+    response = await igni.connection.server.http.get(
+        igni.connection.server.url("/v1/directory/users"),
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 401

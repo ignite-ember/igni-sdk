@@ -1005,10 +1005,10 @@ async def test_igni_server_s_refusal_to_read_list_or_delete_says_why(
         await (app.spaces.list() if ask == "list" else asks[ask]("a"))
 
 
-async def test_an_empty_page_written_as_null_lists_no_spaces(key_file: Path) -> None:
+async def test_the_last_page_s_null_cursor_ends_the_listing(key_file: Path) -> None:
     pages = {
-        "": {"spaces": [{"space_id": "sp-1"}], "next": 2},
-        "2": {"spaces": None, "next": None},
+        "": {"spaces": [{"space_id": "sp-1"}], "next": "sp-1"},
+        "sp-1": {"spaces": [], "next": None},
     }
     asked: list[dict[str, str]] = []
 
@@ -1020,36 +1020,26 @@ async def test_an_empty_page_written_as_null_lists_no_spaces(key_file: Path) -> 
     listed = await app.spaces.list()
 
     assert [s.space_id for s in listed] == ["sp-1"]
-    assert asked == [{"limit": "100"}, {"limit": "100", "after": "2"}]
-
-
-@pytest.mark.parametrize("empty", [[], {}, "", 0, False])
-async def test_a_page_with_any_empty_spaces_lists_none(key_file: Path, empty: Any) -> None:
-    app, _ = _spaces_app(
-        key_file, lambda request: httpx.Response(200, json={"spaces": empty, "next": None})
-    )
-
-    assert await app.spaces.list() == []
+    assert asked == [{"limit": "100"}, {"limit": "100", "after": "sp-1"}]
 
 
 @pytest.mark.parametrize(
-    ("cursor", "sent"),
-    [(True, ["true"]), (1.5, ["1.5"]), (["sp-1", "sp-2"], ["sp-1", "sp-2"])],
+    "page",
+    [
+        {"spaces": None, "next": None},
+        {"spaces": {}, "next": None},
+        {"spaces": [], "next": 2},
+        {"spaces": [], "next": ["sp-1"]},
+        {"spaces": []},
+    ],
 )
-async def test_igni_server_s_cursor_is_passed_back_as_it_came(
-    key_file: Path, cursor: Any, sent: list[str]
+async def test_a_page_off_igni_server_s_contract_is_something_else(
+    key_file: Path, page: dict[str, Any]
 ) -> None:
-    asked: list[list[str]] = []
+    app, _ = _spaces_app(key_file, lambda request: httpx.Response(200, json=page))
 
-    def spaces(request: httpx.Request) -> httpx.Response:
-        asked.append(request.url.params.get_list("after"))
-        first = len(asked) == 1
-        return httpx.Response(200, json={"spaces": [], "next": cursor if first else None})
-
-    app, _ = _spaces_app(key_file, spaces)
-    await app.spaces.list()
-
-    assert asked == [[], sent]
+    with pytest.raises(Unavailable, match="answered listing spaces with something else"):
+        await app.spaces.list()
 
 
 @pytest.mark.parametrize(
@@ -1064,7 +1054,9 @@ async def test_a_space_deleted_is_done_whatever_igni_server_says_with_it(
     await app.spaces.delete("a")
 
 
-async def test_a_space_record_keeps_what_igni_server_added(key_file: Path) -> None:
+async def test_a_space_record_reads_its_fields_and_ignores_what_it_does_not_know(
+    key_file: Path,
+) -> None:
     record = {"space_id": "sp-1", "external_id": "a", "org_id": "org-acme", "vm": "ready"}
     app, _ = _spaces_app(key_file, lambda request: httpx.Response(200, json=record))
 
@@ -1076,7 +1068,7 @@ async def test_a_space_record_keeps_what_igni_server_added(key_file: Path) -> No
         "org-acme",
         "",
     )
-    assert space.record.model_extra == {"vm": "ready"}
+    assert not hasattr(space.record, "vm")
 
 
 async def test_a_space_known_by_its_id_signs_in_without_being_looked_up(key_file: Path) -> None:

@@ -4,8 +4,8 @@
 
 Worth knowing before you design around it:
 
-- **Be installed.** Calling your own backend works — `ext.<your-id>.<method>` is a real namespace, authorised against your manifest's `permissions.rpc` and routed to your service as an MCP tool call. What does not exist yet is the pipeline that starts your sidecar or registers your endpoint, so there is nothing to route *to* outside a test.
-- **Receive a push.** The host sends `hello`, `theme` and `result`. Following a long-running job means polling an RPC on an interval.
-- **Be mounted.** Nothing renders `ExtensionFrame` in the app yet, and no manifest loader exists.
+- **Receive a push of anything it did not subscribe to.** The host sends `hello`, `theme`, `params`, the answers to your calls (`result`, `host-reply`), the tokens for your own service, and the signals you subscribed to with `bridge.on`. A page watches rather than polls, but a signal whose object your manifest's `permissions.host` does not grant never arrives.
+- **Write the address bar or keep storage.** The frame's sandbox has no `allow-top-navigation`, and `localStorage` is wiped whenever the backend restarts, because each extension is served from an ephemeral port. `bridge.setLocation` is how a page stays addressable.
+- **Reach outside its grants.** The frame's CSP admits your service's origin and the hosts in `permissions.egress`, nothing else, and `ext.<your-id>.<method>` calls are authorised against your manifest's `permissions.rpc`.
 
 These are named here rather than left to be discovered three days into a build.

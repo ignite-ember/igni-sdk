@@ -1,6 +1,6 @@
 """Generate both SDKs' ``host`` objects from igni-core's host schema.
 
-``docs/HOST_OBJECT_MODEL.md`` (igni-core): "One schema, two SDKs." igni-core
+igni-core's ``docs/HOST_OBJECT_MODEL.md`` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md): "One schema, two SDKs." igni-core
 describes the model once and publishes it as ``docs/host-schema.json``; this
 repository keeps a copy in ``contracts/host-schema.json``, and this writes
 
@@ -350,7 +350,7 @@ class PythonGenerator:
             f'"""{_BANNER.format(version=self.schema.version)}',
             "",
             "`ext.host` as an extension's process sees it. Read",
-            "`docs/HOST_OBJECT_MODEL.md` in igni for what each object is.",
+            "igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) for what each object is.",
             '"""',
             "",
             "# ruff: noqa: E501",
@@ -614,7 +614,7 @@ class TypeScriptGenerator:
             f"// {_BANNER.format(version=self.schema.version)}",
             "//",
             "// `bridge.host` as an extension's page sees it. Read",
-            "// `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.",
+            "// igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) for what each object is.",
             "",
             # The `.js` extension is what Node resolves: the package is ESM, and
             # a compiled `dist/` has to find its neighbours by their file names.

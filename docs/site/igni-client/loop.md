@@ -24,7 +24,7 @@ End this session's running `/loop`.
 async def cancel(self) -> bool
 ```
 
-Takes no arguments. Returns `true` when a loop was ended;
+Returns `true` when a loop was ended;
 `false` when there was none or it is paused (a paused loop is
 resumed or left alone, not cancelled).
 
@@ -56,7 +56,7 @@ Take the next step of this session's `/loop`, for the client to send.
 async def next_iteration(self) -> LoopAdvance | None
 ```
 
-Takes no arguments. Returns `null` when there is no loop or it is
+Returns `null` when there is no loop or it is
 paused. Otherwise `kind` says what happened: `step` carries the
 `prompt` to send as the next message (and `display_prompt` to
 show), the iteration number and how many remain; `completed`
@@ -92,7 +92,7 @@ Pause this session's `/loop` after the current iteration.
 async def pause(self) -> bool
 ```
 
-Takes no arguments. Returns `true` when the loop is now paused
+Returns `true` when the loop is now paused
 (or already was), `false` when there is no loop.
 
 Takes no arguments.
@@ -123,7 +123,7 @@ Resume this session's paused `/loop`.
 async def resume(self) -> str
 ```
 
-Takes no arguments. Returns the prompt of the iteration to run next,
+Returns the prompt of the iteration to run next,
 for the client to send as a message — nothing runs on its own — or
 `""` when there is no paused loop.
 
@@ -155,7 +155,7 @@ Read the state of this session's `/loop`.
 async def status(self) -> LoopStatusSnapshot
 ```
 
-Takes no arguments. Returns whether a loop is `active` and
+Returns whether a loop is `active` and
 `paused`, its prompt, which iteration it is on and how many
 remain, whether its cap was set explicitly, and the total the agent
 announced, if any.

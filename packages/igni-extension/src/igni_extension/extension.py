@@ -340,7 +340,8 @@ class IgniExtension(ReleasedNames):
 
         `ext.run()` does this itself, and stays connected so that signals
         arrive; a test or a script that drives the extension without
-        `run()` calls it.
+        `run()` calls it. Raises `NotConfigured` outside igni, where there is
+        no host to connect to, and `HostUnavailable` if the host does not answer.
         """
         await self._connection.connect()
 

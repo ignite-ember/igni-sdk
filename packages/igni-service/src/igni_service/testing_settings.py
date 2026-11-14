@@ -33,7 +33,7 @@ class SettingsOverrides(BaseModel):
     key_database_url: str = ""
     """`IGNI_KEY_DATABASE_URL`."""
     extension_bundle_path: str = ""
-    """`IGNI_EXTENSION_BUNDLE_PATH`: the bundle the service uploads at start-up."""
+    """`IGNI_EXTENSION_BUNDLE`: the bundle the service uploads at start-up."""
     revocations_max_staleness: float = 30.0
     """`IGNI_REVOCATIONS_MAX_STALENESS`, in seconds."""
     timeout: float = 10.0

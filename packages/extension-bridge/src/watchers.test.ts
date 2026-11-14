@@ -45,3 +45,48 @@ describe("Watchers", () => {
     expect(seen).toEqual([]);
   });
 });
+
+describe("Watchers held once and changed while they are told", () => {
+  it("holds the same function once, and one unsubscribe removes it", () => {
+    const watchers = new Watchers<string>();
+    const seen: string[] = [];
+    const fn = (value: string) => seen.push(value);
+    const stopFirst = watchers.add(fn);
+    const stopSecond = watchers.add(fn);
+
+    watchers.emit("a");
+    expect(seen).toEqual(["a"]);
+
+    expect(stopFirst() as unknown).toBe(true);
+    expect(stopSecond() as unknown).toBe(false);
+    watchers.emit("b");
+    expect(seen).toEqual(["a"]);
+  });
+
+  it("lets a watcher unsubscribe itself while it is being told, without skipping the next", () => {
+    const watchers = new Watchers<string>();
+    const seen: string[] = [];
+    const stop = watchers.add((value) => {
+      seen.push(`once:${value}`);
+      stop();
+    });
+    watchers.add((value) => seen.push(`other:${value}`));
+
+    watchers.emit("1");
+    watchers.emit("2");
+
+    expect(seen).toEqual(["once:1", "other:1", "other:2"]);
+  });
+
+  it("tells a watcher added during the emit in that same emit", () => {
+    const watchers = new Watchers<string>();
+    const seen: string[] = [];
+    watchers.add(() => {
+      watchers.add((value) => seen.push(`late:${value}`));
+    });
+
+    watchers.emit("1");
+
+    expect(seen).toEqual(["late:1"]);
+  });
+});

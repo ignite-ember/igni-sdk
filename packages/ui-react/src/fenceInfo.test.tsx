@@ -73,4 +73,46 @@ describe("fenceInfo", () => {
       ),
     ).toEqual({ lang: "js", source: "" });
   });
+
+  it("is null for an empty list", () => {
+    expect(fenceInfo([])).toBeNull();
+  });
+
+  it("is null for a fragment, which carries no class", () => {
+    expect(fenceInfo(<></>)).toBeNull();
+  });
+
+  it("does not take a class that merely ends in language-", () => {
+    expect(fenceInfo(<code className="mylanguage-x">x</code>)).toBeNull();
+  });
+
+  it("takes the first of several language classes", () => {
+    expect(
+      fenceInfo(<code className="language-python language-ts">x</code>)?.lang,
+    ).toBe("python");
+  });
+
+  it("reads digits and underscores in the language", () => {
+    expect(fenceInfo(<code className="language-x86_64">x</code>)?.lang).toBe(
+      "x86_64",
+    );
+  });
+
+  it("keeps a language whose name is not only letters, as c++ and c#", () => {
+    expect(fenceInfo(<code className="language-c++">x</code>)?.lang).toBe("c++");
+    expect(fenceInfo(<code className="language-c#">x</code>)?.lang).toBe("c#");
+  });
+
+  it("gives an empty source for an empty string", () => {
+    expect(fenceInfo(<code className="language-js">{""}</code>)).toEqual({
+      lang: "js",
+      source: "",
+    });
+  });
+
+  it("strips a lone newline but leaves the carriage return of a CRLF", () => {
+    expect(
+      fenceInfo(<code className="language-txt">{"a\r\n"}</code>)?.source,
+    ).toBe("a\r");
+  });
 });

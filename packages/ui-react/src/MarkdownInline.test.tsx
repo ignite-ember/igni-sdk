@@ -212,3 +212,111 @@ describe("in a list row", () => {
     expect(button.textContent).toContain("Overview");
   });
 });
+
+describe("className", () => {
+  it("is added after mdi, and mdi is alone without one", () => {
+    expect(render(<MarkdownInline text="x" />).container.firstElementChild?.className).toBe("mdi");
+    cleanup();
+    expect(render(<MarkdownInline text="x" className="row-preview" />).container.firstElementChild?.className).toBe("mdi row-preview");
+  });
+});
+
+describe("what is not text", () => {
+  const draw = (text: string) => render(<MarkdownInline text={text} />).container;
+
+  it("flattens a table to its cells and leaves out the header row", () => {
+    const c = draw("| name | size |\n| - | - |\n| a | 1 |\n| b | 2 |");
+    expect(c.querySelector("table, thead, tbody, tr, td, th")).toBeNull();
+    const cells = [...c.querySelectorAll(".mdi-cell")].map((e) => e.textContent);
+    expect(cells).toContain("a");
+    expect(cells).toContain("2");
+    // The header row is dropped: a preview wants the data, not the labels.
+    expect(c.textContent).not.toContain("name");
+  });
+
+  it("drops a divider and turns a line break into a space", () => {
+    const c = draw("one  \ntwo\n\n---\n\nthree");
+    expect(c.querySelector("hr, br")).toBeNull();
+    expect(c.textContent).toMatch(/one\s+two/);
+    expect(c.textContent).not.toContain("---");
+  });
+
+  it("reads a quote and a list as flowing text, one item beside the next", () => {
+    const c = draw("> quoted\n\n1. first\n2. second\n\n- bullet");
+    expect(c.querySelector("blockquote, ul, ol, li")).toBeNull();
+    expect(c.textContent).toContain("quoted");
+    expect([...c.querySelectorAll(".mdi-item")].map((e) => e.textContent)).toEqual(["first", "second", "bullet"]);
+  });
+
+  it("does not render raw HTML as elements", () => {
+    const c = draw('<script>x()</script><b onclick="y()">bold</b>');
+    expect(c.querySelector("script, b, [onclick]")).toBeNull();
+  });
+});
+
+describe("what text can be", () => {
+  const render1 = (props: object) => render(<MarkdownInline {...({ text: "", ...props } as { text: string })} />).container;
+
+  it("treats a missing text as nothing to show", () => {
+    expect(render1({ text: null }).firstChild).toBeNull();
+    expect(render1({ text: undefined }).firstChild).toBeNull();
+  });
+
+  it("reads a number as its digits", () => {
+    expect(render1({ text: 42 }).textContent).toBe("42");
+  });
+});
+
+describe("cutting a long text", () => {
+  const draw = (text: string, limit: number) =>
+    render(<MarkdownInline text={text} limit={limit} />).container.textContent;
+
+  it("uses 320 characters unless told otherwise", () => {
+    const text = "x".repeat(400);
+    const shown = render(<MarkdownInline text={text} />).container.textContent;
+    expect(shown).toBe("x".repeat(320) + "…");
+  });
+
+  it("keeps a text of exactly the limit whole", () => {
+    expect(draw("abcdefghij", 10)).toBe("abcdefghij");
+    expect(draw("abcdefghijk", 10)).toBe("abcdefghij…");
+  });
+
+  it("cuts mid-word when the last space is in the first 60 percent", () => {
+    // A space at 3 of 10 would throw away most of the preview.
+    expect(draw("abc defghijklmnop", 10)).toBe("abc defghi…");
+  });
+
+  it("cuts at the space when it is past 60 percent", () => {
+    expect(draw("abcdefg hijklmnop", 10)).toBe("abcdefg…");
+  });
+
+  it("closes a mark the cut left open before the ellipsis", () => {
+    const c = render(<MarkdownInline text="**bold words that run on and on" limit={14} />).container;
+    expect(c.querySelector("strong")?.textContent).toMatch(/^bold words/);
+    expect(c.textContent).toBe("bold words…");
+    expect(c.textContent).not.toContain("*");
+  });
+
+  it("closes a code span the cut left open", () => {
+    const c = render(<MarkdownInline text="run `igni login --now please" limit={16} />).container;
+    expect(c.querySelector("code")?.textContent).toBe("igni login");
+    expect(c.textContent).not.toContain("`");
+  });
+
+  it("closes a fence the cut left open", () => {
+    const c = render(<MarkdownInline text={"```\nlong code line\nanother line"} limit={20} />).container;
+    expect(c.textContent).not.toContain("`");
+    expect(c.querySelector("code")?.textContent).toContain("long code");
+    expect(c.textContent?.trim()).toMatch(/…$/);
+  });
+
+  it("cuts the text after the title was dropped, not before", () => {
+    const c = render(<MarkdownInline text={"# Auth model\n\nabcdefghijklmnop"} name="Auth model" limit={10} />).container;
+    expect(c.textContent).toBe("abcdefghij…");
+  });
+
+  it("shows nothing for a limit of zero", () => {
+    expect(render(<MarkdownInline text="hello" limit={0} />).container.textContent).toBe("…");
+  });
+});

@@ -287,7 +287,7 @@ def bundle_with_assets(tmp_path: Path) -> Path:
 async def run_lifespan(igni: IgniService) -> None:
     app = FastAPI(lifespan=igni.lifespan)
     async with app.router.lifespan_context(app):
-        await asyncio.wait_for(igni.registration.registered.wait(), timeout=5)
+        await asyncio.wait_for(igni.connection.registration.registered.wait(), timeout=5)
         await asyncio.sleep(0.05)
 
 
@@ -300,7 +300,7 @@ class TestShipping:
 
         await run_lifespan(igni)
 
-        client_id = await igni.registration.client_id()
+        client_id = await igni.connection.registration.client_id()
         puts = [s for s in fake.traffic.seen if s.method == "PUT"]
         assert [s.path.rsplit("/", 1)[-1] for s in puts][-1] == "extension"
         assets = [s for s in puts if "/extension/assets/" in s.path]
@@ -341,9 +341,9 @@ class TestShipping:
         shipped = ExtensionBundle.at(bundle)
         assert shipped is not None
         igni = fake.service(fake.settings())
-        await igni.registration.register()
+        await igni.connection.registration.register()
 
         with pytest.raises(BundleError, match="build the bundle again"):
-            await igni.registration.ship(shipped)
+            await igni.connection.registration.ship(shipped)
 
         assert fake.extensions.extensions == {}

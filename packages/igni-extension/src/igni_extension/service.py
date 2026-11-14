@@ -46,9 +46,11 @@ class ServiceWebSocket:
 
     async def __aenter__(self) -> ClientConnection:
         token = await self._tokens.token()
-        headers = dict(self._options.pop("additional_headers", None) or {})
+        options = dict(self._options)
+        given = dict(options.pop("additional_headers", None) or {})
+        headers = {name: value for name, value in given.items() if name.lower() != "authorization"}
         headers["Authorization"] = f"Bearer {token}"
-        self._socket = await connect(self.url, additional_headers=headers, **self._options)
+        self._socket = await connect(self.url, additional_headers=headers, **options)
         return self._socket
 
     async def __aexit__(

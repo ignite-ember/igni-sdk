@@ -182,3 +182,100 @@ describe("a method an extension may call", () => {
     expect(methodAllowed("*_status", ["*_status"])).toBe(true);
   });
 });
+
+describe("a hello that lacks one thing it needs", () => {
+  it.each([
+    ["an extensionId", { extensionId: undefined }],
+    ["an extensionId that is a number", { extensionId: 7 }],
+    ["a nonce that is a number", { nonce: 7 }],
+    ["a theme", { theme: undefined }],
+    ["a theme that is a number", { theme: 1 }],
+    ["tokens that are null", { tokens: null }],
+    ["tokens that are a string", { tokens: "dark" }],
+    ["params that are missing", { params: undefined }],
+    ["params that are a string", { params: "x" }],
+  ])("is refused with %s", (_label, over) => {
+    expect(isHostMessage(hello(over))).toBe(false);
+  });
+
+  it("is accepted with settings that are absent, and refused when they are null", () => {
+    expect(isHostMessage(hello({ settings: undefined }))).toBe(true);
+    expect(isHostMessage(hello({ settings: null }))).toBe(false);
+  });
+});
+
+describe("what the guest accepts after the hello, whole", () => {
+  it.each([
+    ["a theme", { kind: "theme", theme: "light", tokens: { "--bg": "#fff" } }],
+    ["params", { kind: "params", params: { doc: "d1" } }],
+    ["a result", { kind: "result", id: "1", ok: true, value: 3 }],
+    ["a host reply", { kind: "host-reply", id: "h1", ok: true, value: [] }],
+    ["a token reply", { kind: "service-token-reply", id: "s1", ok: true, token: "t", expiresIn: 600 }],
+    ["a refused token reply", { kind: "service-token-reply", id: "s1", ok: false, error: "no" }],
+    ["a signal", { kind: "signal", signal: "chat.run_completed", value: { run: "r" } }],
+  ])("accepts %s", (_label, body) => {
+    expect(isHostMessage({ igni: BRIDGE_VERSION, ...body })).toBe(true);
+  });
+
+  it.each([
+    ["a theme whose name is not a string", { kind: "theme", theme: 1, tokens: {} }],
+    ["a theme whose tokens are null", { kind: "theme", theme: "dark", tokens: null }],
+    ["a result whose id is a number", { kind: "result", id: 1, ok: true }],
+    ["a host reply whose id is a number", { kind: "host-reply", id: 1, ok: true }],
+    ["a token reply with no id", { kind: "service-token-reply", ok: true }],
+    ["a token reply whose ok is not a boolean", { kind: "service-token-reply", id: "s", ok: "yes" }],
+    ["a token reply whose expiresIn is a string", { kind: "service-token-reply", id: "s", ok: true, token: "t", expiresIn: "600" }],
+    ["a signal whose name is a number", { kind: "signal", signal: 4 }],
+    ["a message with no kind", {}],
+  ])("refuses %s", (_label, body) => {
+    expect(isHostMessage({ igni: BRIDGE_VERSION, ...body })).toBe(false);
+  });
+
+  it("refuses what is not an object at all, and a message of another version", () => {
+    for (const data of [null, undefined, "hello", 7, true]) {
+      expect(isHostMessage(data)).toBe(false);
+    }
+    expect(
+      isHostMessage({ igni: BRIDGE_VERSION + 1, kind: "signal", signal: "s" }),
+    ).toBe(false);
+    expect(isHostMessage({ kind: "signal", signal: "s" })).toBe(false);
+  });
+});
+
+describe("every op a guest may ask the host for", () => {
+  it.each(["get", "set", "call", "subscribe", "unsubscribe"])("accepts %s", (op) => {
+    expect(
+      isGuestMessage({
+        igni: BRIDGE_VERSION,
+        nonce: "n",
+        kind: "host",
+        id: "h1",
+        op,
+        path: "chat.processing",
+        value: { any: "thing" },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("a permission list that grants little", () => {
+  it("allows nothing when it is empty, whatever the method", () => {
+    expect(methodAllowed("", [])).toBe(false);
+    expect(methodAllowed("*", [])).toBe(false);
+  });
+
+  it("allows every method, the empty one too, for a bare star", () => {
+    expect(methodAllowed("", ["*"])).toBe(true);
+    expect(methodAllowed("anything_at_all", ["*"])).toBe(true);
+  });
+
+  it("allows the empty method only by the empty name, not by a named pattern", () => {
+    expect(methodAllowed("", ["acme_*"])).toBe(false);
+    expect(methodAllowed("", [""])).toBe(true);
+    expect(methodAllowed("acme_status", [""])).toBe(false);
+  });
+
+  it("is granted by any one of several patterns", () => {
+    expect(methodAllowed("b_run", ["a_*", "b_*"])).toBe(true);
+  });
+});

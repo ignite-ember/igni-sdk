@@ -42,3 +42,5 @@ def test_the_npm_packages_resolve_outside_a_bundler() -> None:
         check=False,
     )
     assert done.returncode == 0, done.stdout + done.stderr
+    assert done.stdout.strip() == "the npm packages resolve, type-check and run outside a bundler"
+    assert done.stderr == ""

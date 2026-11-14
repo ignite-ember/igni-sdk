@@ -9,7 +9,7 @@ you have to read every release.
 **The promised part is the token list.** The tokens published in
 `packages/extension-bridge/src/tokens.ts` are under igni's compatibility
 floor: removing one, renaming it, or giving it a different meaning is
-a breaking change under `docs/EXTENSIBILITY.md` §8. `npm install
+a breaking change under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8. `npm install
 @ignite-ember/extension-bridge` and read that list — it is the
 authoritative one, and the fallbacks in this file are checked against it
 and against `theme.css` by a test.

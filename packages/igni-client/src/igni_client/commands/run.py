@@ -67,7 +67,7 @@ class CommandRun:
         self._started = True
         try:
             async with self._fleet.stream(
-                "POST", "/v1/commands", self._token, json=self._request.model_dump()
+                "POST", "/v1/commands", self._token, body=self._request
             ) as response:
                 if response.status_code != 200:
                     await response.aread()

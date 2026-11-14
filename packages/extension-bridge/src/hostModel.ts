@@ -52,7 +52,7 @@ export interface HostLink {
    * Send one request to the host.
    *
    * @param op — what to do: read a property, write one, or call a method.
-   * @param path — where in the model, as `host.chat.processing`.
+   * @param path — where in the model, as `chat.processing`: the path without the leading `host.`.
    * @param options — the window or session it is about, the arguments
    *   of a call, and the value of a write.
    * @returns — whatever the host answered with.
@@ -89,7 +89,7 @@ export class HostObject {
   constructor(
     /** How requests reach the host. */
     protected readonly link: HostLink,
-    /** Where in the model this object sits: `host.chat`. */
+    /** Where in the model this object sits: `chat`, without the leading `host.`. */
     readonly path: string,
     /** The window it belongs to, when it belongs to one. */
     protected readonly window: string | null = null,
@@ -158,7 +158,7 @@ export class Property<T> {
     readonly writable: boolean,
   ) {}
 
-  /** Where in the model this value sits: `host.chat.processing`. */
+  /** Where in the model this value sits: `chat.processing`, without the leading `host.`. */
   get path(): string {
     return this.owner.memberPath(this.name);
   }
