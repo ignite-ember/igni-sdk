@@ -227,7 +227,9 @@ function Submenu({
       // Hover opens it, the way a desktop menu does. `onMouseLeave`
       // rather than a timer: a submenu that lingers after the pointer
       // has gone covers the items below the one that opened it.
-      onMouseEnter={() => setOpen(true)}
+      onMouseEnter={() => {
+        if (!action.disabled) setOpen(true);
+      }}
       onMouseLeave={() => setOpen(false)}
     >
       <button

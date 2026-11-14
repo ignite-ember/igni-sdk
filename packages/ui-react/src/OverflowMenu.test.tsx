@@ -283,3 +283,34 @@ describe("the submenu keyboard", () => {
     expect(document.activeElement?.textContent).toBe("Markdown");
   });
 });
+
+describe("a disabled submenu parent", () => {
+  const disabledParent = (): OverflowAction[] => [
+    {
+      key: "export",
+      label: "Export",
+      disabled: true,
+      items: [{ key: "html", label: "HTML", onSelect: vi.fn() }],
+    },
+    { key: "share", label: "Share", onSelect: vi.fn() },
+  ];
+
+  it("does not open when the pointer moves over it", () => {
+    // Hover is on the wrapper, not the button, so a disabled button
+    // alone does not stop it: the formats would be one click away
+    // from an action the menu says cannot be done.
+    render(<OverflowMenu actions={disabledParent()} label="Document actions" />);
+    open();
+    const parent = screen.getByRole("menuitem", { name: "Export" });
+    fireEvent.mouseEnter(parent.parentElement!);
+    expect(screen.queryByRole("menuitem", { name: "Export HTML" })).toBeNull();
+    expect(parent.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("does not open on a click either", () => {
+    render(<OverflowMenu actions={disabledParent()} label="Document actions" />);
+    open();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Export" }));
+    expect(screen.queryByRole("menuitem", { name: "Export HTML" })).toBeNull();
+  });
+});
