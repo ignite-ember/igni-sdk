@@ -513,7 +513,7 @@ class IgniService:
     # ── Talking to igni ─────────────────────────────────────────────
 
     def host(self, org_id: str) -> Host:
-        """igni for one organisation: `notify`, `agent(producer)`, `send_event`, `vm_profile`, and its `directory`.
+        """igni for one organisation: `notify`, `agent(producer)`, `send_event`, `extension_vm_profile`, and its `directory`.
 
         Args:
             org_id: The organisation's id in igni, the one every call this
