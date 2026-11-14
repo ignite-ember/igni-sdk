@@ -1139,3 +1139,51 @@ describe("accessibility wiring of Switch, Field, Tabs and TabPanel", () => {
     );
   });
 });
+
+describe("the reference describes every prop of every component", () => {
+  // The reference pages are generated from these doc comments, so a
+  // prop with no @param line is a prop the pages do not explain.
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "primitives.tsx"),
+    "utf8",
+  );
+  const components = [
+    ...source.matchAll(
+      /\/\*\*((?:(?!\*\/)[\s\S])*?)\*\/\s*export function (\w+)\(\{([^}]*)\}/g,
+    ),
+  ].map(([, doc, name, params]) => ({
+    name,
+    doc,
+    props: params
+      .split(",")
+      .map((p) =>
+        p
+          .replace(/\.\.\./, "")
+          .split(/[:=]/)[0]
+          .trim(),
+      )
+      .filter(Boolean),
+  }));
+
+  it("finds the components it is meant to check", () => {
+    const names = components.map((c) => c.name);
+    for (const n of [
+      "Button",
+      "Dialog",
+      "Switch",
+      "Progress",
+      "Tabs",
+      "Heading",
+    ])
+      expect(names).toContain(n);
+    expect(names.length).toBeGreaterThanOrEqual(25);
+  });
+
+  it.each(components.map((c) => [c.name, c] as const))(
+    "%s has an @param for each prop it takes",
+    (_name, c) => {
+      const documented = [...c.doc.matchAll(/@param (\w+)/g)].map((m) => m[1]);
+      expect([...c.props].sort()).toEqual([...documented].sort());
+    },
+  );
+});
