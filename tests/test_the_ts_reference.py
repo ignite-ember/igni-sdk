@@ -70,3 +70,21 @@ def test_an_enum_lists_every_member_with_its_value_whatever_follows_it(tmp_path:
         ("Blue", "member", '"b"'),
         ("Last", "member", "4"),
     ]
+
+
+def test_a_rest_parameter_is_optional_in_the_table_and_loses_its_dots(tmp_path: Path) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": """
+            /** Joins. */
+            export function join(sep: string, ...parts: string[]): string {
+              return parts.join(sep);
+            }
+            """
+        },
+    )
+    reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
+    page, _ = reference.page(reference.areas[0])
+    assert "| `sep` | `string` | required | Not documented yet. |" in page
+    assert "| `parts` | `string[]` | optional | Not documented yet. |" in page

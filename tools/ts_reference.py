@@ -965,10 +965,11 @@ def signature_parameters(
         ).strip()
         optional = name.endswith("?")
         name = name.rstrip("?").strip()
-        if name.startswith("..."):
+        rest = name.startswith("...")
+        if rest:
             name = name[3:].strip()
         type_, _, default = _partition_top_level(tail, "=")
-        out.append(Parameter(name, type_.strip(), default.strip(), optional))
+        out.append(Parameter(name, type_.strip(), default.strip(), optional, rest))
     return out
 
 
