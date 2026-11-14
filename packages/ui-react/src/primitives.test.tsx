@@ -34,11 +34,13 @@ import {
   Field,
   Heading,
   Progress,
+  Radio,
   Row,
   Select,
   Spinner,
   Switch,
   Table,
+  TabPanel,
   Tabs,
   Text,
   Textarea,
@@ -562,5 +564,209 @@ describe("Progress against its bounds", () => {
     const bar = screen.getByRole("progressbar");
     expect(bar.className).toBe("ui-progress mine");
     expect(bar.getAttribute("data-k")).toBe("v");
+  });
+});
+
+describe("Dialog edges: closing, keys and focus", () => {
+  it("does not close on a right-click or middle-click of the backdrop", () => {
+    const onClose = vi.fn();
+    render(<Dialog title="Hi" onClose={onClose} />);
+    const overlay = document.querySelector(".overlay") as HTMLElement;
+    fireEvent.mouseDown(overlay, { button: 2 });
+    fireEvent.mouseDown(overlay, { button: 1 });
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.mouseDown(overlay, { button: 0 });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close on a mousedown inside the panel's own children", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog title="Hi" onClose={onClose}>
+        <p>body</p>
+      </Dialog>,
+    );
+    fireEvent.mouseDown(screen.getByText("body"));
+    fireEvent.mouseDown(screen.getByText("Hi"));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("stops Escape from reaching anything behind the dialog", () => {
+    const outer = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <div onKeyDown={outer}>
+        <Dialog title="Hi" onClose={onClose} />
+      </div>,
+    );
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(outer).not.toHaveBeenCalled();
+  });
+
+  it("calls the latest onClose when it changes between renders", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(<Dialog title="Hi" onClose={first} />);
+    rerender(<Dialog title="Hi" onClose={second} />);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves other keys and Tab in the middle alone", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog
+        title="Hi"
+        onClose={onClose}
+        actions={
+          <>
+            <Button>A</Button>
+            <Button>B</Button>
+            <Button>C</Button>
+          </>
+        }
+      />,
+    );
+    const dialog = screen.getByRole("dialog");
+    const [a, b] = Array.from(dialog.querySelectorAll("button"));
+    expect(fireEvent.keyDown(dialog, { key: "Enter" })).toBe(true);
+    a.focus();
+    // Not at an end: the browser moves focus itself, so no preventDefault.
+    expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(true);
+    b.focus();
+    expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(
+      true,
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("holds Tab when nothing inside can take focus", () => {
+    render(<Dialog title="Hi" onClose={vi.fn()} />);
+    const dialog = screen.getByRole("dialog");
+    // fireEvent returns false when the default was prevented.
+    expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(false);
+    expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(
+      false,
+    );
+    expect(document.activeElement).toBe(dialog);
+  });
+
+  it("holds Tab when every control is disabled", () => {
+    render(
+      <Dialog
+        title="Hi"
+        onClose={vi.fn()}
+        actions={<Button disabled>Go</Button>}
+      />,
+    );
+    expect(fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab" })).toBe(
+      false,
+    );
+  });
+
+  it("wraps past disabled buttons at either end", () => {
+    render(
+      <Dialog
+        title="Hi"
+        onClose={vi.fn()}
+        actions={
+          <>
+            <Button disabled>First</Button>
+            <Button>Cancel</Button>
+            <Button>Save</Button>
+            <Button disabled>Last</Button>
+          </>
+        }
+      />,
+    );
+    const dialog = screen.getByRole("dialog");
+    const enabled = (n: string) => screen.getByText(n);
+    enabled("Save").focus();
+    expect(fireEvent.keyDown(dialog, { key: "Tab" })).toBe(false);
+    expect(document.activeElement).toBe(enabled("Cancel"));
+    expect(fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true })).toBe(
+      false,
+    );
+    expect(document.activeElement).toBe(enabled("Save"));
+  });
+
+  it("counts links, inputs, selects, textareas and tabindex as focusable, not hidden inputs or -1", () => {
+    render(
+      <Dialog title="Hi" onClose={vi.fn()}>
+        <input type="hidden" />
+        <a href="#x">link</a>
+        <span tabIndex={-1}>skip</span>
+        <span tabIndex={0} data-testid="last">
+          stop
+        </span>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole("dialog");
+    screen.getByTestId("last").focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(screen.getByText("link"));
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(screen.getByTestId("last"));
+  });
+
+  it("does not focus an opener that left the page, and does not crash", () => {
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    const focus = vi.spyOn(opener, "focus");
+    const { unmount } = render(<Dialog title="Hi" onClose={vi.fn()} />);
+    opener.remove();
+    expect(() => unmount()).not.toThrow();
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("renders no sub or actions row when none are given", () => {
+    render(<Dialog title="Hi" onClose={vi.fn()} />);
+    expect(document.querySelector(".dialog-sub")).toBeNull();
+    expect(document.querySelector(".dialog-actions")).toBeNull();
+  });
+
+  it("renders the sub as a paragraph and actions in an Actions row", () => {
+    render(
+      <Dialog
+        title="Hi"
+        sub="Careful."
+        onClose={vi.fn()}
+        actions={<Button>Ok</Button>}
+      />,
+    );
+    expect(document.querySelector("p.dialog-sub")?.textContent).toBe(
+      "Careful.",
+    );
+    const row = document.querySelector(".dialog-actions");
+    expect(row?.className).toBe("ui-actions dialog-actions");
+    expect(row?.textContent).toBe("Ok");
+  });
+
+  it("puts the title in an h2 the panel is labelled by, and keeps class and props", () => {
+    render(
+      <Dialog title="Name me" onClose={vi.fn()} className="mine" data-k="v" />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "Name me" });
+    expect(dialog.className).toBe("dialog mine");
+    expect(dialog.getAttribute("data-k")).toBe("v");
+    expect(dialog.getAttribute("tabindex")).toBe("-1");
+    const h = dialog.querySelector("h2.dialog-title");
+    expect(h?.id).toBe(dialog.getAttribute("aria-labelledby"));
+  });
+
+  it("gives two dialogs on one page distinct title ids", () => {
+    render(
+      <>
+        <Dialog title="One" onClose={vi.fn()} />
+        <Dialog title="Two" onClose={vi.fn()} />
+      </>,
+    );
+    const [a, b] = screen.getAllByRole("dialog");
+    expect(a.getAttribute("aria-labelledby")).not.toBe(
+      b.getAttribute("aria-labelledby"),
+    );
   });
 });
