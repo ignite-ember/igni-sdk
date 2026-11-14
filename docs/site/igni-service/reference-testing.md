@@ -895,6 +895,9 @@ def form() -> TokenForm
 
 The body, read as the form a token or revocation request posts.
 
+Bytes that are not text read as replacement characters: a form igni
+refuses as unauthenticated, not one that crashes the fake.
+
 ### SeenRequest.bearer()
 
 ```python

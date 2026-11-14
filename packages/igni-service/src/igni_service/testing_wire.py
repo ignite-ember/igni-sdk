@@ -126,14 +126,18 @@ class OAuthError(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
     error: str
+    """RFC 6749's error code: `invalid_client`, `invalid_grant`, ..."""
     error_description: str | None = None
+    """igni's words for why; left out of the body when none."""
     client_state: str | None = None
     """igni's own field beside `invalid_client`: the state of the client's
     registration when that is why it was refused (`token_endpoint.OAuthRefusal`).
     """
     status: int = Field(default=400, exclude=True)
+    """The HTTP status it is answered with; not part of the body."""
 
     def to_response(self) -> httpx.Response:
+        """The error as igni answers it: what it does not say is left out."""
         return httpx.Response(self.status, json=self.model_dump(exclude_none=True))
 
 
@@ -250,6 +254,7 @@ class RoutedCall(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
     seen: SeenRequest
+    """The request, as the fake recorded it."""
     holder: TokenHolder = Field(default_factory=TokenHolder)
     """Empty on a route that needs no token."""
 
@@ -296,6 +301,7 @@ class RecordedTraffic:
         self.failing[prefix] = status
 
     def heal(self) -> None:
+        """Stop failing every path `fail` was asked to."""
         self.failing.clear()
 
     def requests_to(self, path: str) -> list[SeenRequest]:
@@ -308,6 +314,7 @@ class RecordedTraffic:
         return [seen for seen in self.seen if seen.path == path]
 
     def reset(self) -> None:
+        """Forget every request seen and every failure asked for."""
         self.seen.clear()
         self.failing.clear()
 
