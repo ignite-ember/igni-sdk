@@ -195,14 +195,14 @@ for hit in await session.history.search("migration", limit=10):
 """,
     "truncate_history": """
 cut = await session.history.truncate("run_42")
-print(f"removed {cut.removed} turn(s)")
+print(f"removed {cut.removed} run(s)")
 """,
     "compact_if_needed": """
 status = await session.status()
 cleared = await session.context.compact(
     ctx_tokens=status.context_tokens, max_ctx=status.max_context
 )
-if cleared is not None:
+if cleared.compacted:
     print("compacted into", cleared.new_session_id)
 """,
     "loop_pause": """
