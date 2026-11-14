@@ -431,3 +431,14 @@ def test_check_starts_from_an_empty_scratch_directory(root: Path) -> None:
         cnc.check()
     assert not leftover.exists()
     assert (cnc.SCRATCH / "tarballs").is_dir()
+
+
+def test_targets_reads_a_string_through_nested_conditions_and_ignores_anything_else() -> None:
+    assert cnc.targets("./a.js") == {"./a.js"}
+    assert cnc.targets({"import": {"types": "./a.d.ts", "default": "./a.js"}}) == {
+        "./a.d.ts",
+        "./a.js",
+    }
+    assert cnc.targets(None) == set()
+    assert cnc.targets(["./a.js"]) == set()
+    assert cnc.targets({"import": 1}) == set()

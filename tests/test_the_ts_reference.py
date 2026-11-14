@@ -19,6 +19,7 @@ from tools.ts_reference import (
     Module,
     ReferenceError_,
     TsReference,
+    _prev_significant_index,
     member_parameters_text,
     object_pattern_properties,
 )
@@ -462,6 +463,35 @@ def test_a_name_exported_under_another_is_documented_as_the_package_names_it(
     assert "| [`Wait`](#wait) | const | `time.ts` | How long to wait. |" in page
     assert "| [`Near`](#near) | function | `index.ts` | Close by. |" in page
     assert "Timeout" not in page and "Local" not in page
+
+
+def test_a_name_whose_reexport_leaves_the_package_or_is_never_declared_resolves_to_nothing(
+    tmp_path: Path,
+) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": (
+                'export { Outside } from "zod";\n'
+                'export { Missing } from "./time.js";\n'
+                "export { Nowhere as Near };\n"
+            ),
+            "time.ts": "export const Timeout = 30;\n",
+        },
+    )
+    reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
+    index = reference.modules["index.ts"]
+    assert reference.resolve(index, "Outside") is None
+    assert reference.resolve(index, "Missing") is None
+    assert reference.resolve(index, "Near") is None
+
+
+def test_the_character_before_an_index_skips_spaces_and_comments() -> None:
+    assert _prev_significant_index("a /* c */ b", 10) == 0
+    assert _prev_significant_index("  \n ", 4) == -1
+    assert _prev_significant_index("/* c */ b", 8) == -1
+    # A comment end with no start: the `/` itself is the last significant character.
+    assert _prev_significant_index("*/ b", 3) == 1
 
 
 # ── A package read into pages ──

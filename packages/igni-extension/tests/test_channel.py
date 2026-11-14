@@ -468,3 +468,20 @@ async def test_a_deciding_hook_over_the_socket_is_decided_for_the_caller_igni_na
     nobody = await fake.hook("PlanSubmit", PLAN)
     assert (nobody["outcome"], nobody["reason"]) == ("reject", "not for None")
     await ext.aclose()
+
+
+async def test_a_socket_that_fails_sending_says_the_host_went_away(fake: FakeHost) -> None:
+    class Broken:
+        async def send(self, frame: object) -> None:
+            raise OSError("broken pipe")
+
+    ext = IgniExtension("acme.example", environ=fake.environment())
+    await ext.connection.connect()
+    real = ext.connection._socket
+    ext.connection._socket = Broken()  # type: ignore[assignment]
+    try:
+        with pytest.raises(HostUnavailable, match="went away: broken pipe"):
+            await ext.host.chat.processing.get()
+    finally:
+        ext.connection._socket = real
+        await ext.aclose()
