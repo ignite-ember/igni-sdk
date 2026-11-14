@@ -82,6 +82,8 @@ class Lifecycle:
             raise self.failure
         if self.phase is Phase.OPEN and self.link is not None:
             return self.link.socket
+        if self.phase is Phase.CLOSED:
+            raise Unavailable(f"{where} was closed by the client")
         try:
             await asyncio.wait_for(self._open.wait(), timeout)
         except TimeoutError as exc:

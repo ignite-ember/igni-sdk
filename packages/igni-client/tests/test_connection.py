@@ -684,6 +684,22 @@ async def test_a_client_not_yet_open_has_no_name_and_closing_twice_is_harmless()
         await igni.close()
 
 
+async def test_a_call_on_a_closed_client_fails_at_once_not_after_the_welcome_wait() -> None:
+    async with FakeIgni() as fake:
+        igni = await IgniClient(fake.local()).connect()
+        session = await igni.sessions.create()
+        await igni.close()
+        igni._conn.WELCOME_TIMEOUT = 30  # a wait would outlast the test's own limit
+        with pytest.raises(Unavailable, match="was closed"):
+            await asyncio.wait_for(session.status(), 2)
+
+
+async def test_me_on_a_local_igni_names_itself_not_commands() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        with pytest.raises(NotSupported, match=r"^me needs Fleet"):
+            await igni.me()
+
+
 async def test_a_local_igni_has_neither_commands_nor_an_identity_and_gateway_ones_are_cached() -> (
     None
 ):
