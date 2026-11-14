@@ -203,8 +203,9 @@ class Agent:
           `dropped_reason` says why.
         - `failed` — the platform gave up; `failed_reason` says why.
 
-        Raises `EventRefused` for a 4xx (an unknown `event_id`, say) and
-        `IgniUnavailable` otherwise.
+        Raises `EventRefused` for a 4xx other than 429 (an unknown
+        `event_id`, say) and `IgniUnavailable` otherwise, a 429 included:
+        igni is busy, and asking again later may work.
 
         Args:
             event_id: The item's id, as ``EventAccepted.event_id`` gave it.

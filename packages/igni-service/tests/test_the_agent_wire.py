@@ -266,6 +266,14 @@ class TestReadingAStatus:
 
         assert refused.value.status == status
 
+    async def test_a_429_is_unavailable_as_it_is_for_an_upload(
+        self, igni: IgniService, fake: FakeIgni
+    ) -> None:
+        fake.traffic.fail(IgniPaths.SERVICE_EVENTS, 429)
+
+        with pytest.raises(IgniUnavailable, match="429"):
+            await igni.agents.status(ORG, "ev-1")
+
     @pytest.mark.parametrize("status", [500, 502, 503])
     async def test_a_5xx_is_unavailable(
         self, igni: IgniService, fake: FakeIgni, status: int
