@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -360,3 +361,58 @@ def test_a_session_and_an_attempt_need_all_their_fields() -> None:
         LoginAttempt.model_validate(
             {"state": "s", "verifier": "v", "return_to": "/", "expires_at": "soon"}
         )
+
+
+# ── What the Args sections say ───────────────────────────────────────
+
+
+def documented_arguments(doc: str) -> list[str]:
+    """The names an ``Args:`` section documents, in order."""
+    names: list[str] = []
+    lines = doc.split("\n")
+    for index, line in enumerate(lines):
+        if line.strip() != "Args:":
+            continue
+        base = len(line) - len(line.lstrip())
+        item = None
+        for body in lines[index + 1 :]:
+            if body.strip() and len(body) - len(body.lstrip()) <= base:
+                break
+            indent = len(body) - len(body.lstrip())
+            if body.strip() and (item is None or indent == item):
+                item = indent
+                names.append(body.strip().split(":", 1)[0])
+    return names
+
+
+DOCUMENTED_CALLABLES = [
+    (f"{owner.__name__}.{name}", member)
+    for owner in (WebSessionStore, MemoryWebSessionStore, SqlWebSessionStore)
+    for name, member in vars(owner).items()
+    if inspect.isfunction(member) and not name.startswith("_")
+] + [
+    ("Digest.of", vars(Digest)["of"].__func__),
+    ("WebSessionStore", WebSessionStore),
+    ("MemoryWebSessionStore", MemoryWebSessionStore),
+    ("SqlWebSessionStore", SqlWebSessionStore),
+]
+
+
+def test_the_session_stores_are_documented_through_the_inventory() -> None:
+    """The inventory holds the five methods of each store, the digest and the three classes."""
+    names = {name for name, _ in DOCUMENTED_CALLABLES}
+    for owner in ("WebSessionStore", "MemoryWebSessionStore", "SqlWebSessionStore"):
+        for method in ("get", "put", "delete", "put_login", "take_login"):
+            assert f"{owner}.{method}" in names
+    assert "Digest.of" in names
+
+
+@pytest.mark.parametrize(
+    "name,member", DOCUMENTED_CALLABLES, ids=[n for n, _ in DOCUMENTED_CALLABLES]
+)
+def test_each_args_section_names_exactly_the_parameters_the_callable_takes(
+    name: str, member: object
+) -> None:
+    doc = inspect.getdoc(member) or ""
+    taken = [p for p in inspect.signature(member).parameters if p not in ("self", "cls")]  # type: ignore[arg-type]
+    assert documented_arguments(doc) == taken, name
