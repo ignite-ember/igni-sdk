@@ -185,7 +185,10 @@ describe("where it goes", () => {
  * measuring the component does and not something it is being tested
  * against.
  */
-function boxes(control: Partial<DOMRect>, bubble: Partial<DOMRect> = { left: 50, right: 150 }) {
+function boxes(
+  control: Partial<DOMRect>,
+  bubble: Partial<DOMRect> = { left: 50, right: 150 },
+) {
   const rect = (r: Partial<DOMRect>) => ({
     left: 0,
     right: 0,
@@ -257,10 +260,7 @@ describe("where it sits against the control", () => {
   });
 
   it("is nudged right when it would run past the left edge", () => {
-    boxes(
-      { left: 0, width: 4, top: 20, bottom: 50 },
-      { left: -20, right: 60 },
-    );
+    boxes({ left: 0, width: 4, top: 20, bottom: 50 }, { left: -20, right: 60 });
     iconButton();
 
     fireEvent.focus(control());
@@ -398,5 +398,61 @@ describe("a child that is not a control", () => {
 
     expect(anchor().textContent).toBe("just words");
     expect(tip()).toBeNull();
+  });
+});
+
+describe("the browser's own title", () => {
+  it("is taken off the control, so the browser shows no second tooltip", () => {
+    render(
+      <Tooltip text="Show archived documents">
+        <button type="button" title="Show archived documents">
+          ▣
+        </button>
+      </Tooltip>,
+    );
+
+    expect(control().hasAttribute("title")).toBe(false);
+  });
+
+  it("is taken off again when the control's title changes", () => {
+    const view = (title: string) => (
+      <Tooltip text="Archive">
+        <button type="button" title={title}>
+          ▣
+        </button>
+      </Tooltip>
+    );
+    const { rerender } = render(view("one"));
+    rerender(view("two"));
+
+    expect(control().hasAttribute("title")).toBe(false);
+  });
+
+  it("is the word when the Tooltip was given none", () => {
+    vi.useFakeTimers();
+    render(
+      <Tooltip text="">
+        <button type="button" title="Show archived documents">
+          ▣
+        </button>
+      </Tooltip>,
+    );
+    fireEvent.focus(control());
+
+    expect(tip()?.textContent).toBe("Show archived documents");
+    expect(control().hasAttribute("title")).toBe(false);
+  });
+
+  it("does not replace a word the Tooltip was given", () => {
+    render(
+      <Tooltip text="Archive">
+        <button type="button" title="Something else">
+          ▣
+        </button>
+      </Tooltip>,
+    );
+    fireEvent.focus(control());
+
+    expect(tip()?.textContent).toBe("Archive");
   });
 });
