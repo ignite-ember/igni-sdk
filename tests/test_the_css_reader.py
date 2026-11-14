@@ -77,6 +77,37 @@ def test_a_sheet_with_no_markers_has_one_section_named_for_its_header() -> None:
     ]
 
 
+def test_an_empty_sheet_has_nothing_and_its_pages_say_so() -> None:
+    reading = Stylesheet("")
+    assert reading.sections == []
+    assert reading.tokens() == []
+    assert reading.classes() == []
+    reference = CssReference("pkg", "a.css", "")
+    tokens, token_count = reference.tokens_page()
+    classes, class_count = reference.classes_page()
+    assert (token_count, class_count) == (0, 0)
+    assert "## " not in tokens
+    assert "## " not in classes
+    assert "| Token | Fallback | Used by | Meaning |" in tokens
+
+
+def test_a_token_defined_twice_keeps_the_first_definition() -> None:
+    sheet = """/* ── A ── */
+:root { --a: 1; }
+/* ── B ── */
+:root { --a: 2; --b: 3; }"""
+    assert [(t.name, t.value, t.note) for t in Stylesheet(sheet).tokens()] == [
+        ("--a", "1", ""),
+        ("--b", "3", ""),
+    ]
+
+
+def test_a_token_carries_the_note_of_its_section() -> None:
+    sheet = "/* ── Colour ── used everywhere */ :root { --a: 1; }"
+    (token,) = Stylesheet(sheet).tokens()
+    assert (token.note, token.meaning) == ("used everywhere", "")
+
+
 def test_a_semicolon_inside_a_string_or_a_url_is_part_of_the_value() -> None:
     sheet = """/* ── A ── */
 :root { --f: "a;b"; --u: url(data:image/png;base64,xx); --after: 1; }
@@ -133,6 +164,23 @@ def test_exactly_six_users_show_no_ellipsis() -> None:
     ).tokens_page()
     assert "`.c5` |" in page
     assert "…" not in page
+
+
+def test_the_classes_page_groups_by_section_and_counts_every_class() -> None:
+    sheet = """/* ── Buttons ── how they look */
+.btn.big, .chip { color: red; margin: 0; }
+/* ── Empty ── */
+:root { --a: 1; }
+/* ── Fields ── */
+.field { padding: 0; }"""
+    page, count = CssReference("p", "a.css", sheet).classes_page()
+    assert count == 4
+    assert "## Empty" not in page
+    assert page.index("## Buttons") < page.index("## Fields")
+    assert "how they look\n" in page
+    assert "| `.btn` | `.btn.big` | `color`, `margin` |" in page
+    assert "| `.chip` | `.chip` | `color`, `margin` |" in page
+    assert "| `.field` | `.field` | `padding` |" in page
 
 
 @pytest.mark.parametrize(
