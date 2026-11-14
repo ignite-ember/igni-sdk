@@ -77,7 +77,9 @@ class Caller(BaseModel):
 
     @property
     def ref(self) -> str:
-        """`person:<id>` — how the host's token endpoint is told whom a token is for."""
+        """`<kind>:<id>` (`person:<id>`, `app:<id>`) — how the host's token endpoint is told whom a
+        token is for.
+        """
         return f"{self.kind.value}:{self.id}"
 
     @classmethod
