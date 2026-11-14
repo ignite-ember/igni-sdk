@@ -465,7 +465,10 @@ describe("a typed prop that does nothing is worse than no prop", () => {
   // `<Badge tone="success">` rendered identically, because nothing
   // styled the tone. The prop existed, autocompleted, and lied.
   const css = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "../../../clients/ui/igni-ui.css"),
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../clients/ui/igni-ui.css",
+    ),
     "utf8",
   );
 
@@ -491,5 +494,73 @@ describe("a typed prop that does nothing is worse than no prop", () => {
     for (const cls of [".btn", ".ui-item", ".ui-tab", ".ui-switch"]) {
       expect(css).toContain(`${cls}:focus-visible`);
     }
+  });
+});
+
+describe("Progress against its bounds", () => {
+  const fillWidth = (c: HTMLElement) =>
+    c.querySelector<HTMLElement>(".ui-progress-fill")?.style.width;
+
+  it("clamps a negative value to zero", () => {
+    const { container } = render(<Progress value={-5} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("0");
+    expect(bar.getAttribute("aria-valuetext")).toBe("0%");
+    expect(fillWidth(container)).toBe("0%");
+  });
+
+  it("measures against a given max and says so to a screen reader", () => {
+    const { container } = render(<Progress value={5} max={20} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuemin")).toBe("0");
+    expect(bar.getAttribute("aria-valuemax")).toBe("20");
+    expect(bar.getAttribute("aria-valuenow")).toBe("5");
+    expect(bar.getAttribute("aria-valuetext")).toBe("25%");
+    expect(fillWidth(container)).toBe("25%");
+  });
+
+  it("defaults max to 100 and rounds the spoken percent", () => {
+    render(<Progress value={33.6} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuemax")).toBe("100");
+    expect(bar.getAttribute("aria-valuetext")).toBe("34%");
+  });
+
+  it("clamps infinity to full", () => {
+    const { container } = render(<Progress value={Infinity} label="x" />);
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+      "100",
+    );
+    expect(fillWidth(container)).toBe("100%");
+  });
+
+  it("reads NaN as unknown, not as NaN%", () => {
+    const { container } = render(<Progress value={NaN} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("data-indeterminate")).toBe("true");
+    expect(bar.getAttribute("aria-valuenow")).toBeNull();
+    expect(bar.getAttribute("aria-valuetext")).toBeNull();
+    expect(fillWidth(container)).toBe("");
+  });
+
+  it("shows an empty bar, not NaN%, when max is zero", () => {
+    const { container } = render(<Progress value={0} max={0} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuetext")).toBe("0%");
+    expect(fillWidth(container)).toBe("0%");
+  });
+
+  it("marks a value of zero as determinate", () => {
+    render(<Progress value={0} label="x" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("data-indeterminate")).toBe("false");
+    expect(bar.getAttribute("aria-valuenow")).toBe("0");
+  });
+
+  it("keeps the caller's class and props", () => {
+    render(<Progress value={1} label="x" className="mine" data-k="v" />);
+    const bar = screen.getByRole("progressbar");
+    expect(bar.className).toBe("ui-progress mine");
+    expect(bar.getAttribute("data-k")).toBe("v");
   });
 });

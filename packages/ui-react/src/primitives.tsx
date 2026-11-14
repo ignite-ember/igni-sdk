@@ -783,11 +783,18 @@ export function Progress({
   className,
   ...rest
 }: ProgressProps) {
-  const determinate = typeof value === "number";
+  // NaN is not a measurement: it reads as unknown, like no value.
+  const determinate = typeof value === "number" && !Number.isNaN(value);
   const clamped = determinate
     ? Math.max(0, Math.min(max, value as number))
     : undefined;
-  const pct = determinate ? ((clamped as number) / max) * 100 : undefined;
+  // A `max` of zero or less has nothing to measure against; an empty
+  // bar is honest where `0 / 0` would write "NaN%".
+  const pct = determinate
+    ? max > 0
+      ? ((clamped as number) / max) * 100
+      : 0
+    : undefined;
   return (
     <div
       {...rest}
