@@ -131,7 +131,7 @@ complete:
   one-way with no veto, and `localStorage` does not survive a backend
   restart, so a draft has nowhere to live.
 - **one pane** never needs a page shell or a split. `.igni-root` sets
-  colour, type and box-sizing, not layout.
+  colour, type, box-sizing and a minimum height, not layout.
 - **no prose** never needs a block markdown renderer, which the floor
   now publishes as `Markdown` (`examples/release-notes` uses it). Its
   neighbour `MarkdownInline` is designed to *destroy* block structure
