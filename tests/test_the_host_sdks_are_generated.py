@@ -1,6 +1,6 @@
 """Both SDKs agree with the host schema, because both are generated from it.
 
-igni-core's ``docs/HOST_OBJECT_MODEL.md``: "One schema, two SDKs." The
+igni-core's ``docs/HOST_OBJECT_MODEL.md`` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md): "One schema, two SDKs." The
 Python SDK's ``igni_extension.host_model`` and the bridge's
 ``hostModel.generated.ts`` are written by ``tools/host_codegen.py`` from
 ``contracts/host-schema.json``, this repository's copy of the schema

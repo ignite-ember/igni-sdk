@@ -74,7 +74,7 @@ def dismiss(self, run_id: str = '') -> Call[PlanDecisionResult, DismissPlanEvent
 
 `run_id` is the run that submitted the plan. The decision is
 recorded and `plan_decided` tells every window. Returns the same
-shape as `approve_plan`, with an empty `mode_status`; `ok:
+shape as `session.plan.approve()`, with an empty `mode_status`; `ok:
 false` with `error` when `run_id` is empty.
 
 | Parameter | Type | Default | Meaning |
@@ -114,7 +114,7 @@ Read the plan the agent last submitted in this session, with its task list.
 async def latest(self) -> LatestPlanResult
 ```
 
-Takes no arguments. Returns the `latest` plan's text, every plan
+Returns the `latest` plan's text, every plan
 submitted before it (`history`), the to-do list (`tasks`), and
 `state`: `pending` while a plan is waiting for a decision, empty
 when none was submitted.

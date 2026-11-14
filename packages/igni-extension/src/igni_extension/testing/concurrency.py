@@ -34,7 +34,9 @@ class ConcurrentResult(BaseModel):
     call: ConcurrentCall
     """The call it answers."""
     result: Any = None
-    """The tool's result: its structured content, or its text."""
+    """The tool's result: its structured content, or, when it has none, its content blocks
+    (a list, as MCP returns them).
+    """
     is_error: bool = False
     """Whether the tool raised."""
     took: float = 0.0

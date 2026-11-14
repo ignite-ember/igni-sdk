@@ -103,7 +103,7 @@ class IgniApp:
         self.server = IgniServer(base_url=igni_server_url, timeout=timeout, http=http)
         """igni server as the app reaches it."""
         self.key = SigningKey(key_store, clock=self.clock)
-        """The app's signing key; `await app.public_jwk()` is what an org admin registers."""
+        """The app's signing key; `await app.public_jwks()` is what an org admin registers."""
         self._endpoint = TokenEndpoint(self.server, AppId(app_id), self.key)
         self._held: HeldToken | None = None
         self._lock = asyncio.Lock()

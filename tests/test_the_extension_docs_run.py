@@ -20,7 +20,7 @@ line directly above its fence:
 A ``json`` block that is a whole manifest (it has an ``id`` and a
 ``contract``) is validated against ``contracts/extension-manifest.schema.json``,
 this repository's copy of igni-core's. igni-core checks its own
-``docs/EXTENSIBILITY.md`` the same way.
+``docs/EXTENSIBILITY.md`` (https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) the same way.
 
 Blocks that need the SDKs (``igni-extension``, ``igni-service``) skip
 where they are not installed and run in CI's ``packages`` job, which

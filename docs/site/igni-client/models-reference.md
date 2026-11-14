@@ -390,7 +390,7 @@ belonging to that outcome are set, the rest keep their defaults:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `auto_extended` | `bool` | `False` | True on the first iteration after an open-ended loop was resumed past the safety limit. |
+| `auto_extended` | `bool` | `False` | True on the first iteration after an open-ended loop's safety budget rolled over (it is extended every 30 iterations, up to 200). |
 | `cap_explicit` | `bool` | `False` | True when the user gave an explicit iteration count; false for an open-ended loop that runs until stopped or the safety limit. |
 | `completed` | `bool` | `False` | True when `kind` is `completed`. |
 | `display_prompt` | `str` | `''` | The user's own prompt text, for showing in the chat. Set only when `kind` is `step`. |
@@ -415,7 +415,7 @@ over several iterations).
 | `cap_explicit` | `bool` | required | `true` when the user gave the iteration count (`/loop N <prompt>`), so the loop ends at the cap. `false`: the cap is a safety net that extends automatically. |
 | `iteration_index` | `int` | required | Number of iterations started so far (1-based); `0` when idle. |
 | `iterations_remaining` | `int` | required | Iterations left before the loop's cap is reached; `0` when idle. |
-| `paused` | `bool` | required | `true` when the loop stopped early (it hit the hard iteration cap or an iteration failed) and waits to be resumed. |
+| `paused` | `bool` | required | `true` when the loop is paused and waits to be resumed: paused by hand, stopped at the hard iteration cap, or restored paused after igni restarted. |
 | `prompt` | `str` | required | The prompt being looped; empty when no loop is active. |
 
 **Returned by** [`session.loop.status()`](/docs/sdk/igni-client/loop#session-loop-status).
@@ -489,6 +489,16 @@ The models a user can pick from, and which one is the default.
 | `registry` | `dict[str, `[`ModelRegistryEntryView`](/docs/sdk/igni-client/models-reference#modelregistryentryview)`]` | required | Every configured model, keyed by the name used to pick it. |
 
 **Returned by** [`session.models.list()`](/docs/sdk/igni-client/models#session-models-list).
+
+### ModelSwitched
+
+What a successful `switch_model` answers.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Says the model switched, with a note for any part of the choice that could not be saved. |
+
+**Returned by** [`session.models.switch()`](/docs/sdk/igni-client/models#session-models-switch).
 
 ## Workspace trust
 
@@ -863,7 +873,7 @@ as a new task.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `created_at` | `datetime` | `None` | When the task was scheduled, in the machine's local time. |
+| `created_at` | `datetime \| None` | `None` | When the task was scheduled, in the machine's local time. |
 | `description` | `str` | required | What the task does: the prompt igni runs when it is due. |
 | `error` | `str` | `''` | Error message when the run failed. Empty otherwise. |
 | `id` | `str` | required | Short identifier of the task (8 hex characters). |
@@ -2244,7 +2254,7 @@ One of `'pending'`, `'running'`, `'completed'`, `'failed'`, `'cancelled'`.
 
 Each method's arguments are a model of their own, which igni-client fills from the method's parameters and checks before sending. Their fields are the parameters on the method's page.
 
-| Model | Method |
+| Model | Methods |
 |---|---|
 | `AgentNameArgs` | [`session.agents.discard()`](/docs/sdk/igni-client/agents#session-agents-discard) |
 | `AgentRunArgs` | [`igni.agents.cancel_run()`](/docs/sdk/igni-client/agents#igni-agents-cancel-run) |
@@ -2261,13 +2271,13 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `MarkReadArgs` | [`igni.notifications.mark_read()`](/docs/sdk/igni-client/notifications#igni-notifications-mark-read) |
 | `MarketplaceNameArgs` | [`igni.marketplaces.remove()`](/docs/sdk/igni-client/plugins#igni-marketplaces-remove) |
 | `MarketplaceUrlArgs` | [`igni.marketplaces.add()`](/docs/sdk/igni-client/plugins#igni-marketplaces-add) |
-| `McpServerArgs` | [`session.mcp.disconnect()`](/docs/sdk/igni-client/mcp#session-mcp-disconnect) |
+| `McpServerArgs` | [`session.mcp.connect()`](/docs/sdk/igni-client/mcp#session-mcp-connect), [`session.mcp.disconnect()`](/docs/sdk/igni-client/mcp#session-mcp-disconnect) |
 | `McpToolEnabledArgs` | [`session.mcp.set_tool_enabled()`](/docs/sdk/igni-client/mcp#session-mcp-set-tool-enabled) |
-| `NoArgs` | [`session.toggle_verbose()`](/docs/sdk/igni-client/sessions#session-toggle-verbose) |
+| `NoArgs` | every method that takes no arguments |
 | `PickDirArgs` | [`session.files.pick_dir()`](/docs/sdk/igni-client/files#session-files-pick-dir) |
-| `PlanRunArgs` | [`session.plan.dismiss()`](/docs/sdk/igni-client/plans#session-plan-dismiss) |
+| `PlanRunArgs` | [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve), [`session.plan.dismiss()`](/docs/sdk/igni-client/plans#session-plan-dismiss) |
 | `PluginEnabledArgs` | [`session.plugins.set_enabled()`](/docs/sdk/igni-client/plugins#session-plugins-set-enabled) |
-| `PluginNameArgs` | [`session.plugins.remove()`](/docs/sdk/igni-client/plugins#session-plugins-remove) |
+| `PluginNameArgs` | [`session.plugins.contents()`](/docs/sdk/igni-client/plugins#session-plugins-contents), [`session.plugins.remove()`](/docs/sdk/igni-client/plugins#session-plugins-remove) |
 | `PreviewPluginArgs` | [`session.plugins.preview()`](/docs/sdk/igni-client/plugins#session-plugins-preview) |
 | `ProcessArgs` | [`igni.processes.stop()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-stop) |
 | `ProcessTailArgs` | [`igni.processes.tail()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-tail) |
@@ -2280,7 +2290,7 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `ScheduledTasksArgs` | [`session.scheduler.list()`](/docs/sdk/igni-client/scheduler#session-scheduler-list) |
 | `SearchChatArgs` | [`session.history.search()`](/docs/sdk/igni-client/history-and-context#session-history-search) |
 | `SearchCodeArgs` | [`session.files.search()`](/docs/sdk/igni-client/files#session-files-search) |
-| `SessionIdArgs` | [`session.switch()`](/docs/sdk/igni-client/sessions#session-switch) |
+| `SessionIdArgs` | [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get), [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted), [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages), [`session.switch()`](/docs/sdk/igni-client/sessions#session-switch) |
 | `SetExtensionSettingsArgs` | [`igni.extensions.set_settings()`](/docs/sdk/igni-client/extensions#igni-extensions-set-settings) |
 | `SetServerArgs` | [`igni.auth.set_server()`](/docs/sdk/igni-client/sign-in-and-server#igni-auth-set-server) |
 | `SwitchModelArgs` | [`session.models.switch()`](/docs/sdk/igni-client/models#session-models-switch) |

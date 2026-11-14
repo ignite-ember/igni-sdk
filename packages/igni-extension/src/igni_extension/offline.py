@@ -36,7 +36,7 @@ class OfflineHost:
         value: Any = None,
     ) -> Any:
         if op == "call" and path == self.NOTIFY:
-            notification = LocalNotification.model_validate((params or {})["notification"])
+            notification = LocalNotification.model_validate((params or {}).get("notification"))
             await self._session.send(NotifyNotification.of(notification))
             return None
         raise NotConfigured(

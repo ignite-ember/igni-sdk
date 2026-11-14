@@ -50,7 +50,14 @@ async function main() {
   // The extension's own backend, as the person signed in to igni.
   const notes = await bridge.rpc("ext.example.teamnotes.search", { query: "" });
 
-  render(notes);
+  // Draw it however your page draws: plain DOM here, React with @ignite-ember/ui-react.
+  const list = document.createElement("ul");
+  for (const note of notes as { title: string }[]) {
+    const item = document.createElement("li");
+    item.textContent = note.title;
+    list.append(item);
+  }
+  document.body.append(list);
 }
 
 main().catch((error) => {
@@ -95,7 +102,7 @@ framed by a host.
 ## The host: `bridge.host`
 
 `bridge.host` is igni as the page sees it — the **host object model**
-(`docs/HOST_OBJECT_MODEL.md` in igni), the same model the extension's
+([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core), the same model the extension's
 process reaches as `ext.host`. Names are the schema's, as in Python.
 
 ```ts
@@ -135,11 +142,14 @@ socket.addEventListener("message", (e) => render(JSON.parse(e.data)));
 
 `url` is `null` when the extension has no service a page may reach, and
 then `fetch` and `websocket` reject with `no_service`. An extension igni
-distributed always has one: the service that shipped it. A development
+distributed always has a service: the one that shipped it. A development
 install has one only when its manifest declares a `serviceUrl` setting
-(`contributes.settings`) and it is set; a plain-`http` URL counts only for
-this machine (`localhost`, `127.0.0.1`, `::1`) and only with
-`IGNI_DEV_EXTENSIONS=1`, so a service on another host must be `https`.
+(`contributes.settings`) and it is set. A page is given the service only
+over `https`: a plain-`http` URL counts only for this machine (`localhost`,
+any name under `.localhost`, or a loopback address such as `127.0.0.1` or
+`::1`) and only with `IGNI_DEV_EXTENSIONS=1`. A service on another host,
+or on this machine outside development, leaves `url` `null`; a service on
+another host must be `https`.
 
 `websocket` resolves once the socket is open and has sent
 `{"type": "auth", "token": …}` as its first frame (a browser socket
@@ -168,9 +178,13 @@ const one = await bridge.rpc<Note>("ext.example.teamnotes.get", { id: "n1" });
   reaches your service as an MCP tool call.
 - **The arguments** are a plain record of strings and JSON values, sent
   as they are.
-- **The answer** is whatever the service returned, parsed as JSON. Give
-  the call its type — `rpc<Note>(...)` — and the compiler will hold you
-  to it; nothing checks it at runtime.
+- **The answer** is the tool's text answer, parsed as JSON when it is
+  JSON and the text itself when it is not: a tool returning a `dict` or a
+  `json.dumps(...)` string gives an object, one returning a sentence a
+  string, and one returning a Python `list` its items' text, one per
+  line ([igni-extension's table](../igni-extension/README.md#what-a-tool-returns)).
+  Give the call its type — `rpc<Note>(...)` — and the compiler will hold
+  you to it; nothing checks it at runtime.
 - **The deadline** is thirty seconds. `timeoutMs` overrides it. The host
   has a timeout of its own, and the shorter of the two is the one that
   fires.
@@ -201,10 +215,9 @@ one of the host's signals.
 
 `bridge.on(signal, fn, onRefused?)` takes a third argument, and it
 matters: a signal whose object is **not granted** never arrives, and
-without `onRefused` that refusal is silent — your handler simply never
-runs, and there is nothing in the console to say why. With it, the
-refusal arrives as a `HostError` you can show. Without it, it goes to
-the console, so it is never *completely* silent.
+without `onRefused` your handler simply never runs, with only a console
+warning (`igni bridge: subscribing to <signal> failed: …`) to say why.
+With it, the refusal arrives as a `HostError` you can show.
 
 The first handler of a signal subscribes to it; removing the last one
 unsubscribes.
@@ -225,11 +238,73 @@ keystroke.
 `bridge.close()` tells the host this surface is finished. `bridge.navigate(to)`
 asks the host app to navigate; it decides whether to.
 
+## Putting a built page in the extension
+
+An extension's page is the `ui/` directory of its package, and its entry is
+`ui/index.html`. A page built with a bundler goes there as files: build to
+`ui/` (or copy the output into it), keep the script and stylesheet as files
+(the page's CSP is `script-src 'self'`, so nothing may be inline), and make
+the asset URLs relative. With Vite that is `base: "./"` in `vite.config`.
+`igni ext init` writes a no-build page in `ui/`; replace it with the build.
+
+A development install (`IGNI_DEV_EXTENSIONS=1 igni ext install <dir>`) is a
+copy of the directory in igni's extension store, so a rebuilt page reaches
+igni only by installing again: `igni ext install --replace <dir>`, which
+prints again what the extension may use (it asks nothing). A running igni
+serves the rebuilt page at once: reload it. A second install without
+`--replace` is refused ("already installed").
+
+With TypeScript 6 or later, `import "@ignite-ember/ui-css"` type-checks
+because the stylesheet package ships a declaration for it (0.2.0 and later).
+
+## Testing a page
+
+Only igni's app frames a page, and only igni's window carries a page's
+`ext.*` calls to igni, in the page's extension's name; a program, a
+browser test or `igni-client` cannot make those calls as the page. So a
+page is tested with a stand-in for its parent window, and the tool behind
+a call is tested on its own, with igni-extension's `HostHarness`.
+
+The page speaks to its parent with `postMessage`, in the shapes the
+`protocol` subpath exports. A stand-in parent sends `hello`, reads each
+`call` the page posts, and answers it with a `result` of the same `id`:
+
+```ts
+import { BRIDGE_VERSION, isGuestMessage } from "@ignite-ember/extension-bridge/protocol";
+import type { HelloMessage, ResultMessage } from "@ignite-ember/extension-bridge/protocol";
+
+const hello: HelloMessage = {
+  igni: BRIDGE_VERSION, kind: "hello", nonce: "n1", extensionId: "acme.tickets",
+  params: {}, theme: "dark", tokens: {},
+};
+// After the frame's load event: connect() hears only a hello posted once
+// the page's script runs, and one posted earlier is lost.
+frame.addEventListener("load", () => frame.contentWindow!.postMessage(hello, "*"));
+
+window.addEventListener("message", (event) => {
+  if (event.source !== frame.contentWindow || !isGuestMessage(event.data)) return;
+  if (event.data.kind !== "call") return;
+  const answer: ResultMessage = {
+    igni: BRIDGE_VERSION, kind: "result", id: event.data.id, ok: true,
+    value: { id: "T-1001", status: "open" },  // what the tool would return
+  };
+  frame.contentWindow!.postMessage(answer, "*");
+});
+```
+
+`packages/test-utils/ticketLookupPage.test.ts` in this repository does
+this for the ticket-lookup example's page, in jsdom.
+
+There is deliberately no way to send a framed page's calls to the real
+backend outside igni's app — no URL to point it at, no token to pass: the
+answers in a test are the stand-in's. What the real tool returns is tested
+on the tool, with `HostHarness`, and the two meet in igni's app.
+
 ## The floor
 
 Everything this package exports is under igni's **compatibility floor**:
 removing a name, renaming it, or changing the meaning of one of its
-members is a breaking change under `docs/EXTENSIBILITY.md` §8.
+members is a breaking change under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8.
 
 Two versions of that floor are worth knowing about:
 
@@ -262,24 +337,10 @@ reachable from `bridge.host`, and the page simply does not use it.
 
 ## Installing
 
-> **Until it is on npm: install it from a checkout.** The package is not
-> published yet, so `npm install @ignite-ember/extension-bridge` finds
-> nothing. Pack it from an igni-sdk checkout and install the tarball:
->
-> ```bash
-> git clone https://github.com/ignite-ember/igni-sdk.git
-> npm pack --pack-destination ./sdk-packages ./igni-sdk/packages/extension-bridge
-> npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
-> ```
->
-> (`mkdir sdk-packages` first.) It ships TypeScript source and a compiled
-> build beside it (*The source, and a build beside it*, below), so the
-> tarball is all there is.
-
-Once published, from npm:
+From npm, with the stylesheet a page is drawn with:
 
 ```bash
-npm install @ignite-ember/extension-bridge
+npm install @ignite-ember/extension-bridge @ignite-ember/ui-css
 ```
 
 Each release's tarballs are also attached to igni-sdk's GitHub release

@@ -2,24 +2,10 @@
 
 # Installing
 
-> **Until it is on npm: install it from a checkout.** The package is not
-> published yet, so `npm install @ignite-ember/extension-bridge` finds
-> nothing. Pack it from an igni-sdk checkout and install the tarball:
->
-> ```bash
-> git clone https://github.com/ignite-ember/igni-sdk.git
-> npm pack --pack-destination ./sdk-packages ./igni-sdk/packages/extension-bridge
-> npm install ./sdk-packages/ignite-ember-extension-bridge-0.2.0.tgz
-> ```
->
-> (`mkdir sdk-packages` first.) It ships TypeScript source and a compiled
-> build beside it (*The source, and a build beside it*, below), so the
-> tarball is all there is.
-
-Once published, from npm:
+From npm, with the stylesheet a page is drawn with:
 
 ```bash
-npm install @ignite-ember/extension-bridge
+npm install @ignite-ember/extension-bridge @ignite-ember/ui-css
 ```
 
 Each release's tarballs are also attached to igni-sdk's GitHub release

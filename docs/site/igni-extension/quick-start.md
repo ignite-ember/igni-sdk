@@ -57,6 +57,7 @@ assert reminder.body == "Ship the release"
 
 To ship it, you describe the extension in its `manifest.json`, build a
 bundle with `igni-service-bundle` (from `igni-service`), which writes the
-tools and their hints into the manifest from your code, and let the
-backend service upload it. See
+tools and their hints into the manifest from your code when the manifest
+leaves `permissions.tools` out (and checks them against your code when it
+declares them), and let the backend service upload it. See
 [Shipping the extension](/docs/sdk/igni-extension/guides#shipping-the-extension).

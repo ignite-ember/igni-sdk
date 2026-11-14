@@ -21,7 +21,7 @@ List the models this session can run on.
 async def list(self) -> ModelRegistryResult
 ```
 
-Takes no arguments. Returns the `default` model's name, the
+Returns the `default` model's name, the
 largest context window configured, and `registry`: every model by
 name, with its provider and settings.
 
@@ -50,21 +50,20 @@ print(listed.default, listed.max_context_window)
 Make another model the one this session's agent runs on.
 
 ```python
-async def switch(self, model_name: str) -> InfoMessage
+async def switch(self, model_name: str) -> ModelSwitched
 ```
 
 `model_name` is a name from the model registry
-(`get_model_registry`). The choice is also saved as the default
-for new sessions. Returns an `info` message, sent in place of an
-`rpc_response`, saying the model switched, with a note for any
-part of the choice that could not be saved. Fails when the model is
-not in the registry.
+(`session.models.list()`). The choice is also saved as the default
+for new sessions. Returns `text`, saying the model switched, with a
+note for any part of the choice that could not be saved. Fails when
+the model is not in the registry.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `model_name` | `str` | required | A model name from the model registry (see `get_model_registry`). |
+| `model_name` | `str` | required | A model name from the model registry (see `session.models.list()`). |
 
-**Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
+**Returns** [`ModelSwitched`](/docs/sdk/igni-client/models-reference#modelswitched).
 
 **How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
 The client waits up to 30 seconds.
@@ -73,7 +72,7 @@ The client waits up to 30 seconds.
 
 **Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
-**On the wire** RPC method `switch_model`, scope `session`, area `models`; igni answers with `message`.
+**On the wire** RPC method `switch_model`, scope `session`, area `models`; igni answers with `rpc_response`.
 
 **Example**
 

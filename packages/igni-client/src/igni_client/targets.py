@@ -7,13 +7,15 @@ unchanged — so everything above the target is the same code.
 
 from __future__ import annotations
 
-import json
 import os
+from collections.abc import Mapping
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
+from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import InvalidHandshake, InvalidStatus
 from websockets.typing import Subprotocol
@@ -53,16 +55,41 @@ class Target(Protocol):
         ...
 
 
+class RefusalBody(BaseModel):
+    """What a refused handshake says in its body, when it is OAuth's error object."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    error_description: JsonValue = None
+    error: JsonValue = None
+
+    @classmethod
+    def reason_in(cls, body: str) -> str:
+        """The reason `body` gives: OAuth's description or code, else the body itself."""
+        try:
+            parsed = cls.model_validate_json(body)
+        except ValidationError:  # not JSON, or JSON that is not an object
+            return body
+        return str(parsed.error_description or parsed.error or body)
+
+
+class BackendLock(BaseModel):
+    """The lockfile a running igni writes in its project, `.igni/backend.lock`.
+
+    igni writes more (its pid, wire version, start time); a client needs the
+    port, and the token a program attaches with when igni takes one.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    port: int
+    ws_token: str | None = None
+
+
 def _refusal(exc: InvalidStatus, where: str) -> Exception:
     status = exc.response.status_code
     body = bytes(exc.response.body or b"").decode(errors="replace").strip()
-    detail = body
-    try:
-        parsed = json.loads(body)
-        if isinstance(parsed, dict):
-            detail = str(parsed.get("error_description") or parsed.get("error") or body)
-    except ValueError:
-        pass
+    detail = RefusalBody.reason_in(body)
     if status == 401:
         return AuthError(f"{where} refused the credential: {detail or 'unauthorized'}")
     if status == 403:
@@ -75,8 +102,16 @@ class Local:
 
     By default it is found from the lockfile a running igni writes in its
     project, `<project_dir>/.igni/backend.lock`, which also carries the
-    token a program attaches with. Pass `url` (and `token`) to name one
-    directly, such as a backend started with `--ws-port 8765`.
+    token a program attaches with when the desktop app launched it. Pass
+    `url` and `token` to name one directly, such as a backend started by
+    hand (`python -m igni_core.backend --ws-port 8765`): it mints its own
+    window token and prints it once to stderr, so
+    `Local(url=..., token="<the printed token>")` connects as igni's window.
+    `Local(project_dir=...)` finds the lockfile instead and attaches as a
+    program with the token igni publishes there (it approves nothing).
+    Only a backend started with `IGNI_DEV_NO_WS_TOKEN=1`, the development
+    opt-out, takes no token: every connection, `Local(url=...)` without one
+    included, is its window.
 
     A program attached with the lockfile's token runs sessions but cannot
     answer the agent's approval requests: the agent can read the lockfile
@@ -114,8 +149,9 @@ class Local:
 
         An approver with an approver token; with the lockfile's token a
         program; with no token at all igni's window (igni takes none only
-        when started without a launch secret). A `token` given by hand may
-        be the window's launch secret or the lockfile's, so igni decides.
+        when started with `IGNI_DEV_NO_WS_TOKEN=1`). A `token` given by hand
+        may be the window's token (the launch secret, or the one a backend
+        started by hand prints) or the lockfile's, so igni decides.
         Before the lockfile is read, not known.
         """
         if self._approver_token is not None:
@@ -134,19 +170,18 @@ class Local:
             return self._url, self._approver_token or self._token
         lock = self.project_dir / ".igni" / "backend.lock"
         try:
-            payload = json.loads(lock.read_text())
-            port = int(payload["port"])
+            payload = BackendLock.model_validate_json(lock.read_text())
         except FileNotFoundError as exc:
             raise Unavailable(
                 f"no igni is running for {self.project_dir} (no {lock}); "
                 "open the project in igni, or pass url="
             ) from exc
-        except (OSError, ValueError, KeyError, TypeError) as exc:
+        except (OSError, UnicodeDecodeError, ValidationError) as exc:
             raise Unavailable(f"{lock} is not an igni lockfile") from exc
-        lockfile_token = payload.get("ws_token") or None
+        lockfile_token = payload.ws_token or None
         self._stand(lockfile_token or self._token, given=lockfile_token is None)
         token = self._approver_token or lockfile_token or self._token
-        return f"ws://127.0.0.1:{port}", token
+        return f"ws://127.0.0.1:{payload.port}", token
 
     async def open(self) -> ClientConnection:
         url, token = self._resolve()
@@ -226,21 +261,47 @@ class Fleet:
         except (OSError, InvalidHandshake, TimeoutError) as exc:
             raise Unavailable(f"the gateway at {self.base} did not answer: {exc}") from exc
 
-    async def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
-        """A call to the gateway's HTTP API, as this producer."""
-        headers = {
-            "Authorization": f"Bearer {await self.auth.token()}",
-            **kwargs.pop("headers", {}),
-        }
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: BaseModel | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> httpx.Response:
+        """A call to the gateway's HTTP API, as this producer; `body` goes as JSON."""
+        token = await self.auth.token()
         try:
-            return await self._http.request(method, f"{self.base}{path}", headers=headers, **kwargs)
+            return await self._http.request(
+                method,
+                f"{self.base}{path}",
+                headers=self._headers(token, headers),
+                json=None if body is None else body.model_dump(),
+            )
         except httpx.HTTPError as exc:
             raise Unavailable(f"the gateway at {self.base} did not answer: {exc}") from exc
 
-    def stream(self, method: str, path: str, token: str, **kwargs: Any) -> Any:
+    def stream(
+        self,
+        method: str,
+        path: str,
+        token: str,
+        *,
+        body: BaseModel | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> AbstractAsyncContextManager[httpx.Response]:
         """A streamed call to the gateway's HTTP API (the caller supplies the token)."""
-        headers = {"Authorization": f"Bearer {token}", **kwargs.pop("headers", {})}
-        return self._http.stream(method, f"{self.base}{path}", headers=headers, **kwargs)
+        return self._http.stream(
+            method,
+            f"{self.base}{path}",
+            headers=self._headers(token, headers),
+            json=None if body is None else body.model_dump(),
+        )
+
+    @staticmethod
+    def _headers(token: str, extra: Mapping[str, str] | None) -> dict[str, str]:
+        """The bearer `token`, which headers the caller passes may override."""
+        return {"Authorization": f"Bearer {token}", **(extra or {})}
 
     async def aclose(self) -> None:
         if self._owns_http:

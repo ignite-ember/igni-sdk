@@ -2,8 +2,9 @@
 
 import json
 from pathlib import Path
+from urllib.parse import quote
 
-from igni_extension import Hooks, IgniExtension, NotSignedIn, ToolHints
+from igni_extension import Hooks, IgniExtension, NotConfigured, NotSignedIn, ToolHints
 from igni_extension.hooks import PostToolUse
 
 ext = IgniExtension("acme.tickets")
@@ -32,9 +33,11 @@ async def lookup_ticket(ticket_id: str) -> str:
 async def ticket_from_service(ticket_id: str) -> str:
     """Look a ticket up on the Ticket lookup service, as the signed-in person."""
     try:
-        response = await ext.service.get(f"/v1/tickets/{ticket_id}")
+        response = await ext.service.get(f"/v1/tickets/{quote(ticket_id, safe='')}")
     except NotSignedIn:
         return "Sign in to igni to reach the ticket service."
+    except NotConfigured:  # a development install has no service, so no URL for one
+        return "The ticket service is not set up for this install."
     response.raise_for_status()
     return response.text
 
@@ -46,7 +49,7 @@ async def audit(call: PostToolUse) -> None:
     if data_dir is None:
         return
     with (data_dir / "tool-audit.log").open("a") as f:
-        f.write(f"{call.tool_name}\n")
+        f.write(f"{' '.join(call.tool_name.splitlines())}\n")
 
 
 def main() -> None:

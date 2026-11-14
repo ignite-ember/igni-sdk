@@ -2,7 +2,7 @@
 
 # igni_service.testing
 
-Read from the code: every public name below, its signature and its docstring. Import `igni_service.testing` — defined in `igni_service.bundle.archive`, `igni_service.testing`, `igni_service.testing_bundles`, `igni_service.testing_claims`, `igni_service.testing_directory`, `igni_service.testing_items`, `igni_service.testing_notifications`, `igni_service.testing_seams`, `igni_service.testing_sessions`, `igni_service.testing_settings`, `igni_service.testing_vm_profiles`, `igni_service.testing_vm_rules`, `igni_service.testing_wire`, `igni_service.urls`.
+Read from the code: every public name below, its signature and its docstring. Import `igni_service.testing` — defined in `igni_service.bundle.archive`, `igni_service.testing`, `igni_service.testing_bundles`, `igni_service.testing_claims`, `igni_service.testing_directory`, `igni_service.testing_item_records`, `igni_service.testing_items`, `igni_service.testing_notifications`, `igni_service.testing_seams`, `igni_service.testing_sessions`, `igni_service.testing_settings`, `igni_service.testing_vm_profiles`, `igni_service.testing_vm_rules`, `igni_service.testing_wire`, `igni_service.urls`.
 
 | Name | What it is |
 |---|---|
@@ -84,7 +84,7 @@ One person told about one notification, after igni's rules.
 |---|---|---|---|
 | `org_id` | `str` | required | The organisation the person was told in. |
 | `user_id` | `str` | required | Who was told. |
-| `source` | `str` | required | The service that told them: its client id. |
+| `source` | `str` | required | The extension that told them: the `id` of the bundle its service shipped.  Empty when it shipped none. |
 | `notification` | `Notification` | required | What they were told. |
 
 ## FakeAgents
@@ -895,6 +895,9 @@ def form() -> TokenForm
 
 The body, read as the form a token or revocation request posts.
 
+Bytes that are not text read as replacement characters: a form igni
+refuses as unauthenticated, not one that crashes the fake.
+
 ### SeenRequest.bearer()
 
 ```python
@@ -938,6 +941,7 @@ SentEvent(
     event_key: str | None = None,
     state: Literal['pending', 'delivered', 'not_handled', 'expired', 'dropped', 'failed'] = 'pending',
     created_at: datetime,
+    expires_at: datetime.datetime | None = None,
 )
 ```
 
@@ -961,6 +965,7 @@ One item a service sent for a producer, as igni stored it.
 | `event_key` | `str \| None` | `None` | The key it was sent with, if any. |
 | `state` | `ItemState` | `'pending'` | Where it stands; `fake.agents.settle` moves it. |
 | `created_at` | `datetime` | required | When the fake stored it. |
+| `expires_at` | `datetime \| None` | `None` | What the service asked for; the fake stores the sooner of that and the 14-day limit. |
 
 ## SettingsOverrides
 
@@ -996,7 +1001,7 @@ own default. A field `IgniSettings` lacks is refused, not ignored.
 | `redirect_uris` | `list[str]` | factory | `IGNI_REDIRECT_URIS`: more addresses igni may send a signed-in person back to. |
 | `key_encryption_key` | `str` | `''` | `IGNI_KEY_ENCRYPTION_KEY`. |
 | `key_database_url` | `str` | `''` | `IGNI_KEY_DATABASE_URL`. |
-| `extension_bundle_path` | `str` | `''` | `IGNI_EXTENSION_BUNDLE_PATH`: the bundle the service uploads at start-up. |
+| `extension_bundle_path` | `str` | `''` | `IGNI_EXTENSION_BUNDLE`: the bundle the service uploads at start-up. |
 | `revocations_max_staleness` | `float` | `30.0` | `IGNI_REVOCATIONS_MAX_STALENESS`, in seconds. |
 | `timeout` | `float` | `10.0` | `IGNI_SERVER_TIMEOUT`: each call to igni, in seconds. |
 

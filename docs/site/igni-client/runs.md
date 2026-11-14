@@ -12,7 +12,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 |---|---|
 | [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted) | Forget one interrupted run, so it is not offered again. |
 | [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted) | List a session's runs that stopped before they finished. |
-| [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages) | List a session's messages that were received but never answered. |
+| [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages) | List a session's messages whose run started but never finished. |
 
 ## session.runs.discard_interrupted()
 
@@ -22,7 +22,7 @@ Forget one interrupted run, so it is not offered again.
 async def discard_interrupted(self, message_id: str) -> DiscardInterruptedRunResult
 ```
 
-`message_id` names the run (from `get_interrupted_runs`);
+`message_id` names the run (from `session.runs.interrupted()`);
 `session_id` the session it belongs to; only that session's
 interrupted run is deleted. Returns `ok: true` — also when no such
 run exists, so a retry is harmless — or `ok: false` with `error`
@@ -30,7 +30,9 @@ when `message_id` is empty or the store could not be written.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `message_id` | `str` | required | Id of the message that started the run, as listed by `get_interrupted_runs`; must not be empty. |
+| `message_id` | `str` | required | Id of the message that started the run, as listed by `session.runs.interrupted()`; must not be empty. |
+
+`session_id` is this session's own, so it is not a parameter.
 
 **Returns** [`DiscardInterruptedRunResult`](/docs/sdk/igni-client/models-reference#discardinterruptedrunresult).
 
@@ -58,10 +60,11 @@ List a session's runs that stopped before they finished.
 async def interrupted(self) -> list[InterruptedRun]
 ```
 
-`session_id` names the session. Returns one row per run that was
-cancelled or failed: the `message_id` and text of the message that
-started it, when it arrived and when it stopped, why (`cancelled`
-or `errored`) and the last error. A client offers to retry,
+Returns one row per run that was
+cancelled, failed or never finished: the `message_id` and text of
+the message that started it, when it arrived and when it stopped, why
+(`cancelled`, `errored`, or `abandoned` when igni stopped while
+it ran) and the last error. A client offers to retry,
 discard or edit each. A storage failure answers an empty list.
 
 Takes no arguments (`session_id` is this session's own).
@@ -86,13 +89,13 @@ for interrupted_run in await session.runs.interrupted():
 
 ## session.runs.pending_messages()
 
-List a session's messages that were received but never answered.
+List a session's messages whose run started but never finished.
 
 ```python
 async def pending_messages(self) -> list[PendingMessage]
 ```
 
-`session_id` names the session. Returns the user messages still
+Returns the user messages still
 pending at least a minute after they arrived — typically left by a
 crash — oldest first, each with its text, when it arrived and its
 `message_id`. A storage failure answers an empty list.

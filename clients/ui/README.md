@@ -40,7 +40,7 @@ The fallback is igni's dark palette. It is what you see if you open your page on
 
 Inside igni, the bridge pushes the **live computed values** at handshake and again whenever they change. Your page follows dark mode, light mode, and whatever a group's policy pack has branded, without you writing a line for any of it.
 
-Values are pushed rather than baked in, on purpose. `theme.css` defines these across forty-five blocks — a `:root`, a light override, and a `prefers-color-scheme` block per feature. Any second copy of that is wrong within a release.
+Values are pushed rather than baked in, on purpose. `theme.css` defines these across many blocks — a `:root`, a light override, and a `prefers-color-scheme` block per feature. Any second copy of that is wrong within a release.
 
 The published token list is in `packages/extension-bridge/src/tokens.ts`, and it is **under the compatibility floor**: removing or repurposing one of those is a breaking change. Tokens not on that list — `--rail-width`, `--sidebar-w`, `--crumb-row-h` — describe igni's own chrome and are ours to change. An extension positioning itself against those would break the first time we moved something.
 
@@ -53,7 +53,7 @@ you have to read every release.
 **The promised part is the token list.** The tokens published in
 `packages/extension-bridge/src/tokens.ts` are under igni's compatibility
 floor: removing one, renaming it, or giving it a different meaning is
-a breaking change under `docs/EXTENSIBILITY.md` §8. `npm install
+a breaking change under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8. `npm install
 @ignite-ember/extension-bridge` and read that list — it is the
 authoritative one, and the fallbacks in this file are checked against it
 and against `theme.css` by a test.
@@ -86,8 +86,8 @@ These are the same class names igni itself uses, so a surface built here reads a
 
 They were written after finding two, neither of which was drift in the sense of a value slowly diverging:
 
-- **Seven components were never covered at all.** `OverflowMenu`, `Tooltip`, `Skeleton`, `Monogram`, `MarkdownInline`, `MenuIcon` and the mermaid block named thirty-two classes between them that only `theme.css` defined. Inside the app they looked right — the one environment they are promised for is the one nobody rendered them in. The reference extension did not catch it either, because it happens to import only from `primitives`, which was the covered half.
-- **Eighteen of fifty token fallbacks were a different value from the theme they claim to copy.** Radii at 6/10/14 against the app's 8/12/18, every semantic colour a different hue, a different UI font stack. Standalone is how an extension author develops before they ever mount the thing, so that is what they were tuning against.
+- **Some components were never covered at all.** `OverflowMenu`, `Tooltip`, `Skeleton`, `Monogram`, `MarkdownInline`, `MenuIcon` and the mermaid block named classes that only `theme.css` defined. Inside the app they looked right — the one environment they are promised for is the one nobody rendered them in. The reference extension did not catch it either, because it happens to import only from `primitives`, which was the covered half.
+- **Many token fallbacks were a different value from the theme they claim to copy.** Radii at 6/10/14 against the app's 8/12/18, every semantic colour a different hue, a different UI font stack. Standalone is how an extension author develops before they ever mount the thing, so that is what they were tuning against.
 
 `btn-warn` — a typed `variant="warn"` rendering as a plain button because the class existed in the app and not here — is the case the scanner cannot see by reading source, since no line contains the string `btn-warn`; it only exists as `btn-${variant}` at runtime. Those names are enumerated explicitly in the test for that reason.
 
@@ -99,43 +99,46 @@ Treat a difference as a bug and report it.
 
 Use them for `gap`, `margin` and `padding` and your layout sits on the same rhythm as the app around it, rather than next to it.
 
-They are not an invention. They are the steps igni already used, written as literals in 375 places. 85% of gaps and 83% of margins landed on them exactly, which is why adopting them changed nothing on screen — and why the ~60 that stayed literal (`5px`, `3px`, `7px`, `18px`) are now visible as deviations rather than hidden among the rest.
+They are not an invention. They are the steps igni already used, written out as literals. Almost every gap and margin landed on them exactly, which is why adopting them changed nothing on screen — and why the few that stayed literal (`5px`, `3px`, `7px`, `18px`) are now visible as deviations rather than hidden among the rest.
 
 ## The type scale
 
 `--text-2xs` through `--text-4xl` — 10, 11, 12, 13, 14, 17, 20, 30, 42.
 
-Nine steps, down from twenty-two hardcoded sizes that included every half-step from 9px to 15px. `11.5px`, `12px` and `12.5px` between them accounted for 272 declarations: one size written three ways, not three sizes.
+Nine steps, down from many hardcoded sizes that included every half-step from 9px to 15px. `11.5px`, `12px` and `12.5px` were one size written three ways, not three sizes.
 
-Collapsed by role rather than by ratio, because the clusters were already there. No value moved by more than 1px, and 98% of font sizes now name a step.
+Collapsed by role rather than by ratio, because the clusters were already there. No value moved by more than 1px, and nearly every font size now names a step.
 
 One deliberate exception survives, labelled where it lives: a digit inside a 12px circle stays at 7px, because 10px overflows it. A constrained space is a real exception. The half-pixel sizes were not.
 
 ## Shape
 
-`--radius-sm` 6, `--radius` 10, `--radius-lg` 14, plus `--radius-pill` and `--radius-circle` for the two shapes that are not sizes.
+`--radius-sm` 8, `--radius` 12, `--radius-lg` 18, plus `--radius-pill` and `--radius-circle` for the two shapes that are not sizes.
 
 `9999px` and `999px` were both in use for pills — identical to a renderer, two things to a reader. Now one.
 
-**Padding is 62% on the scale, and the rest is probably right.** The values that stayed literal are overwhelmingly *odd* — 1, 3, 5, 7, 9, 11, 13px — which is the signature of optical correction against a 1px border rather than drift. Forcing them onto even steps would move things by a pixel for no reason. They are visible as literals now, which is the right state for a deliberate exception.
+**Most padding is on the scale, and the rest is probably right.** The values that stayed literal are overwhelmingly *odd* — 1, 3, 5, 7, 9, 11, 13px — which is the signature of optical correction against a 1px border rather than drift. Forcing them onto even steps would move things by a pixel for no reason. They are visible as literals now, which is the right state for a deliberate exception.
 
 ## Primitives
 
 `ui-row`, `ui-actions`, `ui-list`, `ui-toolbar`, `ui-card`, `ui-item`, `ui-badge`, `ui-empty`, `ui-table`.
 
-These were decided, not extracted. There was very little duplication to extract: the 231 classes named `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`, and deduplicating all fourteen patterns saved 84 declarations out of 17,789 lines. They did not repeat, they diverged, each feature choosing its own gaps and paddings because there was no scale to choose from.
+These were decided, not extracted. There was very little duplication to extract: the classes named `-row`, `-card`, `-actions` share almost nothing — `*-row` agreed only on `display: flex`. They did not repeat, they diverged, each feature choosing its own gaps and paddings because there was no scale to choose from.
 
-So where the existing uses agreed, the agreement became the value. Where they split, the split is resolved once with a reason rather than per feature. `ui-empty` is the clearest: its colour was split exactly eight and eight between `--fg-faint` and `--fg-muted`. Both clear WCAG AA since F138, so the tie breaks on meaning — an empty state is text you must read to know what to do next, which makes it content rather than de-emphasised chrome.
+So where the existing uses agreed, the agreement became the value. Where they split, the split is resolved once with a reason rather than per feature. `ui-empty` is the clearest: its colour was split evenly between `--fg-faint` and `--fg-muted`. Both clear WCAG AA, so the tie breaks on meaning — an empty state is text you must read to know what to do next, which makes it content rather than de-emphasised chrome.
 
 There is deliberately **no `ui-title`**. Titles varied across four type steps, and that variation is the design — a heading level, not drift. Use the type scale and a weight.
 
-**Remaining:** igni's own 231 feature classes still carry their own copies. The primitives exist and are what an extension builds against; migrating the app onto them moves pixels in 64 files, and is worth doing behind the visual suite rather than blind.
+**Remaining:** igni's own feature classes still carry their own copies. The primitives exist and are what an extension builds against; migrating the app onto them moves pixels, and is worth doing behind the visual suite rather than blind.
 
 ## Writing your own CSS
 
-The stylesheet is the vocabulary, not the layout. It has no page shell,
-no split pane, no scroll container — those are shapes, and a shape is
-cheap to write and expensive to promise.
+The stylesheet is the vocabulary, not your layout. It has three layout
+shapes — `ui-shell` (a column that fills the frame), `ui-split` (two
+panes with a handle) and `ui-scroll` (a scroll container that scrolls
+inside a flex column) — and nothing for the page beyond them; the rest
+is shaped by your own content, and a shape is cheap to write and
+expensive to promise.
 
 Write your own on top, in your own file, against the tokens:
 
@@ -188,8 +191,8 @@ Each release's tarballs are also attached to igni's GitHub release
 
 Worth knowing before you design around it:
 
-- **Be installed.** Calling your own backend works — `ext.<your-id>.<method>` is a real namespace, authorised against your manifest's `permissions.rpc` and routed to your service as an MCP tool call. What does not exist yet is the pipeline that starts your sidecar or registers your endpoint, so there is nothing to route *to* outside a test.
-- **Receive a push.** The host sends `hello`, `theme` and `result`. Following a long-running job means polling an RPC on an interval.
-- **Be mounted.** Nothing renders `ExtensionFrame` in the app yet, and no manifest loader exists.
+- **Receive a push of anything it did not subscribe to.** The host sends `hello`, `theme`, `params`, the answers to your calls (`result`, `host-reply`), the tokens for your own service, and the signals you subscribed to with `bridge.on`. A page watches rather than polls, but a signal whose object your manifest's `permissions.host` does not grant never arrives.
+- **Write the address bar or keep storage.** The frame's sandbox has no `allow-top-navigation`, and `localStorage` is wiped whenever the backend restarts, because each extension is served from an ephemeral port. `bridge.setLocation` is how a page stays addressable.
+- **Reach outside its grants.** The frame's CSP admits your service's origin and the hosts in `permissions.egress`, nothing else, and `ext.<your-id>.<method>` calls are authorised against your manifest's `permissions.rpc`.
 
 These are named here rather than left to be discovered three days into a build.

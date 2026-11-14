@@ -62,13 +62,7 @@ What `seal` sealed. Raises `KeyStoreError` when the key encryption key changed.
 
 ```python
 class KeyStore(Protocol)
-KeyStore(*args, **kwargs)
 ```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `args` | — | required | The positional arguments a concrete implementation's constructor takes; the protocol itself does not use them. |
-| `kwargs` | — | required | The keyword arguments a concrete implementation's constructor takes; the protocol itself does not use them. |
 
 Keeps one key. See the module note for the contract.
 

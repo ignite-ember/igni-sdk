@@ -1181,7 +1181,7 @@ class LoopAdvance(Model):
     """
 
     auto_extended: bool = False
-    """True on the first iteration after an open-ended loop was resumed past the safety limit."""
+    """True on the first iteration after an open-ended loop's safety budget rolled over (it is extended every 30 iterations, up to 200)."""
     cap_explicit: bool = False
     """True when the user gave an explicit iteration count; false for an open-ended loop that runs until stopped or the safety limit."""
     completed: bool = False
@@ -1218,7 +1218,7 @@ class LoopStatusSnapshot(Model):
     iterations_remaining: int
     """Iterations left before the loop's cap is reached; `0` when idle."""
     paused: bool
-    """`true` when the loop stopped early (it hit the hard iteration cap or an iteration failed) and waits to be resumed."""
+    """`true` when the loop is paused and waits to be resumed: paused by hand, stopped at the hard iteration cap, or restored paused after igni restarted."""
     prompt: str
     """The prompt being looped; empty when no loop is active."""
 
@@ -1519,6 +1519,13 @@ class ModelSwitch(Frame):
     """The session the message is for (sent to igni) or from (sent by igni). Empty: the default session, or none in particular."""
     type: Literal["model_switch"] = "model_switch"
     """Always `model_switch`: what kind of message this is."""
+
+
+class ModelSwitched(Model):
+    """What a successful `switch_model` answers."""
+
+    text: str
+    """Says the model switched, with a note for any part of the choice that could not be saved."""
 
 
 class NoArgs(Args):

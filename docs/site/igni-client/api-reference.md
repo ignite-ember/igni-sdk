@@ -30,7 +30,7 @@ socket again after Fleet said busy or the line dropped.
 | `open(session_id, project_dir=None)` | that `Session` |
 | `default()` | the `Session` igni opened at start |
 | `list()` | `list[SessionListEntry]`, every session of igni's own project, newest first |
-| `attach(session_id="", project_dir="")` | igni's own call underneath: an `AttachSessionResult` |
+| `attach(*, project_dir="", session_id="")` | igni's own call underneath: an `AttachSessionResult` |
 
 A `Session`:
 
@@ -69,7 +69,10 @@ entering one twice.
 
 Each has `standing` — what igni stands the connection as (`"window"`,
 `"approver"`, `"program"` or `"unknown"`; see
-[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)) — and `describe()`. `Local.approves`
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)) — and `describe()`. A
+`Local(project_dir)` reads its lockfile when the client opens, so until
+then its `standing` is `"unknown"` (or `"approver"`, with an approver
+token); read it inside `async with IgniClient(...)`. `Local.approves`
 says whether it has an approver token; `IGNI_APPROVER_TOKEN` gives it one.
 
 ## Credentials: Person, App, Space
@@ -143,7 +146,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
 | `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
 | `UnknownMethod` (`RpcError`) | igni is older than this igni-client | upgrade igni |
-| `InvalidArguments` (`RpcError`, `ValueError`) | the arguments are not what the method takes; checked before sending | fix the call |
+| `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
 | `RunFailed` | a run ended with `run_error` | read the message |

@@ -78,6 +78,7 @@ from igni_client.models import (
     McpToolToggleResult,
     ModelCompleted,
     ModelRegistryResult,
+    ModelSwitched,
     NoArgs,
     NotificationCounts,
     NotificationsChangedPush,
@@ -280,7 +281,7 @@ _SET_WORKSPACE_TRUST: TypeAdapter[WorkspaceTrustStatus] = TypeAdapter(WorkspaceT
 _SHUTDOWN: TypeAdapter[None] = TypeAdapter(None)
 _START_SCHEDULER: TypeAdapter[None] = TypeAdapter(None)
 _STOP_BACKGROUND_PROCESS: TypeAdapter[StopProcessResult] = TypeAdapter(StopProcessResult)
-_SWITCH_MODEL: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
+_SWITCH_MODEL: TypeAdapter[ModelSwitched] = TypeAdapter(ModelSwitched)
 _SWITCH_SESSION: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _TOGGLE_VERBOSE: TypeAdapter[bool] = TypeAdapter(bool)
 _TRUNCATE_HISTORY: TypeAdapter[TruncateHistoryResult] = TypeAdapter(TruncateHistoryResult)
@@ -1676,7 +1677,7 @@ METHODS: dict[str, MethodSpec] = {
         python="session.models.switch",
         scope="session",
         access="client",
-        reply="message",
+        reply="rpc_response",
         streams=(),
         may_stream=(),
         duration="io",
@@ -1880,11 +1881,12 @@ class IgniAuth:
     async def set_server(self, api_url: str, *, portal_url: str = "") -> ServerChoice:
         """Choose the igni server to sign in to, and remember it for the next launch.
 
-        `api_url` is the server's API address (`https` only);
-        `portal_url` its portal, empty to derive it from `api_url`.
-        Returns the server as stored, or, when the choice is refused (an
-        empty or non-`https` address), `error` saying why and nothing
-        stored. Fails when the user configuration file cannot be read or
+        `api_url` is the server's API address: `https`, or `http` to
+        `localhost`, `127.0.0.1` or `::1` for a local deployment;
+        `portal_url` its portal, empty to derive it from `api_url`, and
+        held to the same rule when given. Returns the server as stored, or,
+        when the choice is refused (an empty `api_url`, or an address that
+        breaks that rule), `error` saying why and nothing stored. Fails when the user configuration file cannot be read or
         written.
 
         Access: ``window``. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets ``AccessRefused``.
@@ -2118,7 +2120,10 @@ class IgniSessions:
         `session_id` names the session to resume; `project_dir` the folder
         it works in. Neither: the default session. Only `project_dir`: a new
         session locked to that folder. Both: that session, which must belong
-        to that folder. The session is made live if it is not.
+        to that folder. The session is made live if it is not. An id igni has
+        no session by is not an error: a new, empty session starts under that
+        id, so check `session_id` against the session list first when it
+        must already exist.
 
         Returns the `session_id` and `project_dir` actually bound; send
         later requests for that session with this `session_id` on the
@@ -2454,9 +2459,10 @@ class SessionHooks:
         """List the hooks this session runs.
 
         Takes no arguments. Returns one row per hook: the `event` it runs
-        on, its `type` (a shell `command` or an HTTP `url`), the
-        `matcher` that narrows it, its timeout, whether it runs in the
-        background, and the HTTP headers it sends.
+        on, its `type` (`command`, `http`, `prompt` or `mcp_tool`)
+        and the `command` or `url` it runs, the `matcher` that narrows
+        it, its timeout, whether it runs in the background, and the HTTP
+        headers it sends.
         """
         return await self._caller.rpc("get_hooks_details", NoArgs, {}, _GET_HOOKS_DETAILS)
 
@@ -2629,15 +2635,14 @@ class SessionModels:
         """
         return await self._caller.rpc("get_model_registry", NoArgs, {}, _GET_MODEL_REGISTRY)
 
-    async def switch(self, model_name: str) -> InfoMessage:
+    async def switch(self, model_name: str) -> ModelSwitched:
         """Make another model the one this session's agent runs on.
 
         `model_name` is a name from the model registry
         (`get_model_registry`). The choice is also saved as the default
-        for new sessions. Returns an `info` message, sent in place of an
-        `rpc_response`, saying the model switched, with a note for any
-        part of the choice that could not be saved. Fails when the model is
-        not in the registry.
+        for new sessions. Returns `text`, saying the model switched, with a
+        note for any part of the choice that could not be saved. Fails when
+        the model is not in the registry.
         """
         return await self._caller.rpc(
             "switch_model", SwitchModelArgs, {"model_name": model_name}, _SWITCH_MODEL
@@ -2878,9 +2883,10 @@ class SessionRuns:
         """List a session's runs that stopped before they finished.
 
         `session_id` names the session. Returns one row per run that was
-        cancelled or failed: the `message_id` and text of the message that
-        started it, when it arrived and when it stopped, why (`cancelled`
-        or `errored`) and the last error. A client offers to retry,
+        cancelled, failed or never finished: the `message_id` and text of
+        the message that started it, when it arrived and when it stopped, why
+        (`cancelled`, `errored`, or `abandoned` when igni stopped while
+        it ran) and the last error. A client offers to retry,
         discard or edit each. A storage failure answers an empty list.
         """
         return await self._caller.rpc(
@@ -2891,7 +2897,7 @@ class SessionRuns:
         )
 
     async def pending_messages(self) -> list[PendingMessage]:
-        """List a session's messages that were received but never answered.
+        """List a session's messages whose run started but never finished.
 
         `session_id` names the session. Returns the user messages still
         pending at least a minute after they arrived — typically left by a

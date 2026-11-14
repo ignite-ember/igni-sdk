@@ -110,8 +110,9 @@ assert reminder.body == "Ship the release"
 
 To ship it, you describe the extension in its `manifest.json`, build a
 bundle with `igni-service-bundle` (from `igni-service`), which writes the
-tools and their hints into the manifest from your code, and let the
-backend service upload it. See
+tools and their hints into the manifest from your code when the manifest
+leaves `permissions.tools` out (and checks them against your code when it
+declares them), and let the backend service upload it. See
 [Shipping the extension](#shipping-the-extension).
 
 ## Contents
@@ -204,9 +205,13 @@ Started from a terminal rather than by igni, `ext.run()` says so on
 stderr — how to run it inside igni, and how to try a tool without it —
 and then waits for MCP messages as usual.
 
-Three silences in a row (a hook or a
-tool call that raised or was too slow) make the extension *faulty*: igni
-restarts it and stops waiting on its hooks until it answers again.
+Three silences in a row (a hook handler that raised or was too slow, or a
+tool call that timed out or whose process went away; a tool that returns
+an error has answered) make the extension *faulty*: igni restarts it and
+stops waiting on its hooks until it answers again. Meanwhile a hook event
+that fails closed (`PreToolUse`, `UserPromptSubmit`) is refused at once
+with "<extension> isn't responding", and one that fails open goes ahead
+without it.
 
 ### Tools and their four hints
 
@@ -224,7 +229,7 @@ decide on them:
 Plan mode runs a read-only tool and refuses one that changes things.
 Accept Edits runs a write that destroys nothing and stays inside its own
 system. The default mode asks before any write. Bypass runs everything.
-(igni-core's `docs/EXTENSIBILITY.md` has the whole table.)
+(igni-core's [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) has the whole table.)
 
 MCP makes each hint optional; igni does not. `ext.tool(hints=...)`
 requires all four, and `ext.run()` refuses to start while any tool on
@@ -252,8 +257,25 @@ agent — what you want for a tool only your page calls. To see what the
 code implies, run `python -m igni_extension.manifest acme_example` (your
 module), or call `ext.tools.manifest()`.
 
-A tool that raises reaches the model as an error result, with the
-exception's message as its text. igni's `PostToolUse` hooks are not asked
+### What a tool returns
+
+The MCP server turns what a tool returns into the text the model reads,
+and a page's `bridge.rpc(...)` gets that text parsed as JSON when it is
+JSON, else the text itself:
+
+| The tool returns | The model reads | The page gets |
+|---|---|---|
+| a `dict` (or a Pydantic model) | it as JSON text | the object |
+| a `str` holding JSON (`json.dumps(...)`) | that text | the parsed value |
+| any other `str` | that text | the string |
+| an `int`, `float` or `bool` | it as text | the number or boolean |
+| a `list` | one text block per item | the items' text, one per line, as a string |
+
+So a list a page wants as a list goes back inside a `dict`
+(`{"notes": [...]}`) or as `json.dumps([...])`.
+
+A tool that raises reaches the model as an error result whose text is
+`Error executing tool <name>: ` and the exception's message. igni's `PostToolUse` hooks are not asked
 about it, and `PostToolUseFailure` is told.
 
 ### One tool, five names
@@ -319,7 +341,7 @@ has no caller, and `ext.service` there is the person signed in to igni.
 ### The host: igni as the extension sees it
 
 `ext.host` is the igni app as the extension sees it: the **host object
-model** (`docs/HOST_OBJECT_MODEL.md` in igni). There is one object per part
+model** ([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core). There is one object per part
 of the app — `ext.host.chat`, `ext.host.sessions`, `ext.host.ui`,
 `ext.host.workspace` and so on — each with:
 
@@ -389,9 +411,12 @@ igni started the process without a service URL, `ext.service` raises
 `NotConfigured` (and a page's `bridge.service.url` is `null` for the same
 reason). An extension igni distributed always has one: the service that
 shipped it. A development install has one only when it declares a
-`serviceUrl` setting in `contributes.settings` and it is set; a
-plain-`http` URL is given only for this machine (`localhost`), and only
-with `IGNI_DEV_EXTENSIONS=1`.
+`serviceUrl` setting in `contributes.settings` and it is set. igni gives
+the process the URL whatever its scheme, but the sandbox lets the process
+reach a plain-`http` service only with `IGNI_DEV_EXTENSIONS=1` (igni logs
+a warning at start otherwise), so a service must be `https` outside
+development. (A page's `bridge.service` is stricter: it is given a
+plain-`http` service only on this machine, in development.)
 
 ### What the service sends: events and messages
 
@@ -442,9 +467,12 @@ Linux.
 - **Writing.** Its data directory, its temp directory, and the workspace
   when the grant is `write`.
 
-On Windows it is not sandboxed yet. Where no sandbox is available it runs
-unconfined with a warning — unless managed settings set
-`extensions.require_sandbox`, which refuses it. `extensions.sandbox:
+On Windows it runs in an AppContainer of its own, in a job object, and
+reaches igni's egress proxy and igni's two loopback endpoints through
+named pipes. Where no sandbox is available it runs unconfined with a
+warning — unless `extensions.require_sandbox` is set (in managed settings,
+by the organisation's group policy, or with
+`IGNI_EXTENSIONS_REQUIRE_SANDBOX=1`), which refuses it. `extensions.sandbox:
 false` (managed or user settings) turns the sandbox off while you
 develop.
 
@@ -808,7 +836,7 @@ a section, inserts one before or after a named section, replaces a named
 section (an agent's header is the section `frontmatter`). Each may hold
 only while a condition holds (`"when": "index-covers-head"`). The rules —
 what stacks, what collides, what an override leaves out — are in igni's
-`docs/EXTENSIBILITY.md`. Only the extension can judge the condition, so it
+[`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md). Only the extension can judge the condition, so it
 says when it changes:
 
 <!-- continues -->
@@ -1166,8 +1194,8 @@ unchanged, with `manifest_name` set on it.
 The input schema comes from the function's parameters. A parameter typed
 `Caller` (or `Caller | None`) is filled from the call and left out of the
 schema. A plain `def` runs in a worker thread. An exception the tool
-raises reaches igni, and the model, as an error result whose text is the
-exception's message.
+raises reaches igni, and the model, as an error result whose text is
+`Error executing tool <name>: ` and the exception's message.
 
 **`@ext.on(signal)`**
 
@@ -1205,7 +1233,7 @@ Connects to the igni backend's socket now rather than on the first
 `ext.host` call, and subscribes to the signals that have handlers. `run()`
 does this itself; a test or script that drives the extension without
 `run()` calls it so that signals, hooks and service events arrive.
-Idempotent. Raises `HostUnavailable` if the host does not answer.
+Idempotent. Raises `NotConfigured` outside igni, where igni gave the process no host address, and `HostUnavailable` if the host does not answer.
 
 **`await ext.aclose() -> None`**
 
@@ -1266,7 +1294,7 @@ and the first `ext.host` call opens it, so an extension rarely needs it.
 | `connected` | Whether the socket is open now. |
 | `granted` | Once connected, the `permissions.host` grants the host says this extension holds. Empty before. |
 | `schema_version` | Once connected, the version of the host's object model. Empty before. |
-| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `HostUnavailable`. |
+| `await connect()` | What `ext.connect()` does: connects and subscribes to every handled signal. Idempotent. Raises `NotConfigured` when not `configured`, `HostUnavailable` if the host does not answer. |
 | `await serve_forever()` | Stays connected, connecting again every two seconds after the host goes away, until cancelled. Returns at once when not `configured`. `run()` runs it; run it as a task in a test that needs signals, hooks and service events to keep arriving. |
 | `await close()` | Closes the socket. `ext.aclose()` calls it. |
 
@@ -1484,7 +1512,7 @@ seconds; dialogs wait indefinitely), or `NotConfigured` (no socket).
 #### The host objects
 
 Each object needs the matching grant in `permissions.host`. igni's
-`docs/HOST_OBJECT_MODEL.md` describes every member in full.
+[`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) describes every member in full.
 
 | Object | What it is | Some members |
 |---|---|---|
@@ -1535,7 +1563,7 @@ models are frozen and refuse unknown fields.
 | `body` | One line; whitespace is collapsed; at most 1,000 characters. |
 | `target` | Where opening it goes: one of this extension's pages. Required; igni shows nothing it cannot open. |
 | `event_key` | The same event is shown once, however often it is sent; 1–200 characters. Required. |
-| `Target.page` | The page's kind; 1–200 characters. igni checks it is one of this extension's pages. |
+| `Target.page` | The page's id, as the manifest declares it; 1–200 characters. igni checks it is one of this extension's pages. |
 | `Target.params` | Strings only (a page reads them from its location); at most 32, at most 2,048 bytes as JSON. |
 
 A value outside these rules raises `pydantic.ValidationError` where you
@@ -1758,8 +1786,8 @@ delegates to where the work now lives:
 **`NotConfigured: … was not started with its service's URL (IGNI_SERVICE_URL)`.**
 igni gave the process no service. A bundle igni distributed always has
 one. A development install needs a `serviceUrl` setting in
-`contributes.settings`, set; a plain-`http` URL only for `localhost` and
-only with `IGNI_DEV_EXTENSIONS=1`. In a test, pass
+`contributes.settings`, set. A sandboxed process reaches a plain-`http` service only with
+`IGNI_DEV_EXTENSIONS=1`. In a test, pass
 `environ=FakeHostTokenEndpoint().environment()`.
 
 **`NotConfigured: host.…: igni did not give this process the host's address`.**

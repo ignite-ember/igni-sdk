@@ -123,3 +123,56 @@ describe("how it is drawn", () => {
     }
   });
 });
+
+describe("an icon igni does not have", () => {
+  const OWN = "M2 8h12M8 2v12";
+
+  it("draws the path it is given, on the same grid", () => {
+    const { container } = render(<MenuIcon path={OWN} />);
+    expect(container.querySelector("path")?.getAttribute("d")).toBe(OWN);
+    expect(container.querySelector("svg")?.getAttribute("viewBox")).toBe(
+      "0 0 16 16",
+    );
+  });
+
+  it("prefers the path to a name given beside it", () => {
+    const { container } = render(<MenuIcon name="archive" path={OWN} />);
+    expect(container.querySelector("path")?.getAttribute("d")).toBe(OWN);
+  });
+
+  it("draws nothing when it has neither a name nor a path", () => {
+    expect(render(<MenuIcon />).container.firstChild).toBeNull();
+  });
+});
+
+describe("what the svg carries", () => {
+  it("is called menu-icon, with a caller's class after it", () => {
+    expect(render(<MenuIcon name="open" />).container.querySelector("svg")?.getAttribute("class")).toBe("menu-icon");
+    cleanup();
+    expect(render(<MenuIcon name="open" className="big" />).container.querySelector("svg")?.getAttribute("class")).toBe("menu-icon big");
+  });
+
+  it("cannot be tabbed to", () => {
+    const { container } = render(<MenuIcon name="open" />);
+    expect(container.querySelector("svg")?.getAttribute("focusable")).toBe("false");
+  });
+
+  it("draws exactly one path", () => {
+    const { container } = render(<MenuIcon name="lineage" />);
+    expect(container.querySelectorAll("path")).toHaveLength(1);
+  });
+});
+
+describe("the copy button's two icons", () => {
+  const strokes = (name: MenuIconName) =>
+    (drawing(name).match(/M/gi) ?? []).length;
+
+  it("draws the copy icon as two sheets and the check as one bare tick", () => {
+    // The tick is not the circled one the resolve icon draws: it
+    // replaces the copy icon inside a small button, on its own.
+    expect(strokes("copy")).toBe(2);
+    expect(strokes("check")).toBe(1);
+    expect(drawing("check")).not.toBe(drawing("resolve"));
+    expect(drawing("check")).not.toMatch(/[ac]/i);
+  });
+});

@@ -70,7 +70,9 @@ export function withoutComments(src: string): string {
       const stop = end === -1 ? src.length : end + 2;
       // Newlines are kept so line numbers still line up with the
       // original — a scanner that reports a position stays truthful.
-      for (const c of src.slice(i, stop)) out += c === "\n" ? "\n" : " ";
+      // One space per UTF-16 unit, not per code point: an astral
+      // character is two units, and offsets are counted in units.
+      for (let k = i; k < stop; k++) out += src[k] === "\n" ? "\n" : " ";
       i = stop;
       continue;
     }
@@ -87,4 +89,20 @@ export function withoutComments(src: string): string {
     i++;
   }
   return out;
+}
+
+/**
+ * The files a barrel re-exports whole, in the order it names them.
+ *
+ * `export * from "./controls.js"` names `controls.tsx`: the source
+ * names its neighbours the way Node finds them after the build, and
+ * the guards read the TypeScript. Comments are skipped, so an example
+ * in a doc comment is not a file.
+ */
+export function starExportFiles(src: string, extension = ".tsx"): string[] {
+  return [
+    ...withoutComments(src).matchAll(
+      /\bexport\s*\*\s*from\s*["']\.\/([^"']+)\.js["']/g,
+    ),
+  ].map((m) => m[1] + extension);
 }

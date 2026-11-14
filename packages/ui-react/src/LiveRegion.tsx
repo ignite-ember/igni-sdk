@@ -101,7 +101,8 @@ export interface LiveRegionProps {
  *
  * `<LiveRegion>{`${n} results`}</LiveRegion>` is the whole usage.
  * Mounted empty on the first render so the region exists before it
- * has anything to say — see note 1 above.
+ * has anything to say: a live region added to the page with its
+ * message already in it is frequently not announced.
  *
  * @param children — what to say; changing it announces, and clearing it
  *   says nothing.

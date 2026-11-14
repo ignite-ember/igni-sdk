@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
@@ -198,3 +199,97 @@ def test_nothing_granted_is_nothing_granted() -> None:
     assert environment.data_dir is None
     assert environment.secrets.get("anything") is None
     assert not environment.service.configured
+
+
+def test_an_extension_is_named_by_its_manifest_id() -> None:
+    with pytest.raises(ValueError, match="named by its manifest id"):
+        IgniExtension("", environ={})
+    assert IgniExtension("acme.example", environ={}).id == "acme.example"
+
+
+async def test_the_instructions_reach_igni_in_the_initialize_result() -> None:
+    told = IgniExtension("acme.example", instructions="Use lookup first.", environ={})
+    silent = IgniExtension("acme.example", environ={})
+
+    async with HostHarness(told) as host:
+        result = host.session.initialize_result
+        assert result is not None and result.instructions == "Use lookup first."
+        assert result.server_info.name == "acme.example"
+    async with HostHarness(silent) as host:
+        result = host.session.initialize_result
+        assert result is not None and result.instructions is None
+
+
+@pytest.mark.parametrize("name", ["service", "tokens", "assets"])
+def test_the_service_the_tokens_and_the_assets_are_fixed(name: str) -> None:
+    ext = IgniExtension("acme.example", environ={})
+    with pytest.raises(AttributeError):
+        setattr(ext, name, None)
+
+
+def test_two_extensions_in_one_process_do_not_share_their_handlers() -> None:
+    from igni_extension import Hooks
+    from igni_extension.handlers import ExtensionHandlers
+    from igni_extension.hooks import HookHandlers
+    from igni_extension.service_events import ServiceEventHandlers
+    from igni_extension.signals import SignalHandlers
+
+    one, other = IgniExtension("acme.one", environ={}), IgniExtension("acme.two", environ={})
+
+    @one.hook(Hooks.STOP)
+    def stop(event: object) -> None:
+        return None
+
+    @one.on_service_event("claim.created")
+    def created(event: object) -> None:
+        return None
+
+    @one.on(one.host.sessions.current_changed)
+    def switched(change: SessionChange) -> None:
+        return None
+
+    assert one.signals.wires() == ["session.switched"] and other.signals.wires() == []
+    assert one._handlers.hooks.events() == ["Stop"] and other._handlers.hooks.events() == []
+    assert one._handlers.service_events is not other._handlers.service_events
+
+    first, second = ExtensionHandlers(), ExtensionHandlers()
+    assert isinstance(first.signals, SignalHandlers)
+    assert isinstance(first.hooks, HookHandlers)
+    assert isinstance(first.service_events, ServiceEventHandlers)
+    assert first.signals is not second.signals
+    assert first.hooks is not second.hooks
+    assert first.service_events is not second.service_events
+    assert one.signals is one._handlers.signals
+
+
+async def test_closing_before_connecting_or_twice_is_safe_and_closes_the_service_client() -> None:
+    from igni_extension.testing import FakeHostTokenEndpoint
+
+    nothing = IgniExtension("acme.example", environ={})
+    await nothing.aclose()
+    await nothing.aclose()
+
+    endpoint = FakeHostTokenEndpoint()
+    ext = IgniExtension(
+        "acme.example",
+        environ=endpoint.environment(),
+        token_transport=endpoint.transport,
+        service_transport=httpx.MockTransport(lambda request: httpx.Response(200)),
+    )
+    client = ext.service
+    assert (await client.get("/v1/things")).status_code == 200
+    await ext.aclose()
+    await ext.aclose()
+
+    assert client.is_closed
+
+
+async def test_closing_drops_the_socket_the_extension_connected() -> None:
+    from igni_extension.testing import FakeHost
+
+    async with FakeHost() as fake:
+        ext = IgniExtension("acme.example", environ=fake.environment())
+        await ext.connect()
+        assert ext.connection.connected
+        await ext.aclose()
+        assert not ext.connection.connected

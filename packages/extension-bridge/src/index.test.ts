@@ -4,6 +4,10 @@
  * SignalSubscriptions, Watchers, DEFAULT_TIMEOUT_MS) are not among them:
  * once published, anything here is a name an extension may lean on.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import * as root from "./index.js";
@@ -50,5 +54,26 @@ describe("the package root", () => {
       "authMessage",
       "connect",
     ]);
+  });
+});
+
+describe("the compiled build", () => {
+  it("imports its own modules by the name they are published under, with .js", () => {
+    // Node's ESM resolver, which runs the published dist/, does not add
+    // an extension: `from "./hostModel"` would work from src/ under a
+    // bundler and be a module-not-found for everyone who installs it.
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sources = readdirSync(here).filter(
+      (name) => name.endsWith(".ts") && !name.endsWith(".test.ts"),
+    );
+    expect(sources.length).toBeGreaterThan(5);
+    const bare: string[] = [];
+    for (const name of sources) {
+      const text = readFileSync(join(here, name), "utf8");
+      for (const match of text.matchAll(/(?:from|import\()\s*"(\.\.?\/[^"]*)"/g)) {
+        if (!match[1].endsWith(".js")) bare.push(`${name}: ${match[1]}`);
+      }
+    }
+    expect(bare).toEqual([]);
   });
 });

@@ -29,7 +29,7 @@ that you `await connect()` before rendering.
 
 ## Which manifest do I need?
 
-`docs/extension-manifest.schema.json`, and your editor already knows
+`contracts/extension-manifest.schema.json`, and your editor already knows
 how to use it. `manifest.json` here opens with
 
 ```json
@@ -41,11 +41,11 @@ every field, including the ones whose absence is only an error in
 combination — a `dev` command on a `partner` build, two packagings at
 once, a `sidecar` with no `image`.
 
-Do not take this file as the authority on its own. It is validated
-against that schema by
-`tests/test_a_manifest_is_checked_against_its_schema.py` on every run,
-and so is every other example in `examples/`. That test exists because
-the first version of this manifest broke the schema in three places.
+Do not take this file as the authority on its own: the schema is.
+Every manifest in `examples/` validates against it, and so does every
+whole manifest printed in `docs/YOUR_FIRST_EXTENSION.md`, which
+`tests/test_the_extension_docs_run.py` checks on every run. Check your
+own the same way before you install it.
 
 ## What it demonstrates
 
@@ -123,25 +123,29 @@ A single view, mostly reading, one pane, no prose. Each of those avoids
 a known gap, so do not read this file as evidence the floor is
 complete:
 
-- **one view** never needs an addressable internal location. There is
-  no way for an extension to say where it is, or to be told where to
-  go after it has mounted — `params` arrives once, inside `hello`.
+- **one view** never needs an addressable internal location.
+  `setLocation` lets an extension say where it is and `onParams` tells
+  it where to go after it has mounted, and this panel uses neither —
+  `examples/release-notes` does.
 - **mostly reading** never needs an unsaved-work guard. `close()` is
   one-way with no veto, and `localStorage` does not survive a backend
   restart, so a draft has nowhere to live.
 - **one pane** never needs a page shell or a split. `.igni-root` sets
-  colour and type, not layout.
-- **no prose** never needs a block markdown renderer. The floor
-  publishes `MarkdownInline`, which is designed to *destroy* block
-  structure for previews.
+  colour, type, box-sizing and a minimum height, not layout.
+- **no prose** never needs a block markdown renderer, which the floor
+  now publishes as `Markdown` (`examples/release-notes` uses it). Its
+  neighbour `MarkdownInline` is designed to *destroy* block structure
+  for previews.
 
 ## What it cannot do yet
 
-This compiles, is type-checked in CI, and **cannot run**. Two reasons,
-neither of them about this code:
+This compiles, is type-checked and tested in CI, and **cannot run as it
+stands**. Two reasons, neither of them about this code:
 
-1. `@ignite-ember/extension-bridge` and `@ignite-ember/ui-react` are not published
-   packages — they are a tsconfig alias inside `clients/web`.
+1. It is not bundled: there is no build config here, and `igni-ui.css`
+   (from `@ignite-ember/ui-css`) has to be copied in beside the source.
+   The two packages it imports, `@ignite-ember/extension-bridge` and
+   `@ignite-ember/ui-react`, are published on npm.
 2. Nothing installs an extension. `ExtensionRegistry` takes a
    validated manifest and `ExtensionRpc.bind` takes a service, but
    nothing starts a sidecar, registers an endpoint, or renders

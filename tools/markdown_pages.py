@@ -73,15 +73,15 @@ def strip_comments(text: str) -> str:
     lines = text.split("\n")
     in_comment = False
     for line, code in fenced(lines):
-        if code and not in_comment:
-            out.append(line)
-            continue
         if in_comment:
-            if "-->" in line:
-                in_comment = False
-                rest = line.split("-->", 1)[1]
-                if rest.strip():
-                    out.append(rest)
+            if "-->" not in line:
+                continue
+            in_comment = False
+            line = line.split("-->", 1)[1]
+            if not line.strip():
+                continue
+        elif code:
+            out.append(line)
             continue
         line = re.sub(r"<!--.*?-->", "", line)
         if "<!--" in line:
@@ -147,7 +147,7 @@ class ReadmePages:
     def __post_init__(self) -> None:
         current: Section | None = None
         for line, code in fenced(strip_comments(self.text).split("\n")):
-            match = None if code else re.match(r"(#{1,6})\s+(.+?)\s*#*\s*$", line)
+            match = None if code else re.match(r"(#{1,6})\s+(.+?)(?:\s+#+)?\s*$", line)
             if match and len(match.group(1)) == 1 and not self.title:
                 self.title = match.group(2)
                 self.headings.append(Heading(1, match.group(2), None))
@@ -226,10 +226,15 @@ def split_params(params: str) -> list[str]:
     depth = 0
     quote = ""
     current = ""
+    escaped = False
     for char in params:
         if quote:
             current += char
-            if char == quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
                 quote = ""
             continue
         if char in "'\"":

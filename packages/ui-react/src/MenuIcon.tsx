@@ -14,8 +14,8 @@
  * the single most obvious way to make a menu look assembled from
  * parts.
  *
- * Inline rather than a sprite or a font: these are a dozen paths used
- * in three menus, and a build step, a network request or a font with
+ * Inline rather than a sprite or a font: these are small paths used
+ * in a few menus, and a build step, a network request or a font with
  * a flash of missing glyphs are all more machinery than the problem
  * has.
  */
@@ -179,8 +179,8 @@ export interface MenuIconProps {
 /**
  * One of igni's own icons, drawn on a 16×16 grid.
  *
- * See the note at the top of this file for why there is one set and
- * one grammar. A name that is not in the set draws nothing, rather
+ * Every icon is drawn in one grammar: 16×16, strokes of the same
+ * weight, `currentColor`. A name that is not in the set draws nothing, rather
  * than a broken box: the label says what the item does, and the icon
  * is only how it is found.
  *

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import quote, urlsplit, urlunsplit
 
 
 class ServiceUrl:
@@ -30,7 +30,11 @@ class ServiceUrl:
         if parts.query or parts.fragment:
             raise ValueError(f"{url!r} must not have a query or a fragment")
         host = parts.hostname.lower()
-        netloc = f"{host}:{parts.port}" if parts.port else host
+        if ":" in host:
+            # An IPv6 address is written in brackets; without them the port
+            # cannot be told from the address.
+            host = f"[{host}]"
+        netloc = f"{host}:{parts.port}" if parts.port is not None else host
         return urlunsplit((parts.scheme.lower(), netloc, parts.path.rstrip("/"), "", ""))
 
 
@@ -66,6 +70,12 @@ class IgniPaths:
     APPS = "/v1/apps"
     """An app, acting as itself (service-identity §11.1, §17)."""
 
+    @staticmethod
+    def _segment(value: str) -> str:
+        """`value` as one path segment: a slash, a dot-dot or a question mark cannot leave it."""
+        escaped = quote(value, safe="")
+        return escaped.replace(".", "%2E") if escaped in (".", "..") else escaped
+
     @classmethod
     def app_vm_profile_request(cls, app_id: str) -> str:
         """An app's own request for what its VM needs.
@@ -74,7 +84,7 @@ class IgniPaths:
             app_id: The app's id, as an org admin registered it: whose
                 request for a VM profile this is.
         """
-        return f"{cls.APPS}/{app_id}/vm-profile-request"
+        return f"{cls.APPS}/{cls._segment(app_id)}/vm-profile-request"
 
     @classmethod
     def app_vm_profile(cls, app_id: str) -> str:
@@ -84,7 +94,7 @@ class IgniPaths:
             app_id: The app's id, as an org admin registered it: whose VM's
                 profile this is.
         """
-        return f"{cls.APPS}/{app_id}/vm-profile"
+        return f"{cls.APPS}/{cls._segment(app_id)}/vm-profile"
 
     @classmethod
     def service_event(cls, event_id: str) -> str:
@@ -94,7 +104,7 @@ class IgniPaths:
             event_id: The id of the item to report on, as igni gave it when
                 it accepted it.
         """
-        return f"{cls.SERVICE_EVENTS}/{event_id}"
+        return f"{cls.SERVICE_EVENTS}/{cls._segment(event_id)}"
 
     @classmethod
     def extension(cls, client_id: str) -> str:
@@ -104,7 +114,7 @@ class IgniPaths:
             client_id: The client id this service registered with, as igni
                 gave it: whose extension this is.
         """
-        return f"{cls.CLIENTS}/{client_id}/extension"
+        return f"{cls.CLIENTS}/{cls._segment(client_id)}/extension"
 
     @classmethod
     def extension_asset(cls, client_id: str, sha256: str) -> str:
@@ -116,7 +126,7 @@ class IgniPaths:
             sha256: The asset's SHA-256 digest: which asset of the bundle
                 this is.
         """
-        return f"{cls.CLIENTS}/{client_id}/extension/assets/{sha256}"
+        return f"{cls.CLIENTS}/{cls._segment(client_id)}/extension/assets/{cls._segment(sha256)}"
 
     SUBJECTS = "/v1/igni/subjects"
     """Where igni calls a service about one person (erasure, export)."""

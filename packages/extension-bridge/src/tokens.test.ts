@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   PUBLISHED_TOKENS,
@@ -204,5 +204,66 @@ describe("the groups themselves", () => {
       0,
     );
     expect(TOKEN_NAMES.length).toBe(declared);
+  });
+});
+
+describe("reading and applying, at the edges", () => {
+  it("trims the whitespace a computed value carries", () => {
+    // A browser hands back a custom property with the whitespace it was
+    // declared with; jsdom trims it already, so the value is handed over
+    // by hand.
+    const spy = vi.spyOn(window, "getComputedStyle").mockReturnValue({
+      getPropertyValue: (name: string) => (name === "--bg" ? "  #111111\n" : ""),
+    } as unknown as CSSStyleDeclaration);
+    try {
+      expect(readThemeTokens()).toEqual({ "--bg": "#111111" });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("omits a token whose value is only whitespace", () => {
+    document.documentElement.style.setProperty("--bg", "   ");
+
+    expect(readThemeTokens()).not.toHaveProperty("--bg");
+  });
+
+  it("reads the element it is given, not the document's root", () => {
+    document.documentElement.style.setProperty("--bg", "#111111");
+    const root = document.createElement("div");
+    document.body.append(root);
+    root.style.setProperty("--fg", "#eeeeee");
+
+    const tokens = readThemeTokens(root);
+
+    expect(tokens["--fg"]).toBe("#eeeeee");
+    root.remove();
+  });
+
+  it("applies nothing when there is nothing to apply", () => {
+    const root = document.createElement("div");
+
+    applyThemeTokens({}, root);
+
+    expect(root.getAttribute("style")).toBeNull();
+  });
+
+  it("sets a value through the property, so a hostile value cannot add a rule", () => {
+    const root = document.createElement("div");
+
+    applyThemeTokens({ "--bg": "red; position: fixed" }, root);
+
+    expect(root.style.position).toBe("");
+  });
+});
+
+describe("the product's own colour", () => {
+  it("is published as the igni tokens", () => {
+    expect(PUBLISHED_TOKENS.brand).toEqual(
+      expect.arrayContaining(["--igni-orange", "--igni-orange-hover"]),
+    );
+    expect(PUBLISHED_TOKENS.brand.every((name) => name.startsWith("--igni-"))).toBe(
+      true,
+    );
   });
 });

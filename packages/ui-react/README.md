@@ -5,7 +5,7 @@
 The React components an igni extension is allowed to build on.
 Everything exported here is under the compatibility floor: removing
 one, renaming it, or changing a prop's meaning is a breaking change
-under `docs/EXTENSIBILITY.md` §8.
+under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8.
 
 From npm, with the stylesheet it is drawn with:
 
@@ -24,15 +24,21 @@ A page that fills its frame, with a toolbar, a scrolling list and a
 footer:
 
 ```tsx
+import { createRoot } from "react-dom/client";
 import { AppShell, Scroll, Toolbar, Button, Text, Empty } from "@ignite-ember/ui-react";
 import { connect } from "@ignite-ember/extension-bridge";
 import "@ignite-ember/ui-css";
+
+interface Note {
+  id: string;
+  title: string;
+}
 
 async function main() {
   const bridge = await connect();
   const notes = await bridge.rpc<Note[]>("ext.example.teamnotes.list");
 
-  return (
+  createRoot(document.getElementById("root")!).render(
     <AppShell
       header={<Toolbar>Notes</Toolbar>}
       footer={<Button variant="primary">New note</Button>}
@@ -46,10 +52,31 @@ async function main() {
           ))
         )}
       </Scroll>
-    </AppShell>
+    </AppShell>,
   );
 }
+
+void main();
 ```
+
+The page's `index.html` gives its body the `igni-root` class, holds
+`<div id="root"></div>` and loads the built script from a file (an
+extension's page may not run inline script):
+
+```html
+<!doctype html>
+<html>
+  <body class="igni-root">
+    <div id="root"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+```
+
+`igni-root` is what puts the stylesheet's background, font and spacing on
+the page; neither `connect()` nor `AppShell` adds it. Without it the page
+renders unstyled — a transparent background, the browser's serif font, and
+its 8px body margin, so the frame scrolls by 8px.
 
 Three things to know before you write more:
 
@@ -79,10 +106,8 @@ they point in opposite directions:
   in a way we would have to warn you about.
 
 The list is deliberately short. It is not "everything an extension might
-want" — it is what the first two extensions actually import, measured
-rather than estimated. `CodeIndex` needs none of it; its only app
-dependency is the client type. `Artifacts` is 7,737 lines and imports
-exactly seven of the app's components.
+want" — it is what the extensions actually import, measured rather
+than estimated.
 
 Two rules decide whether something joins the floor, and both are checked
 by tests:
@@ -116,15 +141,17 @@ questions.
 `Dialog`, `Tabs`, `TabPanel`, `Heading`, `Text`, `Code`, `Divider`,
 `Spinner`, `Progress`. They are thin, they hold no state, and they make
 no decisions. Reach for one of these first — it is the thing that will
-still be here next release.
+still be here next release. `Chip` and `Badge` take a `tone` of
+`"neutral"`, `"success"`, `"warning"` or `"danger"`.
 
 **The composites** are the parts of a page that have to be a page:
 `AppShell` and `Scroll` (the frame), `DataTable`'s `SortableTh` and
-`Status` (a table with a sortable header and a status cell), `Toast` and
-`ToastHost` and `useToast` (saying something), `LiveRegion` and
+`Status` (a table with a sortable header and a status cell), `ToastHost`
+and `useToast` (saying something) and `Banner` (a condition that is still
+true), `LiveRegion` and
 `useAnnounce` (announcing it), `ErrorBoundary` (catching what falls
 over), `Markdown` and `MarkdownInline` and `MermaidBlock` (reading what
-igni said).
+igni said), with `fenceInfo` and `loadMermaid` for the pieces beneath them.
 
 **The utilities** are the small pieces: `Split`, `MenuIcon`,
 `Monogram`, `OverflowMenu`, `Skeleton`, `Tooltip`.
@@ -162,7 +189,23 @@ Two things follow from sharing the stylesheet:
 ## Peer dependencies
 
 You already have `react` and `react-dom`. `react-markdown` and
-`remark-gfm` come with `MarkdownInline`.
+`remark-gfm` are peers too, and not optional: `Markdown` and
+`MarkdownInline` import them, and the package's entry exports both, so
+every import from `@ignite-ember/ui-react` reaches them. npm 7 and later
+(and pnpm) install them with the package; with another installer, add
+them yourself. (They were optional peers, and a
+Vite build without them succeeded and then threw `Could not resolve
+"react-markdown"` when the page loaded, before anything rendered.)
+
+Type-checking a page takes three more, as dev dependencies:
+`typescript`, `@types/react` and `@types/react-dom`. The package's
+declarations import React's types, and without `@types/react` `tsc`
+stops in them with `TS7016: Could not find a declaration file for module
+'react'`, then reports every component's props as missing:
+
+```bash
+npm install --save-dev typescript @types/react @types/react-dom
+```
 
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never

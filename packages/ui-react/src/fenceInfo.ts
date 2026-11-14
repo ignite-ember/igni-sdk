@@ -10,7 +10,7 @@ import { isValidElement } from "react";
 
 /** The language on a fenced block, and the block's source. */
 export interface Fence {
-  /** The language, lower-cased. `mermaid`, `ts`, `python`. */
+  /** The language, lower-cased. `mermaid`, `ts`, `python`, `c++`. */
   lang: string;
   /** The text inside the fence. */
   source: string;
@@ -29,7 +29,7 @@ export function fenceInfo(children: ReactNode): Fence | null {
   const only = Array.isArray(children) ? children[0] : children;
   if (!isValidElement(only)) return null;
   const props = only.props as { className?: string; children?: ReactNode };
-  const match = /\blanguage-([\w-]+)\b/.exec(props.className ?? "");
+  const match = /\blanguage-([\w+#.-]+)/.exec(props.className ?? "");
   if (!match) return null;
   const source = typeof props.children === "string" ? props.children : "";
   return { lang: match[1].toLowerCase(), source: source.replace(/\n$/, "") };

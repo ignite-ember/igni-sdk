@@ -87,7 +87,9 @@ Or build them from an igni-sdk checkout into the same directory:
 
     def _hint(self, stderr: str) -> str:
         missing_sdk = any(
-            re.search(rf"\b{sdk}\b.*(not found|was not found|no versions)", stderr)
+            # uv says "igni-extension was not found" and "there are no
+            # versions of igni-extension": the name comes either side.
+            re.search(rf"^(?=.*\b{sdk}\b).*(not found|no versions)", stderr, re.MULTILINE)
             for sdk in self.SDKS
         )
         return f"\n{self.WHEELS_HINT}" if missing_sdk else ""

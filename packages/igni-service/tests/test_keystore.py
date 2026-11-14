@@ -102,3 +102,52 @@ async def test_the_memory_store_keeps_the_first_key() -> None:
 
     assert await store.claim(first) == first
     assert await store.claim(a_key()) == first
+
+
+def test_a_key_that_is_not_a_fernet_key_is_refused_by_name() -> None:
+    with pytest.raises(KeyStoreError, match="IGNI_KEY_ENCRYPTION_KEY is not a Fernet key"):
+        KeyCipher("not-a-fernet-key").seal("x")
+    with pytest.raises(KeyStoreError, match="not a Fernet key"):
+        KeyCipher("not-a-fernet-key").open("x")
+
+
+@pytest.mark.parametrize("empty", ["", "   ", "\n"])
+def test_an_empty_key_is_refused_by_name_for_both_directions(empty: str) -> None:
+    with pytest.raises(KeyStoreError, match="IGNI_KEY_ENCRYPTION_KEY is not set"):
+        KeyCipher(empty).seal("x")
+    with pytest.raises(KeyStoreError, match="IGNI_KEY_ENCRYPTION_KEY is not set"):
+        KeyCipher(empty).open("x")
+
+
+def test_whitespace_around_the_key_is_ignored_and_text_round_trips() -> None:
+    key = KeyCipher.generate()
+    sealed = KeyCipher(f"  {key}\n").seal("kéy 🔑 – ключ")
+
+    assert "kéy" not in sealed
+    assert KeyCipher(key).open(sealed) == "kéy 🔑 – ключ"
+
+
+def test_garbage_that_was_never_sealed_cannot_be_opened() -> None:
+    with pytest.raises(KeyStoreError, match="cannot be read with this IGNI_KEY_ENCRYPTION_KEY"):
+        KeyCipher(KeyCipher.generate()).open("garbage")
+
+
+def test_generated_keys_differ_and_are_usable() -> None:
+    first, second = KeyCipher.generate(), KeyCipher.generate()
+
+    assert first != second
+    assert KeyCipher(first).open(KeyCipher(first).seal("x")) == "x"
+
+
+async def test_the_memory_store_is_empty_before_a_claim_and_agrees_under_concurrent_claims() -> (
+    None
+):
+    store = MemoryKeyStore()
+    assert await store.get() is None
+
+    keys = [a_key() for _ in range(6)]
+    winners = await asyncio.gather(*(store.claim(key) for key in keys))
+
+    assert len({w.kid for w in winners}) == 1
+    assert await store.get() == winners[0]
+    assert winners[0] in keys

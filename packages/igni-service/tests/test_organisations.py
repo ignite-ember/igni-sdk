@@ -80,3 +80,51 @@ async def test_a_service_without_a_handler_does_not_confirm(
     response = await fake.directory.delete_organisation(ORG, fake.signer.igni_token(ORG)).send(http)
 
     assert response.status_code == 501
+
+
+def test_registering_a_handler_hands_it_back_unchanged() -> None:
+    from igni_service.organisations import OrganisationHandlers
+
+    handlers = OrganisationHandlers()
+
+    async def gone(org_id: str) -> None:
+        return None
+
+    assert handlers.on_deleted(gone) is gone
+    assert handlers.deleted is gone
+
+
+async def test_a_second_handler_replaces_the_first(
+    igni: IgniService, fake: FakeIgni, http: httpx.AsyncClient
+) -> None:
+    told: list[str] = []
+
+    @igni.on_organisation_deleted
+    async def first(org_id: str) -> None:
+        told.append(f"first {org_id}")
+
+    @igni.on_organisation_deleted
+    async def second(org_id: str) -> None:
+        told.append(f"second {org_id}")
+
+    await fake.directory.delete_organisation(ORG, fake.signer.igni_token(ORG)).send(http)
+
+    assert told == [f"second {ORG}"]
+
+
+async def test_a_handler_that_fails_does_not_confirm(igni: IgniService, fake: FakeIgni) -> None:
+    @igni.on_organisation_deleted
+    async def broken(org_id: str) -> None:
+        raise RuntimeError("database down")
+
+    from fastapi import FastAPI
+
+    app = FastAPI(lifespan=igni.lifespan)
+    igni.install(app)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    async with httpx.AsyncClient(transport=transport, base_url="http://service.test") as client:
+        response = await fake.directory.delete_organisation(ORG, fake.signer.igni_token(ORG)).send(
+            client
+        )
+
+    assert response.status_code == 500

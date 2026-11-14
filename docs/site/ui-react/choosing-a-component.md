@@ -11,15 +11,17 @@ questions.
 `Dialog`, `Tabs`, `TabPanel`, `Heading`, `Text`, `Code`, `Divider`,
 `Spinner`, `Progress`. They are thin, they hold no state, and they make
 no decisions. Reach for one of these first — it is the thing that will
-still be here next release.
+still be here next release. `Chip` and `Badge` take a `tone` of
+`"neutral"`, `"success"`, `"warning"` or `"danger"`.
 
 **The composites** are the parts of a page that have to be a page:
 `AppShell` and `Scroll` (the frame), `DataTable`'s `SortableTh` and
-`Status` (a table with a sortable header and a status cell), `Toast` and
-`ToastHost` and `useToast` (saying something), `LiveRegion` and
+`Status` (a table with a sortable header and a status cell), `ToastHost`
+and `useToast` (saying something) and `Banner` (a condition that is still
+true), `LiveRegion` and
 `useAnnounce` (announcing it), `ErrorBoundary` (catching what falls
 over), `Markdown` and `MarkdownInline` and `MermaidBlock` (reading what
-igni said).
+igni said), with `fenceInfo` and `loadMermaid` for the pieces beneath them.
 
 **The utilities** are the small pieces: `Split`, `MenuIcon`,
 `Monogram`, `OverflowMenu`, `Skeleton`, `Tooltip`.

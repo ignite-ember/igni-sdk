@@ -9,12 +9,13 @@ permission rule, a trusted folder, a plugin) or changes whom igni acts
 for. Make the change in igni's window, or run the program through Fleet,
 where every connection is the window.
 
-**`AccessRefused: … approver token`, or `NotAllowed` from `approve()`.**
+**`AccessRefused: … approver token` from `approve()`, or `NotAllowed` from the `send()` loop (or `ask()`) after it.**
 A program answers approvals only with an approver token: `/programs` in
 igni's window makes one; pass it as `Local(approver_token=...)` or
 `IGNI_APPROVER_TOKEN`. An approver answers once: `approve("always")`,
 `Decision.deny(remember=True)` and switching the permission mode stay the
-window's.
+window's, and igni-client refuses them from an approver before sending
+(`AccessRefused: … an approver answers once`).
 
 **`AuthError: igni at … refused the approver token`.** igni forgets
 approver tokens when it quits, and `/programs` can revoke them: make a new
@@ -23,10 +24,14 @@ one.
 **`Unavailable: no igni is running for …`.** `Local(project_dir)` found no
 lockfile: open the project in igni, or pass `url=`.
 
-**`Unavailable: … got no answer`.** A call waits 60 seconds
-(`Connection.RPC_TIMEOUT`); the slow ones — installing a plugin,
-compacting a conversation, a shell command — longer, and a scheduled
-task's run as long as it takes (`igni_client.calls.TIMEOUTS`).
+**`Unavailable: … got no answer`.** A call waits as long as igni's
+contract allows its method: 10 seconds for an `instant` one, 30 for `io`,
+60 for `network`, 600 for `long` — installing a plugin, compacting a
+conversation, a shell command, a scheduled task's run. Only a method that
+waits for the person (`session.files.pick_dir()`) waits without limit.
+Each method's entry says its wait; `igni_client.calls.timeout_of(wire)`
+gives it, and `Connection.RPC_TIMEOUT` (60 seconds) is for a call the
+contract does not time.
 
 **`UnknownMethod`.** igni is older than this igni-client and lacks the
 method. igni-client is generated from one version of igni's contract,
@@ -37,8 +42,9 @@ new.
 return: igni and igni-client disagree about the contract. Align their
 versions; report it if they match.
 
-**`InvalidArguments`.** An argument is not of the method's type, or is
-one it does not take. Nothing was sent.
+**`InvalidArguments`.** An argument is not of the method's type. Nothing was
+sent. A keyword the method does not take, or a required one left out, is
+Python's `TypeError`, raised by the method's signature before anything else.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read

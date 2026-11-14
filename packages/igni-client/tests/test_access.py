@@ -9,15 +9,16 @@ answers; where it does not, igni decides.
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import pytest
 
-from igni_client import AccessRefused, IgniClient, Local, NotAllowed, Person
+from igni_client import AccessRefused, ApprovalRequested, IgniClient, Local, NotAllowed, Person
 from igni_client.access import REACHES, check
 from igni_client.api import METHODS
 from igni_client.models import ApproverTokenMinted, LoginStarted, PlanDecisionResult, RpcResponse
-from igni_client.testing import FakeGateway, FakeIgni, sample
+from igni_client.testing import FakeGateway, FakeIgni, Steps, sample
 
 
 def _lockfile(project: Path, port: int, token: str | None) -> None:
@@ -108,3 +109,123 @@ def test_every_generated_method_needs_an_access_a_client_can_have() -> None:
     check("m", "approver", "approver")
     with pytest.raises(AccessRefused):
         check("m", "approver", "program")
+
+
+def test_what_each_standing_reaches_is_exactly_this() -> None:
+    expected = {
+        "program": frozenset({"client"}),
+        "approver": frozenset({"client", "approver"}),
+        "window": frozenset({"client", "approver", "window"}),
+        "unknown": None,
+    }
+    assert dict(REACHES) == expected
+
+
+def test_a_refusal_names_the_method_and_says_who_may() -> None:
+    with pytest.raises(AccessRefused) as window_only:
+        check("login", "window", "approver")
+    assert window_only.value.method == "login"
+    assert window_only.value.message == "only igni's window may do this"
+    assert isinstance(window_only.value, NotAllowed)
+
+    with pytest.raises(AccessRefused) as approver_only:
+        check("approve_plan", "approver", "program")
+    assert approver_only.value.method == "approve_plan"
+    assert "Local(approver_token=...)" in approver_only.value.message
+
+    with pytest.raises(AccessRefused):
+        check("login", "window", "program")
+
+
+def test_an_access_level_with_no_reason_is_refused_with_the_fallback_text() -> None:
+    for standing in ("program", "approver", "window"):
+        with pytest.raises(AccessRefused) as refused:
+            check("open_page", "page", standing)
+        assert refused.value.message == "a page call"
+        assert refused.value.method == "open_page"
+    with pytest.raises(AccessRefused) as empty:
+        check("", "platform", "window")
+    assert empty.value.message == "a platform call"
+
+
+def test_an_unknown_standing_never_refuses_even_what_nothing_reaches() -> None:
+    check("m", "page", "unknown")
+    check("m", "window", "unknown")
+
+
+def test_a_standing_that_does_not_exist_is_a_programming_error() -> None:
+    with pytest.raises(KeyError):
+        check("m", "client", "stranger")  # type: ignore[arg-type]
+
+
+async def test_a_reply_that_carries_a_code_is_classified_by_it_not_by_its_words() -> None:
+    async with FakeIgni(local_token="whose") as fake:
+        fake.methods.answers["login"] = lambda args: RpcResponse(
+            error="login: not for this connection", code="forbidden"
+        )
+        async with IgniClient(Local(url=fake.socket.url, token="whose")) as igni:
+            with pytest.raises(AccessRefused, match="not for this connection"):
+                await igni.auth.login()
+
+
+async def test_a_program_s_approve_is_refused_before_it_is_sent(tmp_path: Path) -> None:
+    """`approve()` returned as if it had answered, and igni's refusal came back as
+    a bare `NotAllowed` from the next turn of the `send()` loop."""
+    async with FakeIgni(local_token="program") as fake:
+        _lockfile(tmp_path, fake.socket.port, "program")
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(Local(project_dir=tmp_path)) as igni:
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    with pytest.raises(AccessRefused, match="approver token") as refused:
+                        await event.approve()
+                    assert isinstance(refused.value, NotAllowed)
+                    assert refused.value.method == "hitl_response_batch"
+                    assert not event.answered
+                    break
+
+    assert fake.runs.decisions == [], "refused before it was sent"
+
+
+async def test_a_connection_whose_standing_is_unknown_sends_its_answer(tmp_path: Path) -> None:
+    async with FakeIgni(local_token="anything") as fake:
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(fake.local()) as igni:
+            assert igni.target.standing == "unknown"
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    await event.approve()
+
+    assert len(fake.runs.decisions) == 1
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        lambda event: event.approve("always"),
+        lambda event: event.approve("similar"),
+        lambda event: event.reject(remember=True),
+    ],
+    ids=["always", "similar", "deny-remembered"],
+)
+async def test_an_approver_saving_a_rule_is_refused_before_it_is_sent(
+    tmp_path: Path, answer: Callable[[ApprovalRequested], Awaitable[None]]
+) -> None:
+    """`approve("always")` was sent anyway, igni refused it, `NotAllowed` came
+    from the loop and the run was left paused."""
+    async with FakeIgni(local_token="approver") as fake:
+        _lockfile(tmp_path, fake.socket.port, "program")
+        fake.runs.script = lambda text: [Steps.approval("run_shell_command"), *Steps.answer("x")]
+        async with IgniClient(Local(project_dir=tmp_path, approver_token="approver")) as igni:
+            assert igni.target.standing == "approver"
+            session = await igni.sessions.create()
+            async for event in session.send("run it"):
+                if isinstance(event, ApprovalRequested):
+                    with pytest.raises(AccessRefused, match="an approver answers once"):
+                        await answer(event)
+                    assert fake.runs.decisions == [], "refused before it was sent"
+                    await event.approve()  # once, which an approver may
+
+    assert [[d.choice for d in batch] for batch in fake.runs.decisions] == [["once"]]

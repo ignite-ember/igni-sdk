@@ -31,9 +31,9 @@ async def test_the_environment_names_igni_the_service_and_its_key(
 
     igni = IgniService.from_settings(IgniSettings())
 
-    assert igni.server.base_url == "http://igni-api:8000"
-    assert igni.server.own_url == "https://acme.example.test"
-    assert isinstance(igni.key.store, SqlKeyStore)
+    assert igni.connection.server.base_url == "http://igni-api:8000"
+    assert igni.connection.server.own_url == "https://acme.example.test"
+    assert isinstance(igni.connection.key.store, SqlKeyStore)
     assert isinstance(igni.web.store, SqlWebSessionStore)
     assert igni.settings.extension_bundle_path == "/app/extension-bundle.tar.gz"
     await igni.aclose()

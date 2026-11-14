@@ -71,6 +71,7 @@ class IgniClient(IgniApi):
 
     async def me(self) -> Me:
         """Who the gateway says this client is: the producer, organisation and group."""
+        require_fleet(self.target, "me")
         return await self.commands.me()
 
     async def events(self) -> AsyncIterator[Event]:

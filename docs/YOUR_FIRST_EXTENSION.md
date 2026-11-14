@@ -9,8 +9,8 @@ About thirty minutes, most of it starting things.
 What you build is in this repository as
 [`examples/ticket-lookup/`](../examples/ticket-lookup/), and every file
 this page shows is that file — a test holds them to each other, and CI
-runs the example's tests. Copy it rather than retyping it (from your igni
-checkout, as every command until *1. Write the extension* is):
+runs the example's tests. Copy it rather than retyping it (from this
+repository's checkout):
 
 ```bash
 cp -R examples/ticket-lookup ~/ticket-lookup
@@ -21,7 +21,7 @@ cp -R examples/ticket-lookup ~/ticket-lookup
 > `tests/`, and a `pyproject.toml` for one dev environment — and its README
 > says what to run. This page follows the copy.
 
-How the pieces fit — [EXTENSIBILITY.md](EXTENSIBILITY.md) is the
+How the pieces fit — [EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) (in igni-core) is the
 contract, and the two SDK READMEs are the reference:
 
 ```
@@ -35,9 +35,9 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
 
 ## Before you start
 
-- **igni**, from this checkout: `uv sync`, then put it on your `PATH` for
-  this shell — every command below says `igni`, and most run in another
-  directory:
+- **igni**, from the igni-core checkout: `uv sync`, then put it on your
+  `PATH` for this shell — every command below says `igni`, and most run in
+  another directory:
 
   ```bash
   alias igni="$PWD/.venv/bin/igni"
@@ -57,7 +57,7 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
   it has made its account, yours is no longer the first.
 - **`uv`** and Python 3.12.
 
-### One environment for the walk-through
+### Step 0: one environment for the walk-through
 
 Make it in `~/ticket-lookup`. Every
 command from here on runs there, in it:
@@ -68,6 +68,24 @@ uv venv --python 3.12
 source .venv/bin/activate
 uv pip install igni-extension igni-service uvicorn aiosqlite pytest anyio
 ```
+
+If `igni-extension` and `igni-service` are not on your package index yet
+(the index may hold an older `igni-extension`), build the wheels from this
+repository's checkout and install them by path. Keep the directory: step 2
+reads it too.
+
+```bash
+mkdir -p ~/ticket-lookup/wheels
+(cd packages/igni-extension && uv build --wheel -o ~/ticket-lookup/wheels)
+(cd packages/igni-service && uv build --wheel -o ~/ticket-lookup/wheels)
+uv pip install ~/ticket-lookup/wheels/*.whl uvicorn aiosqlite pytest anyio
+```
+
+(Run those from the checkout; the `cd ~/ticket-lookup` above is for the
+commands after them. A project made by `igni ext init` needs the same
+wheels: its `pyproject.toml` names no wheel directory, and says to run
+`uv sync --find-links <the directory holding them>` instead of a plain
+`uv sync`, which would look on the index.)
 
 ## 1. Write the extension
 
@@ -108,8 +126,9 @@ hook is told about every tool the agent ran.
 
 import json
 from pathlib import Path
+from urllib.parse import quote
 
-from igni_extension import Hooks, IgniExtension, NotSignedIn, ToolHints
+from igni_extension import Hooks, IgniExtension, NotConfigured, NotSignedIn, ToolHints
 from igni_extension.hooks import PostToolUse
 
 ext = IgniExtension("acme.tickets")
@@ -138,9 +157,11 @@ async def lookup_ticket(ticket_id: str) -> str:
 async def ticket_from_service(ticket_id: str) -> str:
     """Look a ticket up on the Ticket lookup service, as the signed-in person."""
     try:
-        response = await ext.service.get(f"/v1/tickets/{ticket_id}")
+        response = await ext.service.get(f"/v1/tickets/{quote(ticket_id, safe='')}")
     except NotSignedIn:
         return "Sign in to igni to reach the ticket service."
+    except NotConfigured:  # a development install has no service, so no URL for one
+        return "The ticket service is not set up for this install."
     response.raise_for_status()
     return response.text
 
@@ -152,7 +173,7 @@ async def audit(call: PostToolUse) -> None:
     if data_dir is None:
         return
     with (data_dir / "tool-audit.log").open("a") as f:
-        f.write(f"{call.tool_name}\n")
+        f.write(f"{' '.join(call.tool_name.splitlines())}\n")
 
 
 def main() -> None:
@@ -311,8 +332,13 @@ igni ext doctor extension
 ```
 
 `doctor` validates the manifest, starts the extension, asks it for its
-tools over MCP (with a timeout), and says what is wrong, with the fix. The
-end of what it prints:
+tools over MCP (with a timeout), and says what is wrong, with the fix.
+Above the part shown below it prints a few `-` notes, such as `no
+wheelhouse at 'wheels'` (a development install builds one), and that an
+extension that runs as a process installs only on a single-user backend, and
+that pages are shown only by one. They are notes, not problems: only a
+line that says what to fix is a problem, and the last line says whether
+there were any. The end of what it prints:
 
 ```
   process    started it and asked for its tools: 2
@@ -352,6 +378,13 @@ on — a machine installs from it with no index.
 ```bash
 igni-service-bundle --extension extension --out extension-bundle.tar.gz
 ```
+
+It needs network access: it downloads the wheels for each platform from the
+package index (about 50 wheels and 30 MB for this example, a few seconds
+to a minute). The SDK wheels in the bundle are the ones the index serves,
+so an `igni-extension` newer than the index's is left out of the bundle
+unless you name where it is — add `--find-links ~/ticket-lookup/wheels` (from
+step 0). A wheel found there is taken as it is, not fetched again.
 
 ## 3. Run the service
 
@@ -438,6 +471,10 @@ the next step for that state:
   ============================================================
 ```
 
+The identity is printed once the service has registered with igni server.
+If the server is not reachable it logs `registration failed … retrying`
+with a growing delay and prints no banner, so start igni server first.
+
 Restart it once approved and the last lines say an org admin switches it
 on for a group. A new version that asks for more than the approved one is
 **held**, and the service logs a warning saying so.
@@ -484,7 +521,8 @@ synced with http://localhost:7777 (group Default)
   installed  acme.tickets 0.2.0 from http://tickets.localhost:8201
 ```
 
-and `igni ext list` shows `acme.tickets  0.2.0  from http://tickets.localhost:8201`.
+and `igni ext list` shows `acme.tickets  0.2.0  from http://tickets.localhost:8201`
+(for a development install it shows `development install` instead of the URL).
 If it says *nothing is switched on for you*, step 4 or 5 is not done yet.
 
 You need `ext sync` only the first time: every `igni -m` / `igni -p` run
@@ -506,21 +544,45 @@ export IGNI_DEV_EXTENSIONS=1
 (Without it `lookup_ticket` still works — it reads only its own data —
 and igni logs once that the service is plain http and what to do.)
 
-In chat:
+A development install (see *Faster loops*) has no service, so there
+`ticket_from_service` answers "The ticket service is not set up for this
+install." — the example catches `NotConfigured` for that; the service
+path below needs the synced install.
+
+In chat — `--read-only`, because a headless `igni -m` cannot ask you
+anything: the extension's tools say they are read-only, so they run, and
+anything else the model reaches for that would need a yes is refused
+rather than left waiting. Without it, a model that also tries, say, a
+shell command stops the run with "Run paused for confirmation … the tool
+did not run" and exit 1:
 
 ```bash
-igni -m "What is the status of ticket T-1001?"
+igni --read-only -m "What is the status of ticket T-1001?"
 ```
 
-The agent calls `lookup_ticket` and answers "open". Then once through the
+The first igni run in a folder sets it up as an igni project: it writes
+`igni.md` and a `.igni/` directory (built-in agents, skills, hooks,
+`config.yaml`, `settings.json`) into `~/ticket-lookup`, trusted or not —
+igni's [First Run](https://github.com/ignite-ember/igni-core/blob/main/QUICKSTART.md#first-run).
+They are igni's files, not the extension's: `igni-service-bundle` reads only
+`extension/`, so they never reach the bundle, but a `git add .` picks them
+up. Delete them, or keep them out of git, if you do not want them.
+
+The agent calls `lookup_ticket` and answers "open". (The model is shown the
+tool's answer wrapped in `<untrusted_tool_output>` tags, so a tool's text
+is never taken for an instruction; a development install also prints a
+line saying it is one.) Then once through the
 service, so it has something to export:
 
 ```bash
-igni -m "Look ticket T-1002 up on the ticket service."
+igni --read-only -m "Look ticket T-1002 up on the ticket service."
 ```
 
 Open igni's app: **Tickets** is in the sidebar, and its page shows
-T-1001, fetched through `ext.acme.tickets.lookup_ticket`.
+T-1001, fetched through `ext.acme.tickets.lookup_ticket`. The page lives on
+a loopback origin igni picks (a new port each start), and only igni's app
+frames it; a program reads the origin with `igni.extensions.list()` in
+`igni-client`, but cannot call `ext.*` methods as a page.
 
 The service's log shows `GET /v1/tickets/T-1002 … 200`: the extension
 called it as you, with a token igni server issued for the service.
@@ -647,7 +709,11 @@ async def test_the_service_takes_a_person_and_answers_export_and_erasure() -> No
 pytest
 ```
 
-Three tests, no igni and no igni server.
+The test file this page prints, `tests/test_example.py`, is three tests. A
+copy of the whole example also holds `test_extension.py` and
+`test_service.py` (the extension's tools, hook and identity, and the
+service's routes), and `pytest` runs all three files. None of them needs
+igni or an igni server.
 
 ## Changing it
 
@@ -656,14 +722,19 @@ Three tests, no igni and no igni server.
   bundle; igni installs it at the next sync. A version that asks for more
   (a new tool, a wider grant) is held until a super admin approves the
   update on the service's page.
-- **Faster loops** — a development install runs a directory straight from
-  disk, with no service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`,
-  and start igni with `IGNI_DEV_EXTENSIONS=1` too
-  ([EXTENSIBILITY.md §9](EXTENSIBILITY.md#9-developing-one)).
+- **Faster loops** — a development install runs a directory with no
+  service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`, and start
+  igni with `IGNI_DEV_EXTENSIONS=1` too. It installs a copy, so after a
+  change (a rebuilt page too) install it again with
+  `igni ext install --replace extension`, which prints again what it may
+  use (it asks nothing). A running igni serves a rebuilt page at once —
+  reload it; changed code or a changed manifest waits for igni's next
+  start. Without `--replace` a second install is refused
+  ([EXTENSIBILITY.md §9](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md#9-developing-one)).
 
 ## Where next
 
 - [`packages/igni-extension/README.md`](../packages/igni-extension/README.md) — the extension SDK: the host object model, notifications, signals, prompt contributions.
 - [`packages/igni-service/README.md`](../packages/igni-service/README.md) — the service SDK: people, apps, the directory, notifications, reaching a producer's agent.
 - [`packages/extension-bridge/README.md`](../packages/extension-bridge/README.md) — the page's bridge, typed.
-- [EXTENSIBILITY.md](EXTENSIBILITY.md) — the contract, and what igni promises not to break.
+- [EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) (in igni-core) — the contract, and what igni promises not to break.

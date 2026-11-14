@@ -246,7 +246,7 @@ class AgentWire:
                 return ItemStatus.model_validate(response.json())
             except (ValidationError, ValueError) as exc:
                 raise IgniUnavailable("igni answered the status with something else") from exc
-        if 400 <= response.status_code < 500:
+        if response.status_code != 429 and 400 <= response.status_code < 500:
             raise EventRefused(response.status_code, response.text)
         raise IgniUnavailable(f"igni answered the status {response.status_code}")
 

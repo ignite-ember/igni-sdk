@@ -1,7 +1,7 @@
 // GENERATED from the igni host schema 1.13.0 by igni-sdk's tools/host_codegen.py — do not edit. Run `make host-sdks` after refreshing contracts/host-schema.json.
 //
 // `bridge.host` as an extension's page sees it. Read
-// `docs/HOST_OBJECT_MODEL.md` in igni for what each object is.
+// igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) for what each object is.
 
 import { HostObject, Property, Signal, type HostLink, type JsonValue } from "./hostModel.js";
 

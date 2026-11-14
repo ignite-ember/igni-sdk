@@ -167,7 +167,8 @@ server*, *the token has no '…' claim*, *the wrong kind of token:
 token_use '…', and this takes …*, *the token's exp or iat is not a
 number*, *the token has expired*, *the token was issued in the future;
 check this machine's clock*, *the token names no person, or no
-organisation*, and *was revoked* for a person removed since.
+organisation*, and *the token was revoked: its holder was removed or signed out*
+for a person removed since.
 
 A token that cannot be checked, because igni server's keys cannot be
 fetched or the revocations are not fresh, is answered **503**: nothing is
@@ -238,7 +239,8 @@ Closes the service's HTTP client and the database engine
 | `igni.settings` | the `IgniSettings` it was made with |
 | `igni.web` | the [`WebSignIn`](#websignin-sign-in-to-the-service-s-own-pages) for the service's own pages |
 | `igni.accepted_callers` | the `frozenset[CallerKind]` `igni.caller` accepts |
-| `igni.clock` | its clock |
+| `igni.connection` | its standing at igni server: `server`, `clock`, `key`, `registration` and the `revocation_feed` |
+| `igni.outbound` | the calls it makes to igni for any organisation; `igni.host(org_id)` is one organisation's |
 
 ## IgniSettings
 
@@ -290,12 +292,14 @@ class Person(BaseModel):       # frozen
     kind: CallerKind           # property: CallerKind.PERSON
     is_org_admin: bool         # property: org_role == "admin"
     display_name: str          # property: name, else email
+    is_named: bool             # property: the token named the person and the organisation
 
 class App(BaseModel):          # frozen
     app_id: str
     org_id: str
     name: str = ""
     kind: CallerKind           # property: CallerKind.APP
+    is_named: bool             # property: the token named the app and its organisation
 
 class Space(BaseModel):        # frozen
     space_id: str
@@ -303,6 +307,7 @@ class Space(BaseModel):        # frozen
     app_id: str                # the app the space belongs to
     external_id: str = ""      # the app's own name for its end user
     kind: CallerKind           # property: CallerKind.SPACE
+    is_named: bool             # property: the token named the space, its app and organisation
 
 Caller = Person | App | Space
 
@@ -320,10 +325,13 @@ class TokenRefused(IgniError):
     reason: str
 ```
 
-Each model has a `from_claims(claims: dict) -> Self` class method that
-reads a verified token's claims (`sub`, `org`, `org_name`, `org_role`,
-`email`, `name`, `super_admin`; `app` and `external_id` for a space).
-The dependencies call it for you.
+Each model has a `from_claims(claims: VerifiedClaims) -> Self` class
+method that reads a verified token's claims (`sub`, `org`, `org_name`,
+`org_role`, `email`, `name`, `super_admin`; `app` and `external_id` for a
+space). `VerifiedClaims` is the typed model of a checked token: a claim
+that is text is read as text (a missing or null one is empty), `exp` and
+`iat` are finite numbers, and `super_admin` is only ever the JSON `true`.
+The dependencies call both for you.
 
 `TokenRefused(reason)` is what `person_of` and `caller_of` raise. Its
 `reason` is said only in terms anybody holding the token could read from
@@ -364,13 +372,13 @@ Properties and constants:
 | Name | Value |
 |---|---|
 | `login_path` | `"/auth/login"`: what a page links to |
-| `logout_path` | `"/auth/logout"`: what a page posts to |
+| `logout_path` | `"/auth/logout"`: what a page posts (or links) to |
 | `redirect_uri` | `"<PUBLIC_BASE_URL>/auth/callback"` |
 | `store` | the `WebSessionStore` in use |
 | `router` | the three routes |
 | `WebSignIn.COOKIE` | `"igni_session"` |
 | `WebSignIn.LOGIN_TTL` | 600 s for a sign-in at the portal |
-| `WebSignIn.SESSION_TTL` | 30 days: a refresh token's life |
+| `WebSignIn.SESSION_TTL` | 30 days from the sign-in or its last renewal: a session not renewed within it is dead |
 | `WebSignIn.RENEW_BEFORE` | 60 s |
 
 These sessions use cookies, so they are **not** reachable from the
@@ -616,7 +624,9 @@ class Agent:
 For every send: `event_key` (1–200 characters) makes retries exact — igni
 stores one item per key and producer, and answers a repeat with the item
 already stored (`duplicate=True`). `expires_at` stops delivery after that
-time; igni keeps an item at most 14 days. Attachments are uploaded first.
+time; igni keeps an item at most 14 days (igni server's default,
+`service_event_max_wait_seconds`; an operator may change it).
+Attachments are uploaded first.
 
 Each send raises `IgniUnavailable` when igni cannot take it after three
 tries, and `EventRefused` when igni reads it and says no (a 4xx other
@@ -1128,7 +1138,7 @@ it (`await igni.host(org_id).extension_vm_profile()`).
 | `PortalRefused` | raised by `fake.oauth.sign_ins.authorize` |
 | `OrganisationDeletion` | the call igni owes after `delete_organisation` |
 | `HeldExtension` | what the fake holds for a client: `extension_id`, `version`, `sha256`, `manifest`, `pages` |
-| `BundleArchive` | `BundleArchive.write(directory, out)` writes a stand-in bundle archive |
+| `BundleArchive` | `BundleArchive.write(staging, out)` writes a stand-in bundle archive |
 | `FakeAgents`, `SentEvent` | the agent channel and one item in it |
 | `FakeVmProfiles`, `FakeCaps` | VM profiles, and the platform's caps (`max_memory_mib=8192`, `max_vcpus=4`, …) |
 | `Delivery`, `NotifyCall` | what `fake.notifications` records |

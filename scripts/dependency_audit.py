@@ -97,6 +97,11 @@ class Allowlist:
                 raise SystemExit(f"{path}: an entry is missing {sorted(missing)}: {raw}")
             if not str(raw["reason"]).strip():
                 raise SystemExit(f"{path}: {raw['advisory']} has an empty reason")
+            if type(raw["review_by"]) is not dt.date:
+                raise SystemExit(
+                    f"{path}: {raw['advisory']} has a review_by that is not a date "
+                    f"(write it unquoted, as 2027-01-31): {raw['review_by']!r}"
+                )
             entries.append(
                 AllowEntry(
                     ecosystem=raw["ecosystem"],
@@ -123,6 +128,12 @@ class NpmAudit:
     def __init__(self, directory: Path) -> None:
         self.directory = directory
 
+    @staticmethod
+    def severity(label: object) -> str:
+        """npm's severity as the gate's: ``info`` is low; one it does not know is unknown."""
+        label = "low" if label == "info" else label
+        return label if isinstance(label, str) and label in SEVERITIES else "unknown"
+
     def findings(self) -> list[Finding]:
         # npm exits non-zero whenever it finds anything; the JSON is the answer.
         run = subprocess.run(
@@ -132,7 +143,13 @@ class NpmAudit:
             text=True,
             check=False,
         )
-        report = json.loads(run.stdout or "{}")
+        try:
+            report = json.loads(run.stdout or "{}")
+        except json.JSONDecodeError:
+            raise SystemExit(
+                f"npm audit failed in {self.directory}: it did not answer in JSON:\n"
+                f"{run.stdout}{run.stderr}"
+            ) from None
         if "error" in report:
             raise SystemExit(f"npm audit failed in {self.directory}: {report['error']}")
         found = []
@@ -148,7 +165,7 @@ class NpmAudit:
                         version=via.get("range", vuln.get("range", "?")),
                         advisory=url.rsplit("/", 1)[-1] or str(via.get("source")),
                         aliases=(url,) if url else (),
-                        severity=via.get("severity", "unknown"),
+                        severity=self.severity(via.get("severity")),
                         title=via.get("title", ""),
                     )
                 )
@@ -171,14 +188,17 @@ class CargoAudit:
     def severity(vector: str | None) -> str:
         if not vector:
             return "unknown"
-        if vector.startswith("CVSS:4"):
-            from cvss import CVSS4
+        from cvss import CVSS3, CVSS4, CVSSError
 
-            label = CVSS4(vector).severity
-        else:
-            from cvss import CVSS3
-
-            label = CVSS3(vector).severities()[0]
+        try:
+            if vector.startswith("CVSS:4"):
+                label = CVSS4(vector).severity
+            else:
+                label = CVSS3(vector).severities()[0]
+        except CVSSError as error:
+            # Reported, not read as unknown: unknown never gates, and a vector
+            # nobody can score must not pass as one nobody scored.
+            raise SystemExit(f"cannot score the CVSS vector {vector!r}: {error}") from None
         label = label.lower()
         return {"medium": "moderate", "none": "low"}.get(label, label)
 
@@ -262,6 +282,9 @@ def main() -> int:
     parser.add_argument("--fail-on", choices=SEVERITIES[1:], default="critical")
     parser.add_argument("--allowlist", type=Path, default=DEFAULT_ALLOWLIST)
     args = parser.parse_args()
+    for directory in args.directories:
+        if not directory.is_dir():
+            parser.error(f"{directory} is not a directory")
 
     gate = Gate(Allowlist.load(args.allowlist), args.fail_on, dt.date.today())
     auditor = {"npm": NpmAudit, "cargo": CargoAudit}[args.ecosystem]

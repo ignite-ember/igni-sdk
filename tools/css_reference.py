@@ -116,24 +116,59 @@ def _match_brace(text: str, start: int) -> int:
     raise CssError("a rule is never closed")
 
 
-#: A comment in a block: ``/* ... */``.
-_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+def _pieces(body: str) -> list[tuple[str, list[str]]]:
+    """A block cut into declarations, each with the comments above it.
+
+    A ``;`` inside a string or inside parentheses (``url(data:...;base64,...)``)
+    is part of the value, not the end of the declaration. A comment is not
+    a declaration; it belongs to the declaration under it.
+    """
+    out: list[tuple[str, list[str]]] = []
+    comments: list[str] = []
+    text: list[str] = []
+    depth = 0
+    index = 0
+    while index < len(body):
+        if body.startswith("/*", index):
+            end = body.find("*/", index + 2)
+            stop = len(body) if end < 0 else end
+            comment = body[index + 2 : stop].strip()
+            index = stop + 2
+            if comment:
+                comments.append(_prose(comment, None))
+            text.append(" ")
+            continue
+        char = body[index]
+        if char in "'\"":
+            stop = index + 1
+            while stop < len(body) and body[stop] != char:
+                stop += 2 if body[stop] == "\\" else 1
+            text.append(body[index : stop + 1])
+            index = stop + 1
+            continue
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth = max(depth - 1, 0)
+        elif char == ";" and depth == 0:
+            out.append(("".join(text), comments))
+            comments = []
+            text = []
+            index += 1
+            continue
+        text.append(char)
+        index += 1
+    out.append(("".join(text), comments))
+    return out
 
 
 def _declarations(body: str) -> list[tuple[str, str]]:
-    """The declarations of a block: ``property: value`` a piece.
-
-    A comment is not a declaration. The comment above a custom property
-    says what the property is for, and the reference shows that beside
-    it — but the comment must not end up glued to the property's name.
-    """
+    """The declarations of a block: ``property: value`` a piece."""
     out: list[tuple[str, str]] = []
-    for part in _COMMENT.sub(" ", body).split(";"):
-        text = part.strip()
-        if not text or ":" not in text:
-            continue
-        name, _, value = text.partition(":")
-        out.append((name.strip(), value.strip()))
+    for part, _comments in _pieces(body):
+        declaration = _one_declaration(part)
+        if declaration is not None:
+            out.append(declaration)
     return out
 
 
@@ -155,34 +190,14 @@ def _token_declarations(body: str) -> list[tuple[str, str, str]]:
     """
     out: list[tuple[str, str, str]] = []
     pending: list[str] = []
-    text = ""
-    index = 0
-    while index < len(body):
-        if body.startswith("/*", index):
-            end = body.find("*/", index)
-            end = len(body) if end < 0 else end
-            comment = body[index + 2 : end].strip()
-            index = end + 2
-            if comment:
-                pending.append(_prose(comment, None))
+    for part, comments in _pieces(body):
+        pending += comments
+        declaration = _one_declaration(part)
+        if declaration is None:
             continue
-        char = body[index]
-        if char == ";":
-            declaration = _one_declaration(text)
-            text = ""
-            index += 1
-            if declaration is None:
-                continue
-            name, value = declaration
-            out.append((name, value, " ".join(pending).strip()))
-            pending = []
-            continue
-        text += char
-        index += 1
-    declaration = _one_declaration(text)
-    if declaration is not None:
         name, value = declaration
         out.append((name, value, " ".join(pending).strip()))
+        pending = []
     return out
 
 
@@ -235,6 +250,8 @@ class Stylesheet:
                 while index < len(text) and text[index] != quote:
                     prelude.append(text[index])
                     index += 1
+                if index >= len(text):
+                    raise CssError("a string is never closed")
                 prelude.append(text[index])
                 index += 1
                 continue
@@ -278,7 +295,7 @@ class Stylesheet:
         if not declarations:
             return
         if current is None:
-            if top:
+            if top and note and not self.header:
                 self.header = note
             return
         if all(name.startswith("--") for name, _ in declarations):
@@ -301,6 +318,8 @@ class Stylesheet:
             char = body[index]
             if body.startswith("/*", index):
                 end = body.find("*/", index)
+                if end < 0:
+                    raise CssError("a comment is never closed")
                 index = end + 2
                 continue
             if char in "'\"":
@@ -310,6 +329,8 @@ class Stylesheet:
                 while index < len(body) and body[index] != quote:
                     prelude.append(body[index])
                     index += 1
+                if index >= len(body):
+                    raise CssError("a string is never closed")
                 prelude.append(body[index])
                 index += 1
                 continue
@@ -366,10 +387,12 @@ class Stylesheet:
 
     def users_of(self, token: str) -> list[str]:
         """The classes whose rules use ``var(--token)``."""
-        needle = f"var({token}"
+        # ``var(--a`` is followed by ``)``, ``,`` or a space; ``var(--a-b)``
+        # is another token's.
+        needle = re.compile(rf"var\(\s*{re.escape(token)}(?![\w-])")
         out: list[str] = []
         for _section, rule in self.classes():
-            if any(needle in value for _name, value in rule.declarations):
+            if any(needle.search(value) for _name, value in rule.declarations):
                 for name in rule.classes:
                     if name not in out:
                         out.append(name)

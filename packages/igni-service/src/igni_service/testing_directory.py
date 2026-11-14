@@ -9,6 +9,7 @@ service token for one organisation.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
@@ -43,11 +44,11 @@ class MemberQuery(BaseModel):
                 are wanted.
         """
         limit = seen.first("limit", "100")
-        if not limit.lstrip("-").isdigit():
+        if not re.fullmatch(r"-?[0-9]+", limit):
             return DetailError(detail=f"limit must be a whole number, not {limit!r}", status=422)
         return cls(
             query=seen.first("query").casefold(),
-            limit=min(int(limit), MAX_PEOPLE),
+            limit=max(1, min(int(limit), MAX_PEOPLE)),
             include_former=seen.first("include_former", "false") == "true",
         )
 

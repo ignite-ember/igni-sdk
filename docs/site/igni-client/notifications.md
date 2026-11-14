@@ -22,7 +22,7 @@ Count the person's unread notifications, in all and per extension.
 async def counts(self) -> NotificationCounts
 ```
 
-Takes no arguments. Answers from what was last read, asking nobody;
+Answers from what was last read, asking nobody;
 `notifications_changed` pushes the counts whenever they move.
 
 Takes no arguments.
@@ -53,7 +53,7 @@ List the signed-in person's notifications, newest first.
 def list(self) -> Call[NotificationsListResult, NotificationsListEvent]
 ```
 
-Takes no arguments. Reads igni server again and merges in what
+Reads igni server again and merges in what
 extensions on this machine posted. Returns at most 100
 `notifications` (each with its source, title, body, target and
 whether it is read), the unread `counts` in all and per

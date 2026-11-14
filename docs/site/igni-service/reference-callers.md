@@ -2,7 +2,7 @@
 
 # Callers: Person, App, Space
 
-Read from the code: every public name below, its signature and its docstring. Import `igni_service` — defined in `igni_service`, `igni_service.tokens`.
+Read from the code: every public name below, its signature and its docstring. Import `igni_service` — defined in `igni_service`, `igni_service.callers`, `igni_service.verified_claims`.
 
 | Name | What it is |
 |---|---|
@@ -14,6 +14,7 @@ Read from the code: every public name below, its signature and its docstring. Im
 | [`Person`](#person) | A person, as their token describes them, in the one organisation it names. |
 | [`Space`](#space) | One end user of an app, a producer of its own: igni's `space` token for this service. |
 | [`TokenRefused`](#tokenrefused) | The token is not one this service accepts, and why. |
+| [`VerifiedClaims`](#verifiedclaims) | The claims of a token whose signature, issuer and audience have been checked. |
 
 ## IgniCall
 
@@ -60,16 +61,25 @@ kind: CallerKind
 
 Always `CallerKind.APP`.
 
+### App.is_named
+
+```python
+@property
+is_named: bool
+```
+
+Whether the token named both the app and its organisation.
+
 ### App.from_claims()
 
 ```python
 @classmethod
-def from_claims(claims: dict[str, Any]) -> App
+def from_claims(claims: VerifiedClaims) -> App
 ```
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `claims` | `dict[str, Any]` | required | The verified claims of an ``app`` token, as ``TokenVerifier.claims`` read them: the app's ``sub``, its ``org`` and its ``name``. |
+| `claims` | `VerifiedClaims` | required | The verified claims of an ``app`` token, as ``TokenVerifier.claims`` read them: the app's ``sub``, its ``org`` and its ``name``. |
 
 The app a verified `app` token's claims describe.
 
@@ -159,16 +169,25 @@ display_name: str
 
 Their name, or their email address when the token has no name.
 
+### Person.is_named
+
+```python
+@property
+is_named: bool
+```
+
+Whether the token named both the person and their organisation.
+
 ### Person.from_claims()
 
 ```python
 @classmethod
-def from_claims(claims: dict[str, Any]) -> Person
+def from_claims(claims: VerifiedClaims) -> Person
 ```
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `claims` | `dict[str, Any]` | required | The verified claims of a token, as ``TokenVerifier.claims`` read them: the person's ``sub``, ``org``, ``org_name``, ``org_role``, ``email``, ``name`` and ``super_admin``. |
+| `claims` | `VerifiedClaims` | required | The verified claims of a token, as ``TokenVerifier.claims`` read them: the person's ``sub``, ``org``, ``org_name``, ``org_role``, ``email``, ``name`` and ``super_admin``. |
 
 The person a verified token's claims describe (`sub`, `org`, `org_role`, ...).
 
@@ -197,16 +216,25 @@ kind: CallerKind
 
 Always `CallerKind.SPACE`.
 
+### Space.is_named
+
+```python
+@property
+is_named: bool
+```
+
+Whether the token named the space, its app and its organisation.
+
 ### Space.from_claims()
 
 ```python
 @classmethod
-def from_claims(claims: dict[str, Any]) -> Space
+def from_claims(claims: VerifiedClaims) -> Space
 ```
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `claims` | `dict[str, Any]` | required | The verified claims of a ``space`` token, as ``TokenVerifier.claims`` read them: the space's ``sub``, its ``org``, the app's ``app`` and the app's own name for it, ``external_id``. |
+| `claims` | `VerifiedClaims` | required | The verified claims of a ``space`` token, as ``TokenVerifier.claims`` read them: the space's ``sub``, its ``org``, the app's ``app`` and the app's own name for it, ``external_id``. |
 
 The space a verified `space` token's claims describe.
 
@@ -225,3 +253,86 @@ from it themselves — expired, for another audience, the wrong kind —
 or as "not signed by igni" for everything about its signature. It goes
 in the 401's RFC 6750 challenge and the service's log, never in the
 body, which stays "Not authenticated".
+
+## VerifiedClaims
+
+```python
+class VerifiedClaims(BaseModel)
+VerifiedClaims(
+    *,
+    iss: str,
+    aud: str | list[str],
+    token_use: str,
+    exp: float,
+    iat: float,
+    iat_ms: int | None = None,
+    sub: str = '',
+    org: str = '',
+    org_name: str = '',
+    org_role: str = '',
+    email: str = '',
+    name: str = '',
+    super_admin: bool = False,
+    app: str = '',
+    external_id: str = '',
+    azp: str | None = None,
+)
+```
+
+The claims of a token whose signature, issuer and audience have been checked.
+
+Every claim a caller model or the revocation list reads, typed. A claim
+that is text is written as text whatever the token held (a missing or
+null one is empty); `exp` and `iat` are finite numbers or the token is
+refused.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `iss` | `str` | required | The issuer: igni server's issuer URL. |
+| `aud` | `str \| list[str]` | required | The audience: this service's own URL. |
+| `token_use` | `str` | required | The kind of token: `user`, `igni`, `app` or `space` (`TokenUse`). |
+| `exp` | `float` | required | When the token stops working, in seconds since the epoch. |
+| `iat` | `float` | required | When the token was issued, in seconds since the epoch. |
+| `iat_ms` | `int \| None` | `None` | When the token was issued, in milliseconds, when the token carries it. |
+| `sub` | `str` | `''` | Whom the token is for: a user id, an app id, a space id, or igni's issuer. |
+| `org` | `str` | `''` | The organisation the token is for. |
+| `org_name` | `str` | `''` | The organisation's display name, on a person's token. |
+| `org_role` | `str` | `''` | `admin` or `member` in `org`, on a person's token. |
+| `email` | `str` | `''` | The person's email address, on a person's token. |
+| `name` | `str` | `''` | The person's or the app's display name. |
+| `super_admin` | `bool` | `False` | Whether the person is a super admin of the igni deployment. |
+| `app` | `str` | `''` | The app a space belongs to, on a space's token. |
+| `external_id` | `str` | `''` | The app's own name for its end user, on a space's token. |
+| `azp` | `str \| None` | `None` | The client the token was issued to, when the token names one. |
+
+### VerifiedClaims.read()
+
+```python
+@classmethod
+def read(raw: dict[str, Any], *, use: Collection[str]) -> VerifiedClaims
+```
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `raw` | `dict[str, Any]` | required | The claims as the token's signature check decoded them. |
+| `use` | `Collection[str]` | required | The ``token_use`` values this route takes. |
+
+The claims of a decoded token, if it is a kind in `use`. `TokenRefused` otherwise.
+
+### VerifiedClaims.issued_ms
+
+```python
+@property
+issued_ms: int
+```
+
+`iat_ms`; a token without it counts from the start of its `iat` second.
+
+### VerifiedClaims.is_igni
+
+```python
+@property
+is_igni: bool
+```
+
+Whether this is igni's own call to the service, not anybody's session.

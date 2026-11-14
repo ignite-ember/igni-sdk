@@ -206,19 +206,13 @@ One person signed in to the service's pages.
 | `access_token` | `str` | required | Their current access token for this service. |
 | `refresh_token` | `str` | required | What renews it, until the sign-in ends. |
 | `access_expires_at` | `float` | required | Wall-clock second the access token stops working. |
-| `expires_at` | `float` | required | Wall-clock second the session is dead: the refresh token's life. |
+| `expires_at` | `float` | required | Wall-clock second the session is dead: `WebSignIn.SESSION_TTL` (30 days) after the sign-in or its last renewal. |
 
 ## WebSessionStore
 
 ```python
 class WebSessionStore(Protocol)
-WebSessionStore(*args, **kwargs)
 ```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `args` | — | required | The positional arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
-| `kwargs` | — | required | The keyword arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
 
 Where `igni.web` keeps its people's sessions and sign-ins in flight.
 
@@ -352,7 +346,8 @@ Where a page links to sign in; it brings the browser back after.
 logout_path: str
 ```
 
-Where a page posts to sign out of this service.
+Where a page sends the browser to sign out of this service: a form
+posts to it, and a plain link to it signs out too.
 
 ### WebSignIn.store
 
@@ -370,7 +365,8 @@ Where the sessions and sign-ins in flight are kept.
 router: APIRouter
 ```
 
-The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `POST /auth/logout`. `igni.install(app)` mounts them.
+The sign-in routes: `GET /auth/login`, `GET /auth/callback`, and
+`GET` or `POST /auth/logout`. `igni.install(app)` mounts them.
 
 ### WebSignIn.login()
 

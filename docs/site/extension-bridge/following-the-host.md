@@ -20,10 +20,9 @@ one of the host's signals.
 
 `bridge.on(signal, fn, onRefused?)` takes a third argument, and it
 matters: a signal whose object is **not granted** never arrives, and
-without `onRefused` that refusal is silent — your handler simply never
-runs, and there is nothing in the console to say why. With it, the
-refusal arrives as a `HostError` you can show. Without it, it goes to
-the console, so it is never *completely* silent.
+without `onRefused` your handler simply never runs, with only a console
+warning (`igni bridge: subscribing to <signal> failed: …`) to say why.
+With it, the refusal arrives as a `HostError` you can show.
 
 The first handler of a signal subscribes to it; removing the last one
 unsubscribes.
