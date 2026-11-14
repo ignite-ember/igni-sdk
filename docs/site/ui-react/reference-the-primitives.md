@@ -556,15 +556,17 @@ A label, a control, and room for the reason it is wrong.
 
 The error slot is the part that gets left out, and a form that
 rejects input without saying why is the one people abandon. When
-`error` is set it is wired to the control through
-`aria-describedby`, so it is announced rather than merely shown.
+`htmlFor` is set and the control is a single element, `error` (or
+`hint`) is wired to it through `aria-describedby`, and an `error`
+also sets `aria-invalid`, so it is announced rather than merely
+shown. Without `htmlFor` the note is shown and nothing points at it.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `label` | field | `ReactNode` | The label. It is visible, not a placeholder. |
 | `hint` | field | `ReactNode` | A sentence under the control, for when nothing is wrong. |
 | `error` | field | `ReactNode` | Why the control is wrong. It replaces the hint while it is set. |
-| `htmlFor` | field | `string` | The id of the control, so the label points at it. |
+| `htmlFor` | field | `string` | The id of the control, so the label points at it. Also what wires `error` and `hint` to the control: without it, nothing does. |
 
 ## Field
 
@@ -728,7 +730,7 @@ function TabPanel({ base, id, active, children, className, ...rest }: TabPanelPr
 | `id` | `string` | required | which tab this panel belongs to. |
 | `active` | `string` | required | which tab is showing; the panel renders only when they match. |
 | `children` | — | optional | the content of the panel, shown while its tab is the active one. |
-| `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
+| `className` | — | optional | the panel's own class; the theme gives it none. |
 | `rest` | — | optional | the remaining props, spread onto the element. |
 
 The panel a tab controls.

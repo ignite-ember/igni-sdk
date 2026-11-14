@@ -77,7 +77,9 @@ async with FakeIgni() as fake:
   with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
 
 igni asks about every call of one pause together and counts a call left
-out as refused, so every answer covers them all. A loop that ends without
+out as refused, so every answer covers them all: `decide()` raises
+`ValueError` for a call it leaves out, and `RuntimeError` when the pause
+was already answered. A loop that ends without
 answering leaves the run waiting on igni's side; the next time the
 session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an

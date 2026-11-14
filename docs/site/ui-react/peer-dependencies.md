@@ -3,7 +3,7 @@
 # Peer dependencies
 
 You already have `react` and `react-dom`. `react-markdown` and
-`remark-gfm` come with `MarkdownInline`.
+`remark-gfm` come with `Markdown` and `MarkdownInline`.
 
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never

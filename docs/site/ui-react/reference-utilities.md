@@ -37,7 +37,7 @@ What a `Split` takes.
 | `min` | field | `number` | The narrowest `aside` may be, in pixels. |
 | `max` | field | `number` | The widest `aside` may be, in pixels — and never more than 60% of the window. |
 | `label` | field | `string` | Said to a screen reader, and shown on hover. |
-| `onResize` | field | `(width: number) => void` | The width changed. Called on release and on each keypress, not on every pointer move — a handler that fires sixty times a second is a handler somebody writes a round trip into. |
+| `onResize` | field | `(width: number) => void` | The width changed. Called on release, on each keypress and on a double-click back to `defaultWidth`, not on every pointer move. |
 
 ## Split
 
@@ -54,21 +54,23 @@ function Split({ aside, children, side = "start", defaultWidth = 280, min = 160,
 | `min` | `number` | `160` | the narrowest `aside` may be, in pixels. |
 | `max` | `number` | `640` | the widest `aside` may be, in pixels, and never more than 60% of the window. |
 | `label` | `string` | required | said to a screen reader, and shown on hover. |
-| `onResize` | `(width: number) => void` | optional | the width changed; called on release and on each keypress, not on every pointer move. |
+| `onResize` | `(width: number) => void` | optional | the width changed; called on release, on each keypress and on a double-click back to `defaultWidth`, not on every pointer move. |
 | `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
 | `rest` | — | optional | the remaining props, spread onto the element. |
 
 Two panes and a rule you can move.
 
-See the note at the top of this file: it drives a CSS variable
-rather than React state, and it does not remember the width.
+It drives a CSS variable rather than React state, and it does not
+remember the width: `onResize` hands the width back, and an
+extension that wants it kept stores it somewhere that survives a
+restart (`bridge.setLocation`, or its own backend).
 
 **Also** [`SplitProps`](/docs/sdk/ui-react/reference-utilities#splitprops).
 
 ## MenuIconName
 
 ```typescript
-type MenuIconName = "open" | "rename" | "export" | "share" | "archive" | "restore" | "remove" | "document" | "document-add" | "folder" | "folder-add" | "outdent" | "compare" | "lineage" // Formatting. Drawn in the same grammar as the rest so the // editor's bar and the document's menus look like one product. | "code" | "list-bullet" | "list-ordered" | "list-task" | "quote" | "code-block" | "table" | "divider" | "link" | "image" | "undo" | "redo" | "resolve" | "reopen" | "lock" | "unlock" | "bell" // A diagram's copy button, before and after. | "copy" | "check"
+type MenuIconName = "open" | "rename" | "export" | "share" | "archive" | "restore" | "remove" | "document" | "document-add" | "folder" | "folder-add" | "outdent" | "compare" | "lineage" | "code" | "list-bullet" | "list-ordered" | "list-task" | "quote" | "code-block" | "table" | "divider" | "link" | "image" | "undo" | "redo" | "resolve" | "reopen" | "lock" | "unlock" | "bell" | "copy" | "check"
 ```
 
 The small glyphs beside a menu item.
@@ -86,8 +88,8 @@ one turns red with it. Mixing a filled glyph into a stroked set is
 the single most obvious way to make a menu look assembled from
 parts.
 
-Inline rather than a sprite or a font: these are a dozen paths used
-in three menus, and a build step, a network request or a font with
+Inline rather than a sprite or a font: these are small paths used
+in a few menus, and a build step, a network request or a font with
 a flash of missing glyphs are all more machinery than the problem
 has.
 
@@ -119,8 +121,8 @@ function MenuIcon({ name, path, className }: MenuIconProps)
 
 One of igni's own icons, drawn on a 16×16 grid.
 
-See the note at the top of this file for why there is one set and
-one grammar. A name that is not in the set draws nothing, rather
+Every icon is drawn in one grammar: 16×16, strokes of the same
+weight, `currentColor`. A name that is not in the set draws nothing, rather
 than a broken box: the label says what the item does, and the icon
 is only how it is found.
 
@@ -134,14 +136,15 @@ function Monogram({ name, size = 18 }: { name: string; size?: number })
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `name` | — | optional | the name the initials and the colour are derived from. |
-| `size` | — | `18` | the width and height of the square, in pixels. |
+| `name` | `string` | required | the name the initials and the colour are derived from. |
+| `size` | `number` | `18` | the width and height of the square, in pixels. |
 
 Two letters standing in for a face.
 
-See the note at the top of this file. The colour comes from the
-name, so the same person is the same colour on every machine and
-across restarts.
+Not an avatar: nothing stores an uploaded picture, so the two
+letters come from the name. The colour comes from the name too, so
+the same person is the same colour on every machine and across
+restarts.
 
 ## OverflowAction
 
@@ -156,7 +159,7 @@ One action in an `OverflowMenu`.
 | `key` | field | `string` | Stable across renders; the label changes on toggles. |
 | `label` | field | `string` | What it is called. |
 | `onSelect` | field | `() => void` | What picking it does. Omitted when `items` makes it a submenu. |
-| `items` | field | `OverflowAction[]` | Variants of this action, opened as a submenu rather than run. Use it when one verb has several objects — export as HTML, as Markdown, as PDF — so the menu stays a list of things you can do rather… |
+| `items` | field | `OverflowAction[]` | Variants of this action, opened as a submenu rather than run. |
 | `danger` | field | `boolean` | Destructive — rendered apart from the rest and in the danger colour. |
 | `active` | field | `boolean` | A toggle that is currently on. Announced as such, not just coloured. |
 | `disabled` | field | `boolean` | Whether it can be picked. Shown as it is, and kept out of the tab order. |
@@ -171,12 +174,12 @@ function OverflowMenu({ actions, label = "More actions", }: { actions: OverflowA
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `actions` | — | optional | the actions to offer; the destructive ones are set apart from the rest. |
-| `label` | — | `"More actions"` | what the trigger is called, for anyone who cannot see three dots. |
+| `actions` | `OverflowAction[]` | required | the actions to offer; the destructive ones are set apart from the rest. |
+| `label` | `string` | `"More actions"` | what the trigger is called, for anyone who cannot see three dots. |
 
 A row of actions collapsed behind one button.
 
-See the note at the top of this file. Everything that made the
+For actions that are real but secondary. Everything that made the
 buttons usable as buttons survives the move: focus, the keyboard,
 and the names screen readers announce.
 
@@ -208,31 +211,31 @@ Usage:
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `width` | — | `"100%"` | how wide the line is, in pixels or as a CSS length. |
-| `height` | — | `12` | how tall the line is, in pixels or as a CSS length. |
-| `style` | — | optional | the element's inline style, merged over the defaults. |
+| `width` | `number \| string` | `"100%"` | how wide the line is, in pixels or as a CSS length. |
+| `height` | `number \| string` | `12` | how tall the line is, in pixels or as a CSS length. |
+| `style` | `CSSProperties` | optional | the element's inline style, merged over the defaults. |
 
 ### Skeleton.Block()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `height` | — | `64` | how tall the block is, in pixels or as a CSS length. |
-| `width` | — | `"100%"` | how wide the block is, in pixels or as a CSS length. |
-| `style` | — | optional | the element's inline style, merged over the defaults. |
+| `height` | `number \| string` | `64` | how tall the block is, in pixels or as a CSS length. |
+| `width` | `number \| string` | `"100%"` | how wide the block is, in pixels or as a CSS length. |
+| `style` | `CSSProperties` | optional | the element's inline style, merged over the defaults. |
 
 ### Skeleton.Circle()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `size` | — | `24` | the diameter of the circle, in pixels. |
-| `style` | — | optional | the element's inline style, merged over the defaults. |
+| `size` | `number` | `24` | the diameter of the circle, in pixels. |
+| `style` | `CSSProperties` | optional | the element's inline style, merged over the defaults. |
 
 ### Skeleton.Rows()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `count` | — | `4` | how many rows of text to draw. |
-| `style` | — | optional | the stack's inline style, merged over the defaults. |
+| `count` | `number` | `4` | how many rows of text to draw. |
+| `style` | `CSSProperties` | optional | the stack's inline style, merged over the defaults. |
 
 ## TooltipProps
 
@@ -260,7 +263,8 @@ function Tooltip({ text, children }: TooltipProps)
 
 What an icon means, on hover and on focus.
 
-See the note at the top of this file. It replaces the browser's own
-`title` rather than sitting beside it.
+It replaces the browser's own `title` rather than sitting beside it:
+leave `title` off the control. Focus shows it at once; hover waits
+350 ms.
 
 **Also** [`TooltipProps`](/docs/sdk/ui-react/reference-utilities#tooltipprops).

@@ -7103,7 +7103,7 @@
       "package": "ui-react",
       "slug": "peer-dependencies",
       "title": "Peer dependencies",
-      "description": "You already have react and react-dom. react-markdown and remark-gfm come with MarkdownInline.",
+      "description": "You already have react and react-dom. react-markdown and remark-gfm come with Markdown and MarkdownInline.",
       "category": "guide",
       "order": 5,
       "file": "ui-react/peer-dependencies.md",

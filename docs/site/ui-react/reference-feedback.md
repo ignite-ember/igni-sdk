@@ -46,8 +46,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, State>
 
 What is shown where a subtree threw.
 
-See the note at the top of this file: it catches less than people
-expect, and the default fallback shows the message on purpose.
+It catches less than people expect: render, lifecycle and
+constructor throws in the subtree below it, and not event handlers,
+`setTimeout`, promise rejections or anything during SSR. The default
+fallback shows the error's message on purpose.
 
 **Also** [`ErrorBoundaryProps`](/docs/sdk/ui-react/reference-feedback#errorboundaryprops).
 
@@ -129,7 +131,7 @@ function ToastHost({ children }: { children: ReactNode })
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `children` | — | optional | the part of the app that raises toasts. |
+| `children` | `ReactNode` | required | the part of the app that raises toasts. |
 
 Wrap the part of the app that raises toasts.
 
@@ -250,6 +252,7 @@ The declarative form, for a value that already lives in state.
 
 `<LiveRegion>{`${n} results`}</LiveRegion>` is the whole usage.
 Mounted empty on the first render so the region exists before it
-has anything to say — see note 1 above.
+has anything to say: a live region added to the page with its
+message already in it is frequently not announced.
 
 **Also** [`LiveRegionProps`](/docs/sdk/ui-react/reference-feedback#liveregionprops).

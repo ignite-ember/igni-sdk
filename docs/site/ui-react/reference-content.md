@@ -57,17 +57,19 @@ function MarkdownInline({ text, name = "", limit = 320, className = "", }: { tex
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `text` | — | optional | the markdown to render as one flowing line. |
-| `name` | — | `""` | the document's name, so a title echo can be dropped. |
-| `limit` | — | `320` | characters to keep; the clamp is visual, and this bounds the work. |
-| `className` | — | `""` | added to the element's classes, beside the one the theme gives it. |
+| `text` | `string` | required | the markdown to render as one flowing line. |
+| `name` | `string` | `""` | the document's name, so a title echo can be dropped. |
+| `limit` | `number` | `320` | characters to keep; the clamp is visual, and this bounds the work. |
+| `className` | `string` | `""` | added to the element's classes, beside the one the theme gives it. |
 
 Markdown rendered as one flowing line of text.
 
-See the note at the top of this file for what it does to blocks and
-why. `limit` bounds the work, not the appearance: the clamp is
-visual, and a document longer than `limit` is cut at a word
-boundary with an ellipsis.
+Every block becomes inline: headings keep their emphasis but not
+their size, list items are separated by middots, tables flatten to
+their cells, and links and images are dropped to their text or to
+nothing. `limit` bounds the work, not the appearance: the clamp is
+visual, and a document longer than `limit` is cut with an ellipsis,
+back to a word boundary when one falls in the last 40% of it.
 
 ## loadMermaid
 
@@ -91,7 +93,7 @@ function MermaidBlock({ source }: { source: string })
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `source` | — | optional | the text inside the fence. |
+| `source` | `string` | required | the text inside the fence. |
 
 A mermaid diagram.
 
