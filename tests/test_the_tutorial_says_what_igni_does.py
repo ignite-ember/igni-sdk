@@ -85,3 +85,21 @@ def test_the_example_s_readme_says_how_to_run_it() -> None:
         }
         assert anchor in slugs, f"no heading for #{anchor}"
     assert "igni ext install ." in extension and "../README.md#run-it" in extension
+
+
+def test_the_bridge_readme_says_how_to_test_a_page_outside_igni_s_app() -> None:
+    """Nothing said how to drive a page outside igni's app: an author took the
+    hello shape and the window's `caller` envelope from igni-app's source.
+    The README now gives the stand-in parent, with the protocol's own types,
+    and names the repository's test that does it."""
+    readme = (REPO / "packages" / "extension-bridge" / "README.md").read_text(encoding="utf-8")
+    section = readme[readme.index("## Testing a page") : readme.index("## The floor")]
+    protocol = (REPO / "packages" / "extension-bridge" / "src" / "protocol.ts").read_text()
+
+    for name in ("BRIDGE_VERSION", "isGuestMessage", "HelloMessage", "ResultMessage"):
+        assert name in section and re.search(
+            rf"export (const|function|interface) {name}\b", protocol
+        )
+    (example,) = re.findall(r"`(packages/test-utils/[\w.]+)`", section)
+    assert (REPO / example).is_file()
+    assert "HostHarness" in section

@@ -252,6 +252,42 @@ re-asks for the extension's permissions. A second install without
 With TypeScript 6 or later, `import "@ignite-ember/ui-css"` type-checks
 because the stylesheet package ships a declaration for it (0.2.0 and later).
 
+## Testing a page
+
+Only igni's app frames a page, and only igni's window carries a page's
+`ext.*` calls to igni, in the page's extension's name; a program, a
+browser test or `igni-client` cannot make those calls as the page. So a
+page is tested with a stand-in for its parent window, and the tool behind
+a call is tested on its own, with igni-extension's `HostHarness`.
+
+The page speaks to its parent with `postMessage`, in the shapes the
+`protocol` subpath exports. A stand-in parent sends `hello`, reads each
+`call` the page posts, and answers it with a `result` of the same `id`:
+
+```ts
+import { BRIDGE_VERSION, isGuestMessage } from "@ignite-ember/extension-bridge/protocol";
+import type { HelloMessage, ResultMessage } from "@ignite-ember/extension-bridge/protocol";
+
+const hello: HelloMessage = {
+  igni: BRIDGE_VERSION, kind: "hello", nonce: "n1", extensionId: "acme.tickets",
+  params: {}, theme: "dark", tokens: {},
+};
+frame.contentWindow!.postMessage(hello, "*");
+
+window.addEventListener("message", (event) => {
+  if (event.source !== frame.contentWindow || !isGuestMessage(event.data)) return;
+  if (event.data.kind !== "call") return;
+  const answer: ResultMessage = {
+    igni: BRIDGE_VERSION, kind: "result", id: event.data.id, ok: true,
+    value: { id: "T-1001", status: "open" },  // what the tool would return
+  };
+  frame.contentWindow!.postMessage(answer, "*");
+});
+```
+
+`packages/test-utils/ticketLookupPage.test.ts` in this repository does
+this for the ticket-lookup example's page, in jsdom.
+
 ## The floor
 
 Everything this package exports is under igni's **compatibility floor**:

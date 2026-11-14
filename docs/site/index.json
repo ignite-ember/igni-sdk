@@ -5420,11 +5420,21 @@
     },
     {
       "package": "extension-bridge",
+      "slug": "testing-a-page",
+      "title": "Testing a page",
+      "description": "Only igni's app frames a page, and only igni's window carries a page's ext.* calls to igni, in the page's extension's name; a program, a browser test or igni-client cannot make those calls as the page.",
+      "category": "guide",
+      "order": 9,
+      "file": "extension-bridge/testing-a-page.md",
+      "sections": []
+    },
+    {
+      "package": "extension-bridge",
       "slug": "the-floor",
       "title": "The floor",
       "description": "Everything this package exports is under igni's compatibility floor: removing a name, renaming it, or changing the meaning of one of its members is a breaking change under docs/EXTENSIBILITY.md §8.",
       "category": "guide",
-      "order": 9,
+      "order": 10,
       "file": "extension-bridge/the-floor.md",
       "sections": []
     },
@@ -5434,7 +5444,7 @@
       "title": "Changed since 0.1.0, on purpose",
       "description": "params and settings as type arguments. Without them, params and settings are readonly records (LaunchParams, ExtensionSettings), so writing into one no longer compiles;",
       "category": "guide",
-      "order": 10,
+      "order": 11,
       "file": "extension-bridge/changed-since-0-1-0-on-purpose.md",
       "sections": []
     },
@@ -5444,7 +5454,7 @@
       "title": "Installing",
       "description": "From npm, with the stylesheet a page is drawn with:",
       "category": "guide",
-      "order": 11,
+      "order": 12,
       "file": "extension-bridge/installing.md",
       "sections": []
     },
@@ -5454,7 +5464,7 @@
       "title": "The source, and a build beside it",
       "description": "This package ships its TypeScript source, and a compiled build beside it.",
       "category": "guide",
-      "order": 12,
+      "order": 13,
       "file": "extension-bridge/the-source-and-a-build-beside-it.md",
       "sections": []
     },
@@ -5464,7 +5474,7 @@
       "title": "The bridge",
       "description": "Reference: connect — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 13,
+      "order": 14,
       "file": "extension-bridge/reference-the-bridge.md",
       "sections": [
         {
@@ -5480,7 +5490,7 @@
       "title": "What a page is handed",
       "description": "Reference: Bridge — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 14,
+      "order": 15,
       "file": "extension-bridge/reference-what-a-page-is-handed.md",
       "sections": [
         {
@@ -5526,7 +5536,7 @@
       "title": "The host object model",
       "description": "Reference: JsonValue, HostErrorCode, HostError, HostLink, HostObject, Property… — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 15,
+      "order": 16,
       "file": "extension-bridge/reference-the-host-object-model.md",
       "sections": [
         {
@@ -6857,7 +6867,7 @@
       "title": "The extension's service",
       "description": "Reference: ServiceError, IssuedToken, ServiceSocketOptions, ServiceBridge, RENEW_BEFORE_MS, authMessage… — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 16,
+      "order": 17,
       "file": "extension-bridge/reference-the-extensions-service.md",
       "sections": [
         {
@@ -6933,7 +6943,7 @@
       "title": "The wire",
       "description": "Reference: BRIDGE_VERSION, LaunchParams, ExtensionSettings, RpcArgs, LocationState, HelloMessage… — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 17,
+      "order": 18,
       "file": "extension-bridge/reference-the-wire.md",
       "sections": [
         {
@@ -7059,7 +7069,7 @@
       "title": "The design tokens",
       "description": "Reference: PUBLISHED_TOKENS, TOKEN_NAMES, ThemeTokens, readThemeTokens, applyThemeTokens — signatures and JSDoc, read from the source.",
       "category": "reference",
-      "order": 18,
+      "order": 19,
       "file": "extension-bridge/reference-the-design-tokens.md",
       "sections": [
         {
