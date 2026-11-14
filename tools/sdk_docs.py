@@ -43,34 +43,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from tools.client_codegen import (
-    _ENVELOPE,
-    ACCESS_NOTES,
-    MESSAGE_DOCS,
-    OWNER_DOCS,
-    README_END,
-    README_START,
-    ApiGenerator,
-    Placement,
-    Plan,
-    class_for_group,
-    field_name,
-    push_class,
-    snake,
-)
+from tools.client_api import ApiGenerator
 from tools.client_contract import CONTRACT_FILE, PUSH_PREFIX, RpcContract
 from tools.client_examples import EXAMPLES
 from tools.client_names import (
+    ACCESS_NOTES,
     FOLLOWED,
+    MESSAGE_DOCS,
     MESSAGE_METHODS,
     MESSAGES_NOT_SENT,
     MESSAGES_SENT_BY_HAND,
     NAMESPACES,
     NOT_FOR_CLIENTS,
     OWN_SESSION_ARG,
+    OWNER_DOCS,
     REFERENCE_PAGES,
     UNFOLLOWED,
 )
+from tools.client_plan import Placement, Plan, class_for_group, push_class
+from tools.client_python import ENVELOPE, Imports, field_name, snake
+from tools.client_reference import README_END, README_START
 from tools.css_reference import CssReference
 from tools.markdown_pages import (
     PageError,
@@ -839,7 +831,7 @@ class ClientReference:
 
     def _first_fields(self, def_name: str) -> list[str]:
         props = self.contract.defs[def_name].get("properties", {})
-        envelope = _ENVELOPE if def_name in self.messages else ()
+        envelope = ENVELOPE if def_name in self.messages else ()
         names = [p for p in props if p not in envelope]
         preferred = [p for p in names if p in ("id", "name", "status", "pid", "role")]
         chosen = (preferred + [p for p in names if p not in preferred])[:2]
@@ -853,12 +845,12 @@ class ClientReference:
         props = {
             p: s
             for p, s in schema.get("properties", {}).items()
-            if p not in _ENVELOPE and p != "client_id"
+            if p not in ENVELOPE and p != "client_id"
         }
         result = self.types.class_name(self.contract.message_def(reply)) if reply else "None"
         params = []
         for prop, prop_schema in props.items():
-            annotation = self.types.annotation(prop_schema, _Imports())
+            annotation = self.types.annotation(prop_schema, Imports())
             default = repr(prop_schema["default"]) if "default" in prop_schema else None
             params.append(_Param(prop, annotation, default))
         sig = ", ".join(
@@ -1053,8 +1045,8 @@ class ClientReference:
         for name in names:
             for ref in self._direct_refs(contract.defs[name].get("properties", {})):
                 used_in.setdefault(ref, []).append(name)
-        for alias, (_, members) in self.types.unions.items():
-            for member in members:
+        for alias, union in self.types.unions.items():
+            for member in union.members:
                 used_in.setdefault(member, []).append(alias)
         # Which page's methods reach each model first, for grouping.
         group_of: dict[str, str] = {}
@@ -1095,7 +1087,8 @@ class ClientReference:
                 undocumented += missing
         body += ["## Unions", ""]
         for alias in sorted(self.types.unions):
-            told_by, members = self.types.unions[alias]
+            union = self.types.unions[alias]
+            told_by, members = union.told_by, union.members
             body += [f"### {alias}", ""]
             linked = " \\| ".join(self.type_md(self.types.class_name(m)) for m in members)
             body.append(f"One of {linked}.")
@@ -1168,7 +1161,7 @@ class ClientReference:
         for prop, prop_schema in props.items():
             python = field_name(prop)
             name = f"`{python}`" + (f" (wire `{prop}`)" if python != prop else "")
-            annotation = self.types.annotation(prop_schema, _Imports())
+            annotation = self.types.annotation(prop_schema, Imports())
             if "default" in prop_schema:
                 default = f"`{_py(prop_schema['default'])}`"
             elif prop in required:
@@ -1268,7 +1261,7 @@ class ClientReference:
         for channel in sorted(contract.push_channels):
             spec = contract.push_channels[channel]
             cls = push_class(channel)
-            payload = self.types.annotation(spec.schema_, _Imports())
+            payload = self.types.annotation(spec.schema_, Imports())
             body += [f"### {cls}", ""]
             if spec.doc:
                 body += [rst(spec.doc), ""]
@@ -1456,15 +1449,6 @@ class _Param:
     name: str
     annotation: str
     default: str | None
-
-
-class _Imports:
-    """What ``Types.annotation`` records imports into; the docs need none."""
-
-    def __init__(self) -> None:
-        self.typing: set[str] = set()
-        self.pydantic: set[str] = set()
-        self.datetime = False
 
 
 def _py(value: Any) -> str:

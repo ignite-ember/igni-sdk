@@ -56,6 +56,7 @@ from tools.client_names import (
     UNFOLLOWED,
     UNION_NAMES,
 )
+from tools.client_types import NamedUnion
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_CONFIG = Path("packages/igni-client/pyproject.toml")
@@ -443,7 +444,7 @@ def test_a_union_of_defs_takes_its_name_and_discriminator(monkeypatch: pytest.Mo
         Imports(),
     )
     assert named == "KindAorB | None"
-    assert types_.unions["KindAorB"] == ("kind", ["KindA", "KindB"])
+    assert types_.unions["KindAorB"] == NamedUnion(told_by="kind", members=["KindA", "KindB"])
     told = types_.annotation(
         {
             "oneOf": [{"$ref": "#/defs/KindA"}, {"$ref": "#/defs/KindB"}],
@@ -452,7 +453,7 @@ def test_a_union_of_defs_takes_its_name_and_discriminator(monkeypatch: pytest.Mo
         Imports(),
     )
     assert told == "KindAorB"
-    assert types_.unions["KindAorB"][0] == "other"
+    assert types_.unions["KindAorB"].told_by == "other"
 
 
 # ── models.py, run ────────────────────────────────────────────────────

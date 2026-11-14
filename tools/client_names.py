@@ -14,6 +14,9 @@ A name is ``owner.namespace.method`` or ``owner.method``:
 * ``session`` — on ``Session``, for a method whose scope is ``session``.
 
 ``SCOPE_EXCEPTIONS`` lists the few placed against their scope, with why.
+
+The prose the generated docstrings add to the contract's is kept here too:
+``ACCESS_NOTES``, ``OWNER_DOCS`` and ``MESSAGE_DOCS``.
 """
 
 from __future__ import annotations
@@ -477,16 +480,62 @@ CLASS_NAMES: dict[str, str] = {
     "HostSignalPush": "HostSignal",
 }
 
+#: What a method reached only by some connections says about it.
+ACCESS_NOTES: dict[str, str] = {
+    "approver": (
+        "Access: ``approver``. Through Fleet's gateway every connection stands as igni's "
+        "window and makes this call. On the desktop, a program needs an approver token the "
+        "window minted (``Local(approver_token=...)``); with the lockfile's token it gets "
+        "``AccessRefused``."
+    ),
+    "window": (
+        "Access: ``window``. Through Fleet's gateway every connection stands as igni's "
+        "window and makes this call. On the desktop only the app's own window does: a "
+        "program — with the lockfile's token or an approver token — gets ``AccessRefused``."
+    ),
+}
+
+#: What the two classes a client calls methods on are, in a docstring.
+OWNER_DOCS: dict[str, str] = {
+    "igni": "The methods igni answers for igni as a whole; `IgniClient` is one.",
+    "session": "The methods igni answers for one session; `Session` is one.",
+}
+
+#: Fuller docstrings than the contract's for the messages sent as methods.
+MESSAGE_DOCS: dict[str, str] = {
+    "command": (
+        "Run a slash command in this session, as typed in igni's composer: ``/help``, "
+        "``/compact``, ``/model``.\n\n``text`` is the command line, its leading ``/`` "
+        "optional. Returns igni's ``command_result``: its ``kind`` (``markdown``, ``info``, "
+        "``error`` or ``action``), the ``content`` to show and the ``action`` the command "
+        "asks a client to take. The commands that switch approvals off, change what igni "
+        "loads or whom it signs in to (``/bypass``, ``/accept``, ``/plugin``, ``/eject``, "
+        "``/login``, ``/logout``) answer an ``error`` to anything but igni's window."
+    ),
+    "cancel_login": (
+        "Cancel the sign-in to igni server that ``igni.auth.login()`` started.\n\n"
+        "igni answers nothing; the sign-in's ``login_result`` push says it ended."
+    ),
+    "typing": (
+        "Show what this client is typing to every other client of this session.\n\n"
+        "``text`` is the whole draft, not a change to it; empty clears it. igni relays it "
+        "to every client attached, this one included, as a ``Typing`` event."
+    ),
+}
+
 __all__ = [
+    "ACCESS_NOTES",
     "CLASS_NAMES",
     "FOLLOWED",
     "HAND_WRITTEN_NAMESPACES",
     "MESSAGES_NOT_SENT",
     "MESSAGES_SENT_BY_HAND",
+    "MESSAGE_DOCS",
     "MESSAGE_METHODS",
     "METHODS",
     "NAMESPACES",
     "NOT_FOR_CLIENTS",
+    "OWNER_DOCS",
     "OWN_SESSION_ARG",
     "REFERENCE_PAGES",
     "SCOPE_EXCEPTIONS",
