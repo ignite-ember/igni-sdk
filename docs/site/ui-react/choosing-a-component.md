@@ -11,7 +11,8 @@ questions.
 `Dialog`, `Tabs`, `TabPanel`, `Heading`, `Text`, `Code`, `Divider`,
 `Spinner`, `Progress`. They are thin, they hold no state, and they make
 no decisions. Reach for one of these first — it is the thing that will
-still be here next release.
+still be here next release. `Chip` and `Badge` take a `tone` of
+`"neutral"`, `"success"`, `"warning"` or `"danger"`.
 
 **The composites** are the parts of a page that have to be a page:
 `AppShell` and `Scroll` (the frame), `DataTable`'s `SortableTh` and

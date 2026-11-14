@@ -242,7 +242,7 @@ from igni_client.testing import FakeIgni
 async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create()
     result = await session.command("/help")
-    print(result.kind, result.content)
+    print(result.kind, result.content)   # against a real igni, /help is an action for the window: kind "action", content empty
     await session.typing("half a tho")              # every client sees the draft
 ```
 

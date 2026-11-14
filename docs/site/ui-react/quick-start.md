@@ -6,15 +6,21 @@ A page that fills its frame, with a toolbar, a scrolling list and a
 footer:
 
 ```tsx
+import { createRoot } from "react-dom/client";
 import { AppShell, Scroll, Toolbar, Button, Text, Empty } from "@ignite-ember/ui-react";
 import { connect } from "@ignite-ember/extension-bridge";
 import "@ignite-ember/ui-css";
+
+interface Note {
+  id: string;
+  title: string;
+}
 
 async function main() {
   const bridge = await connect();
   const notes = await bridge.rpc<Note[]>("ext.example.teamnotes.list");
 
-  return (
+  createRoot(document.getElementById("root")!).render(
     <AppShell
       header={<Toolbar>Notes</Toolbar>}
       footer={<Button variant="primary">New note</Button>}
@@ -28,10 +34,15 @@ async function main() {
           ))
         )}
       </Scroll>
-    </AppShell>
+    </AppShell>,
   );
 }
+
+void main();
 ```
+
+The page's `index.html` holds `<div id="root"></div>` and loads the built
+script from a file (an extension's page may not run inline script).
 
 Three things to know before you write more:
 

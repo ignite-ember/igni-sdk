@@ -41,8 +41,9 @@ new.
 return: igni and igni-client disagree about the contract. Align their
 versions; report it if they match.
 
-**`InvalidArguments`.** An argument is not of the method's type, or is
-one it does not take. Nothing was sent.
+**`InvalidArguments`.** An argument is not of the method's type. Nothing was
+sent. A keyword the method does not take, or a required one left out, is
+Python's `TypeError`, raised by the method's signature before anything else.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read

@@ -3,7 +3,9 @@
 # Peer dependencies
 
 You already have `react` and `react-dom`. `react-markdown` and
-`remark-gfm` come with `Markdown` and `MarkdownInline`.
+`remark-gfm` are used only by `Markdown` and `MarkdownInline`; they are
+optional peers, so install them if your page renders Markdown and not
+otherwise.
 
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never

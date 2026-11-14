@@ -143,7 +143,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
 | `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
 | `UnknownMethod` (`RpcError`) | igni is older than this igni-client | upgrade igni |
-| `InvalidArguments` (`RpcError`, `ValueError`) | the arguments are not what the method takes; checked before sending | fix the call |
+| `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
 | `RunFailed` | a run ended with `run_error` | read the message |
