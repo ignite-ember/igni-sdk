@@ -201,6 +201,30 @@ def page_of(root: Path, files: dict[str, str], link: object = None) -> str:
     return page
 
 
+def test_a_docstring_line_that_starts_with_markdown_keeps_its_asterisks(tmp_path: Path) -> None:
+    page = page_of(
+        tmp_path,
+        {
+            "index.ts": """
+            /**
+             * Says where.
+             *
+             * **Not a navigation.** It stays here.
+             *
+             * *Soft* words.
+             */
+            export interface Where {
+              /** Where. */
+              at: string;
+            }
+            """
+        },
+    )
+
+    assert "\n**Not a navigation.** It stays here.\n" in page
+    assert "\n*Soft* words.\n" in page
+
+
 def test_every_leading_modifier_of_a_constructor_parameter_is_dropped_from_its_name(
     tmp_path: Path,
 ) -> None:

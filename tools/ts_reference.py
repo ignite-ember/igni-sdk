@@ -337,7 +337,11 @@ def _jsdoc(doc: str) -> str:
     for line in body.split("\n"):
         line = re.sub(r"^\s*\* ?", "", line)
         lines.append(line.rstrip())
-    text = "\n".join(lines).strip("\n")
+    return _markdown("\n".join(lines).strip("\n"))
+
+
+def _markdown(text: str) -> str:
+    """JSDoc text whose ``*`` margin is already gone, as Markdown."""
     text = re.sub(r"\{@link\s+([^}]+)\}", r"`\1`", text)
     return text.strip()
 
@@ -1289,7 +1293,7 @@ class TsReference:
         out += parameter_table(
             signature_parameters(entry.params, self._prop_types(entry)), jsdoc_params(entry.doc)
         )
-        doc = _jsdoc(strip_jsdoc_params(entry.doc))
+        doc = _markdown(strip_jsdoc_params(entry.doc))
         if doc:
             out += [doc, ""]
         out += self._also(entry)
