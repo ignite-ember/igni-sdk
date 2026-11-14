@@ -23,8 +23,13 @@ export function initialsOf(name: string): string {
   const local = cleaned.includes("@") ? cleaned.split("@")[0] : cleaned;
   const words = local.split(/[\s._-]+/).filter(Boolean);
   if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  // By code point: slicing by UTF-16 unit cuts an emoji in half.
+  const letters = (word: string) => Array.from(word);
+  if (words.length === 1) {
+    return letters(words[0]).slice(0, 2).join("").toUpperCase();
+  }
+  const last = words[words.length - 1];
+  return (letters(words[0])[0] + letters(last)[0]).toUpperCase();
 }
 
 /** A stable hue for a name. Same person, same colour, every time. */
