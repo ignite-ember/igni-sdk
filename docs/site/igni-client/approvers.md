@@ -21,7 +21,7 @@ Make a token that lets a program answer the agent's approval requests.
 async def mint_token(self) -> ApproverTokenMinted
 ```
 
-Takes no arguments. Returns `token`: a program that connects with it
+Returns `token`: a program that connects with it
 stands as an approver — it may answer approval requests and approve a
 plan, once each time, but saves no rule and changes no permission mode.
 The token lives in memory until igni exits or the tokens are revoked,
@@ -59,7 +59,7 @@ Forget every approver token, so no program answers approval requests any more.
 async def revoke_tokens(self) -> ApproverTokensRevoked
 ```
 
-Takes no arguments. Returns `revoked`: how many tokens were
+Returns `revoked`: how many tokens were
 forgotten (`0` when there were none, or when this igni takes no
 token). Connections that attached with a revoked token lose their
 approver standing.

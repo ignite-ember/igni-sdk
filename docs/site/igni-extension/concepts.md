@@ -46,9 +46,13 @@ Started from a terminal rather than by igni, `ext.run()` says so on
 stderr — how to run it inside igni, and how to try a tool without it —
 and then waits for MCP messages as usual.
 
-Three silences in a row (a hook or a
-tool call that raised or was too slow) make the extension *faulty*: igni
-restarts it and stops waiting on its hooks until it answers again.
+Three silences in a row (a hook handler that raised or was too slow, or a
+tool call that timed out or whose process went away; a tool that returns
+an error has answered) make the extension *faulty*: igni restarts it and
+stops waiting on its hooks until it answers again. Meanwhile a hook event
+that fails closed (`PreToolUse`, `UserPromptSubmit`) is refused at once
+with "<extension> isn't responding", and one that fails open goes ahead
+without it.
 
 ## Tools and their four hints
 
@@ -66,7 +70,7 @@ decide on them:
 Plan mode runs a read-only tool and refuses one that changes things.
 Accept Edits runs a write that destroys nothing and stays inside its own
 system. The default mode asks before any write. Bypass runs everything.
-(igni-core's `docs/EXTENSIBILITY.md` has the whole table.)
+(igni-core's [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) has the whole table.)
 
 MCP makes each hint optional; igni does not. `ext.tool(hints=...)`
 requires all four, and `ext.run()` refuses to start while any tool on
@@ -159,7 +163,7 @@ has no caller, and `ext.service` there is the person signed in to igni.
 ## The host: igni as the extension sees it
 
 `ext.host` is the igni app as the extension sees it: the **host object
-model** (`docs/HOST_OBJECT_MODEL.md` in igni). There is one object per part
+model** ([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core). There is one object per part
 of the app — `ext.host.chat`, `ext.host.sessions`, `ext.host.ui`,
 `ext.host.workspace` and so on — each with:
 
@@ -229,9 +233,12 @@ igni started the process without a service URL, `ext.service` raises
 `NotConfigured` (and a page's `bridge.service.url` is `null` for the same
 reason). An extension igni distributed always has one: the service that
 shipped it. A development install has one only when it declares a
-`serviceUrl` setting in `contributes.settings` and it is set; a
-plain-`http` URL is given only for this machine (`localhost`), and only
-with `IGNI_DEV_EXTENSIONS=1`.
+`serviceUrl` setting in `contributes.settings` and it is set. igni gives
+the process the URL whatever its scheme, but the sandbox lets the process
+reach a plain-`http` service only with `IGNI_DEV_EXTENSIONS=1` (igni logs
+a warning at start otherwise), so a service must be `https` outside
+development. (A page's `bridge.service` is stricter: it is given a
+plain-`http` service only on this machine, in development.)
 
 ## What the service sends: events and messages
 
@@ -282,9 +289,12 @@ Linux.
 - **Writing.** Its data directory, its temp directory, and the workspace
   when the grant is `write`.
 
-On Windows it is not sandboxed yet. Where no sandbox is available it runs
-unconfined with a warning — unless managed settings set
-`extensions.require_sandbox`, which refuses it. `extensions.sandbox:
+On Windows it runs in an AppContainer of its own, in a job object, and
+reaches igni's egress proxy and igni's two loopback endpoints through
+named pipes. Where no sandbox is available it runs unconfined with a
+warning — unless `extensions.require_sandbox` is set (in managed settings,
+by the organisation's group policy, or with
+`IGNI_EXTENSIONS_REQUIRE_SANDBOX=1`), which refuses it. `extensions.sandbox:
 false` (managed or user settings) turns the sandbox off while you
 develop.
 

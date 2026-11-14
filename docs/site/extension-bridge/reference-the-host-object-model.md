@@ -232,24 +232,13 @@ One object of the host model: `host.chat`, `host.windows.ui(id)`, `host.sessions
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(protected readonly link: HostLink, readonly path: string, protected readonly window: string \| null = null, protected readonly session: string \| null = null)` | One object of the model, bound to a host. |
-| `call` | method | `(name: string, params: Record<string, unknown>) => Promise<T>` | Call a method on the host. |
+| `constructor` | method | `(readonly path: string)` | One object of the model, bound to a host. |
 
 ### HostObject.constructor()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `link` | `HostLink` | required | how requests reach the host. |
 | `path` | `string` | required | where in the model this object sits. |
-| `window` | `string \| null` | `null` | the window it belongs to, when it belongs to one. |
-| `session` | `string \| null` | `null` | the session it belongs to, when it belongs to one. |
-
-### HostObject.call()
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `name` | `string` | required | the method's name, as the schema spells it. |
-| `params` | `Record<string, unknown>` | required | its arguments, by name. |
 
 ## Property
 
@@ -261,7 +250,7 @@ A value of a host object: `get()` reads it, `set()` writes it.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `constructor` | method | `(private readonly owner: HostObject, readonly name: string, readonly writable: boolean)` | One value of one host object. |
+| `constructor` | method | `(readonly name: string, readonly writable: boolean)` | One value of one host object. |
 | `path` | accessor | `string` | Where in the model this value sits: `chat.processing`, without the leading `host.`. |
 | `get` | method | `() => Promise<T>` | Read it. |
 | `set` | method | `(value: T) => Promise<void>` | Write it, as the person's UI would. Refused where theirs would be. |
@@ -270,7 +259,6 @@ A value of a host object: `get()` reads it, `set()` writes it.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `owner` | `HostObject` | required | the object it belongs to. |
 | `name` | `string` | required | its name, as the schema spells it. |
 | `writable` | `boolean` | required | whether it may be written. |
 
@@ -292,7 +280,7 @@ the model their topic strings (`session.switched`, …).
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `carries` | field | `T` | Only for the type parameter; never set. |
+| `carries?` | field | `T` | Only for the type parameter; never set. |
 | `constructor` | method | `(readonly name: string)` | One signal of one host object. |
 
 ### Signal.constructor()
@@ -324,7 +312,7 @@ One change anywhere in the model, as `host.changed` reports it.
 |---|---|---|---|
 | `path` | field | `string` | The member that changed, `object.member`. |
 | `value` | field | `JsonValue` | Its new value. |
-| `window` | field | `string \| null` | The window, for a per-window member. |
+| `window?` | field | `string \| null` | The window, for a per-window member. |
 
 ## Display
 
@@ -381,7 +369,7 @@ One key of an extension's own state.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `key` | field | `string` |  |
-| `value` | field | `string \| null` | `None` when the key was deleted. |
+| `value?` | field | `string \| null` | `None` when the key was deleted. |
 
 ## WindowInfo
 
@@ -397,8 +385,8 @@ One igni window: a desktop window or a browser tab.
 | `kind` | field | `string` | `tauri` or `web`. |
 | `connected` | field | `boolean` |  |
 | `focused` | field | `boolean` | Whether the person is using this window: it has focus. |
-| `session_id` | field | `string \| null` | The session it shows. |
-| `project_dir` | field | `string \| null` |  |
+| `session_id?` | field | `string \| null` | The session it shows. |
+| `project_dir?` | field | `string \| null` |  |
 
 ## Page
 
@@ -412,7 +400,7 @@ One level of a window's page stack.
 |---|---|---|---|
 | `kind` | field | `string` | `plugins`, `extensions`, an extension's page kind, … |
 | `label` | field | `string` |  |
-| `params` | field | `Record<string, string>` |  |
+| `params?` | field | `Record<string, string>` |  |
 
 ## Route
 
@@ -438,7 +426,7 @@ The panel open over a window's chat: `notifications`, `search` (find in the conv
 | Member | Kind | Type |
 |---|---|---|
 | `kind` | field | `string` |
-| `params` | field | `Record<string, JsonValue>` |
+| `params?` | field | `Record<string, JsonValue>` |
 
 ## PanelChange
 
@@ -451,7 +439,7 @@ A window's panel opened or closed.
 | Member | Kind | Type |
 |---|---|---|
 | `window` | field | `string` |
-| `panel` | field | `Panel \| null` |
+| `panel?` | field | `Panel \| null` |
 
 ## Sidebar
 
@@ -464,8 +452,8 @@ A window's sidebar.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `open` | field | `boolean` |  |
-| `width` | field | `number \| null` | Its width in pixels; `None` for igni's own. |
-| `section` | field | `string \| null` | The part of it in view: `links` (the destinations) or `sessions`. |
+| `width?` | field | `number \| null` | Its width in pixels; `None` for igni's own. |
+| `section?` | field | `string \| null` | The part of it in view: `links` (the destinations) or `sessions`. |
 
 ## SidebarChange
 
@@ -503,7 +491,7 @@ A window's preview changed.
 | Member | Kind | Type |
 |---|---|---|
 | `window` | field | `string` |
-| `preview` | field | `Preview \| null` |
+| `preview?` | field | `Preview \| null` |
 
 ## SelectionState
 
@@ -515,9 +503,9 @@ What is selected in a window. Each part is independent; `None` for nothing.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `message_id` | field | `string \| null` | The highlighted message, by the run it belongs to (`run_id` in `chat.messages` and the run signals). |
-| `text` | field | `string \| null` | Text selected in the transcript. |
-| `file` | field | `string \| null` | The file last picked: a file pill, a reference. |
+| `message_id?` | field | `string \| null` | The highlighted message, by the run it belongs to (`run_id` in `chat.messages` and the run signals). |
+| `text?` | field | `string \| null` | Text selected in the transcript. |
+| `file?` | field | `string \| null` | The file last picked: a file pill, a reference. |
 
 ## SelectionChange
 
@@ -543,8 +531,8 @@ A window's composer.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `text` | field | `string` | The draft, without the mode's `/` or `$`. |
-| `attachments` | field | `string[]` | The files the draft refers to (`@path`), in order. |
-| `mode` | field | `string \| null` | `chat`, `command` (a slash command) or `shell` (a `$` line). |
+| `attachments?` | field | `string[]` | The files the draft refers to (`@path`), in order. |
+| `mode?` | field | `string \| null` | `chat`, `command` (a slash command) or `shell` (a `$` line). |
 
 ## ComposerChange
 
@@ -573,9 +561,9 @@ A transient message on screen.
 | `id` | field | `string` |  |
 | `text` | field | `string` | Its first line. |
 | `kind` | field | `string` | `info`, `success`, `warning` or `error`. |
-| `body` | field | `string \| null` | A second line. |
-| `target` | field | `Page \| null` | Where clicking it goes. |
-| `source` | field | `string \| null` | The extension that showed it; `None` for igni. |
+| `body?` | field | `string \| null` | A second line. |
+| `target?` | field | `Page \| null` | Where clicking it goes. |
+| `source?` | field | `string \| null` | The extension that showed it; `None` for igni. |
 
 ## ToastChange
 
@@ -603,7 +591,7 @@ A dialog on screen: igni's own (`spec.kind` is `update`) or an extension's (`sho
 | `type` | field | `string` | Always `dialog`: what this is. |
 | `id` | field | `string` |  |
 | `spec` | field | `JsonValue` |  |
-| `source` | field | `string \| null` | The extension that asked; `None` for igni. |
+| `source?` | field | `string \| null` | The extension that asked; `None` for igni. |
 
 ## DialogChange
 
@@ -617,7 +605,7 @@ A dialog opened or closed.
 |---|---|---|---|
 | `window` | field | `string` |  |
 | `dialog` | field | `Dialog` |  |
-| `answer` | field | `JsonValue` | What the person answered, when it closed: `{button, value}`; `None` when it was dismissed or replaced. |
+| `answer?` | field | `JsonValue` | What the person answered, when it closed: `{button, value}`; `None` when it was dismissed or replaced. |
 
 ## Scroll
 
@@ -629,9 +617,9 @@ Where a window's transcript is scrolled to.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `message_id` | field | `string \| null` | The message at the top of the view, by its run; `None` for none. |
+| `message_id?` | field | `string \| null` | The message at the top of the view, by its run; `None` for none. |
 | `at_bottom` | field | `boolean` | Following the newest message. |
-| `window` | field | `string \| null` | The window, in a signal. |
+| `window?` | field | `string \| null` | The window, in a signal. |
 
 ## SessionInfo
 
@@ -662,7 +650,7 @@ A window moved to another session.
 | Member | Kind | Type |
 |---|---|---|
 | `session_id` | field | `string` |
-| `window` | field | `string \| null` |
+| `window?` | field | `string \| null` |
 
 ## SessionList
 
@@ -729,8 +717,8 @@ A message posted in a chat.
 | `session_id` | field | `string` |  |
 | `text` | field | `string` |  |
 | `queued` | field | `boolean` | For the next turn rather than now. |
-| `from_extension` | field | `string \| null` | The extension that posted it, or whose service sent it; `None` for the person. |
-| `from_service` | field | `string \| null` | The client id of the service that sent it, when the extension's service did (a message item, posted as sent); `None` for a post an extension made itself and for the person's. |
+| `from_extension?` | field | `string \| null` | The extension that posted it, or whose service sent it; `None` for the person. |
+| `from_service?` | field | `string \| null` | The client id of the service that sent it, when the extension's service did (a message item, posted as sent); `None` for a post an extension made itself and for the person's. |
 
 ## HistoryChange
 
@@ -958,7 +946,7 @@ One answer to one approval.
 |---|---|---|---|
 | `requirement_id` | field | `string` |  |
 | `action` | field | `string` | `confirm` or `reject`. |
-| `choice` | field | `string` | `once`, `always` or `similar`; empty with `reject`. |
+| `choice?` | field | `string` | `once`, `always` or `similar`; empty with `reject`. |
 
 ## ToolCall
 
@@ -1037,7 +1025,7 @@ Someone's draft in a session, live.
 |---|---|---|
 | `session_id` | field | `string` |
 | `text` | field | `string` |
-| `window` | field | `string \| null` |
+| `window?` | field | `string \| null` |
 
 ## Status
 
@@ -1284,8 +1272,8 @@ Something in a collection changed; read it again.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `what` | field | `string` | What happened: `connected`, `installed`, `event`, … |
-| `name` | field | `string \| null` | Which item, when there is one. |
-| `payload` | field | `JsonValue` | The host's report of it. |
+| `name?` | field | `string \| null` | Which item, when there is one. |
+| `payload?` | field | `JsonValue` | The host's report of it. |
 
 ## WorkflowRun
 
@@ -1381,7 +1369,7 @@ An installed extension.
 | `version` | field | `string` |  |
 | `state` | field | `string` | `PREPARING`, `READY`, `FAILED` or `DISABLED`. |
 | `reason` | field | `string` | Why it is not READY, and what to do. |
-| `web_url` | field | `string \| null` | Its home on the web — its service's URL, which is the service's `client_uri` — when one is known. |
+| `web_url?` | field | `string \| null` | Its home on the web — its service's URL, which is the service's `client_uri` — when one is known. |
 | `switched_off` | field | `Withheld[]` | What it does not get: a collision with an extension higher in the super admin's priority order (the reason begins `lower priority than <extension>`), or an override whose text lacks the sections its… |
 | `dropped` | field | `Withheld[]` | Its prompt edits that land nowhere: another extension overrides that prompt, and its override has no section the edit names. |
 | `faulty` | field | `string` | Why it is faulty — its calls timed out or crashed three times in a row, so igni restarted it and does not wait on its hooks — or empty while it answers. The first answer after the restart clears it. |
@@ -1424,7 +1412,7 @@ The session's permission mode changed.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `mode` | field | `string` |  |
-| `previous` | field | `string \| null` | The mode before this one; `None` when the push named none. |
+| `previous?` | field | `string \| null` | The mode before this one; `None` when the push named none. |
 
 ## Account
 
@@ -1452,7 +1440,7 @@ Where opening a notification goes: one of an extension's pages.
 | Member | Kind | Type |
 |---|---|---|
 | `page` | field | `string` |
-| `params` | field | `Record<string, string>` |
+| `params?` | field | `Record<string, string>` |
 
 ## NotificationEntry
 
@@ -1471,8 +1459,8 @@ One notification, from igni server or from an extension on this machine.
 | `title` | field | `string` |  |
 | `body` | field | `string` |  |
 | `actor` | field | `string` |  |
-| `target` | field | `NotificationTarget \| null` |  |
-| `created_at` | field | `string \| null` | ISO 8601. |
+| `target?` | field | `NotificationTarget \| null` |  |
+| `created_at?` | field | `string \| null` | ISO 8601. |
 | `read` | field | `boolean` |  |
 
 ## NotificationCounts
@@ -1500,7 +1488,7 @@ Something to tell the person at this machine. It never leaves it.
 |---|---|---|---|
 | `kind` | field | `string` | The extension's word for what happened. |
 | `title` | field | `string` |  |
-| `body` | field | `string` | One line. |
+| `body?` | field | `string` | One line. |
 | `target` | field | `NotificationTarget` | One of this extension's pages. |
 | `event_key` | field | `string` | The same event is shown once, however often it is sent. |
 
@@ -1529,8 +1517,8 @@ One typed question about a context. It quotes the context's fields by name in ba
 | `id` | field | `string` | Its name in the answers: a lowercase name. |
 | `kind` | field | `string` | `choice` (one of `options`), `score` (one of `levels`, lowest first) or `noul` (yes or no — Laya's name for it). |
 | `question` | field | `string` | The question, up to 500 characters. |
-| `options` | field | `Record<string, string> \| null` | `choice` only: 2–20 labels, each to what it means (empty when the label says it). |
-| `levels` | field | `string[] \| null` | `score` only: 2–10 level labels, lowest first. |
+| `options?` | field | `Record<string, string> \| null` | `choice` only: 2–20 labels, each to what it means (empty when the label says it). |
+| `levels?` | field | `string[] \| null` | `score` only: 2–10 level labels, lowest first. |
 
 ## DecisionAnswer
 
@@ -1546,7 +1534,7 @@ One question's answer, with the probabilities it came from.
 | `answer` | field | `string` | The option chosen, the level reached, or `yes` / `no`. |
 | `confidence` | field | `number` | The probability of that answer. |
 | `probabilities` | field | `Record<string, number>` | Every option's, level's, or `yes` and `no`'s probability. |
-| `score` | field | `number \| null` | `score` only: the expected level, 0 the lowest. |
+| `score?` | field | `number \| null` | `score` only: the expected level, 0 the lowest. |
 
 ## Decision
 
@@ -1947,7 +1935,7 @@ One slash command.
 | `name` | field | `string` | With its slash: `/ctx`. |
 | `description` | field | `string` |  |
 | `argument_hint` | field | `string` | What it takes, as a hint. |
-| `owner` | field | `string \| null` | The extension that answers it, when an extension does. |
+| `owner?` | field | `string \| null` | The extension that answers it, when an extension does. |
 
 ## SkillDefinition
 

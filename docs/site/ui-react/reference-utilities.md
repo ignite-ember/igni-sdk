@@ -32,12 +32,12 @@ What a `Split` takes.
 |---|---|---|---|
 | `aside` | field | `ReactNode` | The fixed-width pane. |
 | `children` | field | `ReactNode` | The pane that takes what is left. |
-| `side` | field | `"start" \| "end"` | Which side `aside` is on. Defaults to the left. |
-| `defaultWidth` | field | `number` | Starting width of `aside`, in pixels. |
-| `min` | field | `number` | The narrowest `aside` may be, in pixels. |
-| `max` | field | `number` | The widest `aside` may be, in pixels — and never more than 60% of the window. |
+| `side?` | field | `"start" \| "end"` | Which side `aside` is on. Defaults to the left. |
+| `defaultWidth?` | field | `number` | Starting width of `aside`, in pixels. |
+| `min?` | field | `number` | The narrowest `aside` may be, in pixels. |
+| `max?` | field | `number` | The widest `aside` may be, in pixels — and never more than 60% of the window. |
 | `label` | field | `string` | Said to a screen reader, and shown on hover. |
-| `onResize` | field | `(width: number) => void` | The width changed. Called on release, on each keypress and on a double-click back to `defaultWidth`, not on every pointer move. |
+| `onResize?` | field | `(width: number) => void` | The width changed. Called on release, on each keypress and on a double-click back to `defaultWidth`, not on every pointer move. |
 
 ## Split
 
@@ -103,9 +103,9 @@ What a `MenuIcon` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `name` | field | `MenuIconName` | One of igni's own icons. |
-| `path` | field | `string` | An SVG path, for an icon igni does not have. |
-| `className` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
+| `name?` | field | `MenuIconName` | One of igni's own icons. |
+| `path?` | field | `string` | An SVG path, for an icon igni does not have. |
+| `className?` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
 
 ## MenuIcon
 
@@ -158,13 +158,13 @@ One action in an `OverflowMenu`.
 |---|---|---|---|
 | `key` | field | `string` | Stable across renders; the label changes on toggles. |
 | `label` | field | `string` | What it is called. |
-| `onSelect` | field | `() => void` | What picking it does. Omitted when `items` makes it a submenu. |
-| `items` | field | `OverflowAction[]` | Variants of this action, opened as a submenu rather than run. |
-| `danger` | field | `boolean` | Destructive — rendered apart from the rest and in the danger colour. |
-| `active` | field | `boolean` | A toggle that is currently on. Announced as such, not just coloured. |
-| `disabled` | field | `boolean` | Whether it can be picked. Shown as it is, and kept out of the tab order. |
-| `title` | field | `string` | Why you would pick this. Shown on hover, same as the buttons had. |
-| `icon` | field | `MenuIconName` | The glyph beside the label. |
+| `onSelect?` | field | `() => void` | What picking it does. Omitted when `items` makes it a submenu. |
+| `items?` | field | `OverflowAction[]` | Variants of this action, opened as a submenu rather than run. |
+| `danger?` | field | `boolean` | Destructive — rendered apart from the rest and in the danger colour. |
+| `active?` | field | `boolean` | A toggle that is currently on. Announced as such, not just coloured. |
+| `disabled?` | field | `boolean` | Whether it can be picked. Shown as it is, and kept out of the tab order. |
+| `title?` | field | `string` | Why you would pick this. Shown on hover, same as the buttons had. |
+| `icon?` | field | `MenuIconName` | The glyph beside the label. |
 
 ## OverflowMenu
 

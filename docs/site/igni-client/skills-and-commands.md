@@ -26,7 +26,7 @@ List this session's skills with what each tells the agent.
 async def definitions(self) -> list[SkillDefinition]
 ```
 
-Takes no arguments. Returns each skill's `name`, `description`
+Returns each skill's `name`, `description`
 and `prompt` (the skill's body).
 
 Takes no arguments.
@@ -57,7 +57,7 @@ Describe each of this session's skills in full.
 async def list(self) -> list[SkillInfo]
 ```
 
-Takes no arguments. Returns each skill's name, description,
+Returns each skill's name, description,
 version, category, argument hint, the context and agent it runs
 in, whether a person can invoke it, its body and its folder.
 
@@ -89,7 +89,7 @@ List the names of the skills this session has loaded.
 async def names(self) -> list[str]
 ```
 
-Takes no arguments. Returns the names, each usable as `/<name>`.
+Returns the names, each usable as `/<name>`.
 
 Takes no arguments.
 
@@ -147,7 +147,7 @@ List every slash command this session takes.
 async def slash_commands(self) -> list[SlashCommand]
 ```
 
-Takes no arguments. Returns igni's built-in commands, commands
+Returns igni's built-in commands, commands
 written as markdown files, skills a person can invoke, and
 extensions' commands, told apart by `source`; each with its
 `name`, `description` and `argument_hint`.
@@ -179,7 +179,7 @@ List the output styles this session can answer in, and the active one.
 async def output_styles(self) -> OutputStylesResult
 ```
 
-Takes no arguments. Returns the `active` style's name (empty for
+Returns the `active` style's name (empty for
 none) and every style's `name` and `description`.
 
 Takes no arguments.

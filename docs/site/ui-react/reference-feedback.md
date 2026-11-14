@@ -34,9 +34,9 @@ What an `ErrorBoundary` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `children` | field | `ReactNode` | The subtree this boundary guards. |
-| `fallback` | field | `(error: Error, reset: () => void) => ReactNode` | Shown instead of the subtree. Receives the error and a function that clears the boundary and remounts the children. |
-| `onError` | field | `(error: Error, info: ErrorInfo) => void` | Somewhere to send this — a logger, telemetry, a toast. |
-| `resetKeys` | field | `readonly unknown[]` | Changing any of these clears the boundary. |
+| `fallback?` | field | `(error: Error, reset: () => void) => ReactNode` | Shown instead of the subtree. Receives the error and a function that clears the boundary and remounts the children. |
+| `onError?` | field | `(error: Error, info: ErrorInfo) => void` | Somewhere to send this — a logger, telemetry, a toast. |
+| `resetKeys?` | field | `readonly unknown[]` | Changing any of these clears the boundary. |
 
 ## ErrorBoundary
 
@@ -90,9 +90,9 @@ What a toast says and how long it stays.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` | How loud it is. `danger` interrupts; the rest wait for a pause. |
-| `duration` | field | `number \| null` | Milliseconds before it goes. `null` keeps it until dismissed, which is the default when there is an `action`. |
-| `action` | field | `ReactNode` | One thing to do about it. Keeps the toast until dismissed. |
+| `tone?` | field | `Tone` | How loud it is. `danger` interrupts; the rest wait for a pause. |
+| `duration?` | field | `number \| null` | Milliseconds before it goes. `null` keeps it until dismissed, which is the default when there is an `action`. |
+| `action?` | field | `ReactNode` | One thing to do about it. Keeps the toast until dismissed. |
 
 ## Toast
 
@@ -162,8 +162,8 @@ What a `Banner` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` | How loud it is. |
-| `onDismiss` | field | `() => void` | A dismiss affordance appears when this is given. |
+| `tone?` | field | `Tone` | How loud it is. |
+| `onDismiss?` | field | `() => void` | A dismiss affordance appears when this is given. |
 
 ## Banner
 
@@ -234,8 +234,8 @@ What a `LiveRegion` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `children` | field | `string` | What to say. Changing it announces; clearing it says nothing. |
-| `urgency` | field | `Urgency` | How insistently it is announced: politely, or assertively. |
+| `children?` | field | `string` | What to say. Changing it announces; clearing it says nothing. |
+| `urgency?` | field | `Urgency` | How insistently it is announced: politely, or assertively. |
 
 ## LiveRegion
 

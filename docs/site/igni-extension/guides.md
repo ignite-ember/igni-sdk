@@ -338,7 +338,7 @@ a section, inserts one before or after a named section, replaces a named
 section (an agent's header is the section `frontmatter`). Each may hold
 only while a condition holds (`"when": "index-covers-head"`). The rules —
 what stacks, what collides, what an override leaves out — are in igni's
-`docs/EXTENSIBILITY.md`. Only the extension can judge the condition, so it
+[`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md). Only the extension can judge the condition, so it
 says when it changes:
 
 ```python

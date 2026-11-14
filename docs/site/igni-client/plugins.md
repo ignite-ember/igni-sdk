@@ -104,7 +104,7 @@ List the installed plugins.
 async def list(self) -> list[PluginInfo]
 ```
 
-Takes no arguments. Returns each plugin's name, version,
+Returns each plugin's name, version,
 description, where it came from, whether it is enabled (a plugin
 the organisation manages always is), the commit it is pinned to,
 and what it brings: skills, agents, hooks, MCP servers.
@@ -148,7 +148,7 @@ subfolder); `branch` the branch, tag or commit to read (the
 default branch when absent); `subdir` the plugin's folder inside
 the repository, which wins over one in `source`. The repository
 is cloned to a temporary place. Returns the same shape as
-`get_plugin_contents`, with `preview_source` naming what was
+`session.plugins.contents()`, with `preview_source` naming what was
 read; or `error` when the organisation's policy refuses the
 source, git is missing, or the clone failed.
 
@@ -326,7 +326,7 @@ List the plugin marketplaces igni knows, with their catalogues.
 async def list(self) -> list[MarketplaceInfo]
 ```
 
-Takes no arguments. Returns each marketplace's name, URL, when it
+Returns each marketplace's name, URL, when it
 was last fetched, and the plugins it offers.
 
 Takes no arguments.

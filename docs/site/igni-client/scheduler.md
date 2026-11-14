@@ -23,7 +23,7 @@ Cancel a scheduled task of this session's project.
 async def cancel(self, task_id: str) -> InfoMessage
 ```
 
-`task_id` is the task's `id` (from `get_scheduled_tasks`). The
+`task_id` is the task's `id` (from `session.scheduler.list()`). The
 task is marked cancelled, so it does not run again; a run already
 going is not stopped, but its outcome is not recorded. Returns an
 `info` message, sent in place of an `rpc_response`. Fails for
@@ -32,7 +32,7 @@ completed, failed or was cancelled, whose record is left as it is.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `task_id` | `str` | required | The task's `id`, as `get_scheduled_tasks` lists it. |
+| `task_id` | `str` | required | The task's `id`, as `session.scheduler.list()` lists it. |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 
@@ -71,8 +71,8 @@ task's `description`). The agent runs it as a stored task firing,
 not as a live message: its run is not streamed to the windows, and
 the task's own record is not touched. What its tools push while
 they work still goes out. It is the session's run while it goes:
-it waits for a turn already running, `get_processing` reports
-it, and `cancel_run` stops it. Returns the agent's answer as
+it waits for a turn already running, `session.is_processing()` reports
+it, and `session.cancel()` stops it. Returns the agent's answer as
 text with the run's `run_id` — the one given, or one made — which
 every push the run's tools make carries too. Fails when the
 organisation's group policy refuses the run, the run is cancelled,

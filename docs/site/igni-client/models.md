@@ -21,7 +21,7 @@ List the models this session can run on.
 async def list(self) -> ModelRegistryResult
 ```
 
-Takes no arguments. Returns the `default` model's name, the
+Returns the `default` model's name, the
 largest context window configured, and `registry`: every model by
 name, with its provider and settings.
 
@@ -54,7 +54,7 @@ async def switch(self, model_name: str) -> InfoMessage
 ```
 
 `model_name` is a name from the model registry
-(`get_model_registry`). The choice is also saved as the default
+(`session.models.list()`). The choice is also saved as the default
 for new sessions. Returns an `info` message, sent in place of an
 `rpc_response`, saying the model switched, with a note for any
 part of the choice that could not be saved. Fails when the model is
@@ -62,7 +62,7 @@ not in the registry.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `model_name` | `str` | required | A model name from the model registry (see `get_model_registry`). |
+| `model_name` | `str` | required | A model name from the model registry (see `session.models.list()`). |
 
 **Returns** [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage).
 

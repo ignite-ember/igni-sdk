@@ -27,14 +27,14 @@ What an extension's page is handed.
 | `settings` | field | `S` | What `contributes.settings` is configured to. |
 | `theme` | field | `string` | The host's theme now. Use `onTheme` to follow it. |
 | `tokens` | field | `ThemeTokens` | The published design tokens, already applied to this document's root. Here as a reading for anything that needs a value rather than a CSS variable — a canvas, a chart library. |
-| `rpc` | method | `(method: string, args?: RpcArgs, timeoutMs?: number) => Promise<T>` | Call a backend RPC. Rejects with the host's refusal, as a sentence. |
+| `rpc` | method | `<T = unknown>(method: string, args?: RpcArgs, timeoutMs?: number) => Promise<T>` | Call a backend RPC. Rejects with the host's refusal, as a sentence. |
 | `navigate` | method | `(to: string) => void` | Ask the host app to navigate. It decides whether to. |
 | `close` | method | `() => void` | Tell the host this surface is finished. |
 | `onTheme` | method | `(fn: (theme: string) => void) => () => void` | Follow the host's theme. Returns an unsubscribe. |
 | `onParams` | method | `(fn: (params: P) => void) => () => void` | Follow the launch parameters. |
 | `setLocation` | method | `(state: LocationState) => void` | Tell the host where inside this extension the user now is. |
-| `host` | field | `Host` | igni, as this extension sees it: the host object model (`docs/HOST_OBJECT_MODEL.md` in igni). The same model the extension's process reaches as `ext.host`. |
-| `on` | method | `(signal: Signal<T>, fn: (value: T) => void, onRefused?: (error: HostError) => void) => () => void` | Handle a host signal: `bridge.on(bridge.host.chat.run_completed, fn)`. |
+| `host` | field | `Host` | igni, as this extension sees it: the host object model (igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md)). |
+| `on` | method | `<T>(signal: Signal<T>, fn: (value: T) => void, onRefused?: (error: HostError) => void) => () => void` | Handle a host signal: `bridge.on(bridge.host.chat.run_completed, fn)`. |
 | `service` | field | `ServiceBridge` | The extension's own service, reached directly, as the signed-in person. |
 
 ### Bridge.rpc()

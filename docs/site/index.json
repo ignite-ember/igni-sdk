@@ -2774,7 +2774,7 @@
       "package": "igni-extension",
       "slug": "troubleshooting-and-faq",
       "title": "Troubleshooting and FAQ",
-      "description": "igni gave the process no service. A bundle igni distributed always has one. A development install needs a serviceUrl setting in contributes.settings, set;",
+      "description": "igni gave the process no service. A bundle igni distributed always has one. A development install needs a serviceUrl setting in contributes.settings, set.",
       "category": "guide",
       "order": 6,
       "file": "igni-extension/troubleshooting-and-faq.md",
@@ -5317,7 +5317,7 @@
       "package": "extension-bridge",
       "slug": "the-host-bridge-host",
       "title": "The host: bridge.host",
-      "description": "bridge.host is igni as the page sees it — the host object model (docs/HOST_OBJECT_MODEL.md in igni), the same model the extension's process reaches as ext.host. Names are the schema's, as in Python.",
+      "description": "bridge.host is igni as the page sees it — the host object model (docs/HOST_OBJECT_MODEL.md in igni-core), the same model the extension's process reaches as ext.host. Names are the schema's, as in Python.",
       "category": "guide",
       "order": 3,
       "file": "extension-bridge/the-host-bridge-host.md",
@@ -5387,7 +5387,7 @@
       "package": "extension-bridge",
       "slug": "installing",
       "title": "Installing",
-      "description": "Once published, from npm:",
+      "description": "From npm, with the stylesheet a page is drawn with:",
       "category": "guide",
       "order": 10,
       "file": "extension-bridge/installing.md",
@@ -5513,11 +5513,6 @@
           "level": 3,
           "id": "hostobject-constructor",
           "title": "HostObject.constructor()"
-        },
-        {
-          "level": 3,
-          "id": "hostobject-call",
-          "title": "HostObject.call()"
         },
         {
           "level": 2,
@@ -6874,16 +6869,6 @@
           "level": 3,
           "id": "servicelink-websocket",
           "title": "ServiceLink.websocket()"
-        },
-        {
-          "level": 3,
-          "id": "servicelink-fresh",
-          "title": "ServiceLink.fresh()"
-        },
-        {
-          "level": 3,
-          "id": "servicelink-resolve",
-          "title": "ServiceLink.resolve()"
         }
       ]
     },

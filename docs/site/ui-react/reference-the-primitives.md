@@ -89,8 +89,8 @@ What a `Button` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `variant` | field | `ButtonVariant` | How it reads. |
-| `size` | field | `ButtonSize` | Its size. |
+| `variant?` | field | `ButtonVariant` | How it reads. |
+| `size?` | field | `ButtonSize` | Its size. |
 
 ## Button
 
@@ -168,7 +168,7 @@ about the thing, it is a `Chip`.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` | How loud it is. |
+| `tone?` | field | `Tone` | How loud it is. |
 
 ## Chip
 
@@ -205,7 +205,7 @@ the success one; an empty red badge does not.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `Tone` | How loud it is. |
+| `tone?` | field | `Tone` | How loud it is. |
 
 ## Badge
 
@@ -337,7 +337,7 @@ panel wastes the one moment it had the reader's attention. The
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `action` | field | `ReactNode` | A button, usually: the one thing to do about being empty. |
+| `action?` | field | `ReactNode` | A button, usually: the one thing to do about being empty. |
 
 ## Empty
 
@@ -369,9 +369,9 @@ What a `Dialog` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `title` | field | `ReactNode` | Its title. Also the accessible name of the dialog. |
-| `sub` | field | `ReactNode` | Shown under the title. A sentence, not a paragraph. |
-| `children` | field | `ReactNode` | The body. |
-| `actions` | field | `ReactNode` | The buttons. Rendered in an `Actions` row at the foot. |
+| `sub?` | field | `ReactNode` | Shown under the title. A sentence, not a paragraph. |
+| `children?` | field | `ReactNode` | The body. |
+| `actions?` | field | `ReactNode` | The buttons. Rendered in an `Actions` row at the foot. |
 | `onClose` | field | `() => void` | Escape, or a click on the backdrop. |
 
 ## Dialog
@@ -564,9 +564,9 @@ shown. Without `htmlFor` the note is shown and nothing points at it.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `label` | field | `ReactNode` | The label. It is visible, not a placeholder. |
-| `hint` | field | `ReactNode` | A sentence under the control, for when nothing is wrong. |
-| `error` | field | `ReactNode` | Why the control is wrong. It replaces the hint while it is set. |
-| `htmlFor` | field | `string` | The id of the control, so the label points at it. Also what wires `error` and `hint` to the control: without it, nothing does. |
+| `hint?` | field | `ReactNode` | A sentence under the control, for when nothing is wrong. |
+| `error?` | field | `ReactNode` | Why the control is wrong. It replaces the hint while it is set. |
+| `htmlFor?` | field | `string` | The id of the control, so the label points at it. Also what wires `error` and `hint` to the control: without it, nothing does. |
 
 ## Field
 
@@ -637,8 +637,8 @@ What a `Progress` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `value` | field | `number` | How far along, against `max`. Omit for indeterminate, which slides rather than sits. |
-| `max` | field | `number` | Defaults to 100. |
+| `value?` | field | `number` | How far along, against `max`. Omit for indeterminate, which slides rather than sits. |
+| `max?` | field | `number` | Defaults to 100. |
 | `label` | field | `string` | Its name, for a screen reader. |
 
 ## Progress
@@ -677,7 +677,7 @@ What a `Tabs` takes.
 | `active` | field | `string` | Which tab is showing. |
 | `onChange` | field | `(id: string) => void` | Called with the id of the tab the reader chose. |
 | `label` | field | `string` | The strip's name, for a screen reader. |
-| `base` | field | `string` | The id prefix shared with this strip's `TabPanel`s. |
+| `base?` | field | `string` | The id prefix shared with this strip's `TabPanel`s. |
 
 ## Tabs
 
@@ -764,7 +764,7 @@ What a `Heading` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `level` | field | `1 \| 2 \| 3 \| 4` | The outline level. Also picks the size, so they cannot disagree. |
+| `level?` | field | `1 \| 2 \| 3 \| 4` | The outline level. Also picks the size, so they cannot disagree. |
 
 ## Heading
 
@@ -804,7 +804,7 @@ What a `Text` takes.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `tone` | field | `TextTone` | How loud it is. |
+| `tone?` | field | `TextTone` | How loud it is. |
 
 ## Text
 

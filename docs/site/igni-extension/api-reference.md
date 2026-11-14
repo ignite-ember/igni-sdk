@@ -376,7 +376,7 @@ seconds; dialogs wait indefinitely), or `NotConfigured` (no socket).
 ### The host objects
 
 Each object needs the matching grant in `permissions.host`. igni's
-`docs/HOST_OBJECT_MODEL.md` describes every member in full.
+[`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) describes every member in full.
 
 | Object | What it is | Some members |
 |---|---|---|

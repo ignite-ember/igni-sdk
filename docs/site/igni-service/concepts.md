@@ -71,8 +71,8 @@ whenever igni server holds different bytes. Two separate decisions then
 put it on a person's device, and **both** are needed:
 
 1. a **super admin approves the service** (portal, *Services*), and
-2. an **org admin switches the extension on for a group** (portal,
-   *Extensions*). Each person is in exactly one group.
+2. an **org admin switches the extension on for a group** (portal, the
+   group's *Extensions* tab). Each person is in exactly one group.
 
 Every signed-in igni of a person in that group installs the extension the
 next time it syncs with igni server. Approval alone installs it nowhere.

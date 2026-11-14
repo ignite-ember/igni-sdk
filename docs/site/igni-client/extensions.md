@@ -21,7 +21,7 @@ List the installed extensions, including the ones that failed to start.
 async def list(self) -> ExtensionListResult
 ```
 
-Takes no arguments. Returns each extension's id, name, version and
+Returns each extension's id, name, version and
 `state` — a failed one with its `reason`, rather than left out —
 with what it adds to igni's window (pages, menu items, indicators),
 its settings and their values, and the addresses of its UI, its web
@@ -63,7 +63,7 @@ async def set_settings(
 `extension_id` is the extension; `values` the settings to
 change, by key, merged over what is stored. The extension reads them
 the next time it starts. Returns the whole list, as
-`list_extensions` does. Fails when the extension is not
+`igni.extensions.list()` does. Fails when the extension is not
 installed, a key is not one of its settings, a value is not one of
 a setting's options, or igni has no extension support.
 

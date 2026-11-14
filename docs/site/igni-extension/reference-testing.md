@@ -208,7 +208,7 @@ FakeHost(
 
 igni's host object model for one extension process, on a loopback socket.
 
-Speaks the protocol igni does (`docs/HOST_MODEL_PROTOCOL.md` in igni).
+Speaks the protocol igni does (igni-core's `docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md)).
 What it answers is up to the test:
 
 * `values` — `path -> value` for `get`; a `set` stores into it;

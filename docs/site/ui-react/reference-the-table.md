@@ -33,9 +33,9 @@ What a `SortableTh` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `children` | field | `ReactNode` | The heading. |
-| `direction` | field | `SortDirection` | How this column is currently sorted, or `undefined` when the table is sorted by some other column. |
+| `direction?` | field | `SortDirection` | How this column is currently sorted, or `undefined` when the table is sorted by some other column. |
 | `onSort` | field | `(direction: SortDirection) => void` | Asked to sort by this column. Gets the direction to go to. |
-| `numeric` | field | `boolean` | Right-align and use tabular figures. |
+| `numeric?` | field | `boolean` | Right-align and use tabular figures. |
 
 ## SortableTh
 
@@ -76,7 +76,7 @@ What a `Status` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `state` | field | `"READY" \| "PREPARING" \| "DISABLED" \| "FAILED"` | The four states the health contract defines. |
-| `children` | field | `ReactNode` | What to show beside the dot. Defaults to the state itself. |
+| `children?` | field | `ReactNode` | What to show beside the dot. Defaults to the state itself. |
 
 ## Status
 

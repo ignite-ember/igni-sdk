@@ -58,8 +58,8 @@ How a socket says who it is, once it is open.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `authFrame` | field | `(token: string) => string` | The first frame, carrying the token. A browser's WebSocket cannot set an `Authorization` header, and a token in the URL ends up in access logs, so the token goes in the first frame. |
-| `protocols` | field | `string \| string[]` | Sub-protocols, passed to the WebSocket as they are. |
+| `authFrame?` | field | `(token: string) => string` | The first frame, carrying the token. A browser's WebSocket cannot set an `Authorization` header, and a token in the URL ends up in access logs, so the token goes in the first frame. |
+| `protocols?` | field | `string \| string[]` | Sub-protocols, passed to the WebSocket as they are. |
 
 ## ServiceBridge
 
@@ -122,22 +122,16 @@ class ServiceLink implements ServiceBridge
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
-| `held` | field | `{ token: string; expiresAt: number } \| null` | The token this link is holding, and when it stops being valid. |
-| `fetching` | field | `Promise<string> \| null` | The fetch in flight, so two asks share one request to the host. |
-| `constructor` | method | `(readonly url: string \| null, private readonly ask: () => Promise<IssuedToken>, private readonly env: { now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; } = {})` | One link, for one frame. |
+| `constructor` | method | `(readonly url: string \| null)` | One link, for one frame. |
 | `token` | method | `() => Promise<string>` | A bearer token for the service. |
 | `fetch` | method | `(path: string, init: RequestInit = {}) => Promise<Response>` | `fetch` against the service, with the token. |
 | `websocket` | method | `(path: string, options: ServiceSocketOptions = {}) => Promise<WebSocket>` | A socket to the service, with the token in the first frame. |
-| `fresh` | method | `(force: boolean) => Promise<string>` | A token that is worth handing out: the held one if it has time left, a new one otherwise. |
-| `resolve` | method | `(path: string, socket: boolean) => string` | `path` on the service, or a refusal if it is anywhere else. |
 
 ### ServiceLink.constructor()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `url` | `string \| null` | required | the service's URL, or `null` when there is none. |
-| `ask` | `() => Promise<IssuedToken>` | required | how a token is asked of the host. |
-| `env` | `{ now?: () => number; fetch?: typeof fetch; WebSocket?: typeof WebSocket; }` | `{}` | what the browser is asked for, when it is not this one. |
 
 ### ServiceLink.fetch()
 
@@ -152,16 +146,3 @@ class ServiceLink implements ServiceBridge
 |---|---|---|---|
 | `path` | `string` | required | where to open it, relative to the service's URL. |
 | `options` | `ServiceSocketOptions` | `{}` | how the socket says who it is. |
-
-### ServiceLink.fresh()
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `force` | `boolean` | required | fetch a new one even when the held one is good. |
-
-### ServiceLink.resolve()
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `path` | `string` | required | the path on the service, relative to its URL. |
-| `socket` | `boolean` | required | whether the path is opened as a socket, which turns `https` into `wss`. |

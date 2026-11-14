@@ -212,13 +212,7 @@ One person signed in to the service's pages.
 
 ```python
 class WebSessionStore(Protocol)
-WebSessionStore(*args, **kwargs)
 ```
-
-| Parameter | Type | Default | Meaning |
-|---|---|---|---|
-| `*args` | — | — | The positional arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
-| `**kwargs` | — | — | The keyword arguments a concrete store's constructor takes; the protocol itself takes none of them on. |
 
 Where `igni.web` keeps its people's sessions and sign-ins in flight.
 

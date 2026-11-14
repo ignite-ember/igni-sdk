@@ -26,7 +26,7 @@ What a `Markdown` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `children` | field | `string` | The source. Rendered as a document, not flattened. |
-| `className` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
+| `className?` | field | `string` | Added to the element's classes, beside the one the theme gives it. |
 
 ## Markdown
 

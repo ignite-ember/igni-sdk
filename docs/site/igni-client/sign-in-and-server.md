@@ -178,7 +178,7 @@ Read who is signed in to igni server, and their organisation's plan.
 async def plan(self) -> CloudPlan | None
 ```
 
-Takes no arguments. Asks igni server with this session's sign-in and
+Asks igni server with this session's sign-in and
 returns the person's `email` and `full_name`, the organisation's
 display name (`org_name`) and plan `tier`; any of them may be
 null when igni server does not say. Returns `null` when nobody is
@@ -213,7 +213,7 @@ Read the saved sign-in again, so this session acts as whoever is signed in now.
 async def reload_credentials(self) -> StatusUpdate
 ```
 
-Takes no arguments. Use it after a sign-in made elsewhere (another
+Use it after a sign-in made elsewhere (another
 session, another window). Returns the session's status afterwards —
 model, cloud connection, account, context size, permission mode — as
 a `status_update` message, sent in place of an `rpc_response`.
@@ -246,7 +246,7 @@ Sign this session out of igni server.
 def sign_out(self) -> Call[StatusUpdate, ClearCloudCredentialsEvent]
 ```
 
-Takes no arguments. The session forgets its cloud credentials, and
+The session forgets its cloud credentials, and
 the signed-in person's notifications stop arriving and leave the
 badges (`notifications_changed`). Returns the session's status
 afterwards as a `status_update` message, sent in place of an

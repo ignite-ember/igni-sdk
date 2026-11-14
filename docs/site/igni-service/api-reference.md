@@ -617,7 +617,9 @@ class Agent:
 For every send: `event_key` (1–200 characters) makes retries exact — igni
 stores one item per key and producer, and answers a repeat with the item
 already stored (`duplicate=True`). `expires_at` stops delivery after that
-time; igni keeps an item at most 14 days. Attachments are uploaded first.
+time; igni keeps an item at most 14 days (igni server's default,
+`service_event_max_wait_seconds`; an operator may change it).
+Attachments are uploaded first.
 
 Each send raises `IgniUnavailable` when igni cannot take it after three
 tries, and `EventRefused` when igni reads it and says no (a 4xx other

@@ -3,7 +3,7 @@
 # The host: bridge.host
 
 `bridge.host` is igni as the page sees it — the **host object model**
-(`docs/HOST_OBJECT_MODEL.md` in igni), the same model the extension's
+([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core), the same model the extension's
 process reaches as `ext.host`. Names are the schema's, as in Python.
 
 ```ts

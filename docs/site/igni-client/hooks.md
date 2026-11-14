@@ -23,7 +23,7 @@ List the hooks this session runs.
 async def list(self) -> list[HookEntryView]
 ```
 
-Takes no arguments. Returns one row per hook: the `event` it runs
+Returns one row per hook: the `event` it runs
 on, its `type` (a shell `command` or an HTTP `url`), the
 `matcher` that narrows it, its timeout, whether it runs in the
 background, and the HTTP headers it sends.
@@ -56,7 +56,7 @@ Read this session's hook configuration again.
 async def reload(self) -> InfoMessage
 ```
 
-Takes no arguments. Returns an `info` message, sent in place of an
+Returns an `info` message, sent in place of an
 `rpc_response`, saying how many hooks are now active.
 
 Takes no arguments.

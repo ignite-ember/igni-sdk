@@ -102,7 +102,7 @@ Read this session's status: model, account, context size and permission mode.
 async def status(self) -> StatusUpdate
 ```
 
-Takes no arguments. Returns a `status_update` message, sent in
+Returns a `status_update` message, sent in
 place of an `rpc_response`: the model and whether it is
 configured, the igni server connection and account, the context
 used and its window, the permission mode and the theme.
@@ -135,9 +135,9 @@ Read the id of the session this request reached.
 async def current_id(self) -> str
 ```
 
-Takes no arguments. Returns the session's current id, which can
+Returns the session's current id, which can
 differ from the one the request was routed by after `/clear` or
-`switch_session`.
+`session.switch()`.
 
 Takes no arguments.
 
@@ -166,7 +166,7 @@ Read the folder this session is locked to.
 async def get_project_dir(self) -> str
 ```
 
-Takes no arguments. Returns the absolute path the agent's tools and
+Returns the absolute path the agent's tools and
 shell commands work in.
 
 Takes no arguments.
@@ -196,7 +196,7 @@ Say whether this session is running a turn right now.
 async def is_processing(self) -> bool
 ```
 
-Takes no arguments. Returns `true` while a turn the person (or a
+Returns `true` while a turn the person (or a
 client) started is starting, streaming or finishing.
 
 Takes no arguments.
@@ -226,7 +226,7 @@ Read how long, in seconds, a client should wait for one run.
 async def run_timeout(self) -> int
 ```
 
-Takes no arguments. Returns the configured maximum run time; igni
+Returns the configured maximum run time; igni
 does not stop a run at it, the client decides what to do.
 
 Takes no arguments.
@@ -256,7 +256,7 @@ List the sessions kept in this session's project.
 async def list_sessions(self) -> SessionListResult
 ```
 
-Takes no arguments. Returns a `session_list_result` message, sent
+Returns a `session_list_result` message, sent
 in place of an `rpc_response`: each session's id, name, when it
 was created and last updated, how many runs it has, a summary and
 the agent it runs. A storage failure answers an empty list.
@@ -325,7 +325,7 @@ Stop the turn this session is running.
 def cancel(self) -> Call[CancelRunResult, CancelRunEvent]
 ```
 
-Takes no arguments. Returns `cancelled`: whether a turn was
+Returns `cancelled`: whether a turn was
 running. Its stream then ends with an `info` saying it was
 cancelled and its `stream_end`, and the run is recorded as
 interrupted; a foreground shell command the turn started is killed.
@@ -478,8 +478,8 @@ Read the agent's to-do list in this session.
 async def todos(self) -> list[TodoItem]
 ```
 
-Takes no arguments. Returns each item's `content`, `status`
-(`pending`, `in_progress`, `completed`) and `activeForm`
+Returns each item's `content`, `status`
+(`pending`, `in_progress`, `completed`) and `active_form`
 (how it reads while in progress). `todos_updated` pushes the list
 whenever the agent changes it.
 
@@ -511,7 +511,7 @@ Read this session's display settings.
 async def display_config(self) -> DisplayConfig
 ```
 
-Takes no arguments. Returns how output is shown: markdown rendering,
+Returns how output is shown: markdown rendering,
 tool calls, routing, reasoning, the colour theme, and how many lines
 of a tool result and a message are shown before truncating.
 
@@ -543,7 +543,7 @@ Turn showing the agent's routing decisions on or off for this session.
 async def toggle_verbose(self) -> bool
 ```
 
-Takes no arguments. Returns the new setting: `true` when routing is
+Returns the new setting: `true` when routing is
 now shown. Not saved; the session's next settings reload resets it.
 
 Takes no arguments.
