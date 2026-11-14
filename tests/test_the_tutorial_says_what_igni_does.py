@@ -30,3 +30,22 @@ def test_step_0_says_how_a_scaffolded_project_finds_the_wheels() -> None:
     assert "uv sync --find-links" in workspace
     assert "its `pyproject.toml` installs from `--find-links wheels`" not in _text()
     assert "says to run `uv sync --find-links <the directory holding them>`" in _text()
+
+
+def _section(heading: str) -> str:
+    text = TUTORIAL.read_text(encoding="utf-8")
+    start = text.index(heading)
+    return text[start : text.index("\n## ", start + 1)]
+
+
+def test_step_7_s_headless_runs_cannot_stop_at_a_question() -> None:
+    """ "Look ticket T-1002 up on the ticket service." ended with exit 1: the
+    model went on to a shell command, and a headless run that meets a question
+    pauses. `--read-only` lets the extension's read-only tools run and refuses
+    the rest (checked against a real model)."""
+    section = _section("## 7. Use it")
+    runs = [line for line in section.splitlines() if re.match(r"igni\b.*\s-m\s", line)]
+
+    assert len(runs) == 2
+    assert all("--read-only" in line for line in runs), runs
+    assert "Run paused for confirmation" in section

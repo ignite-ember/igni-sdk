@@ -549,10 +549,15 @@ A development install (see *Faster loops*) has no service, so there
 install." — the example catches `NotConfigured` for that; the service
 path below needs the synced install.
 
-In chat:
+In chat — `--read-only`, because a headless `igni -m` cannot ask you
+anything: the extension's tools say they are read-only, so they run, and
+anything else the model reaches for that would need a yes is refused
+rather than left waiting. Without it, a model that also tries, say, a
+shell command stops the run with "Run paused for confirmation … the tool
+did not run" and exit 1:
 
 ```bash
-igni -m "What is the status of ticket T-1001?"
+igni --read-only -m "What is the status of ticket T-1001?"
 ```
 
 The agent calls `lookup_ticket` and answers "open". (The model is shown the
@@ -562,7 +567,7 @@ line saying it is one.) Then once through the
 service, so it has something to export:
 
 ```bash
-igni -m "Look ticket T-1002 up on the ticket service."
+igni --read-only -m "Look ticket T-1002 up on the ticket service."
 ```
 
 Open igni's app: **Tickets** is in the sidebar, and its page shows
