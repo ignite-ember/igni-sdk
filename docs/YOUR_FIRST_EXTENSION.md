@@ -57,7 +57,7 @@ igni ── installs ──▶ extension  ◀─── bundle, signed ◀──�
   it has made its account, yours is no longer the first.
 - **`uv`** and Python 3.12.
 
-### One environment for the walk-through
+### Step 0: one environment for the walk-through
 
 Make it in `~/ticket-lookup`. Every
 command from here on runs there, in it:
@@ -68,6 +68,22 @@ uv venv --python 3.12
 source .venv/bin/activate
 uv pip install igni-extension igni-service uvicorn aiosqlite pytest anyio
 ```
+
+If `igni-extension` and `igni-service` are not on your package index yet
+(the index may hold an older `igni-extension`), build the wheels from this
+repository's checkout and install them by path. Keep the directory: step 2
+reads it too.
+
+```bash
+mkdir -p ~/ticket-lookup/wheels
+(cd packages/igni-extension && uv build --wheel -o ~/ticket-lookup/wheels)
+(cd packages/igni-service && uv build --wheel -o ~/ticket-lookup/wheels)
+uv pip install ~/ticket-lookup/wheels/*.whl uvicorn aiosqlite pytest anyio
+```
+
+(Run those from the checkout; the `cd ~/ticket-lookup` above is for the
+commands after them. A project made by `igni ext init` points here for the
+same reason: its `pyproject.toml` installs from `--find-links wheels`.)
 
 ## 1. Write the extension
 
@@ -355,6 +371,13 @@ on — a machine installs from it with no index.
 ```bash
 igni-service-bundle --extension extension --out extension-bundle.tar.gz
 ```
+
+It needs network access: it downloads the wheels for each platform from the
+package index (about 50 wheels and 30 MB for this example, a few seconds
+to a minute). The SDK wheels in the bundle are the ones the index serves,
+so an `igni-extension` newer than the index's is left out of the bundle
+unless you name where it is — add `--find-links ~/ticket-lookup/wheels` (from
+step 0). A wheel found there is taken as it is, not fetched again.
 
 ## 3. Run the service
 
