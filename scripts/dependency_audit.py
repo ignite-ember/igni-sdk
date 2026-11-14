@@ -97,6 +97,11 @@ class Allowlist:
                 raise SystemExit(f"{path}: an entry is missing {sorted(missing)}: {raw}")
             if not str(raw["reason"]).strip():
                 raise SystemExit(f"{path}: {raw['advisory']} has an empty reason")
+            if type(raw["review_by"]) is not dt.date:
+                raise SystemExit(
+                    f"{path}: {raw['advisory']} has a review_by that is not a date "
+                    f"(write it unquoted, as 2027-01-31): {raw['review_by']!r}"
+                )
             entries.append(
                 AllowEntry(
                     ecosystem=raw["ecosystem"],
