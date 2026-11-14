@@ -642,7 +642,7 @@ class TestFakeRuns:
         assert runs.decisions == [[decision]]
         assert not runs.running("s-1")
 
-    async def test_a_reject_resumes_as_rejected_and_then_answers(self) -> None:
+    async def test_a_reject_resumes_with_no_tool_event_and_then_answers(self) -> None:
         socket = RecordingSocket()
         runs = FakeRuns(socket)
         runs.script = lambda text: [Steps.approval("rm"), *Steps.answer("never")]
@@ -654,7 +654,7 @@ class TestFakeRuns:
 
         texts = [e.text for e in socket.sent if isinstance(e, ContentDelta)]
         assert texts == ["I did not run it."]
-        assert "ToolCompleted" in _kinds(socket)
+        assert not {"ToolStarted", "ToolCompleted", "ToolError"} & set(_kinds(socket))
 
     async def test_an_answer_no_run_is_waiting_for_plays_nothing_but_the_end(self) -> None:
         socket = RecordingSocket()

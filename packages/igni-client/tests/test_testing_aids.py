@@ -108,11 +108,11 @@ def test_an_approval_pauses_on_a_requirement_named_for_its_tool() -> None:
     assert Steps.approval("t", requirement_id="mine").requirements[0].requirement_id == "mine"
 
 
-def test_a_rejected_call_resumes_as_rejected_and_then_answers() -> None:
+def test_a_rejected_call_sends_no_tool_event_and_then_answers() -> None:
     steps = Steps.rejected()
 
-    assert steps[0] == ToolCompleted(run_id="r-1", summary="rejected", is_rejected=True)
-    assert steps[1:] == Steps.answer("I did not run it.")
+    assert not [s for s in steps if isinstance(s, ToolCompleted)]
+    assert steps == Steps.answer("I did not run it.")
 
 
 def test_a_delay_holds_its_seconds() -> None:

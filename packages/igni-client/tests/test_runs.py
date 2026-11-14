@@ -27,6 +27,7 @@ from igni_client import (
     RunStarted,
     StatusUpdate,
     ToolCompleted,
+    ToolError,
     ToolStarted,
     UnexpectedAnswer,
     UnknownMethod,
@@ -125,7 +126,10 @@ async def test_a_refusal_resumes_the_run_with_the_call_rejected() -> None:
 
     assert fake.runs.decisions[0][0].action == "reject"
     assert fake.runs.decisions[0][0].choice == "deny"
-    assert any(isinstance(e, ToolCompleted) and e.is_rejected for e in events)
+    # As igni: the refused call started nothing, so no tool event comes for it.
+    resumed = events[events.index(next(e for e in events if isinstance(e, ApprovalRequested))) :]
+    assert not [e for e in resumed if isinstance(e, (ToolStarted, ToolCompleted, ToolError))]
+    assert isinstance(events[-1], RunCompleted)
 
 
 async def test_every_call_of_a_pause_must_be_answered() -> None:
