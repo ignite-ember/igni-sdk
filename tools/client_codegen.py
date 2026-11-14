@@ -1274,7 +1274,10 @@ class ReferenceGenerator:
 
 def ruff_format(text: str, path: Path) -> str:
     """``text`` as the package's ``ruff`` leaves it: imports sorted, then formatted."""
-    for command in (["check", "--select", "I", "--fix", "--quiet"], ["format"]):
+    # igni_client is first-party whether or not the file written here exists yet: ruff finds
+    # that out from the disk, and a first run would otherwise sort differently from the next.
+    first_party = ["--config", 'lint.isort.known-first-party = ["igni_client"]']
+    for command in (["check", "--select", "I", "--fix", "--quiet", *first_party], ["format"]):
         done = subprocess.run(  # noqa: S603 — this interpreter's ruff, on our own output
             [sys.executable, "-m", "ruff", *command, "--stdin-filename", str(path), "-"],
             input=text,
