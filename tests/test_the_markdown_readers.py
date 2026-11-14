@@ -29,6 +29,13 @@ def test_split_params_keeps_a_comma_inside_a_quoted_default() -> None:
     ]
 
 
+def test_split_params_keeps_a_quote_escaped_inside_a_default() -> None:
+    assert split_params(r"a: str = 'it\'s, ok', b: int = 1") == [
+        r"a: str = 'it\'s, ok'",
+        "b: int = 1",
+    ]
+
+
 def test_split_params_ignores_a_trailing_comma_and_empty_input() -> None:
     assert split_params("a, b,") == ["a", "b"]
     assert split_params("") == []

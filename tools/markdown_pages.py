@@ -226,10 +226,15 @@ def split_params(params: str) -> list[str]:
     depth = 0
     quote = ""
     current = ""
+    escaped = False
     for char in params:
         if quote:
             current += char
-            if char == quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
                 quote = ""
             continue
         if char in "'\"":
