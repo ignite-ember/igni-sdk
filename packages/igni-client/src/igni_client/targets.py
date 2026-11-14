@@ -76,8 +76,15 @@ class Local:
     By default it is found from the lockfile a running igni writes in its
     project, `<project_dir>/.igni/backend.lock`, which also carries the
     token a program attaches with when the desktop app launched it. Pass
-    `url` (and `token`) to name one directly, such as a backend started with
-    `--ws-port 8765`; that one takes no token and checks none.
+    `url` and `token` to name one directly, such as a backend started by
+    hand (`python -m igni_core.backend --ws-port 8765`): it mints its own
+    window token and prints it once to stderr, so
+    `Local(url=..., token="<the printed token>")` connects as igni's window.
+    `Local(project_dir=...)` finds the lockfile instead and attaches as a
+    program with the token igni publishes there (it approves nothing).
+    Only a backend started with `IGNI_DEV_NO_WS_TOKEN=1`, the development
+    opt-out, takes no token: every connection, `Local(url=...)` without one
+    included, is its window.
 
     A program attached with the lockfile's token runs sessions but cannot
     answer the agent's approval requests: the agent can read the lockfile
@@ -115,8 +122,9 @@ class Local:
 
         An approver with an approver token; with the lockfile's token a
         program; with no token at all igni's window (igni takes none only
-        when started without a launch secret). A `token` given by hand may
-        be the window's launch secret or the lockfile's, so igni decides.
+        when started with `IGNI_DEV_NO_WS_TOKEN=1`). A `token` given by hand
+        may be the window's token (the launch secret, or the one a backend
+        started by hand prints) or the lockfile's, so igni decides.
         Before the lockfile is read, not known.
         """
         if self._approver_token is not None:

@@ -136,17 +136,18 @@ A **target** says where the igni is and how to reach it.
 - **`Local(project_dir)`** — the igni the desktop app runs for that
   project on this machine, found from the lockfile it writes there
   (`<project>/.igni/backend.lock`), which carries the token a
-  program attaches with when the desktop app launched it. A backend started
-  by hand writes the lockfile with its port and no token, and then
-  `standing` is `"unknown"`.
+  program attaches with. A backend started by hand publishes the same
+  lockfile, so `Local(project_dir=...)` attaches to it too, as a program
+  (`standing` is `"program"`; it approves nothing).
 - **`Local(url=..., token=...)`** — an igni you name directly, such as
-  one started by hand with `--ws-port`. A hand-started backend takes no
-  token and does not check one, so it has no access control: any program
-  that reaches its port may call it, and a wrong or missing approver token
-  does not refuse (the `AuthError` and `NotAllowed` below come from the
-  desktop app's igni). It prints `{"status": "ready", "ws_url": ...}` on
-  stdout once it listens: read that line to know it is ready, and pass
-  `--project-dir` so sessions have a folder.
+  one started by hand with `--ws-port`. A hand-started backend mints its
+  own window token, prints it once to stderr and requires it:
+  `Local(url=..., token="<the printed token>")` connects as igni's window.
+  The development opt-out `IGNI_DEV_NO_WS_TOKEN=1` (igni warns) starts one
+  that takes no token, where every connection is the window. It prints
+  `{"status": "ready", "ws_url": ...}` on stdout once it listens: read that
+  line to know it is ready, and pass `--project-dir` so sessions have a
+  folder.
 
 <!-- illustrative -->
 ```python
@@ -154,7 +155,7 @@ from igni_client import Fleet, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
 here = Local(project_dir="~/code/payments")          # the desktop app's igni for that project
-by_hand = Local(url="ws://127.0.0.1:8765")           # `python -m igni_core.backend --ws-port 8765`
+by_hand = Local(url="ws://127.0.0.1:8765", token="<the printed token>")  # `python -m igni_core.backend --ws-port 8765`
 ```
 
 Both speak the same protocol once open, so everything above the target is
@@ -869,9 +870,14 @@ by the token it offers:
   also answers approval requests and calls `approve_plan`, each
   time once — no saved rule, no permission-mode change. It still
   reaches no `window` call.
-* **Local client, igni started without a secret** (by hand, or with
-  the development switch): every connection stands as the window, so
-  it reaches `client`, `approver` and `window` calls.
+* **Local client, igni started by hand.** With no launcher to give it
+  a secret, igni mints its own window token and prints it once to the
+  terminal; the connection that offers it stands as the window, and
+  the lockfile's program token makes a program, as on the desktop.
+* **Local client, igni started with the development switch**
+  (`IGNI_DEV_NO_WS_TOKEN=1`): no token at all, so every connection
+  stands as the window and reaches `client`, `approver` and
+  `window` calls.
 * **Through Fleet's gateway** (a cloud VM): the gateway authenticates
   the client — with a person's key or an app's — and igni on the VM
   takes no token, so every connection stands as the window and
@@ -1062,11 +1068,12 @@ Wire method `set_server` · access `window`
 
 Choose the igni server to sign in to, and remember it for the next launch.
 
-`api_url` is the server's API address (`https` only);
-`portal_url` its portal, empty to derive it from `api_url`.
-Returns the server as stored, or, when the choice is refused (an
-empty or non-`https` address), `error` saying why and nothing
-stored. Fails when the user configuration file cannot be read or
+`api_url` is the server's API address: `https`, or `http` to
+`localhost`, `127.0.0.1` or `::1` for a local deployment;
+`portal_url` its portal, empty to derive it from `api_url`, and
+held to the same rule when given. Returns the server as stored, or,
+when the choice is refused (an empty `api_url`, or an address that
+breaks that rule), `error` saying why and nothing stored. Fails when the user configuration file cannot be read or
 written.
 
 Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
@@ -1924,9 +1931,10 @@ Wire method `get_hooks_details` · access `client`
 List the hooks this session runs.
 
 Takes no arguments. Returns one row per hook: the `event` it runs
-on, its `type` (a shell `command` or an HTTP `url`), the
-`matcher` that narrows it, its timeout, whether it runs in the
-background, and the HTTP headers it sends.
+on, its `type` (`command`, `http`, `prompt` or `mcp_tool`)
+and the `command` or `url` it runs, the `matcher` that narrows
+it, its timeout, whether it runs in the background, and the HTTP
+headers it sends.
 
 </details>
 
@@ -2134,7 +2142,7 @@ name, with its provider and settings.
 </details>
 
 <details>
-<summary><code>await session.models.switch(model_name: str)</code> → <code>InfoMessage</code></summary>
+<summary><code>await session.models.switch(model_name: str)</code> → <code>ModelSwitched</code></summary>
 
 Wire method `switch_model` · access `client`
 
@@ -2142,10 +2150,9 @@ Make another model the one this session's agent runs on.
 
 `model_name` is a name from the model registry
 (`get_model_registry`). The choice is also saved as the default
-for new sessions. Returns an `info` message, sent in place of an
-`rpc_response`, saying the model switched, with a note for any
-part of the choice that could not be saved. Fails when the model is
-not in the registry.
+for new sessions. Returns `text`, saying the model switched, with a
+note for any part of the choice that could not be saved. Fails when
+the model is not in the registry.
 
 </details>
 
@@ -2385,9 +2392,10 @@ Wire method `get_interrupted_runs` · access `client`
 List a session's runs that stopped before they finished.
 
 `session_id` names the session. Returns one row per run that was
-cancelled or failed: the `message_id` and text of the message that
-started it, when it arrived and when it stopped, why (`cancelled`
-or `errored`) and the last error. A client offers to retry,
+cancelled, failed or never finished: the `message_id` and text of
+the message that started it, when it arrived and when it stopped, why
+(`cancelled`, `errored`, or `abandoned` when igni stopped while
+it ran) and the last error. A client offers to retry,
 discard or edit each. A storage failure answers an empty list.
 
 </details>
@@ -2397,7 +2405,7 @@ discard or edit each. A storage failure answers an empty list.
 
 Wire method `get_pending_messages` · access `client`
 
-List a session's messages that were received but never answered.
+List a session's messages whose run started but never finished.
 
 `session_id` names the session. Returns the user messages still
 pending at least a minute after they arrived — typically left by a

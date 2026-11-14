@@ -20,12 +20,15 @@ decides, and a refusal comes back as the same `AccessRefused`.
   stands every connection as its window: `client`, `approver` and `window`.
 * `Local(project_dir)` attaches with the token in igni's lockfile — a
   program's: `client` only. When the lockfile has no token, igni was started
-  without a launch secret and every connection is its window.
+  with the development opt-out (`IGNI_DEV_NO_WS_TOKEN=1`) and every
+  connection is its window.
 * `Local(..., approver_token=...)` (or `IGNI_APPROVER_TOKEN`) is an
   approver: `client` and `approver`.
-* `Local(url=...)` with no token reaches an igni started without a launch
-  secret: its window. With a `token`, it offers whatever it was given —
-  igni's window's own launch secret, or the lockfile's — so it is not known.
+* `Local(url=...)` with no token reaches an igni started with
+  `IGNI_DEV_NO_WS_TOKEN=1`: its window; any other igni refuses it. With a
+  `token`, it offers whatever it was given — the window's token (the
+  launch secret, or the one a backend started by hand prints once to
+  stderr), or the lockfile's — so it is not known.
 """
 
 from __future__ import annotations
