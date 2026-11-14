@@ -86,13 +86,34 @@ class ConsumerError(Exception):
 
 def run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     """Run a command in a directory."""
-    return subprocess.run(  # noqa: S603 — our own commands, on our own files
-        command,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        return subprocess.run(  # noqa: S603 — our own commands, on our own files
+            command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise ConsumerError(f"cannot run {command[0]}: {error}") from None
+
+
+def manifest_of(package: str, *keys: str) -> dict:
+    """The package's ``package.json``, which must have ``keys``."""
+    manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
+    missing = [key for key in keys if key not in manifest]
+    if missing:
+        raise ConsumerError(f"{package}'s package.json has no {missing}")
+    return manifest
+
+
+def targets(value: object) -> set[str]:
+    """Every file path an ``exports`` value names, however deep its conditions nest."""
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        return set().union(*(targets(inner) for inner in value.values()))
+    return set()
 
 
 def build() -> None:
@@ -120,7 +141,10 @@ def pack(destination: Path) -> dict[str, Path]:
         )
         if done.returncode != 0:
             raise ConsumerError(f"{package} does not pack:\n{done.stdout}{done.stderr}")
-        name = done.stdout.strip().splitlines()[-1]
+        lines = done.stdout.strip().splitlines()
+        if not lines:
+            raise ConsumerError(f"{package} packed, and npm named no tarball")
+        name = lines[-1]
         tarballs[package] = destination / name
     return tarballs
 
@@ -132,7 +156,7 @@ def install(tarballs: dict[str, Path], into: Path) -> None:
     own manifest, its files, and nothing else.
     """
     for package, tarball in tarballs.items():
-        manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
+        manifest = manifest_of(package, "name")
         target = into / "node_modules" / manifest["name"]
         target.mkdir(parents=True, exist_ok=True)
         with tarfile.open(tarball) as archive:
@@ -161,10 +185,8 @@ def check_the_build_is_in_the_tarball(package: str, tarball: Path) -> None:
     installs it. This is where that is caught.
     """
     names = tarball_contents(tarball)
-    manifest = json.loads((ROOT / package / "package.json").read_text(encoding="utf-8"))
-    wanted = {manifest["main"], manifest["types"]}
-    for entry in manifest["exports"].values():
-        wanted.update(entry.values())
+    manifest = manifest_of(package, "main", "types", "exports")
+    wanted = {manifest["main"], manifest["types"], *targets(manifest["exports"])}
     missing = sorted(name for name in wanted if name.lstrip("./") not in names)
     if missing:
         raise ConsumerError(f"{package}'s tarball does not carry {missing}")
