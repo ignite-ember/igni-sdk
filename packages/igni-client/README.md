@@ -501,15 +501,14 @@ These calls are followed, each by what igni's events carry:
 | `session.plan.approve(run_id)`, `.dismiss(run_id)` | `plan_decided` of that run | that push, or the answer when `ok` is false |
 | `session.visualization_action(...)` | `visualization_action_dispatched` of this session, action and params | that push |
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
-| `igni.auth.login()` | `login_status` | `login_result` |
-
-A few methods make igni send events that carry nothing to tell this
-call's from another's — a shell command moved to the background is
-reported by pid, but the answer does not say which pid. Those return
-their result only, and their reference entry says why and where to watch
-instead: `attach`, `cancel`, `run_shell`, `scheduler.execute`,
-`auth.sign_out`, `notifications.list`, `notifications.mark_read`,
-`workspace.set_trust` and `window.model`.
+| `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
+| `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
+| `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
+| `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
+| `session.workspace.set_trust(...)` | `workspace_trust_required` of that path | the answer |
+| `igni.window.model(...)` | `window_model_changed` carrying this call's token | the answer |
 
 ### Watching an igni
 
@@ -560,8 +559,8 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     await session.typing("half a tho")              # every client sees the draft
 ```
 
-The commands that switch approvals off or change whom igni signs in to
-(`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
+The commands that switch approvals off, change what igni loads or whom it
+signs in to (`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer
 an `error` to anything but igni's window.
 
 ### Commands in a Fleet VM
