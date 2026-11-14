@@ -12,7 +12,8 @@ the asset URLs relative. With Vite that is `base: "./"` in `vite.config`.
 A development install (`IGNI_DEV_EXTENSIONS=1 igni ext install <dir>`) is a
 copy of the directory in igni's extension store, so a rebuilt page reaches
 igni only by installing again: `igni ext install --replace <dir>`, which
-re-asks for the extension's permissions. A second install without
+prints again what the extension may use (it asks nothing). A running igni
+serves the rebuilt page at once: reload it. A second install without
 `--replace` is refused ("already installed").
 
 With TypeScript 6 or later, `import "@ignite-ember/ui-css"` type-checks

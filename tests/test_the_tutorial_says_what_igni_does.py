@@ -175,3 +175,16 @@ def test_the_bridge_readme_says_when_to_post_hello_and_that_there_is_no_real_rou
 
     assert 'frame.addEventListener("load"' in section
     assert "deliberately no way to send a framed page's calls to the real" in section
+
+
+def test_a_replace_is_not_said_to_ask_for_permissions_again() -> None:
+    """`igni ext install --replace` prints what the extension may use and asks
+    nothing (with stdin closed it asked nothing either), and a running igni
+    served the rebuilt page at once; the docs said it "re-asks"."""
+    bridge = (REPO / "packages" / "extension-bridge" / "README.md").read_text(encoding="utf-8")
+    loops = " ".join(_section("## Changing it").split())
+
+    for text in (loops, " ".join(bridge.split())):
+        assert "re-asks" not in text
+        assert "(it asks nothing)" in text
+        assert "reload it" in text

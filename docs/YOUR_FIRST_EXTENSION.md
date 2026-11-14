@@ -726,8 +726,10 @@ igni or an igni server.
   service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`, and start
   igni with `IGNI_DEV_EXTENSIONS=1` too. It installs a copy, so after a
   change (a rebuilt page too) install it again with
-  `igni ext install --replace extension`, which re-asks for its
-  permissions; without `--replace` a second install is refused
+  `igni ext install --replace extension`, which prints again what it may
+  use (it asks nothing). A running igni serves a rebuilt page at once —
+  reload it; changed code or a changed manifest waits for igni's next
+  start. Without `--replace` a second install is refused
   ([EXTENSIBILITY.md §9](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md#9-developing-one)).
 
 ## Where next
