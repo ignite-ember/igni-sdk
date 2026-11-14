@@ -66,8 +66,10 @@ function changed(a: readonly unknown[], b: readonly unknown[]): boolean {
 /**
  * What is shown where a subtree threw.
  *
- * See the note at the top of this file: it catches less than people
- * expect, and the default fallback shows the message on purpose.
+ * It catches less than people expect: render, lifecycle and
+ * constructor throws in the subtree below it, and not event handlers,
+ * `setTimeout`, promise rejections or anything during SSR. The default
+ * fallback shows the error's message on purpose.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   /**
