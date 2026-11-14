@@ -276,7 +276,9 @@ const hello: HelloMessage = {
   igni: BRIDGE_VERSION, kind: "hello", nonce: "n1", extensionId: "acme.tickets",
   params: {}, theme: "dark", tokens: {},
 };
-frame.contentWindow!.postMessage(hello, "*");
+// After the frame's load event: connect() hears only a hello posted once
+// the page's script runs, and one posted earlier is lost.
+frame.addEventListener("load", () => frame.contentWindow!.postMessage(hello, "*"));
 
 window.addEventListener("message", (event) => {
   if (event.source !== frame.contentWindow || !isGuestMessage(event.data)) return;
@@ -291,6 +293,11 @@ window.addEventListener("message", (event) => {
 
 `packages/test-utils/ticketLookupPage.test.ts` in this repository does
 this for the ticket-lookup example's page, in jsdom.
+
+There is deliberately no way to send a framed page's calls to the real
+backend outside igni's app — no URL to point it at, no token to pass: the
+answers in a test are the stand-in's. What the real tool returns is tested
+on the tool, with `HostHarness`, and the two meet in igni's app.
 
 ## The floor
 

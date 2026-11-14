@@ -163,3 +163,15 @@ def test_ui_react_s_quick_start_page_has_the_igni_root_class() -> None:
     assert any(
         ".igni-root" in f.read_text(encoding="utf-8") for f in css if "node_modules" not in f.parts
     )
+
+
+def test_the_bridge_readme_says_when_to_post_hello_and_that_there_is_no_real_route() -> None:
+    """Following 'Testing a page': connect() only sees a hello posted after the
+    page's script runs, and the section did not say to wait for the frame's
+    load event, nor that a framed page has no route to the real backend
+    outside igni's app."""
+    readme = (REPO / "packages" / "extension-bridge" / "README.md").read_text(encoding="utf-8")
+    section = readme[readme.index("## Testing a page") : readme.index("## The floor")]
+
+    assert 'frame.addEventListener("load"' in section
+    assert "deliberately no way to send a framed page's calls to the real" in section
