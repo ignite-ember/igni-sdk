@@ -377,5 +377,5 @@ channel's class, a `PushNotification` whose `payload` is typed.
 | Package | Status | What "done" means |
 |---|---|---|
 | `igni-client` | ✅ written: a complete reference, its API section generated from the contract; its examples run as tests | Every area and method above: what it does, its arguments, its result, its errors, and an example. Streaming, approvals, events, reconnects, and Fleet vs local, each with a worked example. |
-| `igni-service` | ✅ written (2,681 lines; its examples run as tests); on PyPI from 0.2.0 | The plain opening (PR #18), then every capability documented in depth. |
-| `igni-extension` | ✅ written (1,865 lines; its examples run as tests); on PyPI from 0.2.0 | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
+| `igni-service` | ✅ written; its examples run as tests; ships in 0.2.0 (PyPI holds only 0.1.0 until it is published) | The plain opening (PR #18), then every capability documented in depth. |
+| `igni-extension` | ✅ written; its examples run as tests; ships in 0.2.0 (PyPI holds only 0.1.0 until it is published) | The same depth for an extension's process: tools, hooks, host calls, service calls, events. |
