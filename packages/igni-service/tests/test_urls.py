@@ -23,6 +23,8 @@ from igni_service.urls import IgniPaths, ServiceUrl
         ("http://service.test?", "http://service.test"),
         ("http://service.test#", "http://service.test"),
         ("http://127.0.0.1:9000", "http://127.0.0.1:9000"),
+        ("http://user:secret@Service.Test:81/a", "http://service.test:81/a"),
+        ("http://service.test/a%20b/", "http://service.test/a%20b"),
     ],
 )
 def test_a_url_is_written_the_one_way_igni_writes_it(given: str, written: str) -> None:
