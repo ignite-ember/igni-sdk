@@ -84,7 +84,7 @@ One person told about one notification, after igni's rules.
 |---|---|---|---|
 | `org_id` | `str` | required | The organisation the person was told in. |
 | `user_id` | `str` | required | Who was told. |
-| `source` | `str` | required | The service that told them: its client id. |
+| `source` | `str` | required | The extension that told them: the `id` of the bundle its service shipped.  Empty when it shipped none. |
 | `notification` | `Notification` | required | What they were told. |
 
 ## FakeAgents
@@ -999,7 +999,7 @@ own default. A field `IgniSettings` lacks is refused, not ignored.
 | `redirect_uris` | `list[str]` | factory | `IGNI_REDIRECT_URIS`: more addresses igni may send a signed-in person back to. |
 | `key_encryption_key` | `str` | `''` | `IGNI_KEY_ENCRYPTION_KEY`. |
 | `key_database_url` | `str` | `''` | `IGNI_KEY_DATABASE_URL`. |
-| `extension_bundle_path` | `str` | `''` | `IGNI_EXTENSION_BUNDLE_PATH`: the bundle the service uploads at start-up. |
+| `extension_bundle_path` | `str` | `''` | `IGNI_EXTENSION_BUNDLE`: the bundle the service uploads at start-up. |
 | `revocations_max_staleness` | `float` | `30.0` | `IGNI_REVOCATIONS_MAX_STALENESS`, in seconds. |
 | `timeout` | `float` | `10.0` | `IGNI_SERVER_TIMEOUT`: each call to igni, in seconds. |
 

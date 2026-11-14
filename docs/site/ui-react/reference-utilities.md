@@ -79,7 +79,7 @@ what makes a list scannable: the shape is recognised before the
 word is read, so the item somebody wants is found by looking rather
 than by reading the list from the top each time.
 
-*One set, one grammar.** All of them are 16×16, drawn in strokes
+**One set, one grammar.** All of them are 16×16, drawn in strokes
 of the same weight on the same grid, and coloured ``currentColor``
 so a disabled item's icon dims with its label and a destructive
 one turns red with it. Mixing a filled glyph into a stroked set is

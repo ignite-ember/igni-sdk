@@ -123,7 +123,7 @@ The client waits up to 30 seconds.
 
 ```python
 cut = await session.history.truncate("run_42")
-print(f"removed {cut.removed} turn(s)")
+print(f"removed {cut.removed} run(s)")
 ```
 
 ## session.context.breakdown()
@@ -195,7 +195,7 @@ status = await session.status()
 cleared = await session.context.compact(
     ctx_tokens=status.context_tokens, max_ctx=status.max_context
 )
-if cleared is not None:
+if cleared.compacted:
     print("compacted into", cleared.new_session_id)
 ```
 

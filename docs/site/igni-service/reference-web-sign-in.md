@@ -206,7 +206,7 @@ One person signed in to the service's pages.
 | `access_token` | `str` | required | Their current access token for this service. |
 | `refresh_token` | `str` | required | What renews it, until the sign-in ends. |
 | `access_expires_at` | `float` | required | Wall-clock second the access token stops working. |
-| `expires_at` | `float` | required | Wall-clock second the session is dead: the refresh token's life. |
+| `expires_at` | `float` | required | Wall-clock second the session is dead: `WebSignIn.SESSION_TTL` (30 days) after the sign-in or its last renewal. |
 
 ## WebSessionStore
 

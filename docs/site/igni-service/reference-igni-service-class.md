@@ -318,7 +318,7 @@ def host(org_id: str) -> Host
 |---|---|---|---|
 | `org_id` | `str` | required | The organisation's id in igni, the one every call this host makes is for. |
 
-igni for one organisation: `notify`, `agent(producer)`, `send_event`, `vm_profile`, and its `directory`.
+igni for one organisation: `notify`, `agent(producer)`, `send_event`, `extension_vm_profile`, and its `directory`.
 
 ### IgniService.thumbprint()
 

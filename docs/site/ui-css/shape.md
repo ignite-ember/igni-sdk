@@ -2,7 +2,7 @@
 
 # Shape
 
-`--radius-sm` 6, `--radius` 10, `--radius-lg` 14, plus `--radius-pill` and `--radius-circle` for the two shapes that are not sizes.
+`--radius-sm` 8, `--radius` 12, `--radius-lg` 18, plus `--radius-pill` and `--radius-circle` for the two shapes that are not sizes.
 
 `9999px` and `999px` were both in use for pills — identical to a renderer, two things to a reader. Now one.
 

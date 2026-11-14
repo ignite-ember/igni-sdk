@@ -140,7 +140,7 @@ interface LocationMessage
 
 Guest → host: where I am now.
 
-*Not a navigation.** `navigate` asks the host to go somewhere
+**Not a navigation.** `navigate` asks the host to go somewhere
 else; this says "I am still here, and here is now this". The host
 folds it into its own URL and replays it in the next `hello`, so a
 reload or a shared link comes back to the same place inside the

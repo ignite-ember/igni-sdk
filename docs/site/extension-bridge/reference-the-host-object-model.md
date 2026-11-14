@@ -199,7 +199,7 @@ The host said no, or it went wrong there. `code` is for code; the message, for p
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `code` | `HostErrorCode \| string` | required | why it failed: one of the {@link HostErrorCode}s, or whatever the host said. |
+| `code` | `HostErrorCode \| string` | required | why it failed: one of the `HostErrorCode`s, or whatever the host said. |
 | `message` | `string` | required | a sentence for a person to read. |
 
 ## HostLink
@@ -219,7 +219,7 @@ How requests reach the igni host.
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `op` | `"get" \| "set" \| "call"` | required | what to do: read a property, write one, or call a method. |
-| `path` | `string` | required | where in the model, as `host.chat.processing`. |
+| `path` | `string` | required | where in the model, as `chat.processing`: the path without the leading `host.`. |
 | `options` | `{ window?: string \| null; session?: string \| null; params?: Record<string, unknown>; value?: unknown; }` | required | the window or session it is about, the arguments of a call, and the value of a write. |
 
 ## HostObject
@@ -262,7 +262,7 @@ A value of a host object: `get()` reads it, `set()` writes it.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `constructor` | method | `(private readonly owner: HostObject, readonly name: string, readonly writable: boolean)` | One value of one host object. |
-| `path` | accessor | `string` | Where in the model this value sits: `host.chat.processing`. |
+| `path` | accessor | `string` | Where in the model this value sits: `chat.processing`, without the leading `host.`. |
 | `get` | method | `() => Promise<T>` | Read it. |
 | `set` | method | `(value: T) => Promise<void>` | Write it, as the person's UI would. Refused where theirs would be. |
 

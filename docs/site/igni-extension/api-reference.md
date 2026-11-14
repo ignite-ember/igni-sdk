@@ -64,8 +64,8 @@ unchanged, with `manifest_name` set on it.
 The input schema comes from the function's parameters. A parameter typed
 `Caller` (or `Caller | None`) is filled from the call and left out of the
 schema. A plain `def` runs in a worker thread. An exception the tool
-raises reaches igni, and the model, as an error result whose text is the
-exception's message.
+raises reaches igni, and the model, as an error result whose text is
+`Error executing tool <name>: ` and the exception's message.
 
 **`@ext.on(signal)`**
 
@@ -427,7 +427,7 @@ models are frozen and refuse unknown fields.
 | `body` | One line; whitespace is collapsed; at most 1,000 characters. |
 | `target` | Where opening it goes: one of this extension's pages. Required; igni shows nothing it cannot open. |
 | `event_key` | The same event is shown once, however often it is sent; 1–200 characters. Required. |
-| `Target.page` | The page's kind; 1–200 characters. igni checks it is one of this extension's pages. |
+| `Target.page` | The page's id, as the manifest declares it; 1–200 characters. igni checks it is one of this extension's pages. |
 | `Target.params` | Strings only (a page reads them from its location); at most 32, at most 2,048 bytes as JSON. |
 
 A value outside these rules raises `pydantic.ValidationError` where you

@@ -35,7 +35,7 @@ What an extension's page is handed.
 | `setLocation` | method | `(state: LocationState) => void` | Tell the host where inside this extension the user now is. |
 | `host` | field | `Host` | igni, as this extension sees it: the host object model (`docs/HOST_OBJECT_MODEL.md` in igni). The same model the extension's process reaches as `ext.host`. |
 | `on` | method | `(signal: Signal<T>, fn: (value: T) => void, onRefused?: (error: HostError) => void) => () => void` | Handle a host signal: `bridge.on(bridge.host.chat.run_completed, fn)`. |
-| `service` | field | `ServiceBridge` | The extension's own service, reached directly, as the signed-in person: |
+| `service` | field | `ServiceBridge` | The extension's own service, reached directly, as the signed-in person. |
 
 ### Bridge.rpc()
 

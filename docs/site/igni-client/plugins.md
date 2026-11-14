@@ -92,7 +92,7 @@ The client waits up to 600 seconds.
 **Example**
 
 ```python
-info = await session.plugins.install("acme-review@acme")
+info = await session.plugins.install("@acme/acme-review")
 print(info.text)
 ```
 

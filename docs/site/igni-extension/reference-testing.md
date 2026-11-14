@@ -180,7 +180,7 @@ One call's answer, and how long it took.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `call` | `ConcurrentCall` | required | The call it answers. |
-| `result` | `Any` | `None` | The tool's result: its structured content, or its text. |
+| `result` | `Any` | `None` | The tool's result: its structured content, or, when it has none, its content blocks (a list, as MCP returns them). |
 | `is_error` | `bool` | `False` | Whether the tool raised. |
 | `took` | `float` | `0.0` | Seconds from sending the call to its answer. |
 
