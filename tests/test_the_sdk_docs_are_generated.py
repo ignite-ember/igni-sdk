@@ -379,7 +379,7 @@ def test_the_host_model_page_says_what_the_contract_says() -> None:
     for _heading, declared, header, rows in _sections(page):
         if declared not in SCHEMA_TYPES or header[-1] not in ("What it is", "Description"):
             continue
-        shown[declared] = {row[0].strip("`"): row[-1] for row in rows}
+        shown[declared] = {row[0].strip("`").removesuffix("?"): row[-1] for row in rows}
     wrong = []
     for name, spec in SCHEMA_TYPES.items():
         if name not in shown:
