@@ -629,8 +629,10 @@ export function Switch({
  *
  * The error slot is the part that gets left out, and a form that
  * rejects input without saying why is the one people abandon. When
- * `error` is set it is wired to the control through
- * `aria-describedby`, so it is announced rather than merely shown.
+ * `htmlFor` is set and the control is a single element, `error` (or
+ * `hint`) is wired to it through `aria-describedby`, and an `error`
+ * also sets `aria-invalid`, so it is announced rather than merely
+ * shown. Without `htmlFor` the note is shown and nothing points at it.
  */
 export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
   /** The label. It is visible, not a placeholder. */
@@ -639,7 +641,7 @@ export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
   hint?: ReactNode;
   /** Why the control is wrong. It replaces the hint while it is set. */
   error?: ReactNode;
-  /** The id of the control, so the label points at it. */
+  /** The id of the control, so the label points at it. Also what wires `error` and `hint` to the control: without it, nothing does. */
   htmlFor?: string;
 }
 
@@ -959,8 +961,8 @@ export interface TabPanelProps extends HTMLAttributes<HTMLDivElement> {
  *   they match.
  * @param children — the content of the panel, shown while its tab is
  *   the active one.
- * @param className — added to the element's classes, beside the one the
- *   theme gives it.
+ * @param className — the panel's own class; the theme gives it
+ *   none.
  * @param rest — the remaining props, spread onto the element.
  */
 export function TabPanel({
