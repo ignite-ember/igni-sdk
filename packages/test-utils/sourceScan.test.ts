@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { withoutComments } from "./sourceScan";
+import { starExportFiles, withoutComments } from "./sourceScan";
 
 describe("withoutComments: offsets and lines", () => {
   it("keeps the length when a block comment holds an astral character", () => {
@@ -112,5 +112,25 @@ describe("withoutComments: tsconfig", () => {
     const parsed = JSON.parse(withoutComments(src));
     expect(Object.keys(parsed.compilerOptions.paths)).toEqual(["react/*", "u"]);
     expect(parsed.compilerOptions.paths.u).toEqual(["https://x"]);
+  });
+});
+
+describe("starExportFiles", () => {
+  it("names each whole re-export's source file, in order", () => {
+    const src = `export * from "./b.js";\nexport * from './a.js';\n`;
+    expect(starExportFiles(src)).toEqual(["b.tsx", "a.tsx"]);
+  });
+
+  it("takes the extension the caller reads", () => {
+    expect(starExportFiles('export * from "./x.js";', ".ts")).toEqual(["x.ts"]);
+  });
+
+  it("skips named re-exports, packages and comments", () => {
+    const src = `// export * from "./doc.js";
+/* export * from "./block.js"; */
+export { A } from "./named.js";
+export * from "react";
+export * from "./real.js";`;
+    expect(starExportFiles(src)).toEqual(["real.tsx"]);
   });
 });

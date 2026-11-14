@@ -90,3 +90,19 @@ export function withoutComments(src: string): string {
   }
   return out;
 }
+
+/**
+ * The files a barrel re-exports whole, in the order it names them.
+ *
+ * `export * from "./controls.js"` names `controls.tsx`: the source
+ * names its neighbours the way Node finds them after the build, and
+ * the guards read the TypeScript. Comments are skipped, so an example
+ * in a doc comment is not a file.
+ */
+export function starExportFiles(src: string, extension = ".tsx"): string[] {
+  return [
+    ...withoutComments(src).matchAll(
+      /\bexport\s*\*\s*from\s*["']\.\/([^"']+)\.js["']/g,
+    ),
+  ].map((m) => m[1] + extension);
+}

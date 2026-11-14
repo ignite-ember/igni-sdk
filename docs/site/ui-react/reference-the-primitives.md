@@ -8,55 +8,55 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 
 | Name | Kind | Defined in | What it is |
 |---|---|---|---|
-| [`ButtonVariant`](#buttonvariant) | type | `primitives.tsx` | How a button reads. |
-| [`ButtonSize`](#buttonsize) | type | `primitives.tsx` | `md` unless the row is dense, in which case `sm` or `xs`. |
-| [`ButtonProps`](#buttonprops) | interface | `primitives.tsx` | What a `Button` takes. |
-| [`Button`](#button) | function | `primitives.tsx` | A button. |
-| [`InputProps`](#inputprops) | interface | `primitives.tsx` | What an `Input` takes. |
-| [`Input`](#input) | function | `primitives.tsx` | A single-line text field. |
-| [`Tone`](#tone) | type | `primitives.tsx` | How loud a status is. |
-| [`ChipProps`](#chipprops) | interface | `primitives.tsx` | A tag the reader can scan past. |
-| [`Chip`](#chip) | function | `primitives.tsx` | A tag the reader can scan past. See `ChipProps` for when to reach for a chip and when for a badge. |
-| [`BadgeProps`](#badgeprops) | interface | `primitives.tsx` | A state the reader is meant to notice. |
-| [`Badge`](#badge) | function | `primitives.tsx` | A state the reader is meant to notice. See `BadgeProps` for what the tone does and does not say. |
-| [`Row`](#row) | function | `primitives.tsx` | A horizontal run of things, vertically centred. |
-| [`Actions`](#actions) | function | `primitives.tsx` | A horizontal run of buttons. Separate from `Row` because it is what a reader looks for at the foot of a panel. |
-| [`List`](#list) | function | `primitives.tsx` | A vertical stack. |
-| [`Toolbar`](#toolbar) | function | `primitives.tsx` | A row of controls at the top of a panel: what the panel is, and what you can do to it. |
-| [`Card`](#card) | function | `primitives.tsx` | A surface: background, border, radius, padding. |
-| [`Item`](#item) | function | `primitives.tsx` | One selectable row inside a list. Renders a button, because something clickable that is not a button is a keyboard trap. |
-| [`Table`](#table) | function | `primitives.tsx` | A table. |
-| [`EmptyProps`](#emptyprops) | interface | `primitives.tsx` | What to show where there is nothing. |
-| [`Empty`](#empty) | function | `primitives.tsx` | What to show where there is nothing. |
-| [`DialogProps`](#dialogprops) | interface | `primitives.tsx` | What a `Dialog` takes. |
-| [`Dialog`](#dialog) | function | `primitives.tsx` | The one primitive here that is behaviour rather than a box. |
-| [`SelectProps`](#selectprops) | interface | `primitives.tsx` | What a `Select` takes. |
-| [`Select`](#select) | function | `primitives.tsx` | A drop-down. |
-| [`TextareaProps`](#textareaprops) | interface | `primitives.tsx` | What a `Textarea` takes. |
-| [`Textarea`](#textarea) | function | `primitives.tsx` | A multi-line text field. |
-| [`CheckboxProps`](#checkboxprops) | interface | `primitives.tsx` | What a `Checkbox` takes. |
-| [`Checkbox`](#checkbox) | function | `primitives.tsx` | A native checkbox, wrapped in its own label. |
-| [`RadioProps`](#radioprops) | interface | `primitives.tsx` | What a `Radio` takes. |
-| [`Radio`](#radio) | function | `primitives.tsx` | A native radio, wrapped in its own label. |
-| [`SwitchProps`](#switchprops) | interface | `primitives.tsx` | What a `Switch` takes. |
-| [`Switch`](#switch) | function | `primitives.tsx` | A switch, which is a button rather than a checkbox. |
-| [`FieldProps`](#fieldprops) | interface | `primitives.tsx` | A label, a control, and room for the reason it is wrong. |
-| [`Field`](#field) | function | `primitives.tsx` | A label, a control, and room for the reason it is wrong. |
-| [`SpinnerProps`](#spinnerprops) | interface | `primitives.tsx` | Work whose duration is unknown. `Skeleton` is for known shapes. |
-| [`Spinner`](#spinner) | function | `primitives.tsx` | Work whose duration is unknown. |
-| [`ProgressProps`](#progressprops) | interface | `primitives.tsx` | What a `Progress` takes. |
-| [`Progress`](#progress) | function | `primitives.tsx` | A bar that fills. |
-| [`TabsProps`](#tabsprops) | interface | `primitives.tsx` | What a `Tabs` takes. |
-| [`Tabs`](#tabs) | function | `primitives.tsx` | Tabs with the arrow keys wired, because a tab strip that only responds to clicks is a tab strip half the people cannot use. |
-| [`TabPanelProps`](#tabpanelprops) | interface | `primitives.tsx` | The panel a tab controls. Needs the same `base` the strip used. |
-| [`TabPanel`](#tabpanel) | function | `primitives.tsx` | The panel a tab controls. |
-| [`Divider`](#divider) | function | `primitives.tsx` | A horizontal rule. |
-| [`HeadingProps`](#headingprops) | interface | `primitives.tsx` | What a `Heading` takes. |
-| [`Heading`](#heading) | function | `primitives.tsx` | A heading, at the level you say. |
-| [`TextTone`](#texttone) | type | `primitives.tsx` | How loud. Not `Tone`: this is emphasis, not status. |
-| [`TextProps`](#textprops) | interface | `primitives.tsx` | What a `Text` takes. |
-| [`Text`](#text) | function | `primitives.tsx` | A paragraph. |
-| [`Code`](#code) | function | `primitives.tsx` | Inline code: a name, a path, a flag. |
+| [`ButtonVariant`](#buttonvariant) | type | `controls.tsx` | How a button reads. |
+| [`ButtonSize`](#buttonsize) | type | `controls.tsx` | `md` unless the row is dense, in which case `sm` or `xs`. |
+| [`ButtonProps`](#buttonprops) | interface | `controls.tsx` | What a `Button` takes. |
+| [`Button`](#button) | function | `controls.tsx` | A button. |
+| [`InputProps`](#inputprops) | interface | `controls.tsx` | What an `Input` takes. |
+| [`Input`](#input) | function | `controls.tsx` | A single-line text field. |
+| [`Tone`](#tone) | type | `controls.tsx` | How loud a status is. |
+| [`ChipProps`](#chipprops) | interface | `controls.tsx` | A tag the reader can scan past. |
+| [`Chip`](#chip) | function | `controls.tsx` | A tag the reader can scan past. See `ChipProps` for when to reach for a chip and when for a badge. |
+| [`BadgeProps`](#badgeprops) | interface | `controls.tsx` | A state the reader is meant to notice. |
+| [`Badge`](#badge) | function | `controls.tsx` | A state the reader is meant to notice. See `BadgeProps` for what the tone does and does not say. |
+| [`Row`](#row) | function | `layout.tsx` | A horizontal run of things, vertically centred. |
+| [`Actions`](#actions) | function | `layout.tsx` | A horizontal run of buttons. Separate from `Row` because it is what a reader looks for at the foot of a panel. |
+| [`List`](#list) | function | `layout.tsx` | A vertical stack. |
+| [`Toolbar`](#toolbar) | function | `layout.tsx` | A row of controls at the top of a panel: what the panel is, and what you can do to it. |
+| [`Card`](#card) | function | `layout.tsx` | A surface: background, border, radius, padding. |
+| [`Item`](#item) | function | `layout.tsx` | One selectable row inside a list. Renders a button, because something clickable that is not a button is a keyboard trap. |
+| [`Table`](#table) | function | `layout.tsx` | A table. |
+| [`EmptyProps`](#emptyprops) | interface | `layout.tsx` | What to show where there is nothing. |
+| [`Empty`](#empty) | function | `layout.tsx` | What to show where there is nothing. |
+| [`DialogProps`](#dialogprops) | interface | `Dialog.tsx` | What a `Dialog` takes. |
+| [`Dialog`](#dialog) | function | `Dialog.tsx` | The one primitive here that is behaviour rather than a box. |
+| [`SelectProps`](#selectprops) | interface | `formControls.tsx` | What a `Select` takes. |
+| [`Select`](#select) | function | `formControls.tsx` | A drop-down. |
+| [`TextareaProps`](#textareaprops) | interface | `formControls.tsx` | What a `Textarea` takes. |
+| [`Textarea`](#textarea) | function | `formControls.tsx` | A multi-line text field. |
+| [`CheckboxProps`](#checkboxprops) | interface | `formControls.tsx` | What a `Checkbox` takes. |
+| [`Checkbox`](#checkbox) | function | `formControls.tsx` | A native checkbox, wrapped in its own label. |
+| [`RadioProps`](#radioprops) | interface | `formControls.tsx` | What a `Radio` takes. |
+| [`Radio`](#radio) | function | `formControls.tsx` | A native radio, wrapped in its own label. |
+| [`SwitchProps`](#switchprops) | interface | `formControls.tsx` | What a `Switch` takes. |
+| [`Switch`](#switch) | function | `formControls.tsx` | A switch, which is a button rather than a checkbox. |
+| [`FieldProps`](#fieldprops) | interface | `formControls.tsx` | A label, a control, and room for the reason it is wrong. |
+| [`Field`](#field) | function | `formControls.tsx` | A label, a control, and room for the reason it is wrong. |
+| [`SpinnerProps`](#spinnerprops) | interface | `progress.tsx` | Work whose duration is unknown. `Skeleton` is for known shapes. |
+| [`Spinner`](#spinner) | function | `progress.tsx` | Work whose duration is unknown. |
+| [`ProgressProps`](#progressprops) | interface | `progress.tsx` | What a `Progress` takes. |
+| [`Progress`](#progress) | function | `progress.tsx` | A bar that fills. |
+| [`TabsProps`](#tabsprops) | interface | `Tabs.tsx` | What a `Tabs` takes. |
+| [`Tabs`](#tabs) | function | `Tabs.tsx` | Tabs with the arrow keys wired, because a tab strip that only responds to clicks is a tab strip half the people cannot use. |
+| [`TabPanelProps`](#tabpanelprops) | interface | `Tabs.tsx` | The panel a tab controls. Needs the same `base` the strip used. |
+| [`TabPanel`](#tabpanel) | function | `Tabs.tsx` | The panel a tab controls. |
+| [`Divider`](#divider) | function | `text.tsx` | A horizontal rule. |
+| [`HeadingProps`](#headingprops) | interface | `text.tsx` | What a `Heading` takes. |
+| [`Heading`](#heading) | function | `text.tsx` | A heading, at the level you say. |
+| [`TextTone`](#texttone) | type | `text.tsx` | How loud. Not `Tone`: this is emphasis, not status. |
+| [`TextProps`](#textprops) | interface | `text.tsx` | What a `Text` takes. |
+| [`Text`](#text) | function | `text.tsx` | A paragraph. |
+| [`Code`](#code) | function | `text.tsx` | Inline code: a name, a path, a flag. |
 
 ## ButtonVariant
 
@@ -600,10 +600,9 @@ interface SpinnerProps extends HTMLAttributes<HTMLSpanElement>
 
 Work whose duration is unknown. `Skeleton` is for known shapes.
 
-`label` is required for the same reason `Progress.label` is. This
-was `role="status"` on an empty span: a live region with nothing
-to say, so a screen reader got silence while a sighted user
-watched something spin.
+`label` is required for the same reason `Progress.label` is: a
+`role="status"` with nothing in it gives a screen reader silence
+while a sighted user watches something spin.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
@@ -708,9 +707,8 @@ interface TabPanelProps extends HTMLAttributes<HTMLDivElement>
 
 The panel a tab controls. Needs the same `base` the strip used.
 
-Published because `Tabs` without it is half the ARIA pattern: the
-strip announced that it controlled something and there was nothing
-for it to control.
+`Tabs` without it is half the ARIA pattern: a strip that announces
+it controls something needs something for it to control.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|

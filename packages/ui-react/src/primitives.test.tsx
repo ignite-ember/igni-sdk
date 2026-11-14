@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { starExportFiles } from "../../test-utils/sourceScan";
 import { MenuIcon } from "./MenuIcon.js";
 import {
   Actions,
@@ -1142,11 +1143,14 @@ describe("accessibility wiring of Switch, Field, Tabs and TabPanel", () => {
 
 describe("the reference describes every prop of every component", () => {
   // The reference pages are generated from these doc comments, so a
-  // prop with no @param line is a prop the pages do not explain.
-  const source = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "primitives.tsx"),
-    "utf8",
-  );
+  // prop with no @param line is a prop the pages do not explain. The
+  // primitives live in the files `primitives.tsx` re-exports.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const source = starExportFiles(
+    readFileSync(join(here, "primitives.tsx"), "utf8"),
+  )
+    .map((file) => readFileSync(join(here, file), "utf8"))
+    .join("\n");
   const components = [
     ...source.matchAll(
       /\/\*\*((?:(?!\*\/)[\s\S])*?)\*\/\s*export function (\w+)\(\{([^}]*)\}/g,

@@ -29,7 +29,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { withoutComments } from "../../test-utils/sourceScan";
+import { starExportFiles, withoutComments } from "../../test-utils/sourceScan";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLISHED_CSS = join(here, "..", "..", "..", "clients", "ui", "igni-ui.css");
@@ -262,9 +262,11 @@ describe("the published stylesheet covers the published components", () => {
   it("finds classes at all", () => {
     // Guards the scanner itself: if `classExpressions` ever stopped
     // matching, every case above would pass by finding nothing.
-    const src = withoutComments(
-      readFileSync(join(here, "primitives.tsx"), "utf8"),
-    );
+    const files = starExportFiles(readFileSync(join(here, "primitives.tsx"), "utf8"));
+    expect(files).toContain("layout.tsx");
+    const src = files
+      .map((file) => withoutComments(readFileSync(join(here, file), "utf8")))
+      .join("\n");
     const found = classExpressions(src).flatMap(namesIn);
     expect(found).toContain("ui-card");
     expect(found.length).toBeGreaterThan(20);
