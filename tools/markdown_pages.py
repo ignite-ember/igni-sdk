@@ -147,7 +147,7 @@ class ReadmePages:
     def __post_init__(self) -> None:
         current: Section | None = None
         for line, code in fenced(strip_comments(self.text).split("\n")):
-            match = None if code else re.match(r"(#{1,6})\s+(.+?)\s*#*\s*$", line)
+            match = None if code else re.match(r"(#{1,6})\s+(.+?)(?:\s+#+)?\s*$", line)
             if match and len(match.group(1)) == 1 and not self.title:
                 self.title = match.group(2)
                 self.headings.append(Heading(1, match.group(2), None))
