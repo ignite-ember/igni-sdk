@@ -257,7 +257,9 @@ class WebSignIn:
         if error:
             return self._failed(f"igni did not sign you in ({error}).")
         expected = request.cookies.get(self.LOGIN_COOKIE, "")
-        if not code or not state or not secrets.compare_digest(expected, state):
+        # Bytes, not text: `compare_digest` raises on a str beyond ASCII, and
+        # a state anybody can put in a link must be refused, not crash.
+        if not code or not state or not secrets.compare_digest(expected.encode(), state.encode()):
             return self._failed("This sign-in was not started here, or has expired.")
         attempt = await self._store.take_login(state)
         if attempt is None:
