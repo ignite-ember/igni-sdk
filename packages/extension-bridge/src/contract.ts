@@ -142,7 +142,7 @@ export interface Bridge<
 
   /**
    * The extension's own service, reached directly, as the signed-in
-   * person:
+   * person.
    *
    *   const res = await bridge.service.fetch("/v1/notes");
    *   const socket = await bridge.service.websocket("/v1/rooms/a");
