@@ -109,7 +109,7 @@ export interface Bridge<
 
   /**
    * igni, as this extension sees it: the host object model
-   * (`docs/HOST_OBJECT_MODEL.md` in igni). The same model the
+   * (igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md)). The same model the
    * extension's process reaches as `ext.host`.
    *
    *   const busy = await bridge.host.chat.processing.get();
@@ -150,7 +150,7 @@ export interface Bridge<
    * The host fetches a token whose audience is this extension's service
    * and nothing else; it is kept and renewed before it expires. No
    * `permissions.host` grant: having a service is the grant — see
-   * `docs/HOST_OBJECT_MODEL.md` in igni. `url` is `null` when the
+   * igni-core's `docs/HOST_OBJECT_MODEL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md). `url` is `null` when the
    * extension has none.
    */
   readonly service: ServiceBridge;

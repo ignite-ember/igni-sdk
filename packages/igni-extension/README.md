@@ -225,7 +225,7 @@ decide on them:
 Plan mode runs a read-only tool and refuses one that changes things.
 Accept Edits runs a write that destroys nothing and stays inside its own
 system. The default mode asks before any write. Bypass runs everything.
-(igni-core's `docs/EXTENSIBILITY.md` has the whole table.)
+(igni-core's [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) has the whole table.)
 
 MCP makes each hint optional; igni does not. `ext.tool(hints=...)`
 requires all four, and `ext.run()` refuses to start while any tool on
@@ -320,7 +320,7 @@ has no caller, and `ext.service` there is the person signed in to igni.
 ### The host: igni as the extension sees it
 
 `ext.host` is the igni app as the extension sees it: the **host object
-model** (`docs/HOST_OBJECT_MODEL.md` in igni). There is one object per part
+model** ([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core). There is one object per part
 of the app — `ext.host.chat`, `ext.host.sessions`, `ext.host.ui`,
 `ext.host.workspace` and so on — each with:
 
@@ -809,7 +809,7 @@ a section, inserts one before or after a named section, replaces a named
 section (an agent's header is the section `frontmatter`). Each may hold
 only while a condition holds (`"when": "index-covers-head"`). The rules —
 what stacks, what collides, what an override leaves out — are in igni's
-`docs/EXTENSIBILITY.md`. Only the extension can judge the condition, so it
+[`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md). Only the extension can judge the condition, so it
 says when it changes:
 
 <!-- continues -->
@@ -1485,7 +1485,7 @@ seconds; dialogs wait indefinitely), or `NotConfigured` (no socket).
 #### The host objects
 
 Each object needs the matching grant in `permissions.host`. igni's
-`docs/HOST_OBJECT_MODEL.md` describes every member in full.
+[`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) describes every member in full.
 
 | Object | What it is | Some members |
 |---|---|---|

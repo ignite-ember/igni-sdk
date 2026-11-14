@@ -95,7 +95,7 @@ framed by a host.
 ## The host: `bridge.host`
 
 `bridge.host` is igni as the page sees it — the **host object model**
-(`docs/HOST_OBJECT_MODEL.md` in igni), the same model the extension's
+([`docs/HOST_OBJECT_MODEL.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_OBJECT_MODEL.md) in igni-core), the same model the extension's
 process reaches as `ext.host`. Names are the schema's, as in Python.
 
 ```ts
@@ -228,7 +228,7 @@ asks the host app to navigate; it decides whether to.
 
 Everything this package exports is under igni's **compatibility floor**:
 removing a name, renaming it, or changing the meaning of one of its
-members is a breaking change under `docs/EXTENSIBILITY.md` §8.
+members is a breaking change under [`docs/EXTENSIBILITY.md`](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) §8.
 
 Two versions of that floor are worth knowing about:
 

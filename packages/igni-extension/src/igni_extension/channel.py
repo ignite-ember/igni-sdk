@@ -4,7 +4,7 @@ igni starts an extension's process with `IGNI_HOST_URL` and
 `IGNI_HOST_SECRET`: a WebSocket on the host's loopback interface and the
 secret that says which process this is. Every `get`, `set` and `call` on
 `ext.host` is one request on it, and every signal the extension handles
-arrives on it. The protocol is igni's `docs/HOST_MODEL_PROTOCOL.md`, its
+arrives on it. The protocol is igni-core's `docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md), its
 messages `igni_extension.wire`; an extension author never sees it.
 
 A process started without those variables has no socket: its `ext.host`

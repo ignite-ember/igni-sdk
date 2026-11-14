@@ -1,6 +1,6 @@
 """`@ext.hook`: the extension answering igni's hook events.
 
-Against `FakeHost`, which asks as igni asks (`docs/HOST_MODEL_PROTOCOL.md`).
+Against `FakeHost`, which asks as igni asks (`docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md)).
 """
 
 from __future__ import annotations

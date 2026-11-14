@@ -32,7 +32,7 @@ take instead of a registry.
 ## Versions
 
 **One version for all six (lockstep), semver.** §8 of
-[EXTENSIBILITY.md](EXTENSIBILITY.md) versions the floor independently of the
+[EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) versions the floor independently of the
 product, as semver, declared as a range — and the six packages *are* the
 floor's code: the bridge's protocol is the host's, `@ignite-ember/ui-react` is drawn
 with `@ignite-ember/ui-css`, `igni-service` builds the bundles `igni-extension` runs

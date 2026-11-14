@@ -1,7 +1,7 @@
 """The messages on the socket to the igni host, typed.
 
 They mirror igni's `igni_core.extensions.host.wire`, which igni's
-`docs/HOST_MODEL_PROTOCOL.md` describes. An extension author never meets
+`docs/HOST_MODEL_PROTOCOL.md` (https://github.com/ignite-ember/igni-core/blob/main/docs/HOST_MODEL_PROTOCOL.md) describes. An extension author never meets
 them: `ext.host.chat.post(...)` becomes a `Request`, and what the host
 sends back is read as one of `HostMessage`.
 """
