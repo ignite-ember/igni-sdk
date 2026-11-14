@@ -22,6 +22,7 @@ const FILES = [
   "Skeleton.tsx",
   "Split.tsx",
   "Toast.tsx",
+  "Tooltip.tsx",
 ];
 
 function parse(file: string): ts.SourceFile {
@@ -87,7 +88,7 @@ describe("the @param lines of the components", () => {
     });
   }
 
-  it("covers every component the five files export", () => {
+  it("covers every component the files export", () => {
     const names = FILES.flatMap((f) =>
       collect(parse(f))
         .filter((c) => c.exported)
@@ -105,6 +106,7 @@ describe("the @param lines of the components", () => {
         "Scroll",
         "Split",
         "ToastHost",
+        "Tooltip",
       ].sort(),
     );
   });
@@ -140,5 +142,23 @@ describe("the imports of the components", () => {
     expect(count("OverflowMenu.tsx")).toBe(1);
     expect(count("Split.tsx")).toBe(1);
     expect(count("Toast.tsx")).toBe(1);
+  });
+});
+
+describe("the @param line of fenceInfo", () => {
+  it("names the one parameter it takes", () => {
+    const source = parse("fenceInfo.ts");
+    const fn = source.statements.find(
+      (s): s is ts.FunctionDeclaration =>
+        ts.isFunctionDeclaration(s) && s.name?.text === "fenceInfo",
+    );
+    expect(fn).toBeDefined();
+    expect(fn?.parameters.map((p) => p.name.getText())).toEqual(["children"]);
+    expect(
+      ts
+        .getJSDocTags(fn as ts.FunctionDeclaration)
+        .filter(ts.isJSDocParameterTag)
+        .map((t) => t.name.getText()),
+    ).toEqual(["children"]);
   });
 });

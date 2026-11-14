@@ -16,7 +16,14 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { fenceInfo } from "./fenceInfo.js";
 import * as floor from "./index.js";
+import { MenuIcon } from "./MenuIcon.js";
+import { Monogram } from "./Monogram.js";
+import { OverflowMenu } from "./OverflowMenu.js";
+import { Skeleton } from "./Skeleton.js";
+import { Split } from "./Split.js";
+import { Tooltip } from "./Tooltip.js";
 
 const PUBLISHED = [
   "Actions",
@@ -131,6 +138,18 @@ describe("the published types", () => {
     const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "index.ts"), "utf8");
     const found = [...source.matchAll(/\btype (\w+)/g)].map((m) => m[1]);
     expect([...new Set(found)].sort()).toEqual(PUBLISHED_TYPES);
+  });
+});
+
+describe("what each name is", () => {
+  it("is the component from its own module, not another under that name", () => {
+    expect(floor.Tooltip).toBe(Tooltip);
+    expect(floor.fenceInfo).toBe(fenceInfo);
+    expect(floor.Split).toBe(Split);
+    expect(floor.Skeleton).toBe(Skeleton);
+    expect(floor.OverflowMenu).toBe(OverflowMenu);
+    expect(floor.MenuIcon).toBe(MenuIcon);
+    expect(floor.Monogram).toBe(Monogram);
   });
 });
 
