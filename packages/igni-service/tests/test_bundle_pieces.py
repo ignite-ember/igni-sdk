@@ -187,6 +187,40 @@ def failure_of(stderr: str, tmp_path: Path) -> str:
 
 
 class TestTheResolverSaysWhereElseToGetTheSdks:
+    @pytest.mark.parametrize(
+        "stderr",
+        [
+            "  x No solution found: igni-extension was not found in the package registry",
+            "igni-service not found",
+            "Because there are no versions of igni-extension>=9 and the project depends on it",
+            "igni-service has no versions that satisfy it",
+        ],
+    )
+    def test_each_way_uv_says_an_sdk_is_missing_carries_the_hint(
+        self, stderr: str, tmp_path: Path
+    ) -> None:
+        said = failure_of(stderr, tmp_path)
+
+        assert said.startswith("could not resolve the dependencies for Windows x86_64:\n")
+        assert stderr in said
+        assert said.endswith(Resolver.WHEELS_HINT)
+
+    @pytest.mark.parametrize(
+        "stderr",
+        [
+            "  x No solution found: leftpad was not found in the package registry",
+            "igni-extension is fine\nbut somepackage was not found",
+            "igni-extension\nwas not found",
+            "an unrelated failure",
+        ],
+    )
+    def test_any_other_failure_is_said_as_uv_said_it_with_no_hint(
+        self, stderr: str, tmp_path: Path
+    ) -> None:
+        said = failure_of(stderr, tmp_path)
+
+        assert said == f"could not resolve the dependencies for Windows x86_64:\n{stderr}"
+
     def test_the_hint_names_the_release_the_flag_and_a_checkout_build(self) -> None:
         hint = Resolver.WHEELS_HINT
 
