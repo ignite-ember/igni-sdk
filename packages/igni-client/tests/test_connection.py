@@ -340,6 +340,12 @@ def test_a_backoff_is_fixed_once_made_and_counts_whole_attempts() -> None:
     assert igni_client.Backoff is backoff_module.Backoff and "Backoff" in igni_client.__all__
 
 
+def test_reply_is_a_public_name_of_the_package() -> None:
+    from igni_client.replies import Reply
+
+    assert igni_client.Reply is Reply and "Reply" in igni_client.__all__
+
+
 def test_a_client_is_paced_by_a_backoff_not_a_count_of_attempts() -> None:
     with pytest.raises(TypeError):
         IgniClient(Local(url="ws://127.0.0.1:1"), reconnect_attempts=5)  # type: ignore[call-arg]
@@ -453,6 +459,23 @@ async def test_a_call_igni_never_answers_is_unavailable() -> None:
             Unavailable, match="list_background_processes got no answer from igni at"
         ):
             await igni.processes.list()
+
+
+async def test_a_call_with_no_timeout_given_waits_the_connection_s_own_timeout() -> None:
+    async def slowly(args: dict[str, Any]) -> list[Any]:
+        await asyncio.sleep(0.15)
+        return []
+
+    async with FakeIgni() as fake:
+        fake.methods.answers["list_background_processes"] = slowly
+        async with IgniClient(fake.local()) as igni:
+            igni._conn.RPC_TIMEOUT = 5.0
+            # Left out, the timeout is RPC_TIMEOUT (not the -1 sentinel itself).
+            assert await igni._conn.ask("list_background_processes") is not None
+            # `None` waits as long as it takes; a number is that many seconds.
+            assert await igni._conn.ask("list_background_processes", timeout=None) is not None
+            with pytest.raises(Unavailable, match="got no answer"):
+                await igni._conn.ask("list_background_processes", timeout=0.01)
 
 
 async def test_closing_ends_every_call_in_flight() -> None:

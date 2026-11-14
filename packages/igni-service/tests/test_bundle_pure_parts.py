@@ -290,6 +290,7 @@ class TestRequirementNames:
             ("a;python_version<'3.13'", "a"),
             ("a[extra]==1", "a"),
             ("a ==1", "a"),
+            ("name @ https://example.test/name.whl", "name"),
             ("bare", "bare"),
             ("a>1", "a"),
         ],

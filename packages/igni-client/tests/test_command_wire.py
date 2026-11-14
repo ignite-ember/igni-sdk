@@ -21,6 +21,7 @@ from igni_client.commands import (
     Commands,
     Me,
     Wake,
+    models,
     wire,
 )
 from igni_client.commands.wire import (
@@ -57,6 +58,13 @@ def test_the_commands_package_names_its_models_and_its_wire() -> None:
         "CommandRecord",
         "CommandRun",
         "Commands",
+        "Me",
+        "Wake",
+    ]
+    assert sorted(models.__all__) == [
+        "CommandFinished",
+        "CommandOutput",
+        "CommandRecord",
         "Me",
         "Wake",
     ]
