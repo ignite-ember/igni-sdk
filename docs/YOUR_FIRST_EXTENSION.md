@@ -714,9 +714,12 @@ igni or an igni server.
   bundle; igni installs it at the next sync. A version that asks for more
   (a new tool, a wider grant) is held until a super admin approves the
   update on the service's page.
-- **Faster loops** — a development install runs a directory straight from
-  disk, with no service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`,
-  and start igni with `IGNI_DEV_EXTENSIONS=1` too
+- **Faster loops** — a development install runs a directory with no
+  service: `IGNI_DEV_EXTENSIONS=1 igni ext install extension`, and start
+  igni with `IGNI_DEV_EXTENSIONS=1` too. It installs a copy, so after a
+  change (a rebuilt page too) install it again with
+  `igni ext install --replace extension`, which re-asks for its
+  permissions; without `--replace` a second install is refused
   ([EXTENSIBILITY.md §9](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md#9-developing-one)).
 
 ## Where next

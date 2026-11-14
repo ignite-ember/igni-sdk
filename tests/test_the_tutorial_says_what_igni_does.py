@@ -49,3 +49,15 @@ def test_step_7_s_headless_runs_cannot_stop_at_a_question() -> None:
     assert len(runs) == 2
     assert all("--read-only" in line for line in runs), runs
     assert "Run paused for confirmation" in section
+
+
+def test_a_development_install_is_said_to_be_a_copy_refreshed_with_replace() -> None:
+    """ "Faster loops" said a development install "runs a directory straight
+    from disk"; it copies the directory into igni's store, and after a rebuild
+    a second install is refused ("already installed ... Pass --replace")."""
+    bridge = REPO / "packages" / "extension-bridge" / "README.md"
+    loops = _section("## Changing it")
+
+    assert "straight from disk" not in loops
+    assert "igni ext install --replace extension" in loops
+    assert "igni ext install --replace <dir>" in bridge.read_text(encoding="utf-8")

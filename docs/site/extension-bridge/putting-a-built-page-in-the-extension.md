@@ -9,5 +9,11 @@ An extension's page is the `ui/` directory of its package, and its entry is
 the asset URLs relative. With Vite that is `base: "./"` in `vite.config`.
 `igni ext init` writes a no-build page in `ui/`; replace it with the build.
 
+A development install (`IGNI_DEV_EXTENSIONS=1 igni ext install <dir>`) is a
+copy of the directory in igni's extension store, so a rebuilt page reaches
+igni only by installing again: `igni ext install --replace <dir>`, which
+re-asks for the extension's permissions. A second install without
+`--replace` is refused ("already installed").
+
 With TypeScript 6 or later, `import "@ignite-ember/ui-css"` type-checks
 because the stylesheet package ships a declaration for it (0.2.0 and later).
