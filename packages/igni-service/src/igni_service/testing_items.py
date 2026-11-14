@@ -63,6 +63,8 @@ class SentEvent(BaseModel):
     """Where it stands; `fake.agents.settle` moves it."""
     created_at: datetime
     """When the fake stored it."""
+    expires_at: datetime | None = None
+    """What the service asked for; the fake stores the sooner of that and the 14-day limit."""
 
 
 class Upload(BaseModel):
@@ -158,6 +160,7 @@ class FakeAgents:
                 type=event.type,
                 payload=event.payload,
                 event_key=event.event_key,
+                expires_at=event.expires_at,
                 created_at=self._now(),
             ),
         )
@@ -191,6 +194,7 @@ class FakeAgents:
                 action=item.action,
                 attachments=item.attachments,
                 event_key=item.event_key,
+                expires_at=item.expires_at,
                 created_at=self._now(),
             ),
         )
@@ -264,7 +268,7 @@ class FakeAgents:
                             f"no handler for {item.type}" if item.state == "not_handled" else None
                         ),
                         "created_at": item.created_at.isoformat(),
-                        "expires_at": (item.created_at + timedelta(days=14)).isoformat(),
+                        "expires_at": (item.expires_at or item.created_at + timedelta(days=14)).isoformat(),
                         "delivered_at": None,
                         "updated_at": self._now().isoformat(),
                     },
@@ -286,15 +290,42 @@ class FakeAgents:
                     sent.producer,
                     sent.event_key,
                 ):
-                    return httpx.Response(202, json={"event_id": held.event_id, "duplicate": True})
+                    return httpx.Response(
+                        202,
+                        json={
+                            "event_id": held.event_id,
+                            "duplicate": True,
+                            "expires_at": held.expires_at.isoformat() if held.expires_at else None,
+                        },
+                    )
         files = [self.uploads.get(a) for a in sent.attachments]
         if any(f is None or f.client_id != client_id or f.event_id is not None for f in files):
             return httpx.Response(400, json={"detail": "an attachment is not this service's"})
-        stored = sent.model_copy(update={"event_id": f"ev-{len(self.items) + 1}"})
+        stored = sent.model_copy(
+            update={"event_id": f"ev-{len(self.items) + 1}", "expires_at": self._expiry(sent)}
+        )
         for name in sent.attachments:
             self.uploads[name] = self.uploads[name].model_copy(update={"event_id": stored.event_id})
         self.items.append(stored)
-        return httpx.Response(202, json={"event_id": stored.event_id, "duplicate": False})
+        return httpx.Response(
+            202,
+            json={
+                "event_id": stored.event_id,
+                "duplicate": False,
+                "expires_at": stored.expires_at.isoformat() if stored.expires_at else None,
+            },
+        )
+
+    @staticmethod
+    def _expiry(sent: SentEvent) -> datetime:
+        """What the service asked for, or igni's 14-day limit, whichever is sooner."""
+        limit = sent.created_at + timedelta(days=14)
+        if sent.expires_at is None:
+            return limit
+        asked = sent.expires_at
+        if asked.tzinfo is None:
+            asked = asked.replace(tzinfo=UTC)
+        return min(asked, limit)
 
     @staticmethod
     def _needs(sent: SentEvent) -> set[str]:

@@ -68,7 +68,10 @@ def test_a_plain_event_is_stored_with_its_fields_and_answered_202() -> None:
 
     answer = event(fake, payload={"n": 1}, event_key="k-1")
 
-    assert (answer.status_code, answer.json()) == (202, {"event_id": "ev-1", "duplicate": False})
+    assert (answer.status_code, answer.json()) == (
+        202,
+        {"event_id": "ev-1", "duplicate": False, "expires_at": "2023-11-28T22:13:20+00:00"},
+    )
     (stored,) = fake.items
     assert (stored.event_id, stored.org_id, stored.client_id) == ("ev-1", ORG, "c-1")
     assert (stored.kind, stored.type, stored.payload) == ("event", "claim.created", {"n": 1})
@@ -146,7 +149,11 @@ def test_the_same_key_from_the_same_producer_and_organisation_is_stored_once() -
 
     again = event(fake, event_key="k", payload={"a": 2}, type="other")
 
-    assert again.json() == {"event_id": first.json()["event_id"], "duplicate": True}
+    assert again.json() == {
+        "event_id": first.json()["event_id"],
+        "duplicate": True,
+        "expires_at": first.json()["expires_at"],
+    }
     assert again.status_code == 202
     assert len(fake.items) == 1
 

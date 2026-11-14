@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
@@ -220,6 +220,37 @@ class TestAnEvent:
         again = await agent.send_event("a", event_key="k")
 
         assert again.duplicate and again.event_id == first.event_id
+
+
+class TestTheExpiryIgniAnswers:
+    """igni answers with the expiry it set: what was asked, or its 14 days, whichever is sooner."""
+
+    async def test_an_item_that_asks_for_none_gets_igni_s_fourteen_days(
+        self, agent: Agent, fake: FakeIgni
+    ) -> None:
+        accepted = await agent.send_message("hi")
+
+        [stored] = fake.agents.items
+        assert accepted.expires_at == stored.created_at + timedelta(days=14)
+
+    async def test_an_earlier_expiry_than_that_is_the_one_kept(
+        self, agent: Agent, fake: FakeIgni
+    ) -> None:
+        asked = datetime(2027, 1, 15, 10, tzinfo=UTC)  # two hours after the fake's clock
+
+        accepted = await agent.send_message("hi", expires_at=asked)
+
+        assert accepted.expires_at == asked
+        [stored] = fake.agents.items
+        status = fake.agents.status(accepted.event_id, stored.client_id).json()
+        assert datetime.fromisoformat(status["expires_at"]) == asked
+
+    async def test_a_later_expiry_than_the_limit_is_cut_to_the_limit(
+        self, agent: Agent, fake: FakeIgni
+    ) -> None:
+        accepted = await agent.send_message("hi", expires_at=datetime(2040, 1, 1, tzinfo=UTC))
+
+        assert accepted.expires_at == fake.agents.items[0].created_at + timedelta(days=14)
 
 
 class TestAChat:
