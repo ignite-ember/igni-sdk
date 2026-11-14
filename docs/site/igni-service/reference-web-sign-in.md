@@ -346,7 +346,8 @@ Where a page links to sign in; it brings the browser back after.
 logout_path: str
 ```
 
-Where a page posts to sign out of this service.
+Where a page sends the browser to sign out of this service: a form
+posts to it, and a plain link to it signs out too.
 
 ### WebSignIn.store
 
@@ -364,7 +365,8 @@ Where the sessions and sign-ins in flight are kept.
 router: APIRouter
 ```
 
-The sign-in routes: `GET /auth/login`, `GET /auth/callback`, `GET` or `POST /auth/logout`. `igni.install(app)` mounts them.
+The sign-in routes: `GET /auth/login`, `GET /auth/callback`, and
+`GET` or `POST /auth/logout`. `igni.install(app)` mounts them.
 
 ### WebSignIn.login()
 

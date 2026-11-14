@@ -371,7 +371,7 @@ Properties and constants:
 | Name | Value |
 |---|---|
 | `login_path` | `"/auth/login"`: what a page links to |
-| `logout_path` | `"/auth/logout"`: what a page posts to |
+| `logout_path` | `"/auth/logout"`: what a page posts (or links) to |
 | `redirect_uri` | `"<PUBLIC_BASE_URL>/auth/callback"` |
 | `store` | the `WebSessionStore` in use |
 | `router` | the three routes |
