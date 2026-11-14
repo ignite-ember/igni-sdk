@@ -47,3 +47,26 @@ def test_two_modules_exporting_each_other_whole_end_and_list_each_name_once(
     reference = TsReference("p", src, [Area("all", "All", ("a.ts",))], entries=("a.ts",))
     assert reference.entry_names("a.ts") == ["A", "B"]
     assert reference.public == {"A", "B"}
+
+
+def test_an_enum_lists_every_member_with_its_value_whatever_follows_it(tmp_path: Path) -> None:
+    parsed = module(
+        tmp_path,
+        """
+        export enum Color {
+          Red = 1,
+          Green,
+          // a note between members
+          Blue = "b", // and one after
+          /* block */
+          Last = 4
+        }
+        """,
+    )
+    members = parsed.declarations["Color"].members
+    assert [(m.name, m.kind, m.type) for m in members] == [
+        ("Red", "member", "1"),
+        ("Green", "member", ""),
+        ("Blue", "member", '"b"'),
+        ("Last", "member", "4"),
+    ]

@@ -668,6 +668,8 @@ def _enum_members(body: str) -> list[Member]:
         stripped = line.strip()
         if not stripped or stripped.startswith(("//", "/*", "*")):
             continue
+        # A member ends with its comma, and may be followed by a comment.
+        stripped = _strip_comments(stripped).strip().rstrip(",").strip()
         match = re.match(r"([A-Za-z_$][\w$]*)\s*(?:=\s*(.+))?$", stripped)
         if match:
             out.append(Member(match.group(1), "member", match.group(2) or "", ""))
