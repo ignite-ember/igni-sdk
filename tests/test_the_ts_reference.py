@@ -427,3 +427,30 @@ def test_the_member_table_drops_its_description_column_when_no_member_says_what_
         "| Member | Kind | Type | What it is |\n|---|---|---|---|\n"
         "| `a` | field | `string` | The a. |\n| `b` | field | `number` |  |\n"
     ) in documented
+
+
+def test_a_name_exported_under_another_is_documented_as_the_package_names_it(
+    tmp_path: Path,
+) -> None:
+    src = package(
+        tmp_path,
+        {
+            "index.ts": (
+                'export { Timeout as Wait } from "./time.js";\n'
+                "/** Close by. */\nfunction Local(): void {}\n"
+                "export { Local as Near };\n"
+            ),
+            "time.ts": "/** How long to wait. */\nexport const Timeout = 30;\n",
+        },
+    )
+    reference = TsReference("p", src, [Area("all", "All", ("index.ts",))])
+    index = reference.modules["index.ts"]
+    wait = reference.resolve(index, "Wait")
+    near = reference.resolve(index, "Near")
+    assert wait is not None and near is not None
+    assert (wait.name, wait.signature) == ("Wait", "const Wait = 30")
+    assert (near.name, near.signature) == ("Near", "function Near(): void")
+    page, _ = reference.page(reference.areas[0])
+    assert "| [`Wait`](#wait) | const | `time.ts` | How long to wait. |" in page
+    assert "| [`Near`](#near) | function | `index.ts` | Close by. |" in page
+    assert "Timeout" not in page and "Local" not in page

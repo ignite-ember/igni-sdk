@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from tools.param_docs import UNDOCUMENTED, cell, code, jsdoc_params, strip_jsdoc_params, table
@@ -499,6 +499,8 @@ class Module:
         self.exported: dict[str, None] = {}
         #: A name the file re-exports → the module it comes from ("" for its own).
         self.reexports: dict[str, str] = {}
+        #: A name exported under another one (``A as B``) → the name it has where it is declared.
+        self.aliases: dict[str, str] = {}
         #: The modules the file exports whole.
         self.stars: list[str] = []
         self._parse()
@@ -533,8 +535,11 @@ class Module:
                     continue
                 if name.startswith("type "):
                     name = name[len("type ") :].strip()
-                # `A as B` exports B under B.
-                name = name.split(" as ")[-1].strip()
+                # `A as B` exports A under the name B.
+                original, _, renamed = name.rpartition(" as ")
+                name = renamed.strip() if original else name
+                if original and original.strip() != name:
+                    self.aliases[name] = original.strip()
                 self.reexports[name] = specifier
                 if not specifier:
                     self.exported[name] = None
@@ -1147,6 +1152,22 @@ class TsReference:
         if key in seen:
             return None
         seen.add(key)
+        original = module.aliases.get(name)
+        if original is not None:
+            # Exported under another name: the declaration is the original's,
+            # and the page names it as the package does.
+            specifier = module.reexports.get(name, "")
+            if specifier:
+                target = self.target(module.name, specifier)
+                if not target or target not in self.modules:
+                    return None
+                found = self.resolve(self.modules[target], original, seen)
+            else:
+                found = module.declarations.get(original)
+            if found is None:
+                return None
+            signature = re.sub(rf"\b{re.escape(found.name)}\b", name, found.signature, count=1)
+            return replace(found, name=name, signature=signature)
         declaration = module.declarations.get(name)
         if declaration is not None:
             return declaration
