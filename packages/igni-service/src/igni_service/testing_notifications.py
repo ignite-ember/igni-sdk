@@ -44,7 +44,7 @@ class Delivery(BaseModel):
     user_id: str
     """Who was told."""
     source: str
-    """The service that told them: its client id."""
+    """The extension that told them: the `id` of the bundle its service shipped, empty when it shipped none."""
     notification: Notification
     """What they were told."""
 
