@@ -334,3 +334,12 @@ class TestInject:
 
         with CallerScope.of(ada):
             assert CallerScope.inject(only)(4) == (4, ada)
+
+
+class TestNoCallerMessage:
+    def test_it_says_no_caller_means_the_signed_in_person_not_the_extension(self) -> None:
+        with pytest.raises(NoCaller) as raised:
+            Caller.required()
+        message = str(raised.value)
+        assert "as the signed-in person" in message
+        assert "extension itself" not in message

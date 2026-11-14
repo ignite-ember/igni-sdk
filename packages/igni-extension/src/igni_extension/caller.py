@@ -113,7 +113,7 @@ class Caller(BaseModel):
         if caller is None:
             raise NoCaller(
                 "no caller: this runs outside a call igni made, or igni sent none. "
-                "Work with no caller uses the service as the extension itself."
+                "Work with no caller uses the service as the signed-in person."
             )
         return caller
 
