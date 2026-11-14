@@ -975,7 +975,9 @@ class ClientReference:
 
     def models_page(self, order: int) -> Page:
         contract = self.contract
-        args_defs = {contract.ref_name(contract.methods[w].args): w for w in self.plan.placements}
+        args_defs: dict[str | None, list[str]] = {}
+        for w in sorted(self.plan.placements):
+            args_defs.setdefault(contract.ref_name(contract.methods[w].args), []).append(w)
         names = sorted(self.plan.defs_in | self.plan.defs_out)
         models = [n for n in names if n not in self.messages and n not in args_defs]
         enums = [n for n in models if self.types.is_enum(n)]
@@ -1060,13 +1062,17 @@ class ClientReference:
             "the method's parameters and checks before sending. Their fields are the "
             "parameters on the method's page.",
             "",
-            "| Model | Method |",
+            "| Model | Methods |",
             "|---|---|",
         ]
-        for def_name, wire in sorted(args_defs.items(), key=lambda x: x[0] or ""):
+        for def_name, wires in sorted(args_defs.items(), key=lambda x: x[0] or ""):
             if def_name is None:
                 continue
-            body.append(f"| `{self.types.class_name(def_name)}` | {self.method_link(wire)} |")
+            if def_name == "NoArgs":
+                methods = "every method that takes no arguments"
+            else:
+                methods = ", ".join(self.method_link(w) for w in wires)
+            body.append(f"| `{self.types.class_name(def_name)}` | {methods} |")
         self.undocumented_models = undocumented
         return Page(
             self.PACKAGE,
@@ -1108,7 +1114,11 @@ class ClientReference:
                 kind = prop_schema.get("type")
                 default = "`{}`" if kind == "object" else "`[]`" if kind == "array" else "`None`"
                 # The model says `X | None` for a field that defaults to None.
-                if default == "`None`" and annotation != "None" and not annotation.endswith("| None"):
+                if (
+                    default == "`None`"
+                    and annotation != "None"
+                    and not annotation.endswith("| None")
+                ):
                     annotation += " | None"
             const = f"always `{prop_schema['const']!r}`. " if "const" in prop_schema else ""
             desc = const + rst(prop_schema.get("description", ""))
