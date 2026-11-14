@@ -120,8 +120,8 @@ still be here next release.
 
 **The composites** are the parts of a page that have to be a page:
 `AppShell` and `Scroll` (the frame), `DataTable`'s `SortableTh` and
-`Status` (a table with a sortable header and a status cell), `Toast` and
-`ToastHost` and `useToast` (saying something), `LiveRegion` and
+`Status` (a table with a sortable header and a status cell), `ToastHost`
+and `useToast` and `Banner` (saying something), `LiveRegion` and
 `useAnnounce` (announcing it), `ErrorBoundary` (catching what falls
 over), `Markdown` and `MarkdownInline` and `MermaidBlock` (reading what
 igni said).
@@ -162,7 +162,7 @@ Two things follow from sharing the stylesheet:
 ## Peer dependencies
 
 You already have `react` and `react-dom`. `react-markdown` and
-`remark-gfm` come with `MarkdownInline`.
+`remark-gfm` come with `Markdown` and `MarkdownInline`.
 
 `mermaid` is **optional** and loaded on demand — a page with no
 diagram in it never downloads the 700KB, and an extension that never
