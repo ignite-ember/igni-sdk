@@ -313,9 +313,10 @@ class TokenVerifier:
         except (jwt.PyJWTError, ValueError):
             raise TokenRefused(_NOT_SIGNED) from None
         allowed = {use} if isinstance(use, str) else set(use)
-        if claims.get("token_use") not in allowed:
+        token_use = claims.get("token_use")
+        if not isinstance(token_use, str) or token_use not in allowed:
             raise TokenRefused(
-                f"the wrong kind of token: token_use {claims.get('token_use')!r}, "
+                f"the wrong kind of token: token_use {token_use!r}, "
                 f"and this takes {' or '.join(sorted(allowed))}"
             )
         try:
