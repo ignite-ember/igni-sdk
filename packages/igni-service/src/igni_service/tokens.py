@@ -320,6 +320,8 @@ class TokenVerifier:
             )
         try:
             expires, issued = float(claims["exp"]), float(claims["iat"])
+            if not (math.isfinite(expires) and math.isfinite(issued)):
+                raise ValueError("not finite")
         except (TypeError, ValueError):
             raise TokenRefused("the token's exp or iat is not a number") from None
         if not (math.isfinite(expires) and math.isfinite(issued)):
