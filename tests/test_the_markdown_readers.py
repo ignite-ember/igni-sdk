@@ -12,12 +12,20 @@ from __future__ import annotations
 import pytest
 
 from tools.markdown_pages import (
+    REPO_BLOB,
     PageError,
     ReadmePages,
     fenced,
+    first_sentences,
+    github_anchor,
+    lift,
+    plain,
+    rewrite_links,
     signature,
+    site_id,
     split_params,
     strip_comments,
+    tidy,
 )
 
 # ── signatures: one line, or one parameter a line as black writes it ──
@@ -176,3 +184,118 @@ def test_a_comment_closing_and_opening_again_on_one_line_is_all_removed() -> Non
 def test_a_heading_that_ends_in_a_hash_keeps_it() -> None:
     pages = ReadmePages("# Title\n\n## Using C#\n\n### F# and C# ##\n", "p/README.md")
     assert [h.text for h in pages.headings] == ["Title", "Using C#", "F# and C#"]
+
+
+# ── names of headings, as GitHub and the site give them ──
+
+
+def test_plain_drops_links_backticks_and_bold_and_keeps_underscores() -> None:
+    assert plain("**Bold** `check_for_update` [a link](http://x/y) ![img](p.png)") == (
+        "Bold check_for_update a link img"
+    )
+    assert plain("  padded  ") == "padded"
+
+
+def test_the_site_id_is_lowercase_hyphenated_and_trimmed() -> None:
+    assert site_id("`Foo_Bar`: the (2nd) call!") == "foo-bar-the-2nd-call"
+    assert site_id("--x--") == "x"
+    assert site_id("[Link](#a) text") == "link-text"
+    assert site_id("Über naïve") == "ber-na-ve"
+
+
+def test_the_github_anchor_keeps_unicode_word_characters_and_drops_punctuation() -> None:
+    assert github_anchor("Über naïve: C++ & more!") == "über-naïve-c--more"
+    assert github_anchor("  A  B ") == "a--b"
+    assert github_anchor("[Link](#a) text") == "link-text"
+    assert github_anchor("snake_case-and-dash") == "snake_case-and-dash"
+
+
+def test_duplicate_headings_are_numbered_for_github_and_nothing_else_changes() -> None:
+    text = "# T\n\n## Same\n\n### Same\n\n### Same\n\n### Other\n"
+    anchors = ReadmePages(text, "p/README.md").anchors()
+    assert anchors == {
+        "t": (None, ""),
+        "same": ("Same", ""),
+        "same-1": ("Same", "same"),
+        "same-2": ("Same", "same"),
+        "other": ("Same", "other"),
+    }
+
+
+# ── the first sentences of a page ──
+
+
+def test_first_sentences_is_the_first_prose_paragraph_as_plain_text() -> None:
+    text = (
+        "# Title\n\n| a | b |\n|---|---|\n\n- item\n\nThe **first** `one`\nspans lines.\n\nSecond."
+    )
+    assert first_sentences(text) == "The first one spans lines."
+
+
+def test_first_sentences_skips_code_and_finds_nothing_in_a_page_of_no_prose() -> None:
+    assert first_sentences("```\nnot prose\n```\n\nProse.") == "Prose."
+    assert first_sentences("# H\n\n| a |\n\n> quote\n") == ""
+    assert first_sentences("") == ""
+
+
+def test_first_sentences_returns_a_short_paragraph_whole() -> None:
+    assert first_sentences("One. Two. Three.") == "One. Two. Three."
+    assert first_sentences("x" * 220) == "x" * 220
+
+
+def test_first_sentences_cuts_a_long_paragraph_at_a_sentence() -> None:
+    first = "A" * 70 + "."
+    text = first + " " + "b" * 40 + ". " + "c" * 200
+    assert first_sentences(text) == first + " " + "b" * 40 + "."
+
+
+def test_first_sentences_cuts_at_a_word_with_an_ellipsis_when_no_sentence_ends_late_enough() -> (
+    None
+):
+    text = "short. " + "word " * 60
+    out = first_sentences(text)
+    assert out.endswith("word…") and len(out) <= 221 and "short." in out
+    assert first_sentences("x" * 300) == "x" * 220 + "…"
+
+
+# ── lifting headings and rewriting links ──
+
+
+def test_lift_raises_headings_outside_code_and_never_below_the_page_title() -> None:
+    lines = ["## A", "### B", "#### C", "```", "### code", "```", "text ### no"]
+    assert lift(lines) == ["# A", "## B", "### C", "```", "### code", "```", "text ### no"]
+    assert lift(lines, 2)[1:3] == ["# B", "## C"]
+
+
+def test_a_link_to_a_heading_of_the_readme_goes_through_the_anchor_callback() -> None:
+    out = rewrite_links(
+        ["See [x](#one) and [y](#two)."], lambda a: f"/p#{a.upper()}", "a/README.md"
+    )
+    assert out == ["See [x](/p#ONE) and [y](/p#TWO)."]
+
+
+def test_a_relative_link_becomes_a_link_to_the_repository_from_the_readmes_directory() -> None:
+    out = rewrite_links(
+        ["[a](LICENSE) [b](../x/y.md#frag) [c](sub/z.py#L1)"], str, "packages/pkg/README.md"
+    )
+    assert out == [
+        f"[a]({REPO_BLOB}/packages/pkg/LICENSE) "
+        f"[b]({REPO_BLOB}/packages/x/y.md#frag) "
+        f"[c]({REPO_BLOB}/packages/pkg/sub/z.py#L1)"
+    ]
+
+
+def test_absolute_root_and_scheme_links_and_code_are_left_alone() -> None:
+    lines = [
+        "[a](https://x.dev/p) [b](mailto:me@x.dev) [c](/docs/sdk) [d](tel:1)",
+        "```",
+        "[e](rel.md) [f](#frag)",
+        "```",
+    ]
+    assert rewrite_links(lines, lambda a: "BAD", "p/README.md") == lines
+
+
+def test_tidy_collapses_blank_runs_and_ends_in_one_newline() -> None:
+    assert tidy(["", "", "a", "", "", "", "b", "", ""]) == "a\n\nb\n"
+    assert tidy(["a"]) == "a\n"
+    assert tidy([]) == "\n"
