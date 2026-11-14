@@ -178,9 +178,13 @@ const one = await bridge.rpc<Note>("ext.example.teamnotes.get", { id: "n1" });
   reaches your service as an MCP tool call.
 - **The arguments** are a plain record of strings and JSON values, sent
   as they are.
-- **The answer** is whatever the service returned, parsed as JSON. Give
-  the call its type — `rpc<Note>(...)` — and the compiler will hold you
-  to it; nothing checks it at runtime.
+- **The answer** is the tool's text answer, parsed as JSON when it is
+  JSON and the text itself when it is not: a tool returning a `dict` or a
+  `json.dumps(...)` string gives an object, one returning a sentence a
+  string, and one returning a Python `list` its items' text, one per
+  line ([igni-extension's table](../igni-extension/README.md#what-a-tool-returns)).
+  Give the call its type — `rpc<Note>(...)` — and the compiler will hold
+  you to it; nothing checks it at runtime.
 - **The deadline** is thirty seconds. `timeoutMs` overrides it. The host
   has a timeout of its own, and the shorter of the two is the one that
   fires.

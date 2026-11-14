@@ -257,6 +257,23 @@ agent — what you want for a tool only your page calls. To see what the
 code implies, run `python -m igni_extension.manifest acme_example` (your
 module), or call `ext.tools.manifest()`.
 
+### What a tool returns
+
+The MCP server turns what a tool returns into the text the model reads,
+and a page's `bridge.rpc(...)` gets that text parsed as JSON when it is
+JSON, else the text itself:
+
+| The tool returns | The model reads | The page gets |
+|---|---|---|
+| a `dict` (or a Pydantic model) | it as JSON text | the object |
+| a `str` holding JSON (`json.dumps(...)`) | that text | the parsed value |
+| any other `str` | that text | the string |
+| an `int`, `float` or `bool` | it as text | the number or boolean |
+| a `list` | one text block per item | the items' text, one per line, as a string |
+
+So a list a page wants as a list goes back inside a `dict`
+(`{"notes": [...]}`) or as `json.dumps([...])`.
+
 A tool that raises reaches the model as an error result whose text is
 `Error executing tool <name>: ` and the exception's message. igni's `PostToolUse` hooks are not asked
 about it, and `PostToolUseFailure` is told.

@@ -2568,6 +2568,11 @@
         },
         {
           "level": 2,
+          "id": "what-a-tool-returns",
+          "title": "What a tool returns"
+        },
+        {
+          "level": 2,
           "id": "one-tool-five-names",
           "title": "One tool, five names"
         },
