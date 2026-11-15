@@ -134,7 +134,7 @@ def test_a_page_is_at_the_package_path_and_the_overview_is_the_package_itself() 
     assert url("igni-client", "access") == "/docs/sdk/igni-client/access"
     assert url("igni-client", "access", "raises") == "/docs/sdk/igni-client/access#raises"
     assert url("igni-client", "overview", "top") == "/docs/sdk/igni-client#top"
-    assert docs_url("ui-css") == "https://ignite-ember.sh/docs/sdk/ui-css"
+    assert docs_url("ui-css") == "https://igni.sh/docs/sdk/ui-css"
 
 
 def test_the_docstring_roles_become_code_spans() -> None:
@@ -313,11 +313,10 @@ def test_the_pages_of_a_later_package_part_start_at_the_given_order() -> None:
 
 def test_the_readmes_own_link_to_the_site_is_dropped_from_the_overview() -> None:
     text = (
-        "# pkg\n\nSee [the docs](https://ignite-ember.sh/docs/sdk/pkg).\n\nKeep this line.\n\n"
-        "## One\n\nx\n"
+        "# pkg\n\nSee [the docs](https://igni.sh/docs/sdk/pkg).\n\nKeep this line.\n\n## One\n\nx\n"
     )
     body = _site(text).pages()[0].body
-    assert "ignite-ember.sh" not in body
+    assert "igni.sh" not in body
     assert "Keep this line." in body
 
 

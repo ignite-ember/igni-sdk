@@ -1,6 +1,6 @@
 # `@ignite-ember/extension-bridge`
 
-**Full documentation:** [ignite-ember.sh/docs/sdk/extension-bridge](https://ignite-ember.sh/docs/sdk/extension-bridge) — guides and the complete API reference, a page per topic.
+**Full documentation:** [igni.sh/docs/sdk/extension-bridge](https://igni.sh/docs/sdk/extension-bridge) — guides and the complete API reference, a page per topic.
 
 The guest half of the bridge between an igni extension's page and igni:
 `connect()`, RPC to the extension's tools, navigation, and the theme. The

@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from tools.markdown_pages import fenced, plain, site_id
 
 #: Where the pages are served, and the site.
-SITE = "https://ignite-ember.sh"
+SITE = "https://igni.sh"
 BASE = "/docs/sdk"
 
 #: A page's category: a guide cut from a README, or a reference page.

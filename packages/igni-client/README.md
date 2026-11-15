@@ -1,6 +1,6 @@
 # igni-client
 
-**Full documentation:** [ignite-ember.sh/docs/sdk/igni-client](https://ignite-ember.sh/docs/sdk/igni-client) — guides and the complete API reference, a page per topic.
+**Full documentation:** [igni.sh/docs/sdk/igni-client](https://igni.sh/docs/sdk/igni-client) — guides and the complete API reference, a page per topic.
 
 **The Python SDK for driving an igni from your own program.**
 

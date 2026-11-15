@@ -1,6 +1,6 @@
 # `@ignite-ember/ui-react`
 
-**Full documentation:** [ignite-ember.sh/docs/sdk/ui-react](https://ignite-ember.sh/docs/sdk/ui-react) — guides and the complete API reference, a page per topic.
+**Full documentation:** [igni.sh/docs/sdk/ui-react](https://igni.sh/docs/sdk/ui-react) — guides and the complete API reference, a page per topic.
 
 The React components an igni extension is allowed to build on.
 Everything exported here is under the compatibility floor: removing

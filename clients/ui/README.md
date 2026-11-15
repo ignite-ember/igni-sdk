@@ -1,6 +1,6 @@
 # igni-ui
 
-**Full documentation:** [ignite-ember.sh/docs/sdk/ui-css](https://ignite-ember.sh/docs/sdk/ui-css) — guides and the complete API reference, a page per topic.
+**Full documentation:** [igni.sh/docs/sdk/ui-css](https://igni.sh/docs/sdk/ui-css) — guides and the complete API reference, a page per topic.
 
 The controls an extension draws with, so a surface built outside igni looks like one built inside it.
 
