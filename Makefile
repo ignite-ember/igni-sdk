@@ -61,7 +61,7 @@ host-sdks: ## Regenerate the SDKs' host objects from contracts/host-schema.json
 client-api: ## Regenerate igni-client's models, methods and API reference from contracts/rpc-contract.json
 	uv run python -m tools.client_codegen
 
-# The SDKs' documentation on igni's site (ignite-ember.sh/docs/sdk), a page
+# The SDKs' documentation on igni's site (igni.sh/docs/sdk), a page
 # per topic: each README cut at its sections, igni-client's reference from
 # the contract, igni-service's and igni-extension's from their code. The
 # site copies docs/site/ (scripts/sync-sdk-docs.mjs there).

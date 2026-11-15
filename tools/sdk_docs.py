@@ -1,7 +1,7 @@
 """The SDKs' documentation for igni's site, generated: ``make sdk-docs``.
 
 PyPI shows one README per package, npm one page per package. The site
-(ignite-ember.sh, the ``igni-site`` repository) shows the same documentation
+(igni.sh, the ``igni-site`` repository) shows the same documentation
 as many pages, under ``/docs/sdk/<package>/<page>``, and copies them from
 here (``scripts/sync-sdk-docs.mjs`` there). This writes ``docs/site/``:
 

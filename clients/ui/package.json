@@ -10,9 +10,9 @@
     "theme"
   ],
   "license": "Apache-2.0",
-  "author": "Ignite Ember (https://ignite-ember.sh/)",
-  "homepage": "https://ignite-ember.sh/docs/sdk/ui-css",
-  "documentation": "https://ignite-ember.sh/docs/sdk/ui-css",
+  "author": "Ignite Ember (https://igni.sh/)",
+  "homepage": "https://igni.sh/docs/sdk/ui-css",
+  "documentation": "https://igni.sh/docs/sdk/ui-css",
   "bugs": {
     "url": "https://github.com/ignite-ember/igni-sdk/issues"
   },
