@@ -42,6 +42,7 @@ from igni_client.models import (
     DirListResult,
     DiscardEphemeralResult,
     DiscardInterruptedRunResult,
+    DiscardPendingMessageResult,
     DiscoverServerArgs,
     DisplayConfig,
     ErrorMessage,
@@ -69,6 +70,8 @@ from igni_client.models import (
     MarketplaceNameArgs,
     MarketplaceUrlArgs,
     MarkReadArgs,
+    McpApproval,
+    McpApprovalArgs,
     McpInitResult,
     McpServerArgs,
     McpServerSnapshot,
@@ -87,6 +90,7 @@ from igni_client.models import (
     OrchestrateEventPush,
     OutputStylesResult,
     PendingMessage,
+    PendingMessageArgs,
     PermissionModeChangedPush,
     PickDirArgs,
     PickDirResult,
@@ -199,6 +203,9 @@ _DISCARD_EPHEMERAL_AGENT: TypeAdapter[DiscardEphemeralResult] = TypeAdapter(Disc
 _DISCARD_INTERRUPTED_RUN: TypeAdapter[DiscardInterruptedRunResult] = TypeAdapter(
     DiscardInterruptedRunResult
 )
+_DISCARD_PENDING_MESSAGE: TypeAdapter[DiscardPendingMessageResult] = TypeAdapter(
+    DiscardPendingMessageResult
+)
 _DISCOVER_SERVER: TypeAdapter[ServerFound] = TypeAdapter(ServerFound)
 _DISMISS_PLAN: TypeAdapter[PlanDecisionResult] = TypeAdapter(PlanDecisionResult)
 _DISPATCH_VISUALIZATION_ACTION: TypeAdapter[VisualizationActionResult] = TypeAdapter(
@@ -242,6 +249,7 @@ _INSTALL_PLUGIN: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _LIST_BACKGROUND_PROCESSES: TypeAdapter[list[ProcessRow]] = TypeAdapter(list[ProcessRow])
 _LIST_DIRS: TypeAdapter[DirListResult] = TypeAdapter(DirListResult)
 _LIST_EXTENSIONS: TypeAdapter[ExtensionListResult] = TypeAdapter(ExtensionListResult)
+_LIST_MCP_APPROVALS: TypeAdapter[list[McpApproval]] = TypeAdapter(list[McpApproval])
 _LIST_SESSIONS: TypeAdapter[SessionListResult] = TypeAdapter(SessionListResult)
 _LIST_WORKFLOWS: TypeAdapter[list[WorkflowListItem]] = TypeAdapter(list[WorkflowListItem])
 _LOGIN: TypeAdapter[LoginStarted] = TypeAdapter(LoginStarted)
@@ -274,6 +282,7 @@ _SAVE_PERMISSION_RULE: TypeAdapter[None] = TypeAdapter(None)
 _SEARCH_CHAT: TypeAdapter[list[ChatSearchHit]] = TypeAdapter(list[ChatSearchHit])
 _SEARCH_CODE: TypeAdapter[SearchCodeResult] = TypeAdapter(SearchCodeResult)
 _SET_EXTENSION_SETTINGS: TypeAdapter[ExtensionListResult] = TypeAdapter(ExtensionListResult)
+_SET_MCP_APPROVAL: TypeAdapter[McpApproval] = TypeAdapter(McpApproval)
 _SET_MCP_TOOL_ENABLED: TypeAdapter[McpToolToggleResult] = TypeAdapter(McpToolToggleResult)
 _SET_PLUGIN_ENABLED: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _SET_SERVER: TypeAdapter[ServerChoice] = TypeAdapter(ServerChoice)
@@ -608,6 +617,19 @@ METHODS: dict[str, MethodSpec] = {
     "discard_interrupted_run": MethodSpec(
         wire="discard_interrupted_run",
         python="session.runs.discard_interrupted",
+        scope="session",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
+    "discard_pending_message": MethodSpec(
+        wire="discard_pending_message",
+        python="session.runs.discard_pending",
         scope="session",
         access="client",
         reply="rpc_response",
@@ -1163,6 +1185,19 @@ METHODS: dict[str, MethodSpec] = {
         correlate=None,
         followed=False,
     ),
+    "list_mcp_approvals": MethodSpec(
+        wire="list_mcp_approvals",
+        python="session.mcp.list_approvals",
+        scope="session",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="instant",
+        timeout_seconds=10,
+        correlate=None,
+        followed=False,
+    ),
     "list_sessions": MethodSpec(
         wire="list_sessions",
         python="session.list_sessions",
@@ -1553,6 +1588,19 @@ METHODS: dict[str, MethodSpec] = {
         wire="set_extension_settings",
         python="igni.extensions.set_settings",
         scope="igni",
+        access="window",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
+    "set_mcp_approval": MethodSpec(
+        wire="set_mcp_approval",
+        python="session.mcp.set_approval",
+        scope="session",
         access="window",
         reply="rpc_response",
         streams=(),
@@ -2574,6 +2622,19 @@ class SessionMcp:
         """
         return await self._caller.rpc("ensure_mcp", NoArgs, {}, _ENSURE_MCP)
 
+    async def list_approvals(self) -> list[McpApproval]:
+        """List this session's MCP servers that need a first-use approval.
+
+        Takes no arguments. Returns one row per configured server — its
+        `name`, where it is configured (`source`, `source_path`) and
+        whether it is `approved`. A server from a project's or a plugin's
+        `.mcp.json` runs a command or opens a connection as the person, so
+        it never connects until approved; without a terminal to ask on,
+        igni's window asks instead and answers with `set_mcp_approval`. An
+        extension's own service is approved by its install and not listed.
+        """
+        return await self._caller.rpc("list_mcp_approvals", NoArgs, {}, _LIST_MCP_APPROVALS)
+
     async def server_details(self) -> list[McpServerSnapshot]:
         """Describe each of this session's MCP servers in full.
 
@@ -2592,6 +2653,27 @@ class SessionMcp:
         server.
         """
         return await self._caller.rpc("get_mcp_servers", NoArgs, {}, _GET_MCP_SERVERS)
+
+    async def set_approval(self, *, approved: bool, server_name: str) -> McpApproval:
+        """Approve a configured MCP server, or withdraw its approval.
+
+        `server_name` names the server; `approved` is the answer.
+        Approving records it for that server from that configuration file
+        (in `~/.igni/mcp-approved.json`, which every session reads again
+        when it changes); the server connects on the next `mcp_connect` or
+        start. Withdrawing disconnects it if it is connected. Returns the
+        server's row as `list_mcp_approvals` would. Fails for a server not
+        configured, an extension's, or the user's own `~/.igni/.mcp.json`,
+        which is always trusted. Only igni's window may call it.
+
+        Access: ``window``. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets ``AccessRefused``.
+        """
+        return await self._caller.rpc(
+            "set_mcp_approval",
+            McpApprovalArgs,
+            {"approved": approved, "server_name": server_name},
+            _SET_MCP_APPROVAL,
+        )
 
     async def set_tool_enabled(
         self, *, enabled: bool, server: str, tool: str
@@ -2879,6 +2961,24 @@ class SessionRuns:
             _DISCARD_INTERRUPTED_RUN,
         )
 
+    async def discard_pending(self, message_id: str) -> DiscardPendingMessageResult:
+        """Forget one pending message, so it is not offered again.
+
+        `message_id` names the message (from `get_pending_messages`);
+        `session_id` the session it belongs to; only that session's
+        pending message is deleted. Returns `ok: true` — also when no such
+        message is pending, so a retry is harmless — or `ok: false` with
+        `error` when `message_id` is empty, the message arrived less than
+        a minute ago while this igni runs (its run may still be finishing),
+        or the store could not be written.
+        """
+        return await self._caller.rpc(
+            "discard_pending_message",
+            PendingMessageArgs,
+            {"message_id": message_id, "session_id": self._caller.session_id},
+            _DISCARD_PENDING_MESSAGE,
+        )
+
     async def interrupted(self) -> list[InterruptedRun]:
         """List a session's runs that stopped before they finished.
 
@@ -2900,9 +3000,10 @@ class SessionRuns:
         """List a session's messages whose run started but never finished.
 
         `session_id` names the session. Returns the user messages still
-        pending at least a minute after they arrived — typically left by a
-        crash — oldest first, each with its text, when it arrived and its
-        `message_id`. A storage failure answers an empty list.
+        pending — typically left by a crash — oldest first, each with its
+        text, when it arrived and its `message_id`: one saved before this
+        igni started at once, one it received itself a minute after it
+        arrived. A storage failure answers an empty list.
         """
         return await self._caller.rpc(
             "get_pending_messages",
@@ -3455,9 +3556,12 @@ class SessionApi:
         """Tell this session the person used a control in a view the agent drew.
 
         `action` is the control's action name; `params` the values the
-        view attached to it (JSON). The action is kept for the agent and
-        pushed to every window as `visualization_action_dispatched`.
-        Returns the action and params as recorded, with `ok`.
+        view attached to it (JSON). The action is pushed to every window,
+        extension and SDK program as `visualization_action_dispatched`.
+        It does not reach the agent: whoever receives it decides whether
+        and when to tell the agent, for example by posting a message once
+        its own request has finished. Returns the action and params as
+        recorded, with `ok`.
 
         ``async with`` the call to follow it: it yields the ``visualization_action_dispatched`` push of this session carrying this ``action`` and ``params``, and ends with it.
         """

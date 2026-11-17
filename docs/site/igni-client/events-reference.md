@@ -868,7 +868,7 @@ Channel `visualization_action_dispatched`; `payload` is [`VisualizationActionDis
 
 ### VmCredentialPush
 
-A cloud VM's own credential changed state.
+A cloud VM's own credential changed state; a client that connects later is sent the state last pushed, to it alone.
 
 Channel `vm_credential`; `payload` is [`VmCredentialState`](/docs/sdk/igni-client/models-reference#vmcredentialstate).
 

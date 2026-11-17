@@ -1963,6 +1963,15 @@ export class HostChat extends HostObject {
   }
 
   /**
+   * Forget a message whose run never finished.
+   *
+   * @param message_id — The pending message to forget, by its id.
+   */
+  discard_pending(message_id: string): Promise<JsonValue> {
+    return this.call<JsonValue>("discard_pending", { message_id });
+  }
+
+  /**
    * Upload an attachment for a later `post`.
    *
    * @param filename — The file's name, made safe for the disk.

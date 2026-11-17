@@ -592,6 +592,15 @@ class DiscardInterruptedRunResult(Model):
     """`true` once no such interrupted run is left, also when there was none, so a retry is harmless. `false` when the id was empty or the change could not be saved."""
 
 
+class DiscardPendingMessageResult(Model):
+    """The outcome of discarding a pending message."""
+
+    error: str = ""
+    """Why it failed; empty when `ok` is true."""
+    ok: bool
+    """`true` once the message is no longer pending, also when it was not, so a retry is harmless. `false` when the id was empty, the message is one a run of this backend may still be finishing, or the change could not be saved."""
+
+
 class DiscoverServerArgs(Args):
     """An email address to find the user's igni server from."""
 
@@ -1392,6 +1401,28 @@ class MarketplaceUrlArgs(Args):
     """The marketplace's git URL."""
 
 
+class McpApproval(Model):
+    """Whether a configured MCP server may connect: its first-use approval."""
+
+    approved: bool
+    """`true` when it may connect: approved once, or from the user's own `~/.igni/.mcp.json`. An unapproved one is never connected."""
+    name: str
+    """The server's name, as configured."""
+    source: str
+    """Where it is configured: `user`, `project`, `plugin`, `managed`, ..."""
+    source_path: str
+    """The configuration file it comes from."""
+
+
+class McpApprovalArgs(Args):
+    """Arguments approving a configured MCP server, or withdrawing its approval."""
+
+    approved: bool
+    """`true` approves it; `false` withdraws its approval and disconnects it."""
+    server_name: str
+    """The server's name in the MCP configuration."""
+
+
 class McpInitResult(Model):
     """Outcome of connecting the session's configured MCP servers."""
 
@@ -1651,6 +1682,15 @@ class PendingMessage(Model):
     """When igni received it, in seconds since the Unix epoch."""
     role: Literal["user"] = "user"
     """Always `user`."""
+
+
+class PendingMessageArgs(Args):
+    """Arguments naming one pending message of a session."""
+
+    message_id: str
+    """Id of the pending message, as listed by `get_pending_messages`; must not be empty."""
+    session_id: str
+    """Id of the session to act on."""
 
 
 class PermissionModeChangedEventPayload(Model):
@@ -2635,6 +2675,8 @@ class SessionListEntry(Model):
     """The agent the session talks to."""
     created_at: int = 0
     """When the session was created, in Unix seconds."""
+    has_paused_run: bool = False
+    """True when this session has a run waiting for the person to answer an approval."""
     name: str = ""
     """The session's name; empty when it has none."""
     run_count: int = 0
@@ -3027,6 +3069,30 @@ class TaskUpdatedEvent(Model):
     """New task status, such as `running`, `completed` or `failed`. Empty when unknown."""
     type: Literal["task_updated"] = "task_updated"
     """Always `task_updated`: what kind of message this is."""
+
+
+class TeamTurn(Model):
+    """A sub-agent's or a team's progress card, as it was drawn during a run.
+
+    `events` are the card's `orchestrate_event` payloads in the order
+    they arrived; feed them to the same reducer as the live push to draw
+    the card. Placed after the `spawn_agent` / `spawn_team` tool turn
+    it came from. Has no `created_at`. Shown only: none of it is in the
+    model's context.
+    """
+
+    card_id: str = ""
+    """The card's id, as the live events carried it."""
+    events: list[dict[str, JsonValue]] = Field(default_factory=list)
+    """The card's `orchestrate_event` payloads, oldest first."""
+    role: Literal["team"] = "team"
+    """Turn kind; always `team`."""
+    run_id: str = ""
+    """Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point."""
+    seq: int = 0
+    """Position of the card's first event in the session's event log."""
+    tool_call_id: str = ""
+    """Id of the `spawn_agent` / `spawn_team` call the card is for; empty if unknown."""
 
 
 class ThinkingTurn(Model):
@@ -3715,6 +3781,34 @@ class WorkflowRunResponse(Model):
     """Id of the new run; use it to match events and to cancel the run."""
 
 
+class WorkflowTurn(Model):
+    """A workflow run's card, as it was drawn during the run.
+
+    `events` are the run's `workflow_event` records in the order
+    they arrived — the very envelopes the `workflow_event` push
+    carried — so the card can be drawn again from the tape, exactly as
+    the live pushes drew it. Placed where the run happened, among the
+    chat turns around it.
+
+    `run_id` is empty: a workflow's agent calls are kept in their own
+    session, so there is no agent run to point at. Has no
+    `created_at`. Shown only: none of it is in the model's context.
+    """
+
+    events: list[dict[str, JsonValue]] = Field(default_factory=list)
+    """The run's `workflow_event` records, oldest first."""
+    name: str = ""
+    """Name of the workflow that was run."""
+    role: Literal["workflow"] = "workflow"
+    """Turn kind; always `workflow`."""
+    run_id: str = ""
+    """Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point."""
+    seq: int = 0
+    """Position of the run's first event in the session's event log."""
+    workflow_run_id: str = ""
+    """Id of the workflow run the card is for."""
+
+
 class WorkspaceTrustStatus(Model):
     """Whether the project folder is trusted, and why.
 
@@ -3972,7 +4066,7 @@ class VisualizationActionDispatchedPush(PushNotification):
 
 
 class VmCredentialPush(PushNotification):
-    """A cloud VM's own credential changed state.
+    """A cloud VM's own credential changed state; a client that connects later is sent the state last pushed, to it alone.
 
     On the wire: ``push_notification`` on the channel ``vm_credential``.
     """
@@ -4011,9 +4105,17 @@ class WorkspaceTrustRequiredPush(PushNotification):
     payload: WorkspaceTrustStatus  # type: ignore[assignment]
 
 
-#: One of 7 kinds, told apart by ``role``.
+#: One of 9 kinds, told apart by ``role``.
 type ChatTurn = Annotated[
-    UserTurn | AssistantTurn | ThinkingTurn | ToolTurn | PlanTurn | StatsTurn | VisualizationTurn,
+    UserTurn
+    | AssistantTurn
+    | ThinkingTurn
+    | ToolTurn
+    | PlanTurn
+    | StatsTurn
+    | VisualizationTurn
+    | TeamTurn
+    | WorkflowTurn,
     Field(discriminator="role"),
 ]
 

@@ -88,6 +88,7 @@ do not know.
 |---|---|---|---|
 | `agent_name` | `str` | `''` | The agent the session talks to. |
 | `created_at` | `int` | `0` | When the session was created, in Unix seconds. |
+| `has_paused_run` | `bool` | `False` | True when this session has a run waiting for the person to answer an approval. |
 | `name` | `str` | `''` | The session's name; empty when it has none. |
 | `run_count` | `int` | `0` | How many runs the session holds. |
 | `session_id` | `str` | `''` | The session's id. |
@@ -149,6 +150,17 @@ The outcome of discarding an interrupted run.
 | `ok` | `bool` | required | `true` once no such interrupted run is left, also when there was none, so a retry is harmless. `false` when the id was empty or the change could not be saved. |
 
 **Returned by** [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted).
+
+### DiscardPendingMessageResult
+
+The outcome of discarding a pending message.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `error` | `str` | `''` | Why it failed; empty when `ok` is true. |
+| `ok` | `bool` | required | `true` once the message is no longer pending, also when it was not, so a retry is harmless. `false` when the id was empty, the message is one a run of this backend may still be finishing, or the change could not be saved. |
+
+**Returned by** [`session.runs.discard_pending()`](/docs/sdk/igni-client/runs#session-runs-discard-pending).
 
 ### InterruptedRun
 
@@ -281,6 +293,29 @@ the run. Has no `created_at`.
 
 **Part of** [`ChatTurn`](/docs/sdk/igni-client/models-reference#chatturn).
 
+### TeamTurn
+
+A sub-agent's or a team's progress card, as it was drawn during a run.
+
+`events` are the card's `orchestrate_event` payloads in the order
+they arrived; feed them to the same reducer as the live push to draw
+the card. Placed after the `spawn_agent` / `spawn_team` tool turn
+it came from. Has no `created_at`. Shown only: none of it is in the
+model's context.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `card_id` | `str` | `''` | The card's id, as the live events carried it. |
+| `events` | `list[dict[str, JsonValue]]` | `[]` | The card's `orchestrate_event` payloads, oldest first. |
+| `role` | `Literal['team']` | `'team'` | always `'team'`. Turn kind; always `team`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
+| `seq` | `int` | `0` | Position of the card's first event in the session's event log. |
+| `tool_call_id` | `str` | `''` | Id of the `spawn_agent` / `spawn_team` call the card is for; empty if unknown. |
+
+**Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
+
+**Part of** [`ChatTurn`](/docs/sdk/igni-client/models-reference#chatturn).
+
 ### ThinkingTurn
 
 The model's reasoning ("thinking") for part of a run.
@@ -366,6 +401,33 @@ time.
 | `spec` | `dict[str, JsonValue]` | `{}` | The visualization specification to render, as JSON. Not validated by igni. |
 | `spec_id` | `str` | `''` | Unique id of this visualization. |
 | `title` | `str` | `''` | The card's title, as given by the extension that appended it. |
+
+**Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
+
+**Part of** [`ChatTurn`](/docs/sdk/igni-client/models-reference#chatturn).
+
+### WorkflowTurn
+
+A workflow run's card, as it was drawn during the run.
+
+`events` are the run's `workflow_event` records in the order
+they arrived — the very envelopes the `workflow_event` push
+carried — so the card can be drawn again from the tape, exactly as
+the live pushes drew it. Placed where the run happened, among the
+chat turns around it.
+
+`run_id` is empty: a workflow's agent calls are kept in their own
+session, so there is no agent run to point at. Has no
+`created_at`. Shown only: none of it is in the model's context.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `events` | `list[dict[str, JsonValue]]` | `[]` | The run's `workflow_event` records, oldest first. |
+| `name` | `str` | `''` | Name of the workflow that was run. |
+| `role` | `Literal['workflow']` | `'workflow'` | always `'workflow'`. Turn kind; always `workflow`. |
+| `run_id` | `str` | `''` | Id of the agent run this turn belongs to. Pass it to `truncate_history` to edit or delete from this point. |
+| `seq` | `int` | `0` | Position of the run's first event in the session's event log. |
+| `workflow_run_id` | `str` | `''` | Id of the workflow run the card is for. |
 
 **Returned by** [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get).
 
@@ -1025,6 +1087,19 @@ confirm it.
 | `tool` | `str` | required | Name of the tool. |
 
 **Returned by** [`session.mcp.set_tool_enabled()`](/docs/sdk/igni-client/mcp#session-mcp-set-tool-enabled).
+
+### McpApproval
+
+Whether a configured MCP server may connect: its first-use approval.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `approved` | `bool` | required | `true` when it may connect: approved once, or from the user's own `~/.igni/.mcp.json`. An unapproved one is never connected. |
+| `name` | `str` | required | The server's name, as configured. |
+| `source` | `str` | required | Where it is configured: `user`, `project`, `plugin`, `managed`, ... |
+| `source_path` | `str` | required | The configuration file it comes from. |
+
+**Returned by** [`session.mcp.list_approvals()`](/docs/sdk/igni-client/mcp#session-mcp-list-approvals), [`session.mcp.set_approval()`](/docs/sdk/igni-client/mcp#session-mcp-set-approval).
 
 ### McpInitResult
 
@@ -2130,7 +2205,7 @@ use.
 
 ### ChatTurn
 
-One of [`UserTurn`](/docs/sdk/igni-client/models-reference#userturn) \| [`AssistantTurn`](/docs/sdk/igni-client/models-reference#assistantturn) \| [`ThinkingTurn`](/docs/sdk/igni-client/models-reference#thinkingturn) \| [`ToolTurn`](/docs/sdk/igni-client/models-reference#toolturn) \| [`PlanTurn`](/docs/sdk/igni-client/models-reference#planturn) \| [`StatsTurn`](/docs/sdk/igni-client/models-reference#statsturn) \| [`VisualizationTurn`](/docs/sdk/igni-client/models-reference#visualizationturn).
+One of [`UserTurn`](/docs/sdk/igni-client/models-reference#userturn) \| [`AssistantTurn`](/docs/sdk/igni-client/models-reference#assistantturn) \| [`ThinkingTurn`](/docs/sdk/igni-client/models-reference#thinkingturn) \| [`ToolTurn`](/docs/sdk/igni-client/models-reference#toolturn) \| [`PlanTurn`](/docs/sdk/igni-client/models-reference#planturn) \| [`StatsTurn`](/docs/sdk/igni-client/models-reference#statsturn) \| [`VisualizationTurn`](/docs/sdk/igni-client/models-reference#visualizationturn) \| [`TeamTurn`](/docs/sdk/igni-client/models-reference#teamturn) \| [`WorkflowTurn`](/docs/sdk/igni-client/models-reference#workflowturn).
 
 Told apart by `role`.
 
@@ -2271,9 +2346,11 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `MarkReadArgs` | [`igni.notifications.mark_read()`](/docs/sdk/igni-client/notifications#igni-notifications-mark-read) |
 | `MarketplaceNameArgs` | [`igni.marketplaces.remove()`](/docs/sdk/igni-client/plugins#igni-marketplaces-remove) |
 | `MarketplaceUrlArgs` | [`igni.marketplaces.add()`](/docs/sdk/igni-client/plugins#igni-marketplaces-add) |
+| `McpApprovalArgs` | [`session.mcp.set_approval()`](/docs/sdk/igni-client/mcp#session-mcp-set-approval) |
 | `McpServerArgs` | [`session.mcp.connect()`](/docs/sdk/igni-client/mcp#session-mcp-connect), [`session.mcp.disconnect()`](/docs/sdk/igni-client/mcp#session-mcp-disconnect) |
 | `McpToolEnabledArgs` | [`session.mcp.set_tool_enabled()`](/docs/sdk/igni-client/mcp#session-mcp-set-tool-enabled) |
 | `NoArgs` | every method that takes no arguments |
+| `PendingMessageArgs` | [`session.runs.discard_pending()`](/docs/sdk/igni-client/runs#session-runs-discard-pending) |
 | `PickDirArgs` | [`session.files.pick_dir()`](/docs/sdk/igni-client/files#session-files-pick-dir) |
 | `PlanRunArgs` | [`session.plan.approve()`](/docs/sdk/igni-client/plans#session-plan-approve), [`session.plan.dismiss()`](/docs/sdk/igni-client/plans#session-plan-dismiss) |
 | `PluginEnabledArgs` | [`session.plugins.set_enabled()`](/docs/sdk/igni-client/plugins#session-plugins-set-enabled) |

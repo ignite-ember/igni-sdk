@@ -11,6 +11,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 | Method | What it does |
 |---|---|
 | [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted) | Forget one interrupted run, so it is not offered again. |
+| [`session.runs.discard_pending()`](/docs/sdk/igni-client/runs#session-runs-discard-pending) | Forget one pending message, so it is not offered again. |
 | [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted) | List a session's runs that stopped before they finished. |
 | [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages) | List a session's messages whose run started but never finished. |
 
@@ -50,6 +51,46 @@ The client waits up to 30 seconds.
 ```python
 for run in await session.runs.interrupted():
     await session.runs.discard_interrupted(run.message_id)
+```
+
+## session.runs.discard_pending()
+
+Forget one pending message, so it is not offered again.
+
+```python
+async def discard_pending(self, message_id: str) -> DiscardPendingMessageResult
+```
+
+`message_id` names the message (from `session.runs.pending_messages()`);
+`session_id` the session it belongs to; only that session's
+pending message is deleted. Returns `ok: true` — also when no such
+message is pending, so a retry is harmless — or `ok: false` with
+`error` when `message_id` is empty, the message arrived less than
+a minute ago while this igni runs (its run may still be finishing),
+or the store could not be written.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `message_id` | `str` | required | Id of the pending message, as listed by `session.runs.pending_messages()`; must not be empty. |
+
+`session_id` is this session's own, so it is not a parameter.
+
+**Returns** [`DiscardPendingMessageResult`](/docs/sdk/igni-client/models-reference#discardpendingmessageresult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `discard_pending_message`, scope `session`, area `session`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+for message in await session.runs.pending_messages():
+    await session.runs.discard_pending(message.message_id)
 ```
 
 ## session.runs.interrupted()
@@ -96,9 +137,10 @@ async def pending_messages(self) -> list[PendingMessage]
 ```
 
 Returns the user messages still
-pending at least a minute after they arrived — typically left by a
-crash — oldest first, each with its text, when it arrived and its
-`message_id`. A storage failure answers an empty list.
+pending — typically left by a crash — oldest first, each with its
+text, when it arrived and its `message_id`: one saved before this
+igni started at once, one it received itself a minute after it
+arrived. A storage failure answers an empty list.
 
 Takes no arguments (`session_id` is this session's own).
 
