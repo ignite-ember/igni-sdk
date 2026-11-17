@@ -2580,6 +2580,7 @@ The conversation in the current session. Signals carry the session they happened
 | `compact` | method | `() => Promise<SessionCleared \| null>` | Compact the conversation if it needs it, as igni does after a run. |
 | `extract_learnings` | method | `(user_msg: string, assistant_msg: string) => Promise<void>` | Have the agent note what a turn taught it. |
 | `discard_interrupted` | method | `(message_id: string) => Promise<JsonValue>` | Forget an interrupted run. |
+| `discard_pending` | method | `(message_id: string) => Promise<JsonValue>` | Forget a message whose run never finished. |
 | `upload` | method | `(filename: string, content_base64: string) => Promise<JsonValue>` | Upload an attachment for a later `post`. |
 
 ### HostChat.constructor()
@@ -2649,6 +2650,12 @@ The conversation in the current session. Signals carry the session they happened
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `message_id` | `string` | required | The interrupted run to forget, named by the message that started it. |
+
+### HostChat.discard_pending()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `message_id` | `string` | required | The pending message to forget, by its id. |
 
 ### HostChat.upload()
 

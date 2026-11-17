@@ -413,6 +413,11 @@
         },
         {
           "level": 2,
+          "id": "session-runs-discard-pending",
+          "title": "session.runs.discard_pending()"
+        },
+        {
+          "level": 2,
           "id": "session-runs-interrupted",
           "title": "session.runs.interrupted()"
         },
@@ -837,6 +842,11 @@
         },
         {
           "level": 2,
+          "id": "session-mcp-list-approvals",
+          "title": "session.mcp.list_approvals()"
+        },
+        {
+          "level": 2,
           "id": "session-mcp-server-details",
           "title": "session.mcp.server_details()"
         },
@@ -844,6 +854,11 @@
           "level": 2,
           "id": "session-mcp-servers",
           "title": "session.mcp.servers()"
+        },
+        {
+          "level": 2,
+          "id": "session-mcp-set-approval",
+          "title": "session.mcp.set_approval()"
         },
         {
           "level": 2,
@@ -1155,6 +1170,11 @@
         },
         {
           "level": 3,
+          "id": "discardpendingmessageresult",
+          "title": "DiscardPendingMessageResult"
+        },
+        {
+          "level": 3,
           "id": "interruptedrun",
           "title": "InterruptedRun"
         },
@@ -1200,6 +1220,11 @@
         },
         {
           "level": 3,
+          "id": "teamturn",
+          "title": "TeamTurn"
+        },
+        {
+          "level": 3,
           "id": "thinkingturn",
           "title": "ThinkingTurn"
         },
@@ -1222,6 +1247,11 @@
           "level": 3,
           "id": "visualizationturn",
           "title": "VisualizationTurn"
+        },
+        {
+          "level": 3,
+          "id": "workflowturn",
+          "title": "WorkflowTurn"
         },
         {
           "level": 2,
@@ -1492,6 +1522,11 @@
           "level": 3,
           "id": "mcptooltoggleresult",
           "title": "McpToolToggleResult"
+        },
+        {
+          "level": 3,
+          "id": "mcpapproval",
+          "title": "McpApproval"
         },
         {
           "level": 3,
@@ -6468,6 +6503,11 @@
           "level": 3,
           "id": "hostchat-discard-interrupted",
           "title": "HostChat.discard_interrupted()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-discard-pending",
+          "title": "HostChat.discard_pending()"
         },
         {
           "level": 3,

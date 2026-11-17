@@ -98,6 +98,7 @@ PARAM_MEANINGS: dict[tuple[str, str, str], str] = {
     ("chat", "discard_interrupted", "message_id"): (
         "The interrupted run to forget, named by the message that started it."
     ),
+    ("chat", "discard_pending", "message_id"): "The pending message to forget, by its id.",
     ("chat", "upload", "filename"): "The file's name, made safe for the disk.",
     ("chat", "upload", "content_base64"): "The file's bytes, base64-encoded.",
     ("chat.approvals", "answer", "requirement_id"): "The waiting request to answer, by its id.",

@@ -923,12 +923,12 @@ by the token it offers:
 | [`session.history`](#sessionhistory) | `get`, `search`, `truncate` |
 | [`session.hooks`](#sessionhooks) | `list`, `reload` |
 | [`session.loop`](#sessionloop) | `cancel`, `next_iteration`, `pause`, `resume`, `status` |
-| [`session.mcp`](#sessionmcp) | `connect`, `disconnect`, `ensure`, `server_details`, `servers`, `set_tool_enabled`, `status` |
+| [`session.mcp`](#sessionmcp) | `connect`, `disconnect`, `ensure`, `list_approvals`, `server_details`, `servers`, `set_approval`, `set_tool_enabled`, `status` |
 | [`session.models`](#sessionmodels) | `list`, `switch` |
 | [`session.permissions`](#sessionpermissions) | `check`, `save_rule` |
 | [`session.plan`](#sessionplan) | `approve`, `dismiss`, `latest` |
 | [`session.plugins`](#sessionplugins) | `contents`, `install`, `list`, `preview`, `remove`, `set_enabled`, `update` |
-| [`session.runs`](#sessionruns) | `discard_interrupted`, `interrupted`, `pending_messages` |
+| [`session.runs`](#sessionruns) | `discard_interrupted`, `discard_pending`, `interrupted`, `pending_messages` |
 | [`session.scheduler`](#sessionscheduler) | `cancel`, `execute`, `list`, `start` |
 | [`session.skills`](#sessionskills) | `definitions`, `list`, `names` |
 | [`session.workflows`](#sessionworkflows) | `cancel`, `list`, `run` |
@@ -1668,9 +1668,12 @@ Wire method `dispatch_visualization_action` · access `client` · streams `visua
 Tell this session the person used a control in a view the agent drew.
 
 `action` is the control's action name; `params` the values the
-view attached to it (JSON). The action is kept for the agent and
-pushed to every window as `visualization_action_dispatched`.
-Returns the action and params as recorded, with `ok`.
+view attached to it (JSON). The action is pushed to every window,
+extension and SDK program as `visualization_action_dispatched`.
+It does not reach the agent: whoever receives it decides whether
+and when to tell the agent, for example by posting a message once
+its own request has finished. Returns the action and params as
+recorded, with `ok`.
 
 Followed: `async with` the call to follow it: it yields the `visualization_action_dispatched` push of this session carrying this `action` and `params`, and ends with it.
 
@@ -2089,6 +2092,23 @@ was done, `skipped_reason` (`already_initialized`,
 </details>
 
 <details>
+<summary><code>await session.mcp.list_approvals()</code> → <code>list[McpApproval]</code></summary>
+
+Wire method `list_mcp_approvals` · access `client`
+
+List this session's MCP servers that need a first-use approval.
+
+Takes no arguments. Returns one row per configured server — its
+`name`, where it is configured (`source`, `source_path`) and
+whether it is `approved`. A server from a project's or a plugin's
+`.mcp.json` runs a command or opens a connection as the person, so
+it never connects until approved; without a terminal to ask on,
+igni's window asks instead and answers with `set_mcp_approval`. An
+extension's own service is approved by its install and not listed.
+
+</details>
+
+<details>
 <summary><code>await session.mcp.server_details()</code> → <code>list[McpServerSnapshot]</code></summary>
 
 Wire method `get_mcp_server_details` · access `client`
@@ -2112,6 +2132,26 @@ List this session's configured MCP servers, in configuration order.
 
 Takes no arguments. Returns one `{name, connected}` row per
 server.
+
+</details>
+
+<details>
+<summary><code>await session.mcp.set_approval(*, approved: bool, server_name: str)</code> → <code>McpApproval</code></summary>
+
+Wire method `set_mcp_approval` · access `window`
+
+Approve a configured MCP server, or withdraw its approval.
+
+`server_name` names the server; `approved` is the answer.
+Approving records it for that server from that configuration file
+(in `~/.igni/mcp-approved.json`, which every session reads again
+when it changes); the server connects on the next `mcp_connect` or
+start. Withdrawing disconnects it if it is connected. Returns the
+server's row as `list_mcp_approvals` would. Fails for a server not
+configured, an extension's, or the user's own `~/.igni/.mcp.json`,
+which is always trusted. Only igni's window may call it.
+
+Access: `window`. Through Fleet's gateway every connection stands as igni's window and makes this call. On the desktop only the app's own window does: a program — with the lockfile's token or an approver token — gets `AccessRefused`.
 
 </details>
 
@@ -2403,6 +2443,23 @@ when `message_id` is empty or the store could not be written.
 </details>
 
 <details>
+<summary><code>await session.runs.discard_pending(message_id: str)</code> → <code>DiscardPendingMessageResult</code></summary>
+
+Wire method `discard_pending_message` · access `client`
+
+Forget one pending message, so it is not offered again.
+
+`message_id` names the message (from `get_pending_messages`);
+`session_id` the session it belongs to; only that session's
+pending message is deleted. Returns `ok: true` — also when no such
+message is pending, so a retry is harmless — or `ok: false` with
+`error` when `message_id` is empty, the message arrived less than
+a minute ago while this igni runs (its run may still be finishing),
+or the store could not be written.
+
+</details>
+
+<details>
 <summary><code>await session.runs.interrupted()</code> → <code>list[InterruptedRun]</code></summary>
 
 Wire method `get_interrupted_runs` · access `client`
@@ -2426,9 +2483,10 @@ Wire method `get_pending_messages` · access `client`
 List a session's messages whose run started but never finished.
 
 `session_id` names the session. Returns the user messages still
-pending at least a minute after they arrived — typically left by a
-crash — oldest first, each with its text, when it arrived and its
-`message_id`. A storage failure answers an empty list.
+pending — typically left by a crash — oldest first, each with its
+text, when it arrived and its `message_id`: one saved before this
+igni started at once, one it received itself a minute after it
+arrived. A storage failure answers an empty list.
 
 </details>
 

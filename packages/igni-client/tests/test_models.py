@@ -127,7 +127,7 @@ def test_every_def_a_method_message_or_push_reaches_has_its_class() -> None:
 
 def test_every_class_but_the_pushes_comes_from_a_def() -> None:
     assert set(_classes(BaseModel)) - set(DEF_OF) == PUSHES
-    assert len(_classes(BaseModel)) == 269
+    assert len(_classes(BaseModel)) == 275
 
 
 @pytest.mark.parametrize("cls", MODELS, ids=lambda c: c.__name__)
@@ -328,7 +328,7 @@ def test_an_empty_collection_default_is_not_shared_between_instances() -> None:
 @pytest.mark.parametrize(
     ("union", "tag", "kinds"),
     [
-        (ChatTurn, "role", 7),
+        (ChatTurn, "role", 9),
         (SlashCommand, "source", 4),
         (WindowItem, "type", 2),
         (WindowModelResult, "op", 6),

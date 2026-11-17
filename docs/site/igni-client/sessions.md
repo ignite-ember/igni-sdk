@@ -620,9 +620,12 @@ def visualization_action(
 ```
 
 `action` is the control's action name; `params` the values the
-view attached to it (JSON). The action is kept for the agent and
-pushed to every window as `visualization_action_dispatched`.
-Returns the action and params as recorded, with `ok`.
+view attached to it (JSON). The action is pushed to every window,
+extension and SDK program as `visualization_action_dispatched`.
+It does not reach the agent: whoever receives it decides whether
+and when to tell the agent, for example by posting a message once
+its own request has finished. Returns the action and params as
+recorded, with `ok`.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|

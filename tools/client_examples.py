@@ -189,6 +189,10 @@ await session.typing("")  # clears it
 for run in await session.runs.interrupted():
     await session.runs.discard_interrupted(run.message_id)
 """,
+    "discard_pending_message": """
+for message in await session.runs.pending_messages():
+    await session.runs.discard_pending(message.message_id)
+""",
     "search_chat": """
 for hit in await session.history.search("migration", limit=10):
     print(hit.run_id, hit.snippet)
@@ -337,6 +341,11 @@ print(info.text)
     "set_mcp_tool_enabled": """
 toggled = await session.mcp.set_tool_enabled(server="github", tool="delete_repo", enabled=False)
 print(toggled.tool, toggled.enabled)
+""",
+    "set_mcp_approval": """
+for server in await session.mcp.list_approvals():
+    if not server.approved:
+        await session.mcp.set_approval(server_name=server.name, approved=True)
 """,
     "get_plugin_contents": """
 contents = await session.plugins.contents("acme-review")

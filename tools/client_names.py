@@ -70,6 +70,7 @@ METHODS: dict[str, str] = {
     "get_pending_messages": "session.runs.pending_messages",
     "get_interrupted_runs": "session.runs.interrupted",
     "discard_interrupted_run": "session.runs.discard_interrupted",
+    "discard_pending_message": "session.runs.discard_pending",
     "get_chat_history": "session.history.get",
     "search_chat": "session.history.search",
     "truncate_history": "session.history.truncate",
@@ -116,6 +117,8 @@ METHODS: dict[str, str] = {
     "mcp_connect": "session.mcp.connect",
     "mcp_disconnect": "session.mcp.disconnect",
     "set_mcp_tool_enabled": "session.mcp.set_tool_enabled",
+    "list_mcp_approvals": "session.mcp.list_approvals",
+    "set_mcp_approval": "session.mcp.set_approval",
     "get_plugin_details": "session.plugins.list",
     "get_plugin_contents": "session.plugins.contents",
     "preview_plugin": "session.plugins.preview",
@@ -163,6 +166,7 @@ OWN_SESSION_ARG: frozenset[str] = frozenset(
         "get_pending_messages",
         "get_interrupted_runs",
         "discard_interrupted_run",
+        "discard_pending_message",
     }
 )
 
@@ -427,6 +431,8 @@ UNION_NAMES: dict[frozenset[str], str] = {
             "PlanTurn",
             "StatsTurn",
             "VisualizationTurn",
+            "TeamTurn",
+            "WorkflowTurn",
         }
     ): "ChatTurn",
     frozenset(

@@ -2132,6 +2132,14 @@ class HostChat(HostObject):
         """
         return cast(JsonValue, await self._call("discard_interrupted", {"message_id": message_id}, JsonValue))
 
+    async def discard_pending(self, message_id: str) -> JsonValue:
+        """Forget a message whose run never finished.
+
+        Args:
+            message_id: The pending message to forget, by its id.
+        """
+        return cast(JsonValue, await self._call("discard_pending", {"message_id": message_id}, JsonValue))
+
     async def upload(self, filename: str, content_base64: str) -> JsonValue:
         """Upload an attachment for a later `post`.
 
