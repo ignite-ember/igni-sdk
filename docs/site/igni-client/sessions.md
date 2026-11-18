@@ -28,6 +28,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 | [`session.toggle_verbose()`](/docs/sdk/igni-client/sessions#session-toggle-verbose) | Turn showing the agent's routing decisions on or off for this session. |
 | [`session.extract_learnings()`](/docs/sdk/igni-client/sessions#session-extract-learnings) | Let igni learn from one finished turn, in the background. |
 | [`session.visualization_action()`](/docs/sdk/igni-client/sessions#session-visualization-action) | Tell this session the person used a control in a view the agent drew. |
+| [`session.visualization_verdict()`](/docs/sdk/igni-client/sessions#session-visualization-verdict) | Tell this session what the client drew of a card the agent drew. |
 
 ## igni.sessions.attach()
 
@@ -655,4 +656,63 @@ The client waits up to 10 seconds.
 async with session.visualization_action(action="select", params={"row": 3}) as dispatched:
     async for event in dispatched:
         print(event.payload.action, event.payload.params)
+```
+
+## session.visualization_verdict()
+
+Tell this session what the client drew of a card the agent drew.
+
+```python
+async def visualization_verdict(
+    self,
+    spec_id: str,
+    *,
+    failed: list[ElementFailureArgs] | None = None,
+    issues: list[str] | None = None,
+    revision: int = 0,
+    total: int = 0,
+) -> VisualizationVerdictResult
+```
+
+`spec_id` is the card, `revision` which draw of it (the first
+is 1), `total` how many elements the card has, `failed` the
+elements the client could not draw — each with its type and the
+client's word for why — and `issues` what was wrong with the
+card's shape. The verdict is kept against that card and draw,
+and the visualizer's recap quotes it, so the agent says what is
+on the screen. Returns the card, the draw and how much of it
+was drawn.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `failed` | `list[`[`ElementFailureArgs`](/docs/sdk/igni-client/models-reference#elementfailureargs)`] \| None` | `None` | The elements the client could not draw. |
+| `issues` | `list[str] \| None` | `None` | What was wrong with the card's shape. |
+| `revision` | `int` | `0` | Which draw of the card this is; the first draw is 1. |
+| `spec_id` | `str` | required | The card the verdict is about. |
+| `total` | `int` | `0` | How many elements the card has. |
+
+**Returns** [`VisualizationVerdictResult`](/docs/sdk/igni-client/models-reference#visualizationverdictresult).
+
+**How long** `instant` — Answered from what igni holds in memory, at once.
+The client waits up to 10 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `report_visualization_verdict`, scope `session`, area `panels`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+from igni_client.models import ElementFailureArgs
+
+verdict = await session.visualization_verdict(
+    "chart_42",
+    revision=1,
+    total=3,
+    failed=[ElementFailureArgs(type="BarGraph", message="the data had no rows")],
+    issues=["the axis has no label"],
+)
+print(verdict.drawn, "of", verdict.total, "elements drawn")
 ```

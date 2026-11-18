@@ -915,7 +915,7 @@ by the token it offers:
 | [`igni.processes`](#igniprocesses) | `list`, `stop`, `tail` |
 | [`igni.sessions`](#ignisessions) | `attach` |
 | [`igni.window`](#igniwindow) | `model` |
-| [`session`](#session) | `cancel`, `command`, `current_id`, `display_config`, `extract_learnings`, `fire_session_start_hook`, `get_project_dir`, `is_processing`, `list_sessions`, `output_styles`, `run_shell`, `run_timeout`, `shutdown`, `slash_commands`, `status`, `switch`, `todos`, `toggle_verbose`, `typing`, `upload_attachment`, `visualization_action` |
+| [`session`](#session) | `cancel`, `command`, `current_id`, `display_config`, `extract_learnings`, `fire_session_start_hook`, `get_project_dir`, `is_processing`, `list_sessions`, `output_styles`, `run_shell`, `run_timeout`, `shutdown`, `slash_commands`, `status`, `switch`, `todos`, `toggle_verbose`, `typing`, `upload_attachment`, `visualization_action`, `visualization_verdict` |
 | [`session.agents`](#sessionagents) | `discard`, `list`, `promote` |
 | [`session.auth`](#sessionauth) | `plan`, `reload_credentials`, `sign_out` |
 | [`session.context`](#sessioncontext) | `breakdown`, `compact`, `tokens` |
@@ -1676,6 +1676,24 @@ its own request has finished. Returns the action and params as
 recorded, with `ok`.
 
 Followed: `async with` the call to follow it: it yields the `visualization_action_dispatched` push of this session carrying this `action` and `params`, and ends with it.
+
+</details>
+
+<details>
+<summary><code>await session.visualization_verdict(spec_id: str, *, failed: list[ElementFailureArgs] | None = None, issues: list[str] | None = None, revision: int = 0, total: int = 0)</code> → <code>VisualizationVerdictResult</code></summary>
+
+Wire method `report_visualization_verdict` · access `client`
+
+Tell this session what the client drew of a card the agent drew.
+
+`spec_id` is the card, `revision` which draw of it (the first
+is 1), `total` how many elements the card has, `failed` the
+elements the client could not draw — each with its type and the
+client's word for why — and `issues` what was wrong with the
+card's shape. The verdict is kept against that card and draw,
+and the visualizer's recap quotes it, so the agent says what is
+on the screen. Returns the card, the draw and how much of it
+was drawn.
 
 </details>
 

@@ -177,6 +177,18 @@ async with session.visualization_action(action="select", params={"row": 3}) as d
     async for event in dispatched:
         print(event.payload.action, event.payload.params)
 """,
+    "report_visualization_verdict": """
+from igni_client.models import ElementFailureArgs
+
+verdict = await session.visualization_verdict(
+    "chart_42",
+    revision=1,
+    total=3,
+    failed=[ElementFailureArgs(type="BarGraph", message="the data had no rows")],
+    issues=["the axis has no label"],
+)
+print(verdict.drawn, "of", verdict.total, "elements drawn")
+""",
     "command": """
 result = await session.command("/help")
 print(result.kind, result.content)

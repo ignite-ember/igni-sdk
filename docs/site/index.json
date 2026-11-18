@@ -394,6 +394,11 @@
           "level": 2,
           "id": "session-visualization-action",
           "title": "session.visualization_action()"
+        },
+        {
+          "level": 2,
+          "id": "session-visualization-verdict",
+          "title": "session.visualization_verdict()"
         }
       ]
     },
@@ -1157,6 +1162,11 @@
           "level": 3,
           "id": "visualizationactionresult",
           "title": "VisualizationActionResult"
+        },
+        {
+          "level": 3,
+          "id": "visualizationverdictresult",
+          "title": "VisualizationVerdictResult"
         },
         {
           "level": 2,
@@ -1992,6 +2002,11 @@
           "level": 2,
           "id": "in-arguments",
           "title": "In arguments"
+        },
+        {
+          "level": 3,
+          "id": "elementfailureargs",
+          "title": "ElementFailureArgs"
         },
         {
           "level": 3,

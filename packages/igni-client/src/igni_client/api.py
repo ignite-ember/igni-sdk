@@ -45,6 +45,7 @@ from igni_client.models import (
     DiscardPendingMessageResult,
     DiscoverServerArgs,
     DisplayConfig,
+    ElementFailureArgs,
     ErrorMessage,
     ExecuteScheduledTaskArgs,
     ExtensionListResult,
@@ -168,6 +169,8 @@ from igni_client.models import (
     VisualizationActionArgs,
     VisualizationActionDispatchedPush,
     VisualizationActionResult,
+    VisualizationVerdictArgs,
+    VisualizationVerdictResult,
     WindowModelArgs,
     WindowModelChangedPush,
     WindowModelResult,
@@ -275,6 +278,9 @@ _RELOAD_CLOUD_CREDENTIALS: TypeAdapter[StatusUpdate] = TypeAdapter(StatusUpdate)
 _RELOAD_HOOKS: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _REMOVE_MARKETPLACE: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _REMOVE_PLUGIN: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
+_REPORT_VISUALIZATION_VERDICT: TypeAdapter[VisualizationVerdictResult] = TypeAdapter(
+    VisualizationVerdictResult
+)
 _REVOKE_APPROVER_TOKENS: TypeAdapter[ApproverTokensRevoked] = TypeAdapter(ApproverTokensRevoked)
 _RUN_SHELL: TypeAdapter[RunShellResult] = TypeAdapter(RunShellResult)
 _RUN_WORKFLOW: TypeAdapter[WorkflowRunResponse] = TypeAdapter(WorkflowRunResponse)
@@ -1498,6 +1504,19 @@ METHODS: dict[str, MethodSpec] = {
         may_stream=(),
         duration="io",
         timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
+    "report_visualization_verdict": MethodSpec(
+        wire="report_visualization_verdict",
+        python="session.visualization_verdict",
+        scope="session",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="instant",
+        timeout_seconds=10,
         correlate=None,
         followed=False,
     ),
@@ -3570,4 +3589,37 @@ class SessionApi:
             VisualizationActionArgs,
             {"action": action, "params": params},
             _DISPATCH_VISUALIZATION_ACTION,
+        )
+
+    async def visualization_verdict(
+        self,
+        spec_id: str,
+        *,
+        failed: list[ElementFailureArgs] | None = None,
+        issues: list[str] | None = None,
+        revision: int = 0,
+        total: int = 0,
+    ) -> VisualizationVerdictResult:
+        """Tell this session what the client drew of a card the agent drew.
+
+        `spec_id` is the card, `revision` which draw of it (the first
+        is 1), `total` how many elements the card has, `failed` the
+        elements the client could not draw — each with its type and the
+        client's word for why — and `issues` what was wrong with the
+        card's shape. The verdict is kept against that card and draw,
+        and the visualizer's recap quotes it, so the agent says what is
+        on the screen. Returns the card, the draw and how much of it
+        was drawn.
+        """
+        return await self._caller.rpc(
+            "report_visualization_verdict",
+            VisualizationVerdictArgs,
+            {
+                "failed": ([] if failed is None else failed),
+                "issues": ([] if issues is None else issues),
+                "revision": revision,
+                "spec_id": spec_id,
+                "total": total,
+            },
+            _REPORT_VISUALIZATION_VERDICT,
         )

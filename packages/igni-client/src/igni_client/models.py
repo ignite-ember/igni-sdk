@@ -627,6 +627,15 @@ class DisplayConfig(Model):
     """Number of lines of a tool's output shown before it is collapsed."""
 
 
+class ElementFailureArgs(Args):
+    """One element of a card the client could not draw."""
+
+    message: str = ""
+    """Why the client could not draw it, in the client's words."""
+    type: str = ""
+    """The element's type, e.g. `BarGraph`."""
+
+
 class ErrorMessage(Event):
     """An error message to show the person.
 
@@ -3542,6 +3551,8 @@ class VisualizationDeltaPayload(Model):
     """True when `json` holds the complete spec; false for an in-progress update."""
     json_: str = Field(default="", alias="json")
     """The card's visualization spec as JSON text. Partial (possibly incomplete JSON) until `final` is true."""
+    revision: int | None = None
+    """Which draw of the card this is. The first draw is 1. The client sends it back with its verdict, so the verdict names the draw it is about. Null on a partial frame, which is not a draw."""
     source: str = ""
     """Id of the extension that added the card. Empty for cards produced by an agent."""
     spec_id: str = ""
@@ -3576,6 +3587,42 @@ class VisualizationTurn(Model):
     """Unique id of this visualization."""
     title: str = ""
     """The card's title, as given by the extension that appended it."""
+
+
+class VisualizationVerdictArgs(Args):
+    """Arguments for reporting what the client drew of a card the agent
+    drew.
+    """
+
+    failed: list[ElementFailureArgs] = Field(default_factory=list)
+    """The elements the client could not draw."""
+    issues: list[str] = Field(default_factory=list)
+    """What was wrong with the card's shape."""
+    revision: int = 0
+    """Which draw of the card this is; the first draw is 1."""
+    spec_id: str
+    """The card the verdict is about."""
+    total: int = 0
+    """How many elements the card has."""
+
+
+class VisualizationVerdictResult(Model):
+    """Confirmation that a card's verdict was recorded.
+
+    Echoes the card the verdict is about and what the client drew of
+    it, so the client can show that its word was taken.
+    """
+
+    drawn: int
+    """How many elements the client drew."""
+    ok: bool
+    """`true` when the verdict was recorded."""
+    revision: int
+    """Which draw of the card this is."""
+    spec_id: str
+    """The card the verdict is about."""
+    total: int
+    """How many elements the card has."""
 
 
 class VmCredentialState(Model):
