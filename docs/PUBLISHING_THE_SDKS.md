@@ -270,7 +270,7 @@ for t in dist/sdk/npm/*.tgz; do npm publish "$t" --access public; done
 — then configure step 4 before the first tagged release. The workflow skips
 a version that is already published.
 
-Publish **the version the manifests carry** (0.2.0 now). The extension
+Publish **the version the manifests carry** (0.2.1 now). The extension
 pages in the module repositories depend on `@ignite-ember/extension-bridge`,
 `@ignite-ember/ui-react` and `@ignite-ember/ui-css` at `^0.2.0`, so an
 older version does not satisfy them and the module images do not build.)
@@ -341,7 +341,7 @@ a GitHub pre-release, and PyPI, where installers skip it unless asked.
 In order — the consumers cannot resolve the SDKs before they are published.
 
 1. **One-time setup**, above.
-2. **Rehearse** `0.2.0`, the version all six carry today.
+2. **Rehearse** `0.2.0`, the version all six carried for that first release.
 3. **Release** it: `git tag sdk-v0.2.0 && git push origin sdk-v0.2.0` — that
    publishes the three Python packages to PyPI as well, and the three npm
    packages to npmjs. To publish only the npm side and leave PyPI for

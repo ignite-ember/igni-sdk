@@ -8,7 +8,7 @@
       "registryUrl": "https://pypi.org/project/igni-client/",
       "install": "pip install igni-client",
       "importName": "igni_client",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "Drive an igni from your own code: connect headlessly to a person's, an app's or a space's igni — in Fleet or on this machine — and run sessions, prompts, approvals and commands there.",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-client",
       "pypi": "https://pypi.org/project/igni-client/"
@@ -20,7 +20,7 @@
       "registryUrl": "https://pypi.org/project/igni-extension/",
       "install": "pip install igni-extension",
       "importName": "igni_extension",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "What an igni extension's process needs: tools over MCP, its own service with the person's token, and the host's object model.",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-extension",
       "pypi": "https://pypi.org/project/igni-extension/"
@@ -32,7 +32,7 @@
       "registryUrl": "https://pypi.org/project/igni-service/",
       "install": "pip install igni-service",
       "importName": "igni_service",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "What a service needs to be part of an igni deployment: its own key, registration, people's tokens, the directory, notifications, erasure and export, and its extension bundle.",
       "source": "https://github.com/ignite-ember/igni-sdk/tree/main/packages/igni-service",
       "pypi": "https://pypi.org/project/igni-service/"
@@ -44,7 +44,7 @@
       "registryUrl": "https://www.npmjs.com/package/@ignite-ember/extension-bridge",
       "install": "npm install @ignite-ember/extension-bridge",
       "importName": "@ignite-ember/extension-bridge",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "The guest half of the bridge between an igni extension's page and igni: connect(), RPC, navigation, theme. The host imports the same protocol, so there is one description of the wire.",
       "source": "https://github.com/ignite-ember/igni-sdk"
     },
@@ -55,7 +55,7 @@
       "registryUrl": "https://www.npmjs.com/package/@ignite-ember/ui-react",
       "install": "npm install @ignite-ember/ui-react",
       "importName": "@ignite-ember/ui-react",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "The React components an igni extension is allowed to build on. Everything exported here is under the compatibility floor.",
       "source": "https://github.com/ignite-ember/igni-sdk"
     },
@@ -66,7 +66,7 @@
       "registryUrl": "https://www.npmjs.com/package/@ignite-ember/ui-css",
       "install": "npm install @ignite-ember/ui-css",
       "importName": "@ignite-ember/ui-css",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "The stylesheet an igni extension bundles. Classes match igni's own, values are tokens the host pushes live.",
       "source": "https://github.com/ignite-ember/igni-sdk"
     }
