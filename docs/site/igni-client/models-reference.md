@@ -138,6 +138,23 @@ in the conversation.
 
 **Returned by** [`session.visualization_action()`](/docs/sdk/igni-client/sessions#session-visualization-action).
 
+### VisualizationVerdictResult
+
+Confirmation that a card's verdict was recorded.
+
+Echoes the card the verdict is about and what the client drew of
+it, so the client can show that its word was taken.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `drawn` | `int` | required | How many elements the client drew. |
+| `ok` | `bool` | required | `true` when the verdict was recorded. |
+| `revision` | `int` | required | Which draw of the card this is. |
+| `spec_id` | `str` | required | The card the verdict is about. |
+| `total` | `int` | required | How many elements the card has. |
+
+**Returned by** [`session.visualization_verdict()`](/docs/sdk/igni-client/sessions#session-visualization-verdict).
+
 ## Runs received but not finished
 
 ### DiscardInterruptedRunResult
@@ -2139,6 +2156,7 @@ an extension added to the chat.
 | `card_id` | `str \| None` | `None` | The card this delta belongs to; it is not part of the event's wire shape. |
 | `final` | `bool` | `True` | True when `json` holds the complete spec; false for an in-progress update. |
 | `json_` (wire `json`) | `str` | `''` | The card's visualization spec as JSON text. Partial (possibly incomplete JSON) until `final` is true. |
+| `revision` | `int \| None` | `None` | Which draw of the card this is. The first draw is 1. The client sends it back with its verdict, so the verdict names the draw it is about. Null on a partial frame, which is not a draw. |
 | `source` | `str` | `''` | Id of the extension that added the card. Empty for cards produced by an agent. |
 | `spec_id` | `str` | `''` | Identifier of the card; later updates with the same id replace earlier ones. |
 | `title` | `str` | `''` | Card title given by the extension that added it. Empty otherwise. |
@@ -2183,6 +2201,17 @@ One progress event from a running workflow, as pushed on the
 | `workflow_run_id` | `str` | required | Id of the workflow run the event belongs to. |
 
 ## In arguments
+
+### ElementFailureArgs
+
+One element of a card the client could not draw.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `message` | `str` | `''` | Why the client could not draw it, in the client's words. |
+| `type` | `str` | `''` | The element's type, e.g. `BarGraph`. |
+
+**Part of** [`VisualizationVerdictArgs`](/docs/sdk/igni-client/sessions#session-visualization-verdict).
 
 ### ToolCallArgs
 
@@ -2376,6 +2405,7 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `UpdatePluginArgs` | [`session.plugins.update()`](/docs/sdk/igni-client/plugins#session-plugins-update) |
 | `UploadAttachmentArgs` | [`session.upload_attachment()`](/docs/sdk/igni-client/sessions#session-upload-attachment) |
 | `VisualizationActionArgs` | [`session.visualization_action()`](/docs/sdk/igni-client/sessions#session-visualization-action) |
+| `VisualizationVerdictArgs` | [`session.visualization_verdict()`](/docs/sdk/igni-client/sessions#session-visualization-verdict) |
 | `WindowModelArgs` | [`igni.window.model()`](/docs/sdk/igni-client/window#igni-window-model) |
 | `WorkflowCancelRequest` | [`session.workflows.cancel()`](/docs/sdk/igni-client/workflows#session-workflows-cancel) |
 | `WorkflowListRequest` | [`session.workflows.list()`](/docs/sdk/igni-client/workflows#session-workflows-list) |

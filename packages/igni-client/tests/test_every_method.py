@@ -51,6 +51,17 @@ def _arguments(method: Any) -> dict[str, Any]:
     }
 
 
+def _on_the_wire(value: Any) -> Any:
+    """A value as it goes on the wire: a model as its dict, in a list or a dict too."""
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json", by_alias=True)
+    if isinstance(value, list):
+        return [_on_the_wire(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _on_the_wire(item) for key, item in value.items()}
+    return value
+
+
 def _result_type(method: Any) -> Any:
     returns = typing.get_type_hints(method)["return"]
     if typing.get_origin(returns) is Call:
@@ -112,9 +123,7 @@ async def test_the_method_round_trips_through_the_fake(spec: MethodSpec) -> None
         "every argument is sent, by its wire name"
     )
     for name, value in arguments.items():
-        sent = (
-            value.model_dump(mode="json", by_alias=True) if isinstance(value, BaseModel) else value
-        )
+        sent = _on_the_wire(value)
         wire_name = next(
             (p for p in call.args if p.replace("_", "").lower() == name.replace("_", "").lower()),
             name,

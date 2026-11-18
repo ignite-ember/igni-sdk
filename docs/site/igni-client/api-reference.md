@@ -176,7 +176,7 @@ and the [access](/docs/sdk/igni-client/concepts#who-may-call-what) it needs.
 | Page | Namespaces and methods |
 |---|---|
 | [igni as a whole](/docs/sdk/igni-client/igni) | `igni.check_for_update`, `igni.group_policy` |
-| [Sessions](/docs/sdk/igni-client/sessions) | `igni.sessions`, `session.status`, `session.current_id`, `session.get_project_dir`, `session.is_processing`, `session.run_timeout`, `session.list_sessions`, `session.switch`, `session.cancel`, `session.shutdown`, `session.typing`, `session.upload_attachment`, `session.todos`, `session.display_config`, `session.toggle_verbose`, `session.extract_learnings`, `session.visualization_action` |
+| [Sessions](/docs/sdk/igni-client/sessions) | `igni.sessions`, `session.status`, `session.current_id`, `session.get_project_dir`, `session.is_processing`, `session.run_timeout`, `session.list_sessions`, `session.switch`, `session.cancel`, `session.shutdown`, `session.typing`, `session.upload_attachment`, `session.todos`, `session.display_config`, `session.toggle_verbose`, `session.extract_learnings`, `session.visualization_action`, `session.visualization_verdict` |
 | [Runs received but not finished](/docs/sdk/igni-client/runs) | `session.runs` |
 | [History and context](/docs/sdk/igni-client/history-and-context) | `session.history`, `session.context` |
 | [Loop](/docs/sdk/igni-client/loop) | `session.loop` |
