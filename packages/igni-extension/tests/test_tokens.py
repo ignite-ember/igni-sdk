@@ -19,7 +19,13 @@ from igni_extension import (
 )
 from igni_extension.environment import ServiceEndpoint
 from igni_extension.testing import ManualClock
-from igni_extension.tokens import HostTokenAuth, HostTokens, IssuedToken, SignedIn
+from igni_extension.tokens import (
+    REFRESH_HEADER,
+    HostTokenAuth,
+    HostTokens,
+    IssuedToken,
+    SignedIn,
+)
 
 ENDPOINT = ServiceEndpoint(
     url="http://service.test", token_url="http://host.test/token", token_secret="s3cret"
@@ -239,6 +245,34 @@ async def test_invalidate_makes_the_next_call_ask_again() -> None:
     assert await tokens.token() == "b"
 
 
+async def test_an_ordinary_ask_carries_no_refresh() -> None:
+    host = Host(issued())
+
+    await host.tokens().token()
+
+    [request] = host.requests
+    assert REFRESH_HEADER not in request.headers
+
+
+async def test_a_refresh_asks_the_host_for_another_token() -> None:
+    host = Host(issued("t-2"))
+
+    assert await host.tokens().token(refresh=True) == "t-2"
+
+    [request] = host.requests
+    assert request.headers[REFRESH_HEADER] == "1"
+
+
+async def test_a_refresh_ignores_the_kept_token() -> None:
+    """The kept one is the one the service refused."""
+    host = Host(issued("a"), issued("b"))
+    tokens = host.tokens()
+
+    assert await tokens.token() == "a"
+    assert await tokens.token(refresh=True) == "b"
+    assert len(host.requests) == 2
+
+
 async def test_callers_arriving_together_share_one_fetch() -> None:
     gate = asyncio.Event()
     asked = 0
@@ -279,3 +313,36 @@ async def test_a_second_401_is_returned_and_not_retried_again() -> None:
     assert response.status_code == 401
     assert service.seen == ["Bearer a", "Bearer b"]
     assert len(host.requests) == 2
+
+
+async def test_a_401_is_retried_with_a_token_the_host_exchanged_again() -> None:
+    """The host answers with the token it holds, unless it is asked for
+    another one — so the retry has to ask, or the refused token comes
+    back and the retry fails the same way."""
+
+    class Holding:
+        """The host as it is: one token held, exchanged again only on request."""
+
+        def __init__(self) -> None:
+            self.held = "t-old"
+            self.asked: list[bool] = []
+
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            refresh = request.headers.get(REFRESH_HEADER) == "1"
+            self.asked.append(refresh)
+            if refresh:
+                self.held = "t-new"
+            return httpx.Response(200, json={"access_token": self.held, "expires_in": 600})
+
+    host = Holding()
+    service = Service(401, 200)
+    tokens = HostTokens(ENDPOINT, transport=httpx.MockTransport(host.handle), clock=ManualClock())
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(service.handle), auth=HostTokenAuth(tokens)
+    ) as c:
+        response = await c.get("http://service.test/x")
+
+    assert response.status_code == 200
+    assert service.seen == ["Bearer t-old", "Bearer t-new"]
+    assert host.asked == [False, True], "the retry asks the host for another token"

@@ -5,6 +5,12 @@ for a ten-minute token for this extension's service only and hands that
 over on a loopback URL, behind a secret made for this process. This
 module asks for it, keeps it until shortly before it expires, and puts
 it on every request to the service (`HostTokenAuth`).
+
+**A token the service refused.** A `401` from the service means the
+token stopped being good earlier than its expiry said. The kept token
+is dropped and the request is sent again — but the host would answer
+with the very token the service refused, so the retry asks for another
+one (`X-Igni-Token-Refresh`), and the host exchanges one.
 """
 
 from __future__ import annotations
@@ -22,6 +28,11 @@ from igni_extension.caller import Caller
 from igni_extension.clock import Clock
 from igni_extension.environment import ServiceEndpoint
 from igni_extension.errors import HostError, HostUnavailable, NotConfigured, NotSignedIn
+
+#: The header that asks the host for a token that is not the kept one:
+#: the service refused it, and would refuse it again.
+REFRESH_HEADER = "X-Igni-Token-Refresh"
+"""The host's loopback token endpoint answers with the token it holds; this header asks for another."""
 
 
 class IssuedToken(BaseModel):
@@ -140,19 +151,23 @@ class HostTokens:
         self._token = ""
         self._expires_at = 0.0
 
-    async def token(self) -> str:
-        """A token for the service. Raises `NotSignedIn`, `NotConfigured`, `HostUnavailable`."""
+    async def token(self, refresh: bool = False) -> str:
+        """A token for the service. Raises `NotSignedIn`, `NotConfigured`, `HostUnavailable`.
+
+        `refresh` asks the host for another one instead of the kept token:
+        the service refused that one, and it would refuse it again.
+        """
         if not self.configured:
             raise NotConfigured(
                 "igni did not give this process a token endpoint for its service "
                 "(IGNI_SERVICE_TOKEN_URL, IGNI_SERVICE_TOKEN_SECRET)"
             )
-        if self._fresh():
+        if not refresh and self._fresh():
             return self._token
         async with self._lock:
-            if self._fresh():
+            if not refresh and self._fresh():
                 return self._token
-            return await self._fetch()
+            return await self._fetch(refresh=refresh)
 
     def _caller_ref(self) -> str:
         return self._caller.ref if self._caller is not None else "the signed-in person"
@@ -160,12 +175,14 @@ class HostTokens:
     def _fresh(self) -> bool:
         return bool(self._token) and self._clock.monotonic() < self._expires_at - self.RENEW_BEFORE
 
-    async def _fetch(self) -> str:
+    async def _fetch(self, refresh: bool = False) -> str:
         async with httpx.AsyncClient(transport=self._transport, timeout=self._timeout) as client:
             try:
                 headers = {"Authorization": f"Bearer {self._endpoint.token_secret}"}
                 if self._caller is not None:
                     headers[Caller.TOKEN_HEADER] = self._caller.ref
+                if refresh:
+                    headers[REFRESH_HEADER] = "1"
                 response = await client.get(self._endpoint.token_url, headers=headers)
             except httpx.HTTPError as exc:
                 raise HostUnavailable(
@@ -196,7 +213,8 @@ class HostTokenAuth(httpx.Auth):
 
     A 401 from the service means the token stopped being good earlier than
     its expiry said, so it is dropped and the request is sent once more
-    with a fresh one.
+    with a fresh one — asked for, so the host exchanges another rather
+    than handing back the one that was refused.
     """
 
     def __init__(self, tokens: HostTokens) -> None:
@@ -209,5 +227,5 @@ class HostTokenAuth(httpx.Auth):
         response = yield request
         if response.status_code == 401:
             self._tokens.invalidate()
-            request.headers["Authorization"] = f"Bearer {await self._tokens.token()}"
+            request.headers["Authorization"] = f"Bearer {await self._tokens.token(refresh=True)}"
             yield request
