@@ -499,9 +499,19 @@ jobs:
               --notes "igni SDK $VERSION: \`igni-service\`, \`igni-extension\` and \`igni-client\` on PyPI; \`@ignite-ember/extension-bridge\`, \`@ignite-ember/ui-react\` and \`@ignite-ember/ui-css\` on npmjs. The files below are the same bytes, for builds that cannot reach either registry; SHA256SUMS lists their digests, every file has GitHub build provenance (the bundle is attached for offline checks), the *.cdx.json files are CycloneDX SBOMs, and SHA256SUMS.sig, when present, is a cosign signature. See docs/VERIFYING_RELEASES.md."
           fi
           shopt -s nullglob
-          gh release upload "$TAG" --repo "$REPO" --clobber \
-            dist/sdk/python/* dist/sdk/npm/*.tgz dist/sdk/sbom/*.cdx.json \
-            dist/sdk/SHA256SUMS dist/sdk/SHA256SUMS.sig dist/sdk/*.provenance.sigstore.json
+          # The assets are listed rather than globbed for `gh`: it expands
+          # its own globs and fails the step on any that match nothing, and
+          # the cosign signature is optional — the key ceremony has not
+          # happened, so there is no SHA256SUMS.sig to upload and the
+          # release is complete without it.
+          assets=(dist/sdk/python/* dist/sdk/npm/*.tgz dist/sdk/sbom/*.cdx.json
+                  dist/sdk/SHA256SUMS dist/sdk/*.provenance.sigstore.json)
+          if [ -f dist/sdk/SHA256SUMS.sig ]; then
+            assets+=(dist/sdk/SHA256SUMS.sig)
+          else
+            echo "::notice title=Unsigned release::No SHA256SUMS.sig to attach — the cosign key ceremony has not happened yet."
+          fi
+          gh release upload "$TAG" --repo "$REPO" --clobber "${assets[@]}"
           {
             echo "### SDK $VERSION released"
             echo
