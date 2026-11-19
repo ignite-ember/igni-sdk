@@ -7,7 +7,11 @@ Everything igni-client raises on purpose is an `IgniClientError`. Each method's 
 ```text
 IgniClientError
     Unavailable
+    RunFailed
     AuthError
+        CredentialRefused  (also RunFailed)
+            SignInRequired
+            ReissueRequired
     NotAllowed
     NotSupported
     RpcError
@@ -16,7 +20,6 @@ IgniClientError
         InvalidArguments  (also ValueError)
         UnexpectedAnswer
         MethodFailed
-    RunFailed
     RunInterrupted
     ApprovalRequired
 ```
@@ -56,6 +59,14 @@ Raised when the socket cannot open, when the gateway closes it as busy
 (`1013`) more often than the client retries, and when a call gets no
 answer in time.
 
+## RunFailed
+
+```python
+class RunFailed(IgniClientError)
+```
+
+The run ended with an error (`run_error`).
+
 ## AuthError
 
 ```python
@@ -63,6 +74,50 @@ class AuthError(IgniClientError)
 ```
 
 The credential was refused: an expired or wrong token, or an app key igni does not know.
+
+## CredentialRefused
+
+```python
+class CredentialRefused(AuthError, RunFailed)
+```
+
+The igni on a Fleet VM lost its own credential: igni server refused it.
+
+It is a `RunFailed` too, because the run did fail: code that catches
+`RunFailed` keeps catching it, and code that wants to say how to
+recover catches this first.
+
+A VM keeps a credential of its own and exchanges it for the tokens its
+model calls use. When igni server refuses it (revoked, reused, the
+person signed out or was removed, the app deleted) igni says so with a
+`vm_credential` push, and every run that needs igni server fails until
+the credential is replaced. `state` is what igni said
+(`needs_sign_in` or `needs_reissue`), `detail` its reason. The client
+does not replace it on its own: the program decides when to sign in.
+
+## SignInRequired
+
+```python
+class SignInRequired(CredentialRefused)
+```
+
+A person's VM credential was refused: they sign in again at the gateway.
+
+The gateway's `POST /v1/sign-in` (with the person's bearer token)
+wakes the VM and hands igni the person's session, which igni exchanges
+for a new credential with the platform's `vm_sign_in`; the next run
+then works. igni-client does not sign in by itself.
+
+## ReissueRequired
+
+```python
+class ReissueRequired(CredentialRefused)
+```
+
+An app's VM credential was refused: an organisation admin re-issues it.
+
+An app does not sign in. The VM picks the re-issued credential up at
+its next start.
 
 ## NotAllowed
 
@@ -142,14 +197,6 @@ class MethodFailed(RpcError)
 ```
 
 The method ran and failed; `message` is igni's reason.
-
-## RunFailed
-
-```python
-class RunFailed(IgniClientError)
-```
-
-The run ended with an error (`run_error`).
 
 ## RunInterrupted
 

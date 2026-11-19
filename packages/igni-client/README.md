@@ -448,7 +448,9 @@ async with FakeIgni() as fake:
 ```
 
 Without `approve=`, a pause raises `ApprovalRequired` (its
-`requirements` say what was asked); a failed run raises `RunFailed`.
+`requirements` say what was asked); a failed run raises `RunFailed`, or
+`SignInRequired` in Fleet when the VM's own credential was refused
+([see below](#when-the-connection-changes-under-you)).
 `session.queue(text)` adds a prompt for after the run that is going.
 
 ### Calls that stream
@@ -632,6 +634,23 @@ on.
 - **Refused.** `AuthError` for a credential igni does not accept,
   `NotAllowed` for a producer that is no longer active, a lapsed licence,
   or a command in somebody else's VM. Neither is retried.
+- **The VM's own credential was refused.** A Fleet VM keeps a credential
+  of its own, which igni exchanges for the tokens its model calls use.
+  When igni server refuses it (revoked, the person signed out or was
+  removed) igni says so with a `vm_credential` push, which
+  `igni.vm_credential` keeps (igni also sends it to a client that connects
+  later, as it attaches). From then on `session.ask()` raises
+  `SignInRequired` - still a `RunFailed`, so code that catches that keeps
+  working - with the run's own `RunFailed` (the model provider's own words)
+  as its cause. The client does not sign in by
+  itself: your program signs the person in again at the gateway, with
+  `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
+  igni their session for a new credential (the platform's `vm_sign_in`).
+  The gateway answers `{"credential": "ready"}`, igni pushes `ready`, and
+  the next `ask()` works. An app's VM raises `ReissueRequired` instead: an
+  organisation admin re-issues its credential, and the VM takes it at its
+  next start. Before igni has noticed a revocation (up to its next token
+  renewal) a run can still fail with a plain `RunFailed`.
 
 ```python
 from igni_client import Backoff, IgniClient, Person
@@ -691,6 +710,7 @@ with `async with` (or `await igni.connect()` and `await igni.close()`).
 | `events()` | every message igni sends from now on (an async iterator of `Event`) |
 | `commands` | `Commands`, shell commands in a Fleet VM (`NotSupported` locally) |
 | `me()` | who the gateway takes you for: a `Me` (`NotSupported` locally) |
+| `vm_credential` | what igni last pushed about its VM's own credential (a `VmCredentialState`), or `None` |
 | `client_id` | igni's name for this connection; its own messages carry it |
 | `target` | the `Fleet` or `Local` it was made with |
 | `agents`, `approvers`, `auth`, `extensions`, `files`, `marketplaces`, `notifications`, `processes`, `window`, `check_for_update()`, `group_policy()` | igni's methods for igni as a whole, [by namespace](#ignis-methods-by-namespace) |
@@ -819,6 +839,9 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 |---|---|---|
 | `Unavailable` | igni could not be reached, went away, is busy, or did not answer in time | try again later |
 | `AuthError` | the credential was refused | fix or renew it |
+| `CredentialRefused` (`AuthError`, `RunFailed`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
+| `SignInRequired` (`CredentialRefused`) | `ask()` failed after igni said the person's VM credential was refused | sign the person in at the gateway: `POST /v1/sign-in` |
+| `ReissueRequired` (`CredentialRefused`) | `ask()` failed after igni said the app's VM credential was refused | an organisation admin re-issues it |
 | `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |
 | `NotSupported` | the target cannot do it: commands and `me()` need Fleet | use Fleet |
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
@@ -838,7 +861,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `FakeIgni(*, gateway=None, local_token=None)` | igni on a loopback socket; `fake.local()` and `fake.fleet(auth)` are targets pointed at it |
 | `fake.runs` | `script` (the run for a prompt's text, a list of steps), `decisions` (every approval answer) |
 | `fake.methods` | `answers` (by method: a value, a model, a message, or a function of the args), `calls`, `history`, `models`, `sessions`, `unbound_for(n)` |
-| `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections` |
+| `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections`, `vm_credential` (the state last pushed on `vm_credential`, sent to each client that attaches) |
 | `fake.commands` | how a slash command is answered: a function of its text |
 | `FakeGateway(tokens)` | Fleet's gateway: `commands` (by command line, a `PlayedCommand`), `commands_run` |
 | `Steps` | runs to script: `answer(text)`, `approval(tool, **args)`, `echo`, `rejected()`; with `Pause` and `Delay` steps |
@@ -2785,6 +2808,13 @@ versions; report it if they match.
 **`InvalidArguments`.** An argument is not of the method's type. Nothing was
 sent. A keyword the method does not take, or a required one left out, is
 Python's `TypeError`, raised by the method's signature before anything else.
+
+**`SignInRequired` in Fleet.** igni on the VM said its own credential was
+refused, and the run failed for it. Sign the person in again at the
+gateway (`POST /v1/sign-in` with their bearer token), then ask again; the
+client never does it on its own. A plain `RunFailed` whose message is the
+model provider's refusal ("Invalid or expired token") can mean the same
+before igni has noticed: signing in again is safe to try.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read

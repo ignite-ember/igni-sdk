@@ -2502,8 +2502,28 @@
         },
         {
           "level": 2,
+          "id": "runfailed",
+          "title": "RunFailed"
+        },
+        {
+          "level": 2,
           "id": "autherror",
           "title": "AuthError"
+        },
+        {
+          "level": 2,
+          "id": "credentialrefused",
+          "title": "CredentialRefused"
+        },
+        {
+          "level": 2,
+          "id": "signinrequired",
+          "title": "SignInRequired"
+        },
+        {
+          "level": 2,
+          "id": "reissuerequired",
+          "title": "ReissueRequired"
         },
         {
           "level": 2,
@@ -2544,11 +2564,6 @@
           "level": 2,
           "id": "methodfailed",
           "title": "MethodFailed"
-        },
-        {
-          "level": 2,
-          "id": "runfailed",
-          "title": "RunFailed"
         },
         {
           "level": 2,

@@ -13,6 +13,7 @@ with `async with` (or `await igni.connect()` and `await igni.close()`).
 | `events()` | every message igni sends from now on (an async iterator of `Event`) |
 | `commands` | `Commands`, shell commands in a Fleet VM (`NotSupported` locally) |
 | `me()` | who the gateway takes you for: a `Me` (`NotSupported` locally) |
+| `vm_credential` | what igni last pushed about its VM's own credential (a `VmCredentialState`), or `None` |
 | `client_id` | igni's name for this connection; its own messages carry it |
 | `target` | the `Fleet` or `Local` it was made with |
 | `agents`, `approvers`, `auth`, `extensions`, `files`, `marketplaces`, `notifications`, `processes`, `window`, `check_for_update()`, `group_policy()` | igni's methods for igni as a whole, [by namespace](#igni-s-methods-by-namespace) |
@@ -141,6 +142,9 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 |---|---|---|
 | `Unavailable` | igni could not be reached, went away, is busy, or did not answer in time | try again later |
 | `AuthError` | the credential was refused | fix or renew it |
+| `CredentialRefused` (`AuthError`, `RunFailed`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
+| `SignInRequired` (`CredentialRefused`) | `ask()` failed after igni said the person's VM credential was refused | sign the person in at the gateway: `POST /v1/sign-in` |
+| `ReissueRequired` (`CredentialRefused`) | `ask()` failed after igni said the app's VM credential was refused | an organisation admin re-issues it |
 | `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |
 | `NotSupported` | the target cannot do it: commands and `me()` need Fleet | use Fleet |
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
@@ -160,7 +164,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `FakeIgni(*, gateway=None, local_token=None)` | igni on a loopback socket; `fake.local()` and `fake.fleet(auth)` are targets pointed at it |
 | `fake.runs` | `script` (the run for a prompt's text, a list of steps), `decisions` (every approval answer) |
 | `fake.methods` | `answers` (by method: a value, a model, a message, or a function of the args), `calls`, `history`, `models`, `sessions`, `unbound_for(n)` |
-| `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections` |
+| `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections`, `vm_credential` (the state last pushed on `vm_credential`, sent to each client that attaches) |
 | `fake.commands` | how a slash command is answered: a function of its text |
 | `FakeGateway(tokens)` | Fleet's gateway: `commands` (by command line, a `PlayedCommand`), `commands_run` |
 | `Steps` | runs to script: `answer(text)`, `approval(tool, **args)`, `echo`, `rejected()`; with `Pause` and `Delay` steps |

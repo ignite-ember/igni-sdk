@@ -9,6 +9,7 @@ from igni_client.backoff import Backoff
 from igni_client.calls import Caller
 from igni_client.commands import Commands, Me
 from igni_client.connection import Connection
+from igni_client.models import VmCredentialState
 from igni_client.routing import Router
 from igni_client.sessions import Sessions
 from igni_client.targets import Target, require_fleet
@@ -68,6 +69,19 @@ class IgniClient(IgniApi):
         if self._commands is None:
             self._commands = Commands(require_fleet(self.target, "commands"))
         return self._commands
+
+    @property
+    def vm_credential(self) -> VmCredentialState | None:
+        """What igni on a Fleet VM last said of its own credential, or `None` before it said anything.
+
+        igni says it with a `vm_credential` push when the state changes, and
+        sends a client that connects later the state last pushed as it
+        attaches: a `needs_sign_in` (or an app's `needs_reissue`) makes
+        `Session.ask()` raise `SignInRequired` (`ReissueRequired`) instead
+        of `RunFailed`. The client never signs in by itself; the gateway's
+        `POST /v1/sign-in` does.
+        """
+        return self._conn.vm_credential
 
     async def me(self) -> Me:
         """Who the gateway says this client is: the producer, organisation and group."""

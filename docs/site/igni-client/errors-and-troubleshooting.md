@@ -46,6 +46,13 @@ versions; report it if they match.
 sent. A keyword the method does not take, or a required one left out, is
 Python's `TypeError`, raised by the method's signature before anything else.
 
+**`SignInRequired` in Fleet.** igni on the VM said its own credential was
+refused, and the run failed for it. Sign the person in again at the
+gateway (`POST /v1/sign-in` with their bearer token), then ask again; the
+client never does it on its own. A plain `RunFailed` whose message is the
+model provider's refusal ("Invalid or expired token") can mean the same
+before igni has noticed: signing in again is safe to try.
+
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read
 `session.history.get()`, or the method's own state.

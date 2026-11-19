@@ -43,7 +43,13 @@ from igni_client.errors import (
 )
 from igni_client.events import parse_event
 from igni_client.lifecycle import Lifecycle, Link
-from igni_client.models import RpcRequest, RpcResponse, Welcome
+from igni_client.models import (
+    RpcRequest,
+    RpcResponse,
+    VmCredentialPush,
+    VmCredentialState,
+    Welcome,
+)
 from igni_client.routing import Router
 from igni_client.targets import Target
 from igni_client.wire import Event, to_wire
@@ -87,6 +93,8 @@ class Connection:
         self._lifecycle = Lifecycle()
         self._resync: list[Resync] = []
         self._tasks: set[asyncio.Task[Any]] = set()
+        #: What igni last said of its VM's own credential, or `None` before it said anything.
+        self.vm_credential: VmCredentialState | None = None
 
     # ── Lifecycle ──
 
@@ -252,6 +260,8 @@ class Connection:
         return Unavailable(f"{where} closed the connection ({code}): {reason}")
 
     def _route(self, event: Event) -> None:
+        if isinstance(event, VmCredentialPush):
+            self.vm_credential = event.payload
         if not isinstance(event, Welcome):
             self.router.deliver(event)
             return
