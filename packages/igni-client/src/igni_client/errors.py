@@ -2,8 +2,9 @@
 
 One root, `IgniClientError`, and a type per thing a caller decides
 differently about: try again later (`Unavailable`), fix the credential
-(`AuthError`), stop (`NotAllowed`), or look at what the agent did
-(`RunFailed`, `RunInterrupted`, `ApprovalRequired`).
+(`AuthError`; `SignInRequired` when a Fleet VM's own one was refused),
+stop (`NotAllowed`), or look at what the agent did (`RunFailed`,
+`RunInterrupted`, `ApprovalRequired`).
 """
 
 from __future__ import annotations
@@ -29,6 +30,66 @@ class Unavailable(IgniClientError):
 
 class AuthError(IgniClientError):
     """The credential was refused: an expired or wrong token, or an app key igni does not know."""
+
+
+class CredentialRefused(AuthError):
+    """The igni on a Fleet VM lost its own credential: igni server refused it.
+
+    A VM keeps a credential of its own and exchanges it for the tokens its
+    model calls use. When igni server refuses it (revoked, reused, the
+    person signed out or was removed, the app deleted) igni says so with a
+    `vm_credential` push, and every run that needs igni server fails until
+    the credential is replaced. `state` is what igni said
+    (`needs_sign_in` or `needs_reissue`), `detail` its reason. The client
+    does not replace it on its own: the program decides when to sign in.
+    """
+
+    def __init__(self, message: str, *, state: str, detail: str = "") -> None:
+        super().__init__(message)
+        self.state = state
+        self.detail = detail
+
+    @staticmethod
+    def of(state: str, detail: str = "", *, where: str = "igni") -> CredentialRefused | None:
+        """The error a VM credential's `state` means, or `None` for one that works.
+
+        `where` names the igni, and through it the gateway (`Fleet.describe()`).
+        """
+        reason = f" ({detail})" if detail else ""
+        if state == "needs_sign_in":
+            return SignInRequired(
+                f"{where}: the VM's own credential was refused{reason}; sign the person "
+                "in again at the gateway (`POST /v1/sign-in`, which hands igni their "
+                "session through the platform's `vm_sign_in`), then ask again",
+                state=state,
+                detail=detail,
+            )
+        if state == "needs_reissue":
+            return ReissueRequired(
+                f"{where}: the app's VM credential was refused{reason}; an organisation "
+                "admin re-issues it, and the VM takes it at its next start",
+                state=state,
+                detail=detail,
+            )
+        return None
+
+
+class SignInRequired(CredentialRefused):
+    """A person's VM credential was refused: they sign in again at the gateway.
+
+    The gateway's `POST /v1/sign-in` (with the person's bearer token)
+    wakes the VM and hands igni the person's session, which igni exchanges
+    for a new credential with the platform's `vm_sign_in`; the next run
+    then works. igni-client does not sign in by itself.
+    """
+
+
+class ReissueRequired(CredentialRefused):
+    """An app's VM credential was refused: an organisation admin re-issues it.
+
+    An app does not sign in. The VM picks the re-issued credential up at
+    its next start.
+    """
 
 
 class NotAllowed(IgniClientError):

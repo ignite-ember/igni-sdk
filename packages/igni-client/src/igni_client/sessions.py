@@ -61,9 +61,16 @@ class Session(SessionApi):
         `approve` answers any approval the run asks for: `True` allows every
         call, `False` refuses every call, or a function of the `Requirement`
         returns a `bool` or a `Decision`, and may be async. Without it, a
-        pause raises `ApprovalRequired`. A failed run raises `RunFailed`.
+        pause raises `ApprovalRequired`. A failed run raises `RunFailed`, or
+        `SignInRequired` (`ReissueRequired` for an app) when igni has said
+        its VM credential was refused; the client does not sign in itself.
         """
-        return await Reply.collect(self.send(text, files=files), Approver(approve))
+        return await Reply.collect(
+            self.send(text, files=files),
+            Approver(approve),
+            lambda: self._conn.vm_credential,
+            self._conn.target.describe(),
+        )
 
     async def queue(self, text: str) -> None:
         """Add a prompt for after the run that is going; it starts nothing now."""

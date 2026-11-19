@@ -2507,6 +2507,21 @@
         },
         {
           "level": 2,
+          "id": "credentialrefused",
+          "title": "CredentialRefused"
+        },
+        {
+          "level": 2,
+          "id": "signinrequired",
+          "title": "SignInRequired"
+        },
+        {
+          "level": 2,
+          "id": "reissuerequired",
+          "title": "ReissueRequired"
+        },
+        {
+          "level": 2,
           "id": "notallowed",
           "title": "NotAllowed"
         },

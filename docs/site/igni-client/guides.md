@@ -125,7 +125,9 @@ async with FakeIgni() as fake:
 ```
 
 Without `approve=`, a pause raises `ApprovalRequired` (its
-`requirements` say what was asked); a failed run raises `RunFailed`.
+`requirements` say what was asked); a failed run raises `RunFailed`, or
+`SignInRequired` in Fleet when the VM's own credential was refused
+([see below](#when-the-connection-changes-under-you)).
 `session.queue(text)` adds a prompt for after the run that is going.
 
 ## Calls that stream
@@ -307,6 +309,22 @@ on.
 - **Refused.** `AuthError` for a credential igni does not accept,
   `NotAllowed` for a producer that is no longer active, a lapsed licence,
   or a command in somebody else's VM. Neither is retried.
+- **The VM's own credential was refused.** A Fleet VM keeps a credential
+  of its own, which igni exchanges for the tokens its model calls use.
+  When igni server refuses it (revoked, the person signed out or was
+  removed) igni says so with a `vm_credential` push, which
+  `igni.vm_credential` keeps (igni also sends it to a client that connects
+  later, as it attaches). From then on `session.ask()` raises
+  `SignInRequired` instead of `RunFailed`, with the run's `RunFailed` (the
+  model provider's own words) as its cause. The client does not sign in by
+  itself: your program signs the person in again at the gateway, with
+  `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
+  igni their session for a new credential (the platform's `vm_sign_in`).
+  The gateway answers `{"credential": "ready"}`, igni pushes `ready`, and
+  the next `ask()` works. An app's VM raises `ReissueRequired` instead: an
+  organisation admin re-issues its credential, and the VM takes it at its
+  next start. Before igni has noticed a revocation (up to its next token
+  renewal) a run can still fail with a plain `RunFailed`.
 
 ```python
 from igni_client import Backoff, IgniClient, Person

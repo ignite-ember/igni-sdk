@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from igni_client.approvals import ApprovalRequested, Approver
-from igni_client.errors import RunFailed
-from igni_client.models import ContentDelta, RunCompleted, RunError, ToolCompleted
+from igni_client.errors import CredentialRefused, RunFailed
+from igni_client.models import (
+    ContentDelta,
+    RunCompleted,
+    RunError,
+    ToolCompleted,
+    VmCredentialState,
+)
 from igni_client.wire import Event
 
 
@@ -25,9 +31,19 @@ class Reply(BaseModel):
 
     @classmethod
     async def collect(
-        cls, events: AsyncIterator[Event | ApprovalRequested], approver: Approver
+        cls,
+        events: AsyncIterator[Event | ApprovalRequested],
+        approver: Approver,
+        credential: Callable[[], VmCredentialState | None] = lambda: None,
+        where: str = "igni",
     ) -> Reply:
-        """Follow `events` to their end, answering each approval with `approver`."""
+        """Follow `events` to their end, answering each approval with `approver`.
+
+        A failed run raises `RunFailed` — or, when `credential` says igni's
+        VM credential was refused, the `CredentialRefused` that says how to
+        get it back (the run's own error is its cause). `where` names the igni
+        and its gateway in that error.
+        """
         reply = cls()
         text: list[str] = []
         thinking: list[str] = []
@@ -42,7 +58,16 @@ class Reply(BaseModel):
                 case RunCompleted() if not event.parent_run_id:
                     reply.completed = event
                 case RunError():
-                    raise RunFailed(event.error or "the run failed")
+                    failed = RunFailed(event.error or "the run failed")
+                    known = credential()
+                    refused = (
+                        None
+                        if known is None
+                        else CredentialRefused.of(known.state, known.message, where=where)
+                    )
+                    if refused is not None:
+                        raise refused from failed
+                    raise failed
         reply.text = "".join(text)
         reply.thinking = "".join(thinking)
         return reply

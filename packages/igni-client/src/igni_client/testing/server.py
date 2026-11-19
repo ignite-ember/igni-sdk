@@ -1,4 +1,9 @@
-"""igni's socket on loopback: the handshake, a welcome per client, and every message broadcast."""
+"""igni's socket on loopback: the handshake, a welcome per client, and every message broadcast.
+
+A client that attaches after a `vm_credential` push is sent the state last
+pushed, to it alone, as igni does: it would otherwise never learn that the
+VM's own credential was refused.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +18,7 @@ from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 from websockets.http11 import Request, Response
 
-from igni_client.models import PushNotification, Welcome
+from igni_client.models import PushNotification, VmCredentialPush, VmCredentialState, Welcome
 from igni_client.targets import TOKEN_PROTOCOL_PREFIX
 from igni_client.testing.inbound import ClientFrame, Received, read_frame
 from igni_client.wire import Event
@@ -63,6 +68,8 @@ class FakeSocket:
         self.received: list[Received] = []
         #: How many connections were accepted.
         self.connections = 0
+        #: The `vm_credential` state last pushed, which a client that attaches is sent; `None` before any.
+        self.vm_credential: VmCredentialState | None = None
         self.port = 0
         self._server: Server | None = None
         self._clients: dict[ServerConnection, str] = {}
@@ -119,7 +126,12 @@ class FakeSocket:
             await self._send(socket, event)
 
     async def push(self, channel: str, payload: dict[str, Any], *, session_id: str = "") -> None:
-        """Broadcast a push notification on `channel`, as igni's tools and handlers do."""
+        """Broadcast a push notification on `channel`, as igni's tools and handlers do.
+
+        A `vm_credential` push is also kept, for each client that attaches later.
+        """
+        if channel == VmCredentialPush.model_fields["channel"].default:
+            self.vm_credential = VmCredentialState.model_validate(payload)
         await self.broadcast(
             PushNotification(channel=channel, payload=payload, session_id=session_id)
         )
@@ -136,6 +148,8 @@ class FakeSocket:
         self._clients[socket] = client_id
         try:
             await self._send(socket, Welcome(client_id=client_id))
+            if self.vm_credential is not None:
+                await self._send(socket, VmCredentialPush(payload=self.vm_credential))
             with contextlib.suppress(ConnectionClosed):  # a client going away is not a failure
                 async for raw in socket:
                     self._receive(socket, raw)
