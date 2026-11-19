@@ -9,6 +9,7 @@ is what is held.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -175,6 +176,7 @@ def _core_from_environment(
 ) -> Path:
     import importlib
 
+    original = os.environ.get("IGNI_CORE_DIR")
     if value is None:
         monkeypatch.delenv("IGNI_CORE_DIR", raising=False)
     else:
@@ -182,7 +184,13 @@ def _core_from_environment(
     try:
         return importlib.reload(sync).CORE
     finally:
-        monkeypatch.delenv("IGNI_CORE_DIR", raising=False)
+        # The module is put back the way the environment says it is, so
+        # what runs after this looks at the checkout the developer named
+        # and not at the one beside the repository.
+        if original is None:
+            monkeypatch.delenv("IGNI_CORE_DIR", raising=False)
+        else:
+            monkeypatch.setenv("IGNI_CORE_DIR", original)
         importlib.reload(sync)
 
 
@@ -202,8 +210,18 @@ def test_igni_core_is_beside_the_repository_when_the_variable_is_unset_or_empty(
     )
 
 
-def test_the_repository_s_contracts_are_in_sync_with_a_checkout_when_there_is_one() -> None:
-    """``make contracts-check`` as a developer runs it: no drift, exit 0."""
-    if not (sync.CORE / "docs").is_dir():
-        pytest.skip(f"no igni-core checkout at {sync.CORE}")
+def test_the_repository_s_contracts_are_in_sync_with_a_checkout_when_there_is_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``make contracts-check`` as a developer runs it: no drift, exit 0.
+
+    The checkout is the one the environment names — the one a fresh
+    ``make contracts-check`` reads — and not whatever a test that ran
+    before left in the module: a stale checkout whose contract still
+    matches these copies would pass, and the drift would be there.
+    """
+    core = Path(os.environ.get("IGNI_CORE_DIR") or sync.ROOT.parent / "igni-core").resolve()
+    if not (core / "docs").is_dir():
+        pytest.skip(f"no igni-core checkout at {core}")
+    monkeypatch.setattr(sync, "CORE", core)
     assert sync.main(["--check"]) == 0
