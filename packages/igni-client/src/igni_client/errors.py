@@ -28,12 +28,20 @@ class Unavailable(IgniClientError):
     """
 
 
+class RunFailed(IgniClientError):
+    """The run ended with an error (`run_error`)."""
+
+
 class AuthError(IgniClientError):
     """The credential was refused: an expired or wrong token, or an app key igni does not know."""
 
 
-class CredentialRefused(AuthError):
+class CredentialRefused(AuthError, RunFailed):
     """The igni on a Fleet VM lost its own credential: igni server refused it.
+
+    It is a `RunFailed` too, because the run did fail: code that catches
+    `RunFailed` keeps catching it, and code that wants to say how to
+    recover catches this first.
 
     A VM keeps a credential of its own and exchanges it for the tokens its
     model calls use. When igni server refuses it (revoked, reused, the
@@ -188,10 +196,6 @@ _REFUSALS = (
     "only on the platform's control connection",
     "an approver answers once",
 )
-
-
-class RunFailed(IgniClientError):
-    """The run ended with an error (`run_error`)."""
 
 
 class RunInterrupted(IgniClientError):

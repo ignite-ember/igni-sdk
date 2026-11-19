@@ -315,8 +315,9 @@ on.
   removed) igni says so with a `vm_credential` push, which
   `igni.vm_credential` keeps (igni also sends it to a client that connects
   later, as it attaches). From then on `session.ask()` raises
-  `SignInRequired` instead of `RunFailed`, with the run's `RunFailed` (the
-  model provider's own words) as its cause. The client does not sign in by
+  `SignInRequired` - still a `RunFailed`, so code that catches that keeps
+  working - with the run's own `RunFailed` (the model provider's own words)
+  as its cause. The client does not sign in by
   itself: your program signs the person in again at the gateway, with
   `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
   igni their session for a new credential (the platform's `vm_sign_in`).

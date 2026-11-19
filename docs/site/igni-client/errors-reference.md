@@ -7,8 +7,9 @@ Everything igni-client raises on purpose is an `IgniClientError`. Each method's 
 ```text
 IgniClientError
     Unavailable
+    RunFailed
     AuthError
-        CredentialRefused
+        CredentialRefused  (also RunFailed)
             SignInRequired
             ReissueRequired
     NotAllowed
@@ -19,7 +20,6 @@ IgniClientError
         InvalidArguments  (also ValueError)
         UnexpectedAnswer
         MethodFailed
-    RunFailed
     RunInterrupted
     ApprovalRequired
 ```
@@ -59,6 +59,14 @@ Raised when the socket cannot open, when the gateway closes it as busy
 (`1013`) more often than the client retries, and when a call gets no
 answer in time.
 
+## RunFailed
+
+```python
+class RunFailed(IgniClientError)
+```
+
+The run ended with an error (`run_error`).
+
 ## AuthError
 
 ```python
@@ -70,10 +78,14 @@ The credential was refused: an expired or wrong token, or an app key igni does n
 ## CredentialRefused
 
 ```python
-class CredentialRefused(AuthError)
+class CredentialRefused(AuthError, RunFailed)
 ```
 
 The igni on a Fleet VM lost its own credential: igni server refused it.
+
+It is a `RunFailed` too, because the run did fail: code that catches
+`RunFailed` keeps catching it, and code that wants to say how to
+recover catches this first.
 
 A VM keeps a credential of its own and exchanges it for the tokens its
 model calls use. When igni server refuses it (revoked, reused, the
@@ -185,14 +197,6 @@ class MethodFailed(RpcError)
 ```
 
 The method ran and failed; `message` is igni's reason.
-
-## RunFailed
-
-```python
-class RunFailed(IgniClientError)
-```
-
-The run ended with an error (`run_error`).
 
 ## RunInterrupted
 

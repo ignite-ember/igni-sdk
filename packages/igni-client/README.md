@@ -640,8 +640,9 @@ on.
   removed) igni says so with a `vm_credential` push, which
   `igni.vm_credential` keeps (igni also sends it to a client that connects
   later, as it attaches). From then on `session.ask()` raises
-  `SignInRequired` instead of `RunFailed`, with the run's `RunFailed` (the
-  model provider's own words) as its cause. The client does not sign in by
+  `SignInRequired` - still a `RunFailed`, so code that catches that keeps
+  working - with the run's own `RunFailed` (the model provider's own words)
+  as its cause. The client does not sign in by
   itself: your program signs the person in again at the gateway, with
   `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
   igni their session for a new credential (the platform's `vm_sign_in`).
@@ -838,7 +839,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 |---|---|---|
 | `Unavailable` | igni could not be reached, went away, is busy, or did not answer in time | try again later |
 | `AuthError` | the credential was refused | fix or renew it |
-| `CredentialRefused` (`AuthError`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
+| `CredentialRefused` (`AuthError`, `RunFailed`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
 | `SignInRequired` (`CredentialRefused`) | `ask()` failed after igni said the person's VM credential was refused | sign the person in at the gateway: `POST /v1/sign-in` |
 | `ReissueRequired` (`CredentialRefused`) | `ask()` failed after igni said the app's VM credential was refused | an organisation admin re-issues it |
 | `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |

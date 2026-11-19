@@ -51,7 +51,9 @@ def test_a_refused_credential_s_state_names_its_error() -> None:
     reissue = CredentialRefused.of("needs_reissue")
 
     assert isinstance(signed_out, SignInRequired) and isinstance(signed_out, AuthError)
-    assert not isinstance(signed_out, RunFailed)
+    # A refused credential is a failed run too: code that catches RunFailed
+    # keeps catching it.
+    assert isinstance(signed_out, RunFailed) and isinstance(reissue, RunFailed)
     assert (signed_out.state, signed_out.detail) == ("needs_sign_in", "revoked")
     assert str(signed_out).startswith("igni in Fleet via gw: ")
     assert "(revoked)" in str(signed_out)

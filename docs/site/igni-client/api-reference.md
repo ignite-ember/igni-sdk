@@ -142,7 +142,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 |---|---|---|
 | `Unavailable` | igni could not be reached, went away, is busy, or did not answer in time | try again later |
 | `AuthError` | the credential was refused | fix or renew it |
-| `CredentialRefused` (`AuthError`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
+| `CredentialRefused` (`AuthError`, `RunFailed`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
 | `SignInRequired` (`CredentialRefused`) | `ask()` failed after igni said the person's VM credential was refused | sign the person in at the gateway: `POST /v1/sign-in` |
 | `ReissueRequired` (`CredentialRefused`) | `ask()` failed after igni said the app's VM credential was refused | an organisation admin re-issues it |
 | `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |

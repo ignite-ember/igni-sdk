@@ -2502,6 +2502,11 @@
         },
         {
           "level": 2,
+          "id": "runfailed",
+          "title": "RunFailed"
+        },
+        {
+          "level": 2,
           "id": "autherror",
           "title": "AuthError"
         },
@@ -2559,11 +2564,6 @@
           "level": 2,
           "id": "methodfailed",
           "title": "MethodFailed"
-        },
-        {
-          "level": 2,
-          "id": "runfailed",
-          "title": "RunFailed"
         },
         {
           "level": 2,
