@@ -364,6 +364,110 @@ async def test_a_paused_cancel_ends_on_its_stream_end_not_on_the_answer() -> Non
     assert [type(e) for e in events] == [InfoMessage, StreamEnd]
 
 
+def _replay_after_the_answer(fake: FakeIgni, session_id: str, request_id: str) -> asyncio.Event:
+    """Play an attach as igni does: its answer first, then the approval it shows
+    again and the `stream_end` of the attach's id. The event is set once both went."""
+    replayed = asyncio.Event()
+
+    async def answer(args: dict[str, Any]) -> Any:
+        call_id = request_id or fake.methods.calls[-1].id
+
+        async def replay() -> None:
+            await asyncio.sleep(0.02)
+            await fake.socket.broadcast(
+                RunPaused(id=call_id, session_id=session_id, run_id="r-1", requirements=[])
+            )
+            await fake.socket.broadcast(StreamEnd(id=call_id, session_id=session_id))
+            replayed.set()
+
+        asyncio.ensure_future(replay())
+        return AttachSessionResult(session_id=session_id, project_dir="/workspace")
+
+    fake.methods.answers["attach_session"] = answer
+    return replayed
+
+
+def _cancel_after(fake: FakeIgni, session_id: str, replayed: asyncio.Event) -> None:
+    """Answer `cancel_run` once the attach's replay is out, then stream the paused
+    turn's end as igni does for a cancelled pause: an `info` and a `stream_end`, no id."""
+
+    async def answer(args: dict[str, Any]) -> Any:
+        await replayed.wait()
+
+        async def stream() -> None:
+            await asyncio.sleep(0.02)
+            await fake.socket.broadcast(
+                InfoMessage(session_id=session_id, text="Run cancelled by user.")
+            )
+            await fake.socket.broadcast(StreamEnd(session_id=session_id))
+
+        asyncio.ensure_future(stream())
+        return {"cancelled": True}
+
+    fake.methods.answers["cancel_run"] = answer
+
+
+async def test_a_cancel_straight_after_open_is_not_ended_by_the_attach_s_stream_end() -> None:
+    # igni answers the attach, then shows the paused turn's approval again and
+    # ends that with a stream_end of the attach's id: both come after open()
+    # returned. The cancel's own info and stream_end come after its answer.
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        replayed = _replay_after_the_answer(fake, session.id, "")
+        _cancel_after(fake, session.id, replayed)
+        opened = await igni.sessions.open(session.id)
+        events, cancelled = await asyncio.wait_for(_follow(opened.cancel()), 5)
+
+    assert cancelled.cancelled is True
+    assert [type(e) for e in events] == [InfoMessage, StreamEnd]
+    assert [e.id for e in events] == ["", ""]
+
+
+async def test_a_cancel_is_not_ended_by_another_window_s_attach() -> None:
+    # Another client's attach is broadcast too, under an id this client never
+    # made: its stream_end, before the cancel's info, is not the cancel's.
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        replayed = _replay_after_the_answer(fake, session.id, "rpc-another-window-1")
+        _cancel_after(fake, session.id, replayed)
+        await igni.sessions.open(session.id)
+        events, cancelled = await asyncio.wait_for(_follow(session.cancel()), 5)
+
+    assert cancelled.cancelled is True
+    assert [type(e) for e in events] == [InfoMessage, StreamEnd]
+
+
+async def test_a_cancel_after_open_passes_over_an_info_the_attach_brought_back() -> None:
+    # After a restart an attach reports the run igni was continuing with an
+    # `info` of the attach's id, before its stream_end: neither is the cancel's.
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        replayed = asyncio.Event()
+
+        async def attach(args: dict[str, Any]) -> Any:
+            call_id = fake.methods.calls[-1].id
+
+            async def replay() -> None:
+                await asyncio.sleep(0.02)
+                await fake.socket.broadcast(
+                    InfoMessage(id=call_id, session_id=session.id, text="interrupted")
+                )
+                await fake.socket.broadcast(StreamEnd(id=call_id, session_id=session.id))
+                replayed.set()
+
+            asyncio.ensure_future(replay())
+            return AttachSessionResult(session_id=session.id, project_dir="/workspace")
+
+        fake.methods.answers["attach_session"] = attach
+        _cancel_after(fake, session.id, replayed)
+        opened = await igni.sessions.open(session.id)
+        events, cancelled = await asyncio.wait_for(_follow(opened.cancel()), 5)
+
+    assert cancelled.cancelled is True
+    assert [(type(e), e.id) for e in events] == [(InfoMessage, ""), (StreamEnd, "")]
+    assert events[0].text == "Run cancelled by user."
+
+
 async def test_stopping_a_running_turn_still_follows_it_to_its_stream_end() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()

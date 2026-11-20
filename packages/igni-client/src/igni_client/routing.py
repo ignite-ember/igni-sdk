@@ -8,6 +8,7 @@ request it answers, and everything goes to whoever listens.
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextlib
 import itertools
 import secrets
@@ -26,6 +27,9 @@ class Interruption:
 class Router:
     """The requests in flight, the streams open and the listeners, by request id."""
 
+    #: How many of the latest requests' ids `asked` remembers.
+    ASKED_KEPT = 1024
+
     def __init__(self) -> None:
         # igni sends every client's messages to every client: a request id
         # carries this router's own tag, so another client's never matches it.
@@ -36,6 +40,9 @@ class Router:
         self._streams: dict[str, asyncio.Queue[Event | Interruption]] = {}
         self._listeners: list[asyncio.Queue[Event]] = []
         self._followers: list[asyncio.Queue[Event | Interruption]] = []
+        # The ids of the latest requests sent, answered or not: what a
+        # request streams after its answer still carries its id.
+        self._asked: collections.OrderedDict[str, None] = collections.OrderedDict()
 
     def new_id(self, prefix: str) -> str:
         """A request id no other client of the same igni sends: `run-1f2e3d4c-1`."""
@@ -55,7 +62,22 @@ class Router:
         future: asyncio.Future[Event] = asyncio.get_running_loop().create_future()
         self._waiting[request_id] = future
         self._replies[request_id] = reply
+        self._asked[request_id] = None
+        self._asked.move_to_end(request_id)
+        while len(self._asked) > self.ASKED_KEPT:
+            self._asked.popitem(last=False)
         return future
+
+    def asked(self, request_id: str) -> bool:
+        """Whether this client sent a request by `request_id`, among its latest
+        `ASKED_KEPT`.
+
+        A call may stream after it is answered — an attach shows its
+        approvals again, and ends them with a `stream_end` of its id — so
+        a message carrying a request's id is that request's even once it
+        is answered and forgotten.
+        """
+        return request_id in self._asked
 
     def forget(self, request_id: str) -> None:
         self._waiting.pop(request_id, None)

@@ -348,7 +348,7 @@ Takes no arguments.
 
 **Events** `CancelRunEvent` is any of [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend) (igni streams `info`, `stream_end`).
 
-**How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end`. With no turn running or paused nothing is streamed, and the answer says so.
+**How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end` of that `info`'s stream — not one of another stream of the session, such as the `stream_end` an attach ends the approvals it shows again with, which can come after `sessions.open()` returned. With no turn running or paused nothing is streamed, and the answer says so.
 
 **Told apart by** the session the message is for is the session the call was for — igni's contract says so.
 

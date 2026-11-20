@@ -246,8 +246,12 @@ class Call[R, E]:
         #: The id this call is sent as: what igni's messages carry back
         #: when they are this call's own.
         self._request_id = caller.conn.router.new_id("rpc")
+        router = caller.conn.router
         self._context = Context(
-            args=params, session_id=caller.session_id, request_id=self._request_id
+            args=params,
+            session_id=caller.session_id,
+            request_id=self._request_id,
+            sent_elsewhere=lambda other: other != self._request_id and router.asked(other),
         )
         self._queue: asyncio.Queue[Event | Interruption] | None = None
         self._task: asyncio.Future[R] | None = None

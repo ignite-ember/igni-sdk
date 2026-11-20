@@ -201,3 +201,18 @@ async def test_each_call_is_sent_under_an_id_of_its_own_making() -> None:
     foreign = [c.id for c in other_fake.methods.calls if c.method == "run_workflow"]
     assert len(set(ids)) == 2 and ids[0] == first._request_id and ids[1] == second._request_id
     assert set(ids).isdisjoint(foreign), "another client's call never carries this client's id"
+
+
+async def test_a_call_knows_the_other_requests_this_client_sent_and_not_its_own_as_one() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.methods.answers["run_workflow"] = {"workflow_run_id": "wf-1", "name": "n"}
+        first, second = session.workflows.run("n"), session.workflows.run("n")
+        await first
+        await second
+        attached = fake.methods.calls[0].id
+
+    sent_elsewhere = second._context.sent_elsewhere
+    assert sent_elsewhere(attached) and sent_elsewhere(first._request_id)
+    assert not sent_elsewhere(second._request_id), "a call's own id is not another request's"
+    assert not sent_elsewhere("rpc-another-client-1")

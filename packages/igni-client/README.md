@@ -552,7 +552,7 @@ These calls are followed, each by what igni's events carry:
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
 | `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
 | `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
-| `session.cancel()` | the `info` and `stream_end` of the turn it stops, running or paused on an approval | that `stream_end`, or the answer when no turn was running or paused |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops, running or paused on an approval | the `stream_end` of that `info`'s stream (not an attach's), or the answer when no turn was running or paused |
 | `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
 | `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
 | `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
@@ -1448,7 +1448,7 @@ program without an approver token it is refused, `forbidden`,
 and nothing is dropped. With no turn running or paused nothing
 happens and nothing is streamed.
 
-Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end`. With no turn running or paused nothing is streamed, and the answer says so.
+Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end` of that `info`'s stream — not one of another stream of the session, such as the `stream_end` an attach ends the approvals it shows again with, which can come after `sessions.open()` returned. With no turn running or paused nothing is streamed, and the answer says so.
 
 While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets `AccessRefused`, and nothing is dropped. A run that is working any connection may stop.
 
