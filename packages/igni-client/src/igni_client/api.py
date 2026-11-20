@@ -3360,6 +3360,8 @@ class SessionApi:
         With no turn running nothing happens and nothing is streamed.
 
         ``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` of the turn it stops, and ends with the ``stream_end``. With no turn running nothing is streamed, and the answer says so.
+
+        While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets ``AccessRefused``, and nothing is dropped. A run that is working any connection may stop.
         """
         return self._caller.follow("cancel_run", NoArgs, {}, _CANCEL_RUN)
 

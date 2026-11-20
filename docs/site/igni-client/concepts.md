@@ -143,6 +143,11 @@ igni decides what a connection may do by the token it attached with — its
   decides nothing for the person. Given an **approver token**, it also
   answers approvals — each time once: no saved rule, no change of
   permission mode.
+- **While a session waits on the person**, ending its run refuses the
+  approval, so only a connection that may answer it may end it: igni's
+  window or an approver. `session.cancel()` from a program without an
+  approver token raises `AccessRefused`, and the approval stays as it
+  was. A run that is working any connection may stop.
 
 A program's limits are what keeps the agent, which can read the lockfile
 too, from approving its own tool calls. To let a program approve, the

@@ -15,6 +15,7 @@ from tools.client_names import (
     NOT_FOR_CLIENTS,
     OWNER_DOCS,
     UNFOLLOWED,
+    WAITING_ACCESS_NOTES,
 )
 from tools.client_plan import Placement, Plan, class_for_group
 from tools.client_python import BANNER, ENVELOPE, ContractError, docstring
@@ -160,6 +161,8 @@ class ApiGenerator(MethodSignatures):
             doc += "\n\nNot followed: " + UNFOLLOWED[placement.wire]
         if method.access != "client":
             doc += "\n\n" + ACCESS_NOTES[method.access]
+        if placement.wire in WAITING_ACCESS_NOTES:
+            doc += "\n\n" + WAITING_ACCESS_NOTES[placement.wire]
         sig = self.signature(placement, params)
         if placement.wire in FOLLOWED:
             out = [

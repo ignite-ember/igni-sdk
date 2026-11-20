@@ -42,6 +42,9 @@ class Session(SessionApi):
         app attaches a file. `force` discards a run left interrupted in this
         session before starting. A run that pauses for approval yields an
         `ApprovalRequested`; answer it in the loop and the loop continues.
+        A prompt sent while a run of this session stands paused moves on
+        from that run: its approvals are dropped, and answering one
+        afterwards runs nothing.
         """
         frame = UserMessage(
             id=self._conn.router.new_id("run"),

@@ -15,6 +15,7 @@ from tools.client_names import (
     NOT_FOR_CLIENTS,
     OWNER_DOCS,
     UNFOLLOWED,
+    WAITING_ACCESS_NOTES,
 )
 from tools.client_plan import Placement, Plan
 from tools.client_python import ENVELOPE
@@ -96,6 +97,8 @@ class ReferenceGenerator:
             out += [f"Not followed: {self._md(UNFOLLOWED[placement.wire])}", ""]
         if method.access != "client":
             out += [self._md(ACCESS_NOTES[method.access]), ""]
+        if placement.wire in WAITING_ACCESS_NOTES:
+            out += [self._md(WAITING_ACCESS_NOTES[placement.wire]), ""]
         out += ["</details>", ""]
         return out
 

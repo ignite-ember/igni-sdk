@@ -268,6 +268,11 @@ igni decides what a connection may do by the token it attached with — its
   decides nothing for the person. Given an **approver token**, it also
   answers approvals — each time once: no saved rule, no change of
   permission mode.
+- **While a session waits on the person**, ending its run refuses the
+  approval, so only a connection that may answer it may end it: igni's
+  window or an approver. `session.cancel()` from a program without an
+  approver token raises `AccessRefused`, and the approval stays as it
+  was. A run that is working any connection may stop.
 
 A program's limits are what keeps the agent, which can read the lockfile
 too, from approving its own tool calls. To let a program approve, the
@@ -413,10 +418,18 @@ session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
+Two things end a waiting run instead of answering it.
+`session.cancel()` ends it and answers `cancelled=True`; a new prompt
+sent to the session moves on from it. Either way its approvals are
+dropped: answering one afterwards runs nothing, and igni does not show
+it again, after a restart either.
+
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
 anything is sent, and the run keeps waiting (see
-[Who may call what](#who-may-call-what)). Where igni-client does not know
+[Who may call what](#who-may-call-what)). Nor can it end the waiting
+run: igni refuses its `session.cancel()` with `AccessRefused`, and
+drops nothing. Where igni-client does not know
 the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
 refusal comes as `NotAllowed` from the `send()` loop.
 
@@ -1418,6 +1431,8 @@ interrupted; a foreground shell command the turn started is killed.
 With no turn running nothing happens and nothing is streamed.
 
 Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
+
+While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets `AccessRefused`, and nothing is dropped. A run that is working any connection may stop.
 
 </details>
 

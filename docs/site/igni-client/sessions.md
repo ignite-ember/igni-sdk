@@ -348,9 +348,9 @@ Takes no arguments.
 **How long** `instant` — Answered from what igni holds in memory, at once.
 The client waits up to 10 seconds.
 
-**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted. While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets `AccessRefused`, and nothing is dropped. A run that is working any connection may stop.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when the session waits on an approval and this connection is not an approver · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `cancel_run`, scope `session`, area `session`; igni answers with `rpc_response`.
 

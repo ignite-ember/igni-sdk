@@ -55,6 +55,7 @@ from tools.client_names import (
     SELF_MADE,
     UNFOLLOWED,
     UNION_NAMES,
+    WAITING_ACCESS_NOTES,
 )
 from tools.client_types import NamedUnion
 
@@ -753,9 +754,9 @@ def test_every_method_documents_how_it_is_followed_and_who_may_call_it(
     caller = FakeCaller()
     cancel = _method(api, caller, "session.cancel")
     assert inspect.iscoroutinefunction(cancel)
-    assert (
-        (cancel.__doc__ or "").rstrip().endswith("Not followed: its events carry no id of its own.")
-    )
+    doc = (cancel.__doc__ or "").rstrip()
+    not_followed = "Not followed: its events carry no id of its own."
+    assert doc.endswith(f"{not_followed}\n\n        {WAITING_ACCESS_NOTES['cancel_run']}")
     assert asyncio.run(cancel()) == ("rpc", "cancel_run")
     approve = _method(api, caller, METHODS["approve_plan"])
     assert FOLLOWED["approve_plan"] in (approve.__doc__ or "")

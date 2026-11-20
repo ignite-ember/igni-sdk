@@ -92,10 +92,18 @@ session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
+Two things end a waiting run instead of answering it.
+`session.cancel()` ends it and answers `cancelled=True`; a new prompt
+sent to the session moves on from it. Either way its approvals are
+dropped: answering one afterwards runs nothing, and igni does not show
+it again, after a restart either.
+
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
 anything is sent, and the run keeps waiting (see
-[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Where igni-client does not know
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Nor can it end the waiting
+run: igni refuses its `session.cancel()` with `AccessRefused`, and
+drops nothing. Where igni-client does not know
 the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
 refusal comes as `NotAllowed` from the `send()` loop.
 

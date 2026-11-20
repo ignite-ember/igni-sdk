@@ -121,8 +121,8 @@ class MethodSection:
             out += [f"**Returns** {sources.type_md(result)}.", ""]
         out += self.notes.streams(wire)
         out += self.notes.duration(wire)
-        out += self.notes.access(method.access)
-        out += self.notes.raises(method.access, followed=followed, sends_only=False)
+        out += self.notes.access(method.access, wire)
+        out += self.notes.raises(method.access, followed=followed, sends_only=False, wire=wire)
         out += [
             f"**On the wire** RPC method `{wire}`, scope `{method.scope}`, area "
             f"`{method.area}`; igni answers with `{method.reply}`.",
