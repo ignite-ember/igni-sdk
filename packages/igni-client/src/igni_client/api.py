@@ -3354,10 +3354,17 @@ class SessionApi:
         """Stop the turn this session is running.
 
         Takes no arguments. Returns `cancelled`: whether a turn was
-        running. Its stream then ends with an `info` saying it was
-        cancelled and its `stream_end`, and the run is recorded as
-        interrupted; a foreground shell command the turn started is killed.
-        With no turn running nothing happens and nothing is streamed.
+        running or paused on an approval. Either way the session then
+        streams an `info` saying it was cancelled and a `stream_end`,
+        after the answer; the run is recorded as interrupted, and a
+        foreground shell command the turn started is killed. A turn paused
+        on an approval has its waiting approvals dropped: answering one
+        afterwards runs nothing, and a window that attaches is not offered
+        it. Ending a paused turn
+        refuses its approval, so it takes what answering takes: from a
+        program without an approver token it is refused, `forbidden`,
+        and nothing is dropped. With no turn running or paused nothing
+        happens and nothing is streamed.
 
         ``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` of the turn it stops, and ends with the ``stream_end``. With no turn running nothing is streamed, and the answer says so.
 

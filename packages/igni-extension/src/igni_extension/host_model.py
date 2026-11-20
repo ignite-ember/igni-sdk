@@ -2045,7 +2045,7 @@ class HostChat(HostObject):
         """Turns were truncated or discarded."""
 
     async def post(self, text: str, attachments: dict[str, str] | None = None) -> None:
-        """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
+        """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments. In the session on screen a run waiting on an approval ends with it, which refuses the approval, so there it needs `chat.approvals` too.
 
         Args:
             text: The message to post, labelled as this extension's.
@@ -2090,7 +2090,7 @@ class HostChat(HostObject):
         return cast(list[JsonValue], await self._call("search", {"query": query, "limit": limit}, list[JsonValue]))
 
     async def cancel(self) -> None:
-        """Stop the run.
+        """Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. Either way the chat then gets an `info` saying the run was cancelled and its `streaming_done`.
         """
         await self._call("cancel", {}, NO_RESULT)
 

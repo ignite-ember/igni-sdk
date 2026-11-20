@@ -1146,6 +1146,11 @@ Wire type `typing`. igni-client sends it as [`session.typing()`](/docs/sdk/igni-
 
 The person sends a chat message, starting a run.
 
+A run waiting on an approval ends with it, and its approvals are
+dropped. That refuses them, so it takes what answering takes: from a
+program without an approver token it is refused while the session
+waits, with an `error` and the stream's end, and nothing is dropped.
+
 Wire type `user_message`. igni-client sends it from `session.send()` and `session.ask()`.
 
 | Field | Type | Default | Description |

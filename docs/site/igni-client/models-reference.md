@@ -53,11 +53,11 @@ The session a connection is now attached to.
 
 ### CancelRunResult
 
-Result of cancelling the current turn: whether one was running.
+Result of cancelling the current turn: whether one was running or paused.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `cancelled` | `bool` | required | `true` when a turn was running and is being stopped: its stream ends with an `info` and a `stream_end`. `false` when nothing was running. |
+| `cancelled` | `bool` | required | `true` when a turn was running or paused on an approval and is being stopped: the session then streams an `info` and a `stream_end`. `false` when nothing was running or paused, and nothing is streamed. |
 
 **Returned by** [`session.cancel()`](/docs/sdk/igni-client/sessions#session-cancel).
 
