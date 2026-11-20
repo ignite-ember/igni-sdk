@@ -44,13 +44,25 @@ def test_the_copies_are_the_four_contracts_and_the_rpc_contract_is_one() -> None
     }
 
 
-def test_every_contract_in_the_repository_is_a_copy() -> None:
+def test_every_contract_in_the_repository_is_a_copy_or_igni_sdk_s_own() -> None:
     held = {
         f"contracts/{path.name}"
         for path in (sync.ROOT / "contracts").iterdir()
         if path.suffix == ".json"
     }
-    assert held == set(sync.COPIES)
+    assert held == set(sync.COPIES) | set(sync.OWNED)
+    assert not set(sync.COPIES) & set(sync.OWNED)
+
+
+def test_igni_sdk_s_own_contract_is_neither_checked_nor_overwritten(
+    trees: tuple[Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    [own] = sync.OWNED
+    (trees[1] / own).write_text("igni-sdk's own\n", encoding="utf-8")
+    assert sync.main(["--check"]) == 0
+    assert sync.main([]) == 0
+    assert capsys.readouterr().out == ""
+    assert (trees[1] / own).read_text(encoding="utf-8") == "igni-sdk's own\n"
 
 
 def test_copies_in_sync_print_nothing_and_succeed(
