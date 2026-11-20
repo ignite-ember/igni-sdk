@@ -29,7 +29,7 @@ class Unavailable(IgniClientError):
 
 
 class RunFailed(IgniClientError):
-    """The run ended with an error (`run_error`)."""
+    """The run ended with an error (`run_error`), or `ask()`'s prompt got an `error` and no run."""
 
 
 class AuthError(IgniClientError):

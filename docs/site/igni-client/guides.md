@@ -101,8 +101,8 @@ so both take what answering takes: igni's window or an approver may, a
 program without an approver token may not. igni refuses that program's
 `session.cancel()` with `AccessRefused`. Its prompt gets igni's
 `ErrorMessage` and the end of its stream, so the `send()` loop yields
-the error and ends: no run starts and nothing is queued. Either way the
-approvals stay.
+the error and ends, and `ask()` raises `RunFailed` with igni's words:
+no run starts and nothing is queued. Either way the approvals stay.
 
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
@@ -141,7 +141,10 @@ async with FakeIgni() as fake:
 Without `approve=`, a pause raises `ApprovalRequired` (its
 `requirements` say what was asked); a failed run raises `RunFailed`, or
 `SignInRequired` in Fleet when the VM's own credential was refused
-([see below](#when-the-connection-changes-under-you)).
+([see below](#when-the-connection-changes-under-you)). A prompt igni
+answers with an `error` and no run at all — refused, or blocked by a hook
+or the group policy — raises `RunFailed` too, in igni's words, rather
+than returning an empty `Reply`.
 `session.queue(text)` adds a prompt for after the run that is going.
 
 ## Calls that stream
