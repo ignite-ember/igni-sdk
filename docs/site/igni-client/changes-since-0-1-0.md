@@ -33,6 +33,12 @@ On purpose, and not backwards compatible:
   before; `shutdown` is no longer among them, since igni's `shutdown`
   method winds one session down (`session.shutdown()`, igni's window's),
   while the `shutdown` message, which stops igni, is still never sent.
+- **New since 0.2.1:** finding a person's cloud igni from igni server —
+  `discover()`, `Fleet.from_server()`, `set_events_owner()`, `CloudIgni`;
+  `GroupIsLocalOnly`; `igni.sign_in()` and `SignedIn`; `Me.vm`
+  (`VmState`); `1008 token_expired` reconnects with a fresh token; and in
+  `igni_client.testing`, `FakeServer`, `fake.server`, `fake.set_mode()` and
+  the gateway's `local_only`, `vm_states` and `/v1/sign-in`.
 - **New:** `Call` (`igni_client.calls`), `session.events()`,
   `session.command()`, `session.typing()`, `igni.auth.cancel_login()`,
   typed push notifications, `Fleet.standing` and `Local.standing`,
