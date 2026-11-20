@@ -334,10 +334,10 @@ class CancelLogin(Frame):
 
 
 class CancelRunResult(Model):
-    """Result of cancelling the current turn: whether one was running."""
+    """Result of cancelling the current turn: whether one was running or paused."""
 
     cancelled: bool
-    """`true` when a turn was running and is being stopped: its stream ends with an `info` and a `stream_end`. `false` when nothing was running."""
+    """`true` when a turn was running or paused on an approval and is being stopped: the session then streams an `info` and a `stream_end`. `false` when nothing was running or paused, and nothing is streamed."""
 
 
 class ChatSearchHit(Model):
@@ -3432,6 +3432,11 @@ class UploadAttachmentResult(Model):
 
 class UserMessage(Frame):
     """The person sends a chat message, starting a run.
+
+    A run waiting on an approval ends with it, and its approvals are
+    dropped. That refuses them, so it takes what answering takes: from a
+    program without an approver token it is refused while the session
+    waits, with an `error` and the stream's end, and nothing is dropped.
 
     On the wire: ``user_message``.
     """

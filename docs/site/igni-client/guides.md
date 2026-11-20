@@ -92,10 +92,24 @@ session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
+Two things end a waiting run instead of answering it.
+`session.cancel()` ends it and answers `cancelled=True`; a new prompt
+sent to the session moves on from it. Either way its approvals are
+dropped: answering one afterwards runs nothing, and igni does not show
+it again, after a restart either. Ending the run refuses its approvals,
+so both take what answering takes: igni's window or an approver may, a
+program without an approver token may not. igni refuses that program's
+`session.cancel()` with `AccessRefused`. Its prompt gets igni's
+`ErrorMessage` and the end of its stream, so the `send()` loop yields
+the error and ends, and `ask()` raises `RunFailed` with igni's words:
+no run starts and nothing is queued. Either way the approvals stay.
+
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
 anything is sent, and the run keeps waiting (see
-[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Where igni-client does not know
+[Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Nor can it end the waiting
+run, by `session.cancel()` or by a new prompt: igni refuses both, and
+drops nothing. Where igni-client does not know
 the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
 refusal comes as `NotAllowed` from the `send()` loop.
 
@@ -127,7 +141,10 @@ async with FakeIgni() as fake:
 Without `approve=`, a pause raises `ApprovalRequired` (its
 `requirements` say what was asked); a failed run raises `RunFailed`, or
 `SignInRequired` in Fleet when the VM's own credential was refused
-([see below](#when-the-connection-changes-under-you)).
+([see below](#when-the-connection-changes-under-you)). A prompt igni
+answers with an `error` and no run at all — refused, or blocked by a hook
+or the group policy — raises `RunFailed` too, in igni's words, rather
+than returning an empty `Reply`.
 `session.queue(text)` adds a prompt for after the run that is going.
 
 ## Calls that stream
@@ -203,7 +220,7 @@ These calls are followed, each by what igni's events carry:
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
 | `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
 | `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
-| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops, running or paused on an approval | that `stream_end`, or the answer when no turn was running or paused |
 | `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
 | `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
 | `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |

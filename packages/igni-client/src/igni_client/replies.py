@@ -10,8 +10,10 @@ from igni_client.approvals import ApprovalRequested, Approver
 from igni_client.errors import CredentialRefused, RunFailed
 from igni_client.models import (
     ContentDelta,
+    ErrorMessage,
     RunCompleted,
     RunError,
+    RunStarted,
     ToolCompleted,
     VmCredentialState,
 )
@@ -43,12 +45,23 @@ class Reply(BaseModel):
         VM credential was refused, the `CredentialRefused` that says how to
         get it back (the run's own error is its cause). `where` names the igni
         and its gateway in that error.
+
+        A prompt igni answers with an `error` and no run at all raises
+        `RunFailed` too, in igni's words: igni refused it, or a hook or the
+        group policy blocked it. igni's `error` carries no code, so those
+        cannot be told apart, and none of them is an empty reply.
         """
         reply = cls()
         text: list[str] = []
         thinking: list[str] = []
+        started = False
+        unstarted: ErrorMessage | None = None
         async for event in events:
             match event:
+                case RunStarted():
+                    started = True
+                case ErrorMessage() if unstarted is None:
+                    unstarted = event
                 case ApprovalRequested():
                     await approver.answer(event)
                 case ContentDelta():
@@ -68,6 +81,8 @@ class Reply(BaseModel):
                     if refused is not None:
                         raise refused from failed
                     raise failed
+        if unstarted is not None and not started:
+            raise RunFailed(unstarted.text or "igni started no run for the prompt")
         reply.text = "".join(text)
         reply.thinking = "".join(thinking)
         return reply

@@ -2574,7 +2574,7 @@ The conversation in the current session. Signals carry the session they happened
 | `append` | method | `(view: JsonValue, title?: string) => Promise<string>` | Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id. |
 | `replace` | method | `(view_id: string, view: JsonValue, title?: string) => Promise<void>` | Replace a block this extension appended. |
 | `search` | method | `(query: string, limit?: number) => Promise<JsonValue[]>` | Search the transcript. |
-| `cancel` | method | `() => Promise<void>` | Stop the run. |
+| `cancel` | method | `() => Promise<void>` | Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. |
 | `cancel_agent` | method | `(run_id: string) => Promise<void>` | Stop one sub-agent's run. |
 | `truncate` | method | `(run_id: string) => Promise<JsonValue>` | Remove a run and everything after it. |
 | `compact` | method | `() => Promise<SessionCleared \| null>` | Compact the conversation if it needs it, as igni does after a run. |

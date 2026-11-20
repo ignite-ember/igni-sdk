@@ -330,10 +330,17 @@ def cancel(self) -> Call[CancelRunResult, CancelRunEvent]
 ```
 
 Returns `cancelled`: whether a turn was
-running. Its stream then ends with an `info` saying it was
-cancelled and its `stream_end`, and the run is recorded as
-interrupted; a foreground shell command the turn started is killed.
-With no turn running nothing happens and nothing is streamed.
+running or paused on an approval. Either way the session then
+streams an `info` saying it was cancelled and a `stream_end`,
+after the answer; the run is recorded as interrupted, and a
+foreground shell command the turn started is killed. A turn paused
+on an approval has its waiting approvals dropped: answering one
+afterwards runs nothing, and a window that attaches is not offered
+it. Ending a paused turn
+refuses its approval, so it takes what answering takes: from a
+program without an approver token it is refused, `forbidden`,
+and nothing is dropped. With no turn running or paused nothing
+happens and nothing is streamed.
 
 Takes no arguments.
 
@@ -341,16 +348,16 @@ Takes no arguments.
 
 **Events** `CancelRunEvent` is any of [`InfoMessage`](/docs/sdk/igni-client/events-reference#infomessage), [`StreamEnd`](/docs/sdk/igni-client/events-reference#streamend) (igni streams `info`, `stream_end`).
 
-**How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
+**How they are told apart** `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end`. With no turn running or paused nothing is streamed, and the answer says so.
 
 **Told apart by** the session the message is for is the session the call was for — igni's contract says so.
 
 **How long** `instant` — Answered from what igni holds in memory, at once.
 The client waits up to 10 seconds.
 
-**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted. While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets `AccessRefused`, and nothing is dropped. A run that is working any connection may stop.
 
-**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`AccessRefused`](/docs/sdk/igni-client/errors-reference#accessrefused) when the session waits on an approval and this connection is not an approver · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
 
 **On the wire** RPC method `cancel_run`, scope `session`, area `session`; igni answers with `rpc_response`.
 

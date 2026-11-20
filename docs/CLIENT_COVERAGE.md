@@ -80,7 +80,7 @@ clients (the reason is in the row)
 
 | # | Wire method | SDK call | Access | Args (igni-core) | Result (igni-core) | Streams | SDK | Notes |
 |---|---|---|---|---|---|---|---|---|
-| 9 | `cancel_run` | `session.cancel(…)` → `Call` | client | ✅ NoArgs | ✅ `CancelRunResult` | yes | ✅ done | followed: the `info` and `stream_end` of the turn it stops |
+| 9 | `cancel_run` | `session.cancel(…)` → `Call` | client | ✅ NoArgs | ✅ `CancelRunResult` | yes | ✅ done | followed: the `info` and `stream_end` of the turn it stops; ends a run paused on an approval too, dropping its approvals, and answers `cancelled=True`; while the session waits on an approval, a program without an approver token gets `AccessRefused` |
 | 10 | `cancel_agent_run` | `await igni.agents.cancel_run(…)` | client | ✅ AgentRunArgs | ✅ `CancelAgentRunResult` |  | ✅ done |  |
 | 11 | `get_pending_messages` | `await session.runs.pending_messages(…)` | client | ✅ SessionIdArgs | ✅ `list[PendingMessage]` |  | ✅ done |  |
 | 12 | `get_interrupted_runs` | `await session.runs.interrupted(…)` | client | ✅ SessionIdArgs | ✅ `list[InterruptedRun]` |  | ✅ done |  |

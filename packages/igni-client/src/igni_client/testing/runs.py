@@ -63,6 +63,11 @@ class FakeRuns:
         active = self._active.pop(cancel.session_id, "")
         if not active:
             return
+        # A turn paused on an approval ends too, and its approvals go: an
+        # answer afterwards continues nothing, as igni plays it.
+        for requirement_id, waiting in list(self._paused.items()):
+            if waiting.session_id == cancel.session_id:
+                del self._paused[requirement_id]
         await self._socket.broadcast(
             InfoMessage(id=active, session_id=cancel.session_id, text="Run cancelled by user.")
         )

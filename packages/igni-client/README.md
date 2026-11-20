@@ -268,6 +268,13 @@ igni decides what a connection may do by the token it attached with — its
   decides nothing for the person. Given an **approver token**, it also
   answers approvals — each time once: no saved rule, no change of
   permission mode.
+- **While a session waits on the person**, ending its run refuses the
+  approval, so only a connection that may answer it may end it: igni's
+  window or an approver. A new prompt ends it too. From a program without
+  an approver token, `session.cancel()` raises `AccessRefused` and a
+  prompt is refused, and the approval stays as it was. A run that is
+  working any connection may stop, and a session that waits on nobody
+  any connection may write to.
 
 A program's limits are what keeps the agent, which can read the lockfile
 too, from approving its own tool calls. To let a program approve, the
@@ -413,10 +420,24 @@ session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
 `ApprovalRequested`.
 
+Two things end a waiting run instead of answering it.
+`session.cancel()` ends it and answers `cancelled=True`; a new prompt
+sent to the session moves on from it. Either way its approvals are
+dropped: answering one afterwards runs nothing, and igni does not show
+it again, after a restart either. Ending the run refuses its approvals,
+so both take what answering takes: igni's window or an approver may, a
+program without an approver token may not. igni refuses that program's
+`session.cancel()` with `AccessRefused`. Its prompt gets igni's
+`ErrorMessage` and the end of its stream, so the `send()` loop yields
+the error and ends, and `ask()` raises `RunFailed` with igni's words:
+no run starts and nothing is queued. Either way the approvals stay.
+
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
 anything is sent, and the run keeps waiting (see
-[Who may call what](#who-may-call-what)). Where igni-client does not know
+[Who may call what](#who-may-call-what)). Nor can it end the waiting
+run, by `session.cancel()` or by a new prompt: igni refuses both, and
+drops nothing. Where igni-client does not know
 the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
 refusal comes as `NotAllowed` from the `send()` loop.
 
@@ -450,7 +471,10 @@ async with FakeIgni() as fake:
 Without `approve=`, a pause raises `ApprovalRequired` (its
 `requirements` say what was asked); a failed run raises `RunFailed`, or
 `SignInRequired` in Fleet when the VM's own credential was refused
-([see below](#when-the-connection-changes-under-you)).
+([see below](#when-the-connection-changes-under-you)). A prompt igni
+answers with an `error` and no run at all — refused, or blocked by a hook
+or the group policy — raises `RunFailed` too, in igni's words, rather
+than returning an empty `Reply`.
 `session.queue(text)` adds a prompt for after the run that is going.
 
 ### Calls that stream
@@ -528,7 +552,7 @@ These calls are followed, each by what igni's events carry:
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
 | `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
 | `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
-| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops, running or paused on an approval | that `stream_end`, or the answer when no turn was running or paused |
 | `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
 | `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
 | `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
@@ -850,7 +874,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
-| `RunFailed` | a run ended with `run_error` | read the message |
+| `RunFailed` | a run ended with `run_error`, or `ask()`'s prompt got an `error` and started no run | read the message |
 | `RunInterrupted` | the connection moved or dropped while a run or followed call was going | read the session's history |
 | `ApprovalRequired` | `ask()` reached an approval with no `approve=`; `requirements` say what | pass `approve=`, or use `send()` |
 
@@ -1412,12 +1436,21 @@ Wire method `cancel_run` · access `client` · streams `info`, `stream_end`
 Stop the turn this session is running.
 
 Takes no arguments. Returns `cancelled`: whether a turn was
-running. Its stream then ends with an `info` saying it was
-cancelled and its `stream_end`, and the run is recorded as
-interrupted; a foreground shell command the turn started is killed.
-With no turn running nothing happens and nothing is streamed.
+running or paused on an approval. Either way the session then
+streams an `info` saying it was cancelled and a `stream_end`,
+after the answer; the run is recorded as interrupted, and a
+foreground shell command the turn started is killed. A turn paused
+on an approval has its waiting approvals dropped: answering one
+afterwards runs nothing, and a window that attaches is not offered
+it. Ending a paused turn
+refuses its approval, so it takes what answering takes: from a
+program without an approver token it is refused, `forbidden`,
+and nothing is dropped. With no turn running or paused nothing
+happens and nothing is streamed.
 
-Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, and ends with the `stream_end`. With no turn running nothing is streamed, and the answer says so.
+Followed: `async with` the call to follow it: it yields the `info` and `stream_end` of the turn it stops, running or paused on an approval, and ends with the `stream_end`. With no turn running or paused nothing is streamed, and the answer says so.
+
+While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets `AccessRefused`, and nothing is dropped. A run that is working any connection may stop.
 
 </details>
 

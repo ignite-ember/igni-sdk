@@ -42,6 +42,14 @@ class Session(SessionApi):
         app attaches a file. `force` discards a run left interrupted in this
         session before starting. A run that pauses for approval yields an
         `ApprovalRequested`; answer it in the loop and the loop continues.
+        A prompt sent while a run of this session stands paused moves on
+        from that run: its approvals are dropped, and answering one
+        afterwards runs nothing. That refuses them, so it takes what
+        answering takes: while the session waits on an approval, igni
+        refuses a prompt from a program without an approver token. The
+        loop then yields igni's `ErrorMessage` saying why and ends (`ask()`
+        raises `RunFailed`): no run starts, nothing is queued, and the
+        approvals stay.
         """
         frame = UserMessage(
             id=self._conn.router.new_id("run"),
@@ -64,6 +72,9 @@ class Session(SessionApi):
         pause raises `ApprovalRequired`. A failed run raises `RunFailed`, or
         `SignInRequired` (`ReissueRequired` for an app) when igni has said
         its VM credential was refused; the client does not sign in itself.
+        A prompt igni answers with an `error` and no run at all (refused,
+        or blocked by a hook or the group policy) raises `RunFailed` too,
+        in igni's words.
         """
         return await Reply.collect(
             self.send(text, files=files),

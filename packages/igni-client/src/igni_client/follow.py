@@ -365,9 +365,10 @@ ATTACH_SESSION = Rule(
     yields=("run_paused", "requirement_details", "stream_end"),
 )
 
-#: Stopping the turn: the `info` and `stream_end` of the turn it stops are
-#: the session's own, and the `stream_end` ends them. With no turn running
-#: nothing is streamed, and the answer says so.
+#: Stopping the turn: the `info` and `stream_end` of the turn it stops,
+#: running or paused on an approval, are the session's own, and the
+#: `stream_end` ends them. With no turn running or paused nothing is
+#: streamed, and the answer says so.
 CANCEL_RUN = Rule(
     last=_stream_end,
     ends_with=lambda c: result(c, "cancelled") is False,

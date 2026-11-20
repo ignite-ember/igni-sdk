@@ -1866,7 +1866,7 @@ export class HostChat extends HostObject {
   }
 
   /**
-   * Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments.
+   * Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments. In the session on screen a run waiting on an approval ends with it, which refuses the approval, so there it needs `chat.approvals` too.
    *
    * @param text — The message to post, labelled as this extension's.
    * @param attachments — Path → content.
@@ -1915,7 +1915,7 @@ export class HostChat extends HostObject {
     return this.call<JsonValue[]>("search", { query, limit });
   }
 
-  /** Stop the run. */
+  /** Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. Either way the chat then gets an `info` saying the run was cancelled and its `streaming_done`. */
   cancel(): Promise<void> {
     return this.call<void>("cancel", {});
   }

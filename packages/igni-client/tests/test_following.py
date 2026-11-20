@@ -58,7 +58,7 @@ from igni_client.models import (
     WorkspaceTrustStatus,
     Written,
 )
-from igni_client.testing import FakeIgni, Steps, sample
+from igni_client.testing import Delay, FakeIgni, Steps, sample
 from igni_client.wire import Event
 
 
@@ -327,12 +327,51 @@ async def test_attaching_a_session_yields_the_approvals_it_shows_again() -> None
     assert events[0].id == request_id
 
 
-async def test_stopping_a_turn_yields_its_info_and_its_end() -> None:
+async def test_stopping_a_turn_paused_on_an_approval_yields_its_info_and_its_end() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.runs.script = lambda text: [Steps.approval("deploy"), *Steps.answer("deployed")]
+        await _drain(session.send("a long turn"))
+        events, cancelled = await asyncio.wait_for(_follow(session.cancel()), 5)
+        assert fake.runs._paused == {}, "the cancel dropped the approval"
+
+    assert cancelled.cancelled is True
+    assert [type(e) for e in events] == [InfoMessage, StreamEnd]
+
+
+async def test_a_paused_cancel_ends_on_its_stream_end_not_on_the_answer() -> None:
     async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
         session = await igni.sessions.create()
         fake.runs.script = lambda text: [Steps.approval("deploy")]
         await _drain(session.send("a long turn"))
-        events, cancelled = await _follow(session.cancel())
+
+        async def answer_then_stream(args: dict[str, Any]) -> Any:
+            # igni answers first and streams the info and stream_end after.
+            async def stream() -> None:
+                await asyncio.sleep(0.05)
+                await fake.socket.broadcast(
+                    InfoMessage(session_id=session.id, text="Run cancelled by user.")
+                )
+                await fake.socket.broadcast(StreamEnd(session_id=session.id))
+
+            asyncio.ensure_future(stream())
+            return {"cancelled": True}
+
+        fake.methods.answers["cancel_run"] = answer_then_stream
+        events, cancelled = await asyncio.wait_for(_follow(session.cancel()), 5)
+
+    assert cancelled.cancelled is True
+    assert [type(e) for e in events] == [InfoMessage, StreamEnd]
+
+
+async def test_stopping_a_running_turn_still_follows_it_to_its_stream_end() -> None:
+    async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
+        session = await igni.sessions.create()
+        fake.runs.script = lambda text: [Delay(seconds=30), *Steps.answer("too late")]
+        running = asyncio.ensure_future(_drain(session.send("a long turn")))
+        await asyncio.sleep(0.05)
+        events, cancelled = await asyncio.wait_for(_follow(session.cancel()), 5)
+        running.cancel()
 
     assert cancelled.cancelled is True
     assert [type(e) for e in events] == [InfoMessage, StreamEnd]

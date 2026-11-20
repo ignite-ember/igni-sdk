@@ -327,8 +327,9 @@ FOLLOWED: dict[str, str] = {
     ),
     "cancel_run": (
         "``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` "
-        "of the turn it stops, and ends with the ``stream_end``. With no turn running "
-        "nothing is streamed, and the answer says so."
+        "of the turn it stops, running or paused on an approval, and ends with the "
+        "``stream_end``. With no turn running or paused nothing is streamed, and the "
+        "answer says so."
     ),
     "execute_scheduled_task": (
         "``async with`` the call to follow it: it yields the pushes of the run it "
@@ -503,6 +504,18 @@ ACCESS_NOTES: dict[str, str] = {
     ),
 }
 
+#: Methods any connection may call that igni refuses to some while the
+#: session waits on the person, and why. The contract's ``access`` is one
+#: word for every state of a session, so it says ``client`` for these.
+WAITING_ACCESS_NOTES: dict[str, str] = {
+    "cancel_run": (
+        "While the session waits on an approval, only igni's window or an approver ends "
+        "its run: ending it refuses the approval. A program without an approver token "
+        "gets ``AccessRefused``, and nothing is dropped. A run that is working any "
+        "connection may stop."
+    ),
+}
+
 #: What the two classes a client calls methods on are, in a docstring.
 OWNER_DOCS: dict[str, str] = {
     "igni": "The methods igni answers for igni as a whole; `IgniClient` is one.",
@@ -549,4 +562,5 @@ __all__ = [
     "SCOPE_EXCEPTIONS",
     "UNFOLLOWED",
     "UNION_NAMES",
+    "WAITING_ACCESS_NOTES",
 ]

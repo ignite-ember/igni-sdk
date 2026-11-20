@@ -7,7 +7,7 @@ from tools.client_contract import PUSH_PREFIX
 from tools.client_doc_layout import ACCESS_PAGE, CLIENT_PACKAGE, ERRORS_PAGE
 from tools.client_doc_links import ClientSources
 from tools.client_errors_doc import ErrorCatalog
-from tools.client_names import ACCESS_NOTES, FOLLOWED, UNFOLLOWED
+from tools.client_names import ACCESS_NOTES, FOLLOWED, UNFOLLOWED, WAITING_ACCESS_NOTES
 from tools.site_page import DocsError, url
 from tools.wire_prose import rst
 
@@ -116,23 +116,24 @@ class MethodNotes:
         return out
 
     @staticmethod
-    def access(access: str) -> list[str]:
+    def access(access: str, wire: str = "") -> list[str]:
         link = url(CLIENT_PACKAGE, ACCESS_PAGE)
+        waiting = f" {rst(WAITING_ACCESS_NOTES[wire])}" if wire in WAITING_ACCESS_NOTES else ""
         if access == "client":
-            return [f"**Access** [`client`]({link}) — any connection igni admitted.", ""]
+            return [f"**Access** [`client`]({link}) — any connection igni admitted.{waiting}", ""]
         note = rst(ACCESS_NOTES[access]).removeprefix(f"Access: `{access}`. ")
-        return [f"**Access** [`{access}`]({link}) — {note}", ""]
+        return [f"**Access** [`{access}`]({link}) — {note}{waiting}", ""]
 
-    def raises(self, access: str, *, followed: bool, sends_only: bool) -> list[str]:
+    def raises(self, access: str, *, followed: bool, sends_only: bool, wire: str = "") -> list[str]:
         names = ["InvalidArguments"]
-        if access != "client":
+        if access != "client" or wire in WAITING_ACCESS_NOTES:
             names.append("AccessRefused")
         if not sends_only:
             names += ["MethodFailed", "UnknownMethod", "UnexpectedAnswer"]
         names.append("Unavailable")
         if followed:
             names.append("RunInterrupted")
-        parts = [self._raised(name, access) for name in names]
+        parts = [self._raised(name, access, waiting=wire in WAITING_ACCESS_NOTES) for name in names]
         return [
             "**Raises** "
             + " · ".join(parts)
@@ -140,10 +141,15 @@ class MethodNotes:
             "",
         ]
 
-    def _raised(self, name: str, access: str) -> str:
+    def _raised(self, name: str, access: str, *, waiting: bool = False) -> str:
         if name not in self.errors:
             raise DocsError(f"igni-client has no {name} to document")
         link = self.sources.type_md(name)
+        if name == "AccessRefused" and waiting:
+            return (
+                link
+                + " when the session waits on an approval and this connection is not an approver"
+            )
         if name == "AccessRefused":
             return link + f" when this connection does not stand as `{access}`"
         if name == "RunInterrupted":

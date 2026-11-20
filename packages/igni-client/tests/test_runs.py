@@ -497,6 +497,51 @@ async def test_igni_refusing_an_answer_raises_not_allowed(text: str, message: st
     assert str(raised.value) == message
 
 
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        (
+            "user_message: the run is waiting on an approval, and a new message ends it",
+            "user_message: the run is waiting on an approval, and a new message ends it",
+        ),
+        ("", "igni started no run for the prompt"),
+    ],
+)
+async def test_a_prompt_igni_answers_with_an_error_and_no_run_raises(
+    text: str, message: str
+) -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda _: [ErrorMessage(text=text)]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            with pytest.raises(RunFailed) as raised:
+                await asyncio.wait_for(session.ask("status?"), timeout=5)
+
+    assert str(raised.value) == message
+    assert not isinstance(raised.value, NotAllowed)
+
+
+async def test_an_error_before_a_run_that_then_starts_is_no_failure() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda _: [ErrorMessage(text="the model hiccuped"), *Steps.answer("ok")]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            reply = await asyncio.wait_for(session.ask("go"), timeout=5)
+
+    assert str(reply) == "ok"
+
+
+async def test_a_refused_prompt_s_send_loop_yields_the_error_and_ends() -> None:
+    async with FakeIgni() as fake:
+        fake.runs.script = lambda _: [ErrorMessage(text="refused")]
+        async with IgniClient(fake.local()) as igni:
+            session = await igni.sessions.create()
+            events = await asyncio.wait_for(_collect(session.send("status?")), timeout=5)
+
+    assert [e.text for e in events if isinstance(e, ErrorMessage)] == ["refused"]
+    assert not any(isinstance(e, RunStarted) for e in events)
+
+
 async def test_the_details_of_a_waiting_call_fill_in_its_requirement() -> None:
     async with FakeIgni() as fake:
         fake.runs.script = lambda text: [

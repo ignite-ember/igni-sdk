@@ -29,6 +29,7 @@ from tools.client_names import (
     NOT_FOR_CLIENTS,
     OWN_SESSION_ARG,
     REFERENCE_PAGES,
+    WAITING_ACCESS_NOTES,
 )
 from tools.client_signatures import Param
 from tools.markdown_pages import ReadmePages
@@ -491,6 +492,20 @@ def test_a_method_that_needs_more_than_client_access_raises_access_refused(
         "**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted."
         in plain
     )
+
+
+def test_a_method_refused_while_the_session_waits_says_so_and_raises_access_refused(
+    client: ClientReference,
+) -> None:
+    section = _section(client, "session.cancel")
+    access = next(line for line in section.splitlines() if line.startswith("**Access**"))
+    assert access.startswith(
+        "**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted. "
+    )
+    assert access.endswith(WAITING_ACCESS_NOTES["cancel_run"].replace("``", "`"))
+    assert "when the session waits on an approval and this connection is not an approver" in section
+    plain = _section(client, "session.scheduler.cancel")
+    assert "waits on an approval" not in plain
 
 
 def test_a_message_method_that_is_only_sent_has_no_answer_to_fail(client: ClientReference) -> None:

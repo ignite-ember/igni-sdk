@@ -153,7 +153,7 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `InvalidArguments` (`RpcError`, `ValueError`) | an argument is not of the type the method takes; checked before sending (a keyword it does not take, or a required one left out, is Python's own `TypeError`) | fix the call |
 | `UnexpectedAnswer` (`RpcError`) | igni answered with something the method does not return | igni and igni-client disagree: align their versions |
 | `MethodFailed` (`RpcError`) | the method ran and failed; `message` is igni's reason | read it |
-| `RunFailed` | a run ended with `run_error` | read the message |
+| `RunFailed` | a run ended with `run_error`, or `ask()`'s prompt got an `error` and started no run | read the message |
 | `RunInterrupted` | the connection moved or dropped while a run or followed call was going | read the session's history |
 | `ApprovalRequired` | `ask()` reached an approval with no `approve=`; `requirements` say what | pass `approve=`, or use `send()` |
 
