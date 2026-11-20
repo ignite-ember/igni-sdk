@@ -327,8 +327,9 @@ FOLLOWED: dict[str, str] = {
     ),
     "cancel_run": (
         "``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` "
-        "of the turn it stops, and ends with the ``stream_end``. With no turn running "
-        "nothing is streamed, and the answer says so."
+        "of the turn it stops, running or paused on an approval, and ends with the "
+        "``stream_end``. With no turn running or paused nothing is streamed, and the "
+        "answer says so."
     ),
     "execute_scheduled_task": (
         "``async with`` the call to follow it: it yields the pushes of the run it "

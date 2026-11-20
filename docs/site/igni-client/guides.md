@@ -220,7 +220,7 @@ These calls are followed, each by what igni's events carry:
 | `session.scheduler.start()` | this session's `scheduler_started` and `scheduler_completed` | when you leave the block |
 | `igni.auth.login()` | `login_status`, `login_result` | `login_result` |
 | `igni.sessions.attach()` | the approvals it shows again and the runs it continues (`run_paused`, `requirement_details`, `stream_end`) | the `stream_end` |
-| `session.cancel()` | the `info` and `stream_end` of the turn it stops | that `stream_end`, or the answer when no turn was running |
+| `session.cancel()` | the `info` and `stream_end` of the turn it stops, running or paused on an approval | that `stream_end`, or the answer when no turn was running or paused |
 | `session.run_shell(command)` | `process_started`, `process_line`, `process_exited`, `background_process_done` of the command's pid, when it outlives the wait | `background_process_done`, or the answer when the command finished inside the wait |
 | `session.scheduler.execute(...)` | what the task's tools push: `orchestrate_event`, `file_edited`, `todos_updated`, `process_started`, `permission_mode_changed`, `plan_submitted` | the answer |
 | `session.auth.sign_out()`, `igni.notifications.list()`, `.mark_read()` | `notifications_changed` of that cause | the answer |
