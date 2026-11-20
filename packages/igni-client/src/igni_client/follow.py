@@ -32,6 +32,10 @@ from igni_client.wire import Event
 PUSH_PREFIX = "push_notification:"
 
 
+def _sent_by_nobody(request_id: str) -> bool:
+    return False
+
+
 @dataclass
 class Context:
     """What a rule reads: the call's arguments, its session, its request's id,
@@ -45,6 +49,12 @@ class Context:
     has_result: bool = False
     #: Whether the call's last event has been seen.
     ended: bool = False
+    #: Whether an id is that of another request this client sent: a message
+    #: carrying it belongs to that request, not to this call.
+    sent_elsewhere: Callable[[str], bool] = _sent_by_nobody
+    #: The id of the stream this call's events come on, once a rule has seen
+    #: which one it is; `None` before.
+    stream_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -365,11 +375,38 @@ ATTACH_SESSION = Rule(
     yields=("run_paused", "requirement_details", "stream_end"),
 )
 
+
+def _of_the_stopped_turn(context: Context, event: Event) -> bool:
+    """Whether a session's `info` or `stream_end` is of the turn a cancel stops.
+
+    The session carries more than one stream: the turn's, and those of
+    other calls about the session — an attach shows its approvals again
+    and ends them with a `stream_end` of the attach's id, and that comes
+    after the attach's answer, so after `sessions.open()` returned. The
+    turn's stream is the one its `info` comes on: igni says the turn was
+    cancelled with an `info`, then ends that stream with a `stream_end` of
+    the same id — the run's request id for a running turn, none for a
+    turn paused on an approval. So a `stream_end` is the cancel's only
+    once an `info` came, and only with that `info`'s id. A message carrying
+    the id of another request this client sent is that request's.
+    """
+    event_id = getattr(event, "id", "") or ""
+    if event_id and context.sent_elsewhere(event_id):
+        return False
+    if getattr(event, "type", "") == "info":
+        context.stream_id = event_id
+        return True
+    return context.stream_id is not None and event_id == context.stream_id
+
+
 #: Stopping the turn: the `info` and `stream_end` of the turn it stops,
 #: running or paused on an approval, are the session's own, and the
-#: `stream_end` ends them. With no turn running or paused nothing is
+#: `stream_end` of that `info`'s stream ends them — not a `stream_end` of
+#: another stream of the session, such as an attach's (see
+#: `_of_the_stopped_turn`). With no turn running or paused nothing is
 #: streamed, and the answer says so.
 CANCEL_RUN = Rule(
+    match=_of_the_stopped_turn,
     last=_stream_end,
     ends_with=lambda c: result(c, "cancelled") is False,
     yields=("info", "stream_end"),

@@ -208,6 +208,43 @@ def test_a_message_type_the_call_causes_is_told_by_its_type() -> None:
     )
 
 
+def _frame(kind: str, frame_id: str = "") -> Any:
+    return parse_event({"type": kind, "id": frame_id, "session_id": "s-1"})
+
+
+def test_a_cancel_s_stream_end_is_the_one_on_the_stream_of_its_info() -> None:
+    # A running turn's cancel streams under the run's id; a paused one's under none.
+    for stream in ("run-1", ""):
+        context = _context()
+        assert not CANCEL_RUN.is_ours(context, _frame("stream_end", "rpc-attach"), "cancel_run")
+        assert not CANCEL_RUN.is_ours(context, _frame("stream_end", ""), "cancel_run")
+        assert CANCEL_RUN.is_ours(context, _frame("info", stream), "cancel_run")
+        assert context.stream_id == stream
+        assert not CANCEL_RUN.is_ours(context, _frame("stream_end", "elsewhere"), "cancel_run")
+        end = _frame("stream_end", stream)
+        assert CANCEL_RUN.is_ours(context, end, "cancel_run")
+        assert CANCEL_RUN.last(context, end)
+
+
+def test_a_cancel_passes_over_what_carries_another_request_this_client_sent() -> None:
+    context = Context(
+        args=_Args(),
+        session_id="s-1",
+        request_id="rpc-2",
+        sent_elsewhere=lambda other: other == "rpc-1",
+    )
+
+    assert not CANCEL_RUN.is_ours(context, _frame("info", "rpc-1"), "cancel_run")
+    assert context.stream_id is None
+    assert CANCEL_RUN.is_ours(context, _frame("info", "run-1"), "cancel_run")
+    assert not CANCEL_RUN.is_ours(context, _frame("stream_end", "rpc-1"), "cancel_run")
+    assert CANCEL_RUN.is_ours(context, _frame("stream_end", "run-1"), "cancel_run")
+
+
+def test_a_context_says_by_default_that_no_other_request_was_sent() -> None:
+    assert _context().sent_elsewhere("rpc-1") is False
+
+
 def test_a_rule_without_a_known_method_applies_only_its_own_match() -> None:
     context = _context(run_id="r-1")
 

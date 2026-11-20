@@ -3366,7 +3366,7 @@ class SessionApi:
         and nothing is dropped. With no turn running or paused nothing
         happens and nothing is streamed.
 
-        ``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` of the turn it stops, running or paused on an approval, and ends with the ``stream_end``. With no turn running or paused nothing is streamed, and the answer says so.
+        ``async with`` the call to follow it: it yields the ``info`` and ``stream_end`` of the turn it stops, running or paused on an approval, and ends with the ``stream_end`` of that ``info``'s stream — not one of another stream of the session, such as the ``stream_end`` an attach ends the approvals it shows again with, which can come after ``sessions.open()`` returned. With no turn running or paused nothing is streamed, and the answer says so.
 
         While the session waits on an approval, only igni's window or an approver ends its run: ending it refuses the approval. A program without an approver token gets ``AccessRefused``, and nothing is dropped. A run that is working any connection may stop.
         """

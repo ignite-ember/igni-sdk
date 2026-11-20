@@ -126,3 +126,27 @@ def _drained(queue: Any) -> list[Any]:
     while not queue.empty():
         items.append(queue.get_nowait())
     return items
+
+
+async def test_a_router_remembers_the_latest_requests_it_sent_after_they_are_answered() -> None:
+    router = Router()
+    assert not router.asked("req-1")
+    router.expect("req-1")
+    router.forget("req-1")
+    assert router.asked("req-1")
+
+    for n in range(Router.ASKED_KEPT):
+        router.expect(f"later-{n}")
+    assert not router.asked("req-1"), "only the latest are kept"
+    assert router.asked("later-0") and router.asked(f"later-{Router.ASKED_KEPT - 1}")
+
+
+async def test_a_request_sent_again_is_kept_as_one_of_the_latest() -> None:
+    router = Router()
+    router.expect("req-1")
+    for n in range(Router.ASKED_KEPT - 1):
+        router.expect(f"later-{n}")
+    router.expect("req-1")
+    router.expect("one-more")
+    assert router.asked("req-1")
+    assert not router.asked("later-0")
