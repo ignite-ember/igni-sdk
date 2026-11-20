@@ -15,6 +15,7 @@ from igni_client.commands.models import (
     CommandOutput,
     CommandRecord,
     Me,
+    VmState,
     Wake,
 )
 from igni_client.commands.run import CommandRun
@@ -26,5 +27,6 @@ __all__ = [
     "CommandRun",
     "Commands",
     "Me",
+    "VmState",
     "Wake",
 ]

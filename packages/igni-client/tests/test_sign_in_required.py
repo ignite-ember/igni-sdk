@@ -93,13 +93,13 @@ async def test_a_run_failing_after_igni_said_sign_in_raises_sign_in_required() -
 async def test_the_client_does_not_sign_in_on_its_own(monkeypatch: pytest.MonkeyPatch) -> None:
     gateway = FakeGateway(TOKENS)
     asked: list[tuple[str, str]] = []
-    served = gateway._http
+    served = gateway.handle
 
-    def recorded(request: httpx.Request) -> httpx.Response:
+    async def recorded(request: httpx.Request) -> httpx.Response:
         asked.append((request.method, request.url.path))
-        return served(request)
+        return await served(request)
 
-    monkeypatch.setattr(gateway, "_http", recorded)
+    monkeypatch.setattr(gateway, "handle", recorded)
     async with FakeIgni(gateway=gateway) as fake:
         fake.runs.script = _failing
         async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
@@ -113,6 +113,7 @@ async def test_the_client_does_not_sign_in_on_its_own(monkeypatch: pytest.Monkey
     # The gateway was only ever asked for the socket: no `POST /v1/sign-in`, no other call.
     assert fake.socket.connections == 1
     assert asked == []
+    assert gateway.signed_in == []
 
 
 async def test_an_app_s_run_failing_after_igni_said_reissue_raises_reissue_required() -> None:

@@ -26,12 +26,14 @@ from igni_client.auth.tokens import TokenSource
 from igni_client.backoff import Backoff
 from igni_client.calls import Call
 from igni_client.client import IgniClient
-from igni_client.commands import CommandFinished, CommandOutput, CommandRun, Commands, Me
+from igni_client.cloud import CloudGroup, CloudIgni, discover, set_events_owner
+from igni_client.commands import CommandFinished, CommandOutput, CommandRun, Commands, Me, VmState
 from igni_client.errors import (
     AccessRefused,
     ApprovalRequired,
     AuthError,
     CredentialRefused,
+    GroupIsLocalOnly,
     IgniClientError,
     InvalidArguments,
     MethodFailed,
@@ -77,6 +79,7 @@ from igni_client.events import (
 from igni_client.models import ChatTurn, SessionListEntry
 from igni_client.replies import Reply
 from igni_client.sessions import Session, Sessions
+from igni_client.sign_in import SignedIn
 from igni_client.targets import Fleet, Local, Target
 
 __all__ = [
@@ -86,6 +89,13 @@ __all__ = [
     "Local",
     "Target",
     "Backoff",
+    # Finding the cloud igni, and signing in to it
+    "discover",
+    "set_events_owner",
+    "CloudIgni",
+    "CloudGroup",
+    "SignedIn",
+    "VmState",
     # Who
     "Person",
     "ApiKey",
@@ -144,6 +154,7 @@ __all__ = [
     "SignInRequired",
     "ReissueRequired",
     "NotAllowed",
+    "GroupIsLocalOnly",
     "NotSupported",
     "RpcError",
     "AccessRefused",

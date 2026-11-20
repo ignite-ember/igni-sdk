@@ -31,6 +31,10 @@ class Handshake(Protocol):
 
     def refuse(self, connection: ServerConnection, request: Request) -> Response | None: ...
 
+    def close_on_open(self, request: Request) -> tuple[int, str] | None:
+        """The close code and reason to end an upgraded connection with at once, or `None`."""
+        ...
+
 
 class LocalHandshake:
     """A local igni's check: the per-launch token, offered as a subprotocol, when there is one."""
@@ -49,6 +53,10 @@ class LocalHandshake:
         if f"{TOKEN_PROTOCOL_PREFIX}{self.token}" in offered:
             return None
         return connection.respond(HTTPStatus.FORBIDDEN, "Forbidden\n")
+
+    def close_on_open(self, request: Request) -> tuple[int, str] | None:
+        """A local igni ends no connection it let through."""
+        return None
 
 
 #: Sends one message to the client that sent the frame being handled, and no other.
@@ -143,6 +151,10 @@ class FakeSocket:
         if self._busy > 0:
             self._busy -= 1
             await socket.close(1013, "busy, retry")
+            return
+        closing = self._handshake.close_on_open(socket.request) if socket.request else None
+        if closing is not None:
+            await socket.close(*closing)
             return
         client_id = self._new_client_id()
         self._clients[socket] = client_id

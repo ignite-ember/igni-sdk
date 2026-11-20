@@ -15,7 +15,10 @@ What can happen to the socket, and what this does about it:
 * **The socket closed.** For Fleet, the gateway's `1013` ("busy, retry")
   and `1011` and a dropped line are opened again, with a fresh token,
   backing off. `1008` — not an active producer, or the licence — is final
-  (`NotAllowed`). A local igni that closed has stopped (`Unavailable`).
+  (`NotAllowed`; `GroupIsLocalOnly` when its reason is `group_local_only`),
+  except `1008 token_expired`: the gateway closes a socket when its token
+  runs out, and it is opened again with a fresh one. A local igni that
+  closed has stopped (`Unavailable`).
 """
 
 from __future__ import annotations
@@ -34,12 +37,16 @@ from websockets.exceptions import WebSocketException
 from igni_client.api import NOT_FOR_CLIENTS
 from igni_client.backoff import Backoff
 from igni_client.errors import (
+    GROUP_LOCAL_ONLY,
+    TOKEN_EXPIRED,
     AuthError,
+    GroupIsLocalOnly,
     IgniClientError,
     NotAllowed,
     RpcError,
     RunInterrupted,
     Unavailable,
+    reason_token,
 )
 from igni_client.events import parse_event
 from igni_client.lifecycle import Lifecycle, Link
@@ -253,6 +260,13 @@ class Connection:
     def _close_error(self, socket: ClientConnection) -> IgniClientError:
         code, reason = socket.close_code, socket.close_reason or ""
         where = self.target.describe()
+        if self._token_expired(socket):
+            return Unavailable(f"{where} closed the connection as its token expired: {reason}")
+        if code == NOT_A_PRODUCER and reason_token(reason) == GROUP_LOCAL_ONLY:
+            return GroupIsLocalOnly(
+                f"{where} closed the connection: the person's group runs igni only on "
+                f"their own computer ({reason}); use the local igni"
+            )
         if code == NOT_A_PRODUCER:
             return NotAllowed(f"{where} closed the connection: {reason or 'not allowed'}")
         if code == BUSY:
@@ -279,7 +293,8 @@ class Connection:
     async def _closed(self, socket: ClientConnection) -> None:
         code = socket.close_code
         where = self.target.describe()
-        if code == NOT_A_PRODUCER or not self.target.reconnects:
+        final = code == NOT_A_PRODUCER and not self._token_expired(socket)
+        if final or not self.target.reconnects:
             self._fail(self._close_error(socket))
             return
         self.router.interrupt(
@@ -298,6 +313,12 @@ class Connection:
             await self._run_resync()
             return
         self._fail(Unavailable(f"{where} could not be reached again after it closed ({code})"))
+
+    @staticmethod
+    def _token_expired(socket: ClientConnection) -> bool:
+        """The gateway closed it because its token ran out: opening again takes a fresh one."""
+        reason = socket.close_reason or ""
+        return socket.close_code == NOT_A_PRODUCER and reason_token(reason) == TOKEN_EXPIRED
 
     async def _run_resync(self) -> None:
         for callback in list(self._resync):

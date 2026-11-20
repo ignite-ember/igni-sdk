@@ -12,6 +12,7 @@ from igni_client.connection import Connection
 from igni_client.models import VmCredentialState
 from igni_client.routing import Router
 from igni_client.sessions import Sessions
+from igni_client.sign_in import SignedIn, sign_in
 from igni_client.targets import Target, require_fleet
 from igni_client.wire import Event
 
@@ -84,9 +85,23 @@ class IgniClient(IgniApi):
         return self._conn.vm_credential
 
     async def me(self) -> Me:
-        """Who the gateway says this client is: the producer, organisation and group."""
+        """Who the gateway says this client is — producer, organisation, group — and its VM's state.
+
+        It is the gateway's HTTP API, not igni's socket: it works before the
+        client is opened, and never wakes the VM (`Me.vm`).
+        """
         require_fleet(self.target, "me")
         return await self.commands.me()
+
+    async def sign_in(self) -> SignedIn:
+        """Sign the person in to the igni in their Fleet VM again: the gateway's `POST /v1/sign-in`.
+
+        Do it when `SignInRequired` says the VM's own credential was refused.
+        The gateway wakes the VM and hands igni the person's session; igni
+        then pushes `ready` on `vm_credential`, and the next run works. Like
+        `me()`, it needs no open socket. Not available for a local igni.
+        """
+        return await sign_in(require_fleet(self.target, "sign_in"))
 
     async def events(self) -> AsyncIterator[Event]:
         """Every message igni sends from now on, from every session and every client attached.
