@@ -96,13 +96,19 @@ Two things end a waiting run instead of answering it.
 `session.cancel()` ends it and answers `cancelled=True`; a new prompt
 sent to the session moves on from it. Either way its approvals are
 dropped: answering one afterwards runs nothing, and igni does not show
-it again, after a restart either.
+it again, after a restart either. Ending the run refuses its approvals,
+so both take what answering takes: igni's window or an approver may, a
+program without an approver token may not. igni refuses that program's
+`session.cancel()` with `AccessRefused`. Its prompt gets igni's
+`ErrorMessage` and the end of its stream, so the `send()` loop yields
+the error and ends: no run starts and nothing is queued. Either way the
+approvals stay.
 
 A program without an approver token cannot answer: `approve()`,
 `reject()` and `decide()` raise `AccessRefused` (a `NotAllowed`) before
 anything is sent, and the run keeps waiting (see
 [Who may call what](/docs/sdk/igni-client/concepts#who-may-call-what)). Nor can it end the waiting
-run: igni refuses its `session.cancel()` with `AccessRefused`, and
+run, by `session.cancel()` or by a new prompt: igni refuses both, and
 drops nothing. Where igni-client does not know
 the standing (`Local(url=..., token=...)`), the answer is sent, and igni's
 refusal comes as `NotAllowed` from the `send()` loop.
