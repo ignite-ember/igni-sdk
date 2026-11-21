@@ -59,6 +59,7 @@ def test_the_commands_package_names_its_models_and_its_wire() -> None:
         "CommandRun",
         "Commands",
         "Me",
+        "VmState",
         "Wake",
     ]
     assert sorted(models.__all__) == [
@@ -66,6 +67,8 @@ def test_the_commands_package_names_its_models_and_its_wire() -> None:
         "CommandOutput",
         "CommandRecord",
         "Me",
+        "VM_STATES",
+        "VmState",
         "Wake",
     ]
     assert sorted(wire.__all__) == [

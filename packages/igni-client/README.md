@@ -20,6 +20,8 @@ a person does in igni's window:
   arguments and result generated from igni's own contract. A call that
   makes igni stream events follows them, and only its own.
 - **Run commands in a Fleet VM**, streaming their output.
+- **Find a person's igni in Fleet** from igni server, see whether their
+  organisation lets them use it, and sign them in to it.
 
 It speaks the protocol igni's own app speaks, so anything the app can do,
 your program can.
@@ -55,6 +57,12 @@ your program. Ignite Ember hosts none of it.
   - [Commands in a Fleet VM](#commands-in-a-fleet-vm)
   - [When the connection changes under you](#when-the-connection-changes-under-you)
   - [Testing your program](#testing-your-program)
+- [Fleet discovery and signing in](#fleet-discovery-and-signing-in)
+  - [Finding the gateway from igni server](#finding-the-gateway-from-igni-server)
+  - [Where the group runs igni](#where-the-group-runs-igni)
+  - [Who pulls the person's events](#who-pulls-the-persons-events)
+  - [The VM's state, without waking it](#the-vms-state-without-waking-it)
+  - [Signing in to the VM's igni](#signing-in-to-the-vms-igni)
 - [API reference](#api-reference)
   - [IgniClient](#igniclient)
   - [Session and Sessions](#session-and-sessions)
@@ -155,6 +163,7 @@ A **target** says where the igni is and how to reach it.
 from igni_client import Fleet, Local, Person
 
 fleet = Fleet("https://gw.acme.internal", auth=Person.from_cli())
+found = await Fleet.from_server("https://igni.acme.internal", auth=Person.from_cli())  # igni server names the gateway
 here = Local(project_dir="~/code/payments")          # the desktop app's igni for that project
 by_hand = Local(url="ws://127.0.0.1:8765", token="<the printed token>")  # `python -m igni_core.backend --ws-port 8765`
 ```
@@ -657,7 +666,12 @@ on.
   producer yet" for a moment; calls are asked again.
 - **Refused.** `AuthError` for a credential igni does not accept,
   `NotAllowed` for a producer that is no longer active, a lapsed licence,
-  or a command in somebody else's VM. Neither is retried.
+  or a command in somebody else's VM; `GroupIsLocalOnly`, a `NotAllowed`,
+  when the person's group runs igni only on the desktop (see
+  [Where the group runs igni](#where-the-group-runs-igni)). None is retried.
+- **The token ran out.** The gateway closes a socket whose token expired
+  (`1008 token_expired`); the client opens it again with a fresh token,
+  as after a drop.
 - **The VM's own credential was refused.** A Fleet VM keeps a credential
   of its own, which igni exchanges for the tokens its model calls use.
   When igni server refuses it (revoked, the person signed out or was
@@ -667,11 +681,12 @@ on.
   `SignInRequired` - still a `RunFailed`, so code that catches that keeps
   working - with the run's own `RunFailed` (the model provider's own words)
   as its cause. The client does not sign in by
-  itself: your program signs the person in again at the gateway, with
-  `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
-  igni their session for a new credential (the platform's `vm_sign_in`).
-  The gateway answers `{"credential": "ready"}`, igni pushes `ready`, and
-  the next `ask()` works. An app's VM raises `ReissueRequired` instead: an
+  itself: your program signs the person in again at the gateway with
+  `igni.sign_in()` (`POST /v1/sign-in` with their bearer token), which
+  wakes the VM and hands igni their session for a new credential (the
+  platform's `vm_sign_in`). The gateway answers the credential's state
+  (`signed.credential.state == "ready"`), igni pushes `ready`, and the
+  next `ask()` works ([Signing in to the VM's igni](#signing-in-to-the-vms-igni)). An app's VM raises `ReissueRequired` instead: an
   organisation admin re-issues its credential, and the VM takes it at its
   next start. Before igni has noticed a revocation (up to its next token
   renewal) a run can still fail with a plain `RunFailed`.
@@ -721,6 +736,186 @@ frames it sent), `fake.methods.calls`, `fake.runs.decisions`,
 `drop(code)`, `busy_next(n)` and `fake.methods.unbound_for(n)`. See
 [igni_client.testing](#igni_clienttesting).
 
+## Fleet discovery and signing in
+
+A person's igni in Fleet is reached through the organisation's gateway.
+igni server knows where that is, whether the person may use it, and how
+their organisation set things up; the gateway knows the VM as it is right
+now. igni-client asks each the question it can answer.
+
+### Finding the gateway from igni server
+
+`await Fleet.from_server(server, auth=person)` asks igni server at
+`server` (its `GET /v1/me/cloud`) for the gateway, and returns a `Fleet`
+pointed at it. When the person has no cloud igni to use, it raises what
+connecting would have, before anything is woken:
+
+```python
+from igni_client import Fleet, IgniClient, Person
+from igni_client.testing import FakeGateway, FakeIgni, Steps
+
+async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
+    fake.runs.script = lambda text: Steps.answer("PONG")
+    fleet = await Fleet.from_server(
+        fake.server_url,             # igni server's address: "https://igni.acme.internal"
+        auth=Person("t-ada"),
+        http=fake.server_http(),     # the fake's igni server and gateway
+        allow_http=True,             # the fake's gateway is plain HTTP on loopback
+    )
+    print(fleet.discovered.mode, fleet.discovered.group.name)
+    async with IgniClient(fleet) as igni:
+        print(await (await igni.sessions.create()).ask("ping"))
+```
+
+`discover(server, auth)` is the question alone: a `CloudIgni`, whose
+`available` says whether there is a cloud igni to connect to.
+
+| `CloudIgni` field | What it says |
+|---|---|
+| `cloud` | `"available"` or `"unavailable"` |
+| `reason` | why it is unavailable: `fleet_not_configured`, `group_local_only`, `inactive`, `not_licensed`, or a reason newer than this igni-client; `None` when available |
+| `gateway_url` | the gateway's address, `None` when igni server has no Fleet |
+| `mode` | where the person's group runs igni: `"local"`, `"cloud"` or `"local_and_cloud"` |
+| `events_owner` | who pulls the person's service events: `"local"` or `"cloud"` |
+| `group` | the person's group (`id`, `name`), or `None` |
+| `producer` | the gateway's id for the person, `person:<id>` |
+
+Only a person's session is answered: an app or a space gets `NotAllowed`
+(they know their gateway; `Fleet(url, auth=app)`). The answer is read in
+the safe direction: a `cloud` value this igni-client does not know reads
+as `unavailable`, a `mode` or `events_owner` as `local`. An igni server
+older than `/v1/me/cloud` is read from the `igni_gateway` its discovery
+document advertises: available in `local_and_cloud` when it names one.
+
+The person's session goes only to igni server and to the gateway igni
+server itself names, and only over TLS: a plain-HTTP gateway raises
+`NotAllowed`, unless `allow_http=True` (or `IGNI_DEV_GATEWAY_INSECURE=1`)
+says a lab gateway will do. The shape of igni server's answer is
+igni-sdk's own contract, `contracts/cloud-discovery.schema.json`, which
+igni server and igni's desktop app are tested against too.
+
+### Where the group runs igni
+
+An organisation admin sets, per group, where igni runs for its people:
+
+- **`local_and_cloud`** (the default): on the person's computer or in
+  their VM, as they choose.
+- **`cloud`**: in their VM only. igni on their computer refuses to run.
+- **`local`**: on their computer only. Fleet refuses the person, wherever
+  they come from: `discover()` says `group_local_only`, `from_server`
+  raises `GroupIsLocalOnly`, the gateway closes a connection with `1008
+  group_local_only` (and kicks one that is open), and refuses a sign-in or
+  a command with `403`. Each of those raises `GroupIsLocalOnly`, a
+  `NotAllowed`, and none is retried. Use `Local` instead.
+
+```python
+from igni_client import Fleet, GroupIsLocalOnly, IgniClient, Person, discover
+from igni_client.testing import FakeGateway, FakeIgni
+
+async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
+    igni = await IgniClient(fake.fleet(Person("t-ada"))).connect()
+    await fake.set_mode("local")                    # an admin moves the group to local
+    try:
+        await igni.sessions.create()
+    except GroupIsLocalOnly as kicked:
+        print("kicked:", kicked)
+    await igni.close()
+
+    cloud = await discover(fake.server_url, Person("t-ada"), http=fake.server_http())
+    print(cloud.cloud, cloud.reason)                # unavailable group_local_only
+```
+
+### Who pulls the person's events
+
+Service events for a person (an extension's backend telling their igni
+something happened) are pulled by one side only: their desktop (`local`)
+or the gateway for their VM (`cloud`). igni server decides, so the two
+never race: in `local` mode it is the desktop, in `cloud` mode the cloud,
+and in `local_and_cloud` the person's own choice — the desktop until they
+first switch. A program that uses the person's igni only through Fleet
+chooses the cloud once:
+
+```python
+from igni_client import Person, set_events_owner
+from igni_client.testing import FakeGateway, FakeIgni
+
+async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
+    cloud = await set_events_owner(fake.server_url, Person("t-ada"), "cloud", http=fake.server_http())
+    print(cloud.events_owner)                       # cloud
+```
+
+An owner the group's mode does not allow (`cloud` in `local` mode,
+`local` in `cloud` mode) raises `NotAllowed`. Events already handed to the
+other side are not lost: what it did not acknowledge comes back, after its
+two-minute lease, to the new owner.
+
+### The VM's state, without waking it
+
+`igni.me()` is the gateway's `GET /v1/me`: who it takes you for, and
+`vm`, the VM as it is right now — `state` (`none`, `asleep`, `waking` or
+`running`) and `signed_in`. It is the gateway's HTTP API, not igni's
+socket, so it works before the client is opened and never wakes the VM:
+
+```python
+from igni_client import IgniClient, Person, VmState
+from igni_client.testing import FakeGateway, FakeIgni
+
+gateway = FakeGateway({"t-ada": "person:u-ada"})
+gateway.vm_states["person:u-ada"] = VmState(state="asleep", signed_in=True)
+async with FakeIgni(gateway=gateway) as fake:
+    me = await IgniClient(fake.fleet(Person("t-ada"))).me()   # not opened: nothing wakes
+    print(me.vm.state, me.vm.signed_in)                       # asleep True
+```
+
+A gateway older than the field leaves `vm` as `None`. Opening the client
+is what wakes the VM: the first connection waits while it resumes.
+
+### Signing in to the VM's igni
+
+The person's own session is what reaches their igni. The desktop's sign-in
+(`igni login`, or the app's sign-in wall) keeps a 30-day session; the
+gateway takes it as a bearer token, and hands it to igni in the VM the
+first time the person connects. igni exchanges it for a credential of the
+VM's own, which it keeps on the VM's volume and uses for its model calls.
+After that, the VM needs nothing from the person until that credential is
+refused — revoked on the portal, the person signed out everywhere, or
+removed.
+
+When it is, igni says so with a `vm_credential` push (`needs_sign_in`),
+which `igni.vm_credential` keeps, and `session.ask()` raises
+`SignInRequired`. igni-client never signs in on its own; the program
+decides, and `igni.sign_in()` does it — the gateway's `POST /v1/sign-in`,
+which wakes the VM and hands igni the person's session again:
+
+```python
+import asyncio
+
+from igni_client import IgniClient, Person
+from igni_client.testing import FakeGateway, FakeIgni
+
+async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
+    async with IgniClient(fake.fleet(Person("t-ada"))) as igni:
+        await fake.socket.push("vm_credential", {"state": "needs_sign_in", "message": ""})
+        signed = await igni.sign_in()
+        print(signed.credential.state, signed.ready)          # ready True
+        while getattr(igni.vm_credential, "state", None) != "ready":   # igni says so on its socket too
+            await asyncio.sleep(0.01)
+```
+
+`sign_in()` answers a `SignedIn`: the node the VM woke on and the
+credential's state — `ready`, or `needs_sign_in` when the session itself
+was refused (sign the person in to igni server again first). It raises
+`GroupIsLocalOnly` for a person whose group runs igni only on the desktop,
+`NotAllowed` for an app or a space (an app's VM credential is re-issued by
+an admin, `ReissueRequired`), and `Unavailable` when the gateway is busy
+or could not wake the VM.
+
+The gateway checks a token's expiry when a socket opens, and closes a
+socket whose token runs out with `1008 token_expired`. That close is not
+a refusal: the client opens the socket again with a fresh token from
+`auth` (an `ApiKey` makes a new 15-minute session), re-attaches its
+sessions, and a run going at that moment ends with `RunInterrupted`.
+
 ## API reference
 
 ### IgniClient
@@ -733,7 +928,8 @@ with `async with` (or `await igni.connect()` and `await igni.close()`).
 | `sessions` | `Sessions`: create, open, list sessions |
 | `events()` | every message igni sends from now on (an async iterator of `Event`) |
 | `commands` | `Commands`, shell commands in a Fleet VM (`NotSupported` locally) |
-| `me()` | who the gateway takes you for: a `Me` (`NotSupported` locally) |
+| `me()` | who the gateway takes you for, and `vm`, the VM's state: a `Me` (`NotSupported` locally); never wakes the VM, works before opening |
+| `sign_in()` | the gateway's `POST /v1/sign-in`: hands igni in the VM the person's session again, after `SignInRequired`; a `SignedIn` (`NotSupported` locally) |
 | `vm_credential` | what igni last pushed about its VM's own credential (a `VmCredentialState`), or `None` |
 | `client_id` | igni's name for this connection; its own messages carry it |
 | `target` | the `Fleet` or `Local` it was made with |
@@ -787,7 +983,17 @@ entering one twice.
 | Target | |
 |---|---|
 | `Fleet(url, *, auth, http=None)` | a producer's igni through Fleet's gateway at `url`; `auth` is a `Person`, `App` or `Space`; `http` an `httpx.AsyncClient` to use |
+| `await Fleet.from_server(server, *, auth, http=None, allow_http=None)` | a person's igni in Fleet, the gateway named by igni server at `server`; `fleet.discovered` is igni server's `CloudIgni`. Raises `GroupIsLocalOnly`, `NotSupported` (no Fleet) or `NotAllowed` when the person has no cloud igni to use, and `NotAllowed` for a gateway that is not `https` unless `allow_http` (default: `IGNI_DEV_GATEWAY_INSECURE=1`) |
 | `Local(project_dir=".", *, url=None, token=None, approver_token=None)` | an igni on this machine: from the project's lockfile, or at `url` with `token` |
+
+igni server's side of finding one ([Fleet discovery and signing in](#fleet-discovery-and-signing-in)):
+
+| Name | What it is |
+|---|---|
+| `await discover(server, auth, *, http=None)` | a `CloudIgni`: igni server's `/v1/me/cloud` for the person — `cloud`, `reason`, `gateway_url`, `mode`, `events_owner`, `group`, `producer`; `available`, `allows_local` and `refusal()` read it |
+| `await set_events_owner(server, auth, owner, *, http=None)` | who pulls the person's service events from now on, `"cloud"` or `"local"`; igni server's `CloudIgni` after the change |
+| `Me.vm` | a `VmState`: `state` (`none`, `asleep`, `waking`, `running`) and `signed_in`; `None` from an older gateway |
+| `SignedIn` | `sign_in()`'s answer: `producer`, `node`, `how`, `credential` (a `VmCredentialState`) and `ready` |
 
 Each has `standing` — what igni stands the connection as (`"window"`,
 `"approver"`, `"program"` or `"unknown"`; see
@@ -866,7 +1072,8 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `CredentialRefused` (`AuthError`, `RunFailed`) | a Fleet VM's own credential was refused; `state` and `detail` say how, the run's `RunFailed` is its cause | see its kinds below |
 | `SignInRequired` (`CredentialRefused`) | `ask()` failed after igni said the person's VM credential was refused | sign the person in at the gateway: `POST /v1/sign-in` |
 | `ReissueRequired` (`CredentialRefused`) | `ask()` failed after igni said the app's VM credential was refused | an organisation admin re-issues it |
-| `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM | stop |
+| `NotAllowed` | igni said no, and asking again will not change it: an inactive producer, a lapsed licence, somebody else's VM, a gateway that is not `https` | stop |
+| `GroupIsLocalOnly` (`NotAllowed`) | the person's group runs igni only on the desktop: Fleet refuses them (`1008`/`403 group_local_only`, igni server's `group_local_only`) | use `Local` |
 | `NotSupported` | the target cannot do it: commands and `me()` need Fleet | use Fleet |
 | `RpcError` | a method failed; `method` and `message` say which and why | see its kinds below |
 | `AccessRefused` (`RpcError`, `NotAllowed`) | the connection's standing does not reach the method | connect with the standing it needs |
@@ -887,7 +1094,9 @@ Everything igni-client raises on purpose is an `IgniClientError`:
 | `fake.methods` | `answers` (by method: a value, a model, a message, or a function of the args), `calls`, `history`, `models`, `sessions`, `unbound_for(n)` |
 | `fake.socket` | `received`, `broadcast(event)`, `push(channel, payload, session_id="")`, `move()`, `drop(code)`, `busy_next(n)`, `connections`, `vm_credential` (the state last pushed on `vm_credential`, sent to each client that attaches) |
 | `fake.commands` | how a slash command is answered: a function of its text |
-| `FakeGateway(tokens)` | Fleet's gateway: `commands` (by command line, a `PlayedCommand`), `commands_run` |
+| `FakeGateway(tokens)` | Fleet's gateway: `commands` (by command line, a `PlayedCommand`), `commands_run`; `local_only` (people refused with `group_local_only`), `vm_states` (what `/v1/me` says of each VM), `sign_in_state` and `signed_in` (every `/v1/sign-in`, after which igni pushes the state on `vm_credential`) |
+| `fake.server` | a `FakeServer`, igni server's discovery in front of the gateway: `mode`, `fleet_configured`, `serves_cloud`, `group`, `inactive`, `not_licensed`, `events_owners`, `calls`; `fake.server_url` and `fake.server_http()` reach it (and the gateway) for `discover()` and `Fleet.from_server()` |
+| `await fake.set_mode(mode)` | an admin sets the group's mode: igni server says it, and `local` refuses every person at the gateway and closes their connections with `1008 group_local_only` |
 | `Steps` | runs to script: `answer(text)`, `approval(tool, **args)`, `echo`, `rejected()`; with `Pause` and `Delay` steps |
 | `sample(T)` | a valid value of any of igni-client's types |
 
@@ -2844,10 +3053,20 @@ Python's `TypeError`, raised by the method's signature before anything else.
 
 **`SignInRequired` in Fleet.** igni on the VM said its own credential was
 refused, and the run failed for it. Sign the person in again at the
-gateway (`POST /v1/sign-in` with their bearer token), then ask again; the
-client never does it on its own. A plain `RunFailed` whose message is the
+gateway (`await igni.sign_in()`, the gateway's `POST /v1/sign-in` with
+their bearer token), then ask again; the client never does it on its own. A plain `RunFailed` whose message is the
 model provider's refusal ("Invalid or expired token") can mean the same
 before igni has noticed: signing in again is safe to try.
+
+**`GroupIsLocalOnly`.** The person's organisation runs igni for their
+group only on their own computer, so Fleet refuses them. Connect to the
+local igni (`Local(project_dir=...)`). It can arrive mid-session: when an
+admin moves the group to `local`, the gateway closes the open connection.
+
+**`NotAllowed: igni server named a gateway that is not https`.** The
+person's session goes only over TLS. For a lab gateway on plain HTTP pass
+`allow_http=True` to `Fleet.from_server()`, or set
+`IGNI_DEV_GATEWAY_INSECURE=1`.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read
@@ -2900,6 +3119,12 @@ On purpose, and not backwards compatible:
   before; `shutdown` is no longer among them, since igni's `shutdown`
   method winds one session down (`session.shutdown()`, igni's window's),
   while the `shutdown` message, which stops igni, is still never sent.
+- **New since 0.2.1:** finding a person's cloud igni from igni server —
+  `discover()`, `Fleet.from_server()`, `set_events_owner()`, `CloudIgni`;
+  `GroupIsLocalOnly`; `igni.sign_in()` and `SignedIn`; `Me.vm`
+  (`VmState`); `1008 token_expired` reconnects with a fresh token; and in
+  `igni_client.testing`, `FakeServer`, `fake.server`, `fake.set_mode()` and
+  the gateway's `local_only`, `vm_states` and `/v1/sign-in`.
 - **New:** `Call` (`igni_client.calls`), `session.events()`,
   `session.command()`, `session.typing()`, `igni.auth.cancel_login()`,
   typed push notifications, `Fleet.standing` and `Local.standing`,

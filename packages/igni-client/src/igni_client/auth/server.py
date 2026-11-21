@@ -16,7 +16,10 @@ from igni_client.errors import AuthError, Unavailable
 class _Discovery(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    issuer: str
+    issuer: str = ""
+    #: The Fleet gateway's public address; left out when this igni server has no Fleet.
+    #: Any JSON is taken, so a value that is not an address never costs the issuer.
+    igni_gateway: Any = None
 
 
 class _OAuthError(BaseModel):
@@ -44,12 +47,18 @@ class IgniServer:
         bearer: str | None = None,
         form: Mapping[str, str] | None = None,
         params: Mapping[str, Any] | None = None,
+        json: BaseModel | None = None,
     ) -> httpx.Response:
-        """One request; `Unavailable` when igni server cannot be reached."""
+        """One request; `Unavailable` when igni server cannot be reached. `json` goes as the body."""
         headers = {"Authorization": f"Bearer {bearer}"} if bearer is not None else None
         try:
             return await self._http.request(
-                method, f"{self.url}{path}", headers=headers, data=form, params=params
+                method,
+                f"{self.url}{path}",
+                headers=headers,
+                data=form,
+                params=params,
+                json=None if json is None else json.model_dump(mode="json"),
             )
         except httpx.HTTPError as exc:
             raise Unavailable(f"could not reach igni server for {what}: {exc}") from exc
@@ -69,19 +78,26 @@ class IgniServer:
     async def issuer(self) -> str:
         """igni server's issuer URL, from its discovery document; asked once."""
         if self._issuer is None:
-            response = await self.call("GET", "/.well-known/openid-configuration", what="discovery")
-            try:
-                issuer = (
-                    _Discovery.model_validate_json(response.content).issuer
-                    if response.status_code == 200
-                    else ""
-                )
-            except ValidationError:
-                issuer = ""
+            issuer = (await self._discovery()).issuer
             if not issuer:
                 raise Unavailable("igni server published no issuer")
             self._issuer = issuer
         return self._issuer
+
+    async def gateway(self) -> str | None:
+        """The Fleet gateway igni server advertises (`igni_gateway`), or `None` when it has no Fleet."""
+        gateway = (await self._discovery()).igni_gateway
+        return gateway if isinstance(gateway, str) and gateway else None
+
+    async def _discovery(self) -> _Discovery:
+        """igni server's discovery document; an empty one when it answers something else."""
+        response = await self.call("GET", "/.well-known/openid-configuration", what="discovery")
+        if response.status_code != 200:
+            return _Discovery()
+        try:
+            return _Discovery.model_validate_json(response.content)
+        except ValidationError:
+            return _Discovery()
 
     async def aclose(self) -> None:
         if self._owns_http:

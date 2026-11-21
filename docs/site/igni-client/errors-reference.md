@@ -13,6 +13,7 @@ IgniClientError
             SignInRequired
             ReissueRequired
     NotAllowed
+        GroupIsLocalOnly
     NotSupported
     RpcError
         AccessRefused  (also NotAllowed)
@@ -129,6 +130,21 @@ igni answered and said no, and asking again will not change it.
 
 A producer that is no longer active (removed, deactivated), a lapsed
 licence, or a command in a VM that is not the caller's.
+
+## GroupIsLocalOnly
+
+```python
+class GroupIsLocalOnly(NotAllowed)
+```
+
+The person's group runs igni only on the desktop: there is no cloud igni to reach.
+
+An organisation admin sets where each group runs igni — on the desktop,
+in the cloud, or either (the group's `mode`). In `local` mode Fleet
+refuses the person: the gateway closes a connection with `1008
+group_local_only`, kicks one that is open, and answers its sign-in
+with `403`; igni server's `/v1/me/cloud` says `group_local_only`. Use
+the igni on the person's own machine (`Local`) instead.
 
 ## NotSupported
 

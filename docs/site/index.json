@@ -201,11 +201,47 @@
     },
     {
       "package": "igni-client",
+      "slug": "fleet-discovery-and-signing-in",
+      "title": "Fleet discovery and signing in",
+      "description": "A person's igni in Fleet is reached through the organisation's gateway. igni server knows where that is, whether the person may use it, and how their organisation set things up;",
+      "category": "guide",
+      "order": 5,
+      "file": "igni-client/fleet-discovery-and-signing-in.md",
+      "sections": [
+        {
+          "level": 2,
+          "id": "finding-the-gateway-from-igni-server",
+          "title": "Finding the gateway from igni server"
+        },
+        {
+          "level": 2,
+          "id": "where-the-group-runs-igni",
+          "title": "Where the group runs igni"
+        },
+        {
+          "level": 2,
+          "id": "who-pulls-the-person-s-events",
+          "title": "Who pulls the person's events"
+        },
+        {
+          "level": 2,
+          "id": "the-vm-s-state-without-waking-it",
+          "title": "The VM's state, without waking it"
+        },
+        {
+          "level": 2,
+          "id": "signing-in-to-the-vm-s-igni",
+          "title": "Signing in to the VM's igni"
+        }
+      ]
+    },
+    {
+      "package": "igni-client",
       "slug": "api-reference",
       "title": "API reference",
       "description": "IgniClient(target, *, backoff=None) — a connection to one igni. Open it with async with (or await igni.connect() and await igni.close()).",
       "category": "guide",
-      "order": 5,
+      "order": 6,
       "file": "igni-client/api-reference.md",
       "sections": [
         {
@@ -266,7 +302,7 @@
       "title": "Errors and troubleshooting",
       "description": "a program, attached with igni's lockfile on the desktop, and the method is the window's: it loosens a rule the agent is held to (a saved permission rule, a trusted folder, a plugin) or changes whom igni acts for.",
       "category": "guide",
-      "order": 6,
+      "order": 7,
       "file": "igni-client/errors-and-troubleshooting.md",
       "sections": []
     },
@@ -276,7 +312,7 @@
       "title": "Changes since 0.1.0",
       "description": "On purpose, and not backwards compatible:",
       "category": "guide",
-      "order": 7,
+      "order": 8,
       "file": "igni-client/changes-since-0-1-0.md",
       "sections": []
     },
@@ -286,7 +322,7 @@
       "title": "igni as a whole",
       "description": "The methods igni answers for igni as a whole; IgniClient is one.",
       "category": "reference",
-      "order": 8,
+      "order": 9,
       "file": "igni-client/igni.md",
       "sections": [
         {
@@ -307,7 +343,7 @@
       "title": "Sessions",
       "description": "igni's sessions: attach one, or make a new one in a project folder. The methods igni answers for one session; Session is one.",
       "category": "reference",
-      "order": 9,
+      "order": 10,
       "file": "igni-client/sessions.md",
       "sections": [
         {
@@ -408,7 +444,7 @@
       "title": "Runs received but not finished",
       "description": "This session's runs that were received but not finished.",
       "category": "reference",
-      "order": 10,
+      "order": 11,
       "file": "igni-client/runs.md",
       "sections": [
         {
@@ -439,7 +475,7 @@
       "title": "History and context",
       "description": "This session's conversation as stored: read, search, cut back. This session's context window: how full it is, and compacting it.",
       "category": "reference",
-      "order": 11,
+      "order": 12,
       "file": "igni-client/history-and-context.md",
       "sections": [
         {
@@ -480,7 +516,7 @@
       "title": "Loop",
       "description": "This session's loop: a task the agent repeats until it is done.",
       "category": "reference",
-      "order": 12,
+      "order": 13,
       "file": "igni-client/loop.md",
       "sections": [
         {
@@ -516,7 +552,7 @@
       "title": "Plans",
       "description": "Plan mode: the plan the agent submitted, and the person's decision.",
       "category": "reference",
-      "order": 13,
+      "order": 14,
       "file": "igni-client/plans.md",
       "sections": [
         {
@@ -542,7 +578,7 @@
       "title": "Choosing a model",
       "description": "The models this session can use, and switching between them.",
       "category": "reference",
-      "order": 14,
+      "order": 15,
       "file": "igni-client/models.md",
       "sections": [
         {
@@ -563,7 +599,7 @@
       "title": "Permissions",
       "description": "Saved permission rules for tool calls.",
       "category": "reference",
-      "order": 15,
+      "order": 16,
       "file": "igni-client/permissions.md",
       "sections": [
         {
@@ -584,7 +620,7 @@
       "title": "Workspace trust",
       "description": "Whether this session's project folder is trusted.",
       "category": "reference",
-      "order": 16,
+      "order": 17,
       "file": "igni-client/workspace.md",
       "sections": [
         {
@@ -605,7 +641,7 @@
       "title": "Files and folders",
       "description": "Files in this session's project folder. Folders on the machine igni runs on.",
       "category": "reference",
-      "order": 17,
+      "order": 18,
       "file": "igni-client/files.md",
       "sections": [
         {
@@ -641,7 +677,7 @@
       "title": "Shell and background processes",
       "description": "The methods igni answers for one session; Session is one. Background processes igni tracks, in every session.",
       "category": "reference",
-      "order": 18,
+      "order": 19,
       "file": "igni-client/shell-and-processes.md",
       "sections": [
         {
@@ -672,7 +708,7 @@
       "title": "Agents",
       "description": "The agents this session can hand work to. Sub-agents' runs, wherever they are going.",
       "category": "reference",
-      "order": 19,
+      "order": 20,
       "file": "igni-client/agents.md",
       "sections": [
         {
@@ -703,7 +739,7 @@
       "title": "Skills, slash commands and output styles",
       "description": "The skills this session's agent can use. The methods igni answers for one session; Session is one.",
       "category": "reference",
-      "order": 20,
+      "order": 21,
       "file": "igni-client/skills-and-commands.md",
       "sections": [
         {
@@ -744,7 +780,7 @@
       "title": "Hooks",
       "description": "The hooks that run on this session's events. The methods igni answers for one session; Session is one.",
       "category": "reference",
-      "order": 21,
+      "order": 22,
       "file": "igni-client/hooks.md",
       "sections": [
         {
@@ -770,7 +806,7 @@
       "title": "Scheduled tasks",
       "description": "Scheduled tasks of this session's project.",
       "category": "reference",
-      "order": 22,
+      "order": 23,
       "file": "igni-client/scheduler.md",
       "sections": [
         {
@@ -801,7 +837,7 @@
       "title": "Workflows",
       "description": "Workflows: scripted runs this session starts and follows.",
       "category": "reference",
-      "order": 23,
+      "order": 24,
       "file": "igni-client/workflows.md",
       "sections": [
         {
@@ -827,7 +863,7 @@
       "title": "MCP servers",
       "description": "MCP servers this session connects to, and their tools.",
       "category": "reference",
-      "order": 24,
+      "order": 25,
       "file": "igni-client/mcp.md",
       "sections": [
         {
@@ -883,7 +919,7 @@
       "title": "Plugins and marketplaces",
       "description": "Plugins installed into this session's project. Plugin marketplaces: where plugins are installed from.",
       "category": "reference",
-      "order": 25,
+      "order": 26,
       "file": "igni-client/plugins.md",
       "sections": [
         {
@@ -949,7 +985,7 @@
       "title": "Extensions",
       "description": "The extensions installed into this igni, and their settings.",
       "category": "reference",
-      "order": 26,
+      "order": 27,
       "file": "igni-client/extensions.md",
       "sections": [
         {
@@ -970,7 +1006,7 @@
       "title": "Notifications",
       "description": "The signed-in person's notifications, and what extensions posted.",
       "category": "reference",
-      "order": 27,
+      "order": 28,
       "file": "igni-client/notifications.md",
       "sections": [
         {
@@ -996,7 +1032,7 @@
       "title": "Sign-in and server",
       "description": "Signing igni in to igni server, and choosing which server. This session's sign-in to igni server.",
       "category": "reference",
-      "order": 28,
+      "order": 29,
       "file": "igni-client/sign-in-and-server.md",
       "sections": [
         {
@@ -1042,7 +1078,7 @@
       "title": "Approver tokens",
       "description": "Approver tokens: what lets a program answer approval requests.",
       "category": "reference",
-      "order": 29,
+      "order": 30,
       "file": "igni-client/approvers.md",
       "sections": [
         {
@@ -1063,7 +1099,7 @@
       "title": "igni's window model",
       "description": "igni's own window's model — its fields, toasts and dialog.",
       "category": "reference",
-      "order": 30,
+      "order": 31,
       "file": "igni-client/window.md",
       "sections": [
         {
@@ -1079,7 +1115,7 @@
       "title": "Access: who may call what",
       "description": "Which connections may make each call — client, approver, window — and how a connection's standing is decided.",
       "category": "reference",
-      "order": 31,
+      "order": 32,
       "file": "igni-client/access.md",
       "sections": [
         {
@@ -1105,7 +1141,7 @@
       "title": "Models reference",
       "description": "Every model igni-client reads or sends, field by field, with the methods that return it and the models it is part of.",
       "category": "reference",
-      "order": 32,
+      "order": 33,
       "file": "igni-client/models-reference.md",
       "sections": [
         {
@@ -2091,7 +2127,7 @@
       "title": "Events reference",
       "description": "Every message igni sends and a client sends, and every push notification channel's payload, field by field.",
       "category": "reference",
-      "order": 33,
+      "order": 34,
       "file": "igni-client/events-reference.md",
       "sections": [
         {
@@ -2482,7 +2518,7 @@
       "title": "Errors reference",
       "description": "Every error igni-client raises, how they are related, and when each is raised.",
       "category": "reference",
-      "order": 34,
+      "order": 35,
       "file": "igni-client/errors-reference.md",
       "sections": [
         {
@@ -2529,6 +2565,11 @@
           "level": 2,
           "id": "notallowed",
           "title": "NotAllowed"
+        },
+        {
+          "level": 2,
+          "id": "groupislocalonly",
+          "title": "GroupIsLocalOnly"
         },
         {
           "level": 2,

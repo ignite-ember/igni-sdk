@@ -20,6 +20,8 @@ a person does in igni's window:
   arguments and result generated from igni's own contract. A call that
   makes igni stream events follows them, and only its own.
 - **Run commands in a Fleet VM**, streaming their output.
+- **Find a person's igni in Fleet** from igni server, see whether their
+  organisation lets them use it, and sign them in to it.
 
 It speaks the protocol igni's own app speaks, so anything the app can do,
 your program can.

@@ -14,6 +14,12 @@ igni-core publishes them; this repository builds against its copies:
   ``contracts/theme.schema.json`` — what an extension's manifest and theme
   are checked against.
 
+One contract here is igni-sdk's own, not a copy, and is never refreshed:
+``contracts/cloud-discovery.schema.json``, igni server's ``/v1/me/cloud``
+(igni-core's ``docs/design/local-cloud-switch.md`` §2.1). igni-server,
+igni-client and the desktop shell are tested against it; the shell keeps
+a copy of it, checked by its own sync script.
+
 ``tools/host_spec.py`` is igni-core's grammar for the host schema, copied
 by hand when that grammar changes: a test fails when it can no longer read
 the published schema back.
@@ -35,6 +41,9 @@ COPIES: dict[str, str] = {
     "contracts/extension-manifest.schema.json": "docs/extension-manifest.schema.json",
     "contracts/theme.schema.json": "docs/theme.schema.json",
 }
+
+#: The contracts igni-sdk itself owns: the single source, which others copy.
+OWNED: tuple[str, ...] = ("contracts/cloud-discovery.schema.json",)
 
 
 def main(argv: list[str]) -> int:

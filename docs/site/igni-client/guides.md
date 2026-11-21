@@ -325,7 +325,12 @@ on.
   producer yet" for a moment; calls are asked again.
 - **Refused.** `AuthError` for a credential igni does not accept,
   `NotAllowed` for a producer that is no longer active, a lapsed licence,
-  or a command in somebody else's VM. Neither is retried.
+  or a command in somebody else's VM; `GroupIsLocalOnly`, a `NotAllowed`,
+  when the person's group runs igni only on the desktop (see
+  [Where the group runs igni](/docs/sdk/igni-client/fleet-discovery-and-signing-in#where-the-group-runs-igni)). None is retried.
+- **The token ran out.** The gateway closes a socket whose token expired
+  (`1008 token_expired`); the client opens it again with a fresh token,
+  as after a drop.
 - **The VM's own credential was refused.** A Fleet VM keeps a credential
   of its own, which igni exchanges for the tokens its model calls use.
   When igni server refuses it (revoked, the person signed out or was
@@ -335,11 +340,12 @@ on.
   `SignInRequired` - still a `RunFailed`, so code that catches that keeps
   working - with the run's own `RunFailed` (the model provider's own words)
   as its cause. The client does not sign in by
-  itself: your program signs the person in again at the gateway, with
-  `POST /v1/sign-in` and their bearer token, which wakes the VM and hands
-  igni their session for a new credential (the platform's `vm_sign_in`).
-  The gateway answers `{"credential": "ready"}`, igni pushes `ready`, and
-  the next `ask()` works. An app's VM raises `ReissueRequired` instead: an
+  itself: your program signs the person in again at the gateway with
+  `igni.sign_in()` (`POST /v1/sign-in` with their bearer token), which
+  wakes the VM and hands igni their session for a new credential (the
+  platform's `vm_sign_in`). The gateway answers the credential's state
+  (`signed.credential.state == "ready"`), igni pushes `ready`, and the
+  next `ask()` works ([Signing in to the VM's igni](/docs/sdk/igni-client/fleet-discovery-and-signing-in#signing-in-to-the-vm-s-igni)). An app's VM raises `ReissueRequired` instead: an
   organisation admin re-issues its credential, and the VM takes it at its
   next start. Before igni has noticed a revocation (up to its next token
   renewal) a run can still fail with a plain `RunFailed`.

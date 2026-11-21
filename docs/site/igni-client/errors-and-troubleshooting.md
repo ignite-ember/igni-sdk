@@ -48,10 +48,20 @@ Python's `TypeError`, raised by the method's signature before anything else.
 
 **`SignInRequired` in Fleet.** igni on the VM said its own credential was
 refused, and the run failed for it. Sign the person in again at the
-gateway (`POST /v1/sign-in` with their bearer token), then ask again; the
-client never does it on its own. A plain `RunFailed` whose message is the
+gateway (`await igni.sign_in()`, the gateway's `POST /v1/sign-in` with
+their bearer token), then ask again; the client never does it on its own. A plain `RunFailed` whose message is the
 model provider's refusal ("Invalid or expired token") can mean the same
 before igni has noticed: signing in again is safe to try.
+
+**`GroupIsLocalOnly`.** The person's organisation runs igni for their
+group only on their own computer, so Fleet refuses them. Connect to the
+local igni (`Local(project_dir=...)`). It can arrive mid-session: when an
+admin moves the group to `local`, the gateway closes the open connection.
+
+**`NotAllowed: igni server named a gateway that is not https`.** The
+person's session goes only over TLS. For a lab gateway on plain HTTP pass
+`allow_http=True` to `Fleet.from_server()`, or set
+`IGNI_DEV_GATEWAY_INSECURE=1`.
 
 **`RunInterrupted`.** Fleet moved the VM, or the line dropped, while a run
 or a followed call was going. It may or may not have finished: read

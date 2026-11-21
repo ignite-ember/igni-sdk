@@ -22,7 +22,16 @@ from websockets.typing import Subprotocol
 
 from igni_client.access import Standing
 from igni_client.auth.tokens import TokenSource
-from igni_client.errors import AuthError, NotAllowed, NotSupported, Unavailable
+from igni_client.cloud import CloudIgni, checked_gateway, discover, insecure_gateway_allowed
+from igni_client.errors import (
+    GROUP_LOCAL_ONLY,
+    AuthError,
+    GroupIsLocalOnly,
+    NotAllowed,
+    NotSupported,
+    Unavailable,
+    reason_token,
+)
 
 #: The subprotocol igni speaks, locally and through the gateway.
 SUBPROTOCOL = Subprotocol("igni.v1")
@@ -72,6 +81,18 @@ class RefusalBody(BaseModel):
             return body
         return str(parsed.error_description or parsed.error or body)
 
+    @classmethod
+    def local_only(cls, body: str) -> bool:
+        """Whether `body` refuses because the person's group runs igni only on the desktop."""
+        try:
+            parsed = cls.model_validate_json(body)
+        except ValidationError:
+            return reason_token(body) == GROUP_LOCAL_ONLY
+        return GROUP_LOCAL_ONLY in (
+            reason_token(str(parsed.error or "")),
+            reason_token(str(parsed.error_description or "")),
+        )
+
 
 class BackendLock(BaseModel):
     """The lockfile a running igni writes in its project, `.igni/backend.lock`.
@@ -92,6 +113,11 @@ def _refusal(exc: InvalidStatus, where: str) -> Exception:
     detail = RefusalBody.reason_in(body)
     if status == 401:
         return AuthError(f"{where} refused the credential: {detail or 'unauthorized'}")
+    if status == 403 and RefusalBody.local_only(body):
+        return GroupIsLocalOnly(
+            f"{where} refused the connection: the person's group runs igni only on their "
+            f"own computer ({detail}); use the local igni"
+        )
     if status == 403:
         return NotAllowed(f"{where} refused the connection: {detail or 'forbidden'}")
     return Unavailable(f"{where} answered {status}: {detail}")
@@ -225,10 +251,14 @@ class Fleet:
     `url` is the gateway's public address. `auth` decides whose igni it
     is: a `Person`, an `App` or a `Space` — the gateway wakes that
     producer's VM and connects to the igni in it. A fresh token is asked
-    of `auth` every time the socket opens.
+    of `auth` every time the socket opens. A person need not know the
+    address: `await Fleet.from_server(server, auth=person)` asks igni
+    server for it.
     """
 
     reconnects = True
+    #: What igni server said of the person's cloud igni, for a `Fleet` made by `from_server`.
+    discovered: CloudIgni | None = None
 
     def __init__(
         self, url: str, *, auth: TokenSource, http: httpx.AsyncClient | None = None
@@ -244,6 +274,32 @@ class Fleet:
         self.auth = auth
         self._http = http or httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=None))
         self._owns_http = http is None
+
+    @classmethod
+    async def from_server(
+        cls,
+        server: str,
+        *,
+        auth: TokenSource,
+        http: httpx.AsyncClient | None = None,
+        allow_http: bool | None = None,
+    ) -> Fleet:
+        """The person's igni in Fleet, its gateway found from igni server at `server`.
+
+        igni server's `/v1/me/cloud` (`igni_client.cloud.discover`) names
+        the gateway and says whether the person may use it. When they may
+        not, this raises what connecting would: `GroupIsLocalOnly` for a
+        group that runs igni only on the desktop, `NotSupported` for an igni
+        server with no Fleet, `NotAllowed` for an inactive or unlicensed
+        person. The gateway must be `https`; `allow_http=True` (or
+        `IGNI_DEV_GATEWAY_INSECURE=1`) takes a plain-HTTP lab gateway.
+        `http` serves igni server's calls and the gateway's both.
+        """
+        cloud = await discover(server, auth, http=http)
+        allowed = insecure_gateway_allowed() if allow_http is None else allow_http
+        fleet = cls(checked_gateway(cloud, allow_http=allowed), auth=auth, http=http)
+        fleet.discovered = cloud
+        return fleet
 
     async def open(self) -> ClientConnection:
         token = await self.auth.token()

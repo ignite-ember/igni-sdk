@@ -3,12 +3,14 @@
 One root, `IgniClientError`, and a type per thing a caller decides
 differently about: try again later (`Unavailable`), fix the credential
 (`AuthError`; `SignInRequired` when a Fleet VM's own one was refused),
-stop (`NotAllowed`), or look at what the agent did (`RunFailed`,
+stop (`NotAllowed`; `GroupIsLocalOnly` when the person's group runs igni
+only on the desktop), or look at what the agent did (`RunFailed`,
 `RunInterrupted`, `ApprovalRequired`).
 """
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -108,6 +110,18 @@ class NotAllowed(IgniClientError):
     """
 
 
+class GroupIsLocalOnly(NotAllowed):
+    """The person's group runs igni only on the desktop: there is no cloud igni to reach.
+
+    An organisation admin sets where each group runs igni — on the desktop,
+    in the cloud, or either (the group's `mode`). In `local` mode Fleet
+    refuses the person: the gateway closes a connection with `1008
+    group_local_only`, kicks one that is open, and answers its sign-in
+    with `403`; igni server's `/v1/me/cloud` says `group_local_only`. Use
+    the igni on the person's own machine (`Local`) instead.
+    """
+
+
 class NotSupported(IgniClientError):
     """The target cannot do this: commands and identity exist only through Fleet's gateway."""
 
@@ -179,6 +193,27 @@ class UnexpectedAnswer(RpcError):
 
 class MethodFailed(RpcError):
     """The method ran and failed; `message` is igni's reason."""
+
+
+#: The stable word a gateway refusal leads with (`group_local_only: …`).
+_REASON_TOKEN = re.compile(r"[a-z][a-z0-9_]*(?![A-Za-z0-9_])")
+
+#: The gateway's reason when a person's group runs igni only on the desktop.
+GROUP_LOCAL_ONLY = "group_local_only"
+#: The gateway's reason when it closes a connection whose token expired.
+TOKEN_EXPIRED = "token_expired"  # noqa: S105 — a close reason, not a secret
+
+
+def reason_token(reason: str) -> str:
+    """The stable word a gateway's reason leads with, or `""` when it leads with none.
+
+    The gateway's `1008` reasons and its refusals' descriptions start with
+    a token — `group_local_only`, `inactive`, `licence`, `token_expired` —
+    followed by text for a person: `"group_local_only: your organisation
+    runs igni on your computer"`.
+    """
+    found = _REASON_TOKEN.match(reason.strip())
+    return found.group(0) if found else ""
 
 
 #: The kind of error each `code` igni sends names; every other code is a failure.

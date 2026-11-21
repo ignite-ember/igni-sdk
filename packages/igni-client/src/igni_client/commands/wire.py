@@ -24,7 +24,15 @@ from pydantic import (
 )
 
 from igni_client.commands.models import CommandFinished, CommandOutput, CommandRecord, Wake
-from igni_client.errors import AuthError, IgniClientError, NotAllowed, Unavailable
+from igni_client.errors import (
+    GROUP_LOCAL_ONLY,
+    AuthError,
+    GroupIsLocalOnly,
+    IgniClientError,
+    NotAllowed,
+    Unavailable,
+    reason_token,
+)
 
 PRODUCER_KINDS = ("person", "app", "space")
 MAX_COMMAND_BYTES = 16 * 1024
@@ -178,6 +186,8 @@ class GatewayRefusal(BaseModel):
 
     status_code: int
     detail: str
+    #: The gateway's error code (`refused`, `busy`, `not_a_person`, ...), when it sent one.
+    code: str = ""
 
     @classmethod
     def of(cls, response: httpx.Response) -> GatewayRefusal:
@@ -191,11 +201,25 @@ class GatewayRefusal(BaseModel):
         if not isinstance(value, dict):
             return cls(status_code=response.status_code, detail=text)
         body = GatewayErrorBody.model_validate(value)
-        return cls(status_code=response.status_code, detail=body.reason() or text)
+        code = body.error if isinstance(body.error, str) else ""
+        return cls(status_code=response.status_code, detail=body.reason() or text, code=code)
+
+    @property
+    def local_only(self) -> bool:
+        """Whether the gateway refused because the person's group runs igni only on the desktop."""
+        return self.status_code == 403 and GROUP_LOCAL_ONLY in (
+            reason_token(self.code),
+            reason_token(self.detail),
+        )
 
     def error(self) -> IgniClientError:
         if self.status_code == 401:
             return AuthError(f"the gateway refused the credential: {self.detail}")
+        if self.local_only:
+            return GroupIsLocalOnly(
+                "the gateway refused: the person's group runs igni only on their own "
+                f"computer ({self.detail}); use the local igni"
+            )
         if self.status_code in (400, 403, 404, 422):
             return NotAllowed(f"the gateway refused: {self.detail}")
         return Unavailable(f"the gateway answered {self.status_code}: {self.detail}")
