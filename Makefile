@@ -7,7 +7,8 @@ help: ## Show this help
 # igni's SDKs, one repository, released in lockstep (docs/PUBLISHING_THE_SDKS.md).
 #
 #   Python   packages/igni-service, packages/igni-extension, packages/igni-client
-#   npm      packages/extension-bridge, packages/ui-react, clients/ui
+#   npm      packages/extension-bridge, packages/ui-react, clients/ui,
+#            packages/igni-client (the TypeScript client)
 #
 # Each Python SDK is a package of its own with its own environment, which uv
 # makes from its pyproject. The repository root has one more, for the host
@@ -91,17 +92,18 @@ clean: ## Remove build artifacts and caches
 
 # ── Publishing the SDKs ─────────────────────────────────────────────────
 #
-# Six packages, one version — docs/PUBLISHING_THE_SDKS.md. Python, on
+# Seven packages, one version — docs/PUBLISHING_THE_SDKS.md. Python, on
 # PyPI: igni-service, igni-extension, igni-client. npm, on npmjs:
-# @ignite-ember/extension-bridge, @ignite-ember/ui-react, and the
-# stylesheet @ignite-ember/ui-css (clients/ui), which @ignite-ember/ui-react's
-# README tells an extension to install beside it. They are released
-# together by pushing the tag `sdk-v<version>`
+# @ignite-ember/extension-bridge, @ignite-ember/ui-react, the stylesheet
+# @ignite-ember/ui-css (clients/ui), which @ignite-ember/ui-react's README
+# tells an extension to install beside it, and @ignite-ember/igni-client
+# (packages/igni-client, the TypeScript client; the PyPI igni-client lives
+# in the same folder). They are released together by pushing the tag `sdk-v<version>`
 # (.github/workflows/sdk-release.yml), which runs `sdk-build` and then
 # publishes what it made with PyPI's and npm's trusted publishing — no
 # token is kept anywhere, so there is no publish target here.
 SDK_PY_PACKAGES := $(PY_PACKAGES)
-SDK_NPM_PACKAGES := packages/extension-bridge packages/ui-react clients/ui
+SDK_NPM_PACKAGES := packages/extension-bridge packages/ui-react clients/ui packages/igni-client
 SDK_DIST := dist/sdk
 
 # Every manifest's version, checked to be one version. The npm form is
@@ -132,10 +134,10 @@ export SDK_VERSIONS_PY
 
 .PHONY: sdk-version sdk-version-check sdk-build
 
-sdk-version-check: ## Check the six SDK packages carry one version (and VERSION=, when given)
+sdk-version-check: ## Check the seven SDK packages carry one version (and VERSION=, when given)
 	@uv run --no-project --python 3.12 python -c "$$SDK_VERSIONS_PY" "$(VERSION)" "$(SDK_PY_PACKAGES)" "$(SDK_NPM_PACKAGES)"
 
-sdk-version: ## Set the six SDK packages' version: make sdk-version VERSION=0.2.0
+sdk-version: ## Set the seven SDK packages' version: make sdk-version VERSION=0.2.0
 	@test -n "$(VERSION)" || { echo "VERSION=<x.y.z> is required"; exit 1; }
 	@for pkg in $(SDK_PY_PACKAGES); do uv version --directory $$pkg --no-sync "$(VERSION)" || exit 1; done
 	@for pkg in $(SDK_NPM_PACKAGES); do \
@@ -143,7 +145,7 @@ sdk-version: ## Set the six SDK packages' version: make sdk-version VERSION=0.2.
 	done
 	@$(MAKE) --no-print-directory sdk-version-check VERSION="$(VERSION)"
 
-sdk-build: sdk-version-check npm-build ## Build the six SDK packages into dist/sdk/ (wheels, sdists, npm tarballs)
+sdk-build: sdk-version-check npm-build ## Build the seven SDK packages into dist/sdk/ (wheels, sdists, npm tarballs)
 	rm -rf $(SDK_DIST)
 	@for pkg in $(SDK_PY_PACKAGES); do \
 		uv build --no-sources --out-dir $(SDK_DIST)/python $$pkg || exit 1; \

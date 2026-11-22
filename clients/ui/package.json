@@ -1,6 +1,6 @@
 {
   "name": "@ignite-ember/ui-css",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "The stylesheet an igni extension bundles. Classes match igni's own, values are tokens the host pushes live.",
   "keywords": [
     "igni",

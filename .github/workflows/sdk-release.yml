@@ -4,14 +4,14 @@ name: SDK release
 #
 #   PyPI    igni-service, igni-extension, igni-client
 #   npmjs   @ignite-ember/extension-bridge, @ignite-ember/ui-react,
-#           @ignite-ember/ui-css
+#           @ignite-ember/ui-css, @ignite-ember/igni-client
 #
-# One version for all six, one tag: pushing `sdk-v<version>` (say
+# One version for all seven, one tag: pushing `sdk-v<version>` (say
 # `sdk-v0.2.0`, or `sdk-v0.2.0-rc.1`) publishes that version to PyPI and
 # npmjs, then attaches every wheel, sdist and tarball to the GitHub Release
 # for the tag, where the offline bundle and air-gapped builds take them
 # from. The tag must name the version the manifests already carry —
-# `make sdk-version VERSION=…` sets all six — or the release stops
+# `make sdk-version VERSION=…` sets all seven — or the release stops
 # before building anything.
 #
 # Run by hand (Actions -> SDK release -> Run workflow), from any branch,
@@ -496,7 +496,7 @@ jobs:
             if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
             gh release create "$TAG" --repo "$REPO" --verify-tag "${flags[@]}" \
               --title "SDK $VERSION" \
-              --notes "igni SDK $VERSION: \`igni-service\`, \`igni-extension\` and \`igni-client\` on PyPI; \`@ignite-ember/extension-bridge\`, \`@ignite-ember/ui-react\` and \`@ignite-ember/ui-css\` on npmjs. The files below are the same bytes, for builds that cannot reach either registry; SHA256SUMS lists their digests, every file has GitHub build provenance (the bundle is attached for offline checks), the *.cdx.json files are CycloneDX SBOMs, and SHA256SUMS.sig, when present, is a cosign signature. See docs/VERIFYING_RELEASES.md."
+              --notes "igni SDK $VERSION: \`igni-service\`, \`igni-extension\` and \`igni-client\` on PyPI; \`@ignite-ember/extension-bridge\`, \`@ignite-ember/ui-react\`, \`@ignite-ember/ui-css\` and \`@ignite-ember/igni-client\` on npmjs. The files below are the same bytes, for builds that cannot reach either registry; SHA256SUMS lists their digests, every file has GitHub build provenance (the bundle is attached for offline checks), the *.cdx.json files are CycloneDX SBOMs, and SHA256SUMS.sig, when present, is a cosign signature. See docs/VERIFYING_RELEASES.md."
           fi
           shopt -s nullglob
           # The assets are listed rather than globbed for `gh`: it expands
