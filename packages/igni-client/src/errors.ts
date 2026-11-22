@@ -25,8 +25,15 @@ export class RunFailed extends IgniClientError {}
 /** The credential was refused: an expired or wrong token, or an app key igni does not know. */
 export class AuthError extends IgniClientError {}
 
-/** The igni on a Fleet VM lost its own credential: igni server refused it. */
-export class CredentialRefused extends AuthError {
+/**
+ * The igni on a Fleet VM lost its own credential: igni server refused it.
+ *
+ * It is a `RunFailed` (the run did fail): code that catches `RunFailed` keeps
+ * catching it, and code that wants to say how to recover catches this first.
+ * (Python also makes it an `AuthError`; TypeScript has single inheritance, and
+ * the `RunFailed` relationship is the one `ask()` callers rely on.)
+ */
+export class CredentialRefused extends RunFailed {
   readonly state: string;
   readonly detail: string;
   constructor(message: string, state: string, detail = "") {

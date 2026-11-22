@@ -30,6 +30,11 @@
       "types": "./dist/index.d.ts",
       "node": "./dist/index.js",
       "default": "./src/index.ts"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "node": "./dist/testing/index.js",
+      "default": "./src/testing/index.ts"
     }
   },
   "files": [
@@ -37,7 +42,6 @@
     "src/**/*.ts",
     "!src/**/*.test.ts",
     "!src/igni_client",
-    "!src/testing",
     "README.md",
     "LICENSE",
     "NOTICE"

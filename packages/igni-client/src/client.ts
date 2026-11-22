@@ -10,6 +10,7 @@ import type { Event } from "./events.js";
 import type { VmCredentialState } from "./models.generated.js";
 import { Router } from "./routing.js";
 import { Sessions } from "./sessions.js";
+import { signIn, type SignedIn } from "./signIn.js";
 import { Fleet, requireFleet, type Target } from "./targets.js";
 
 /** A connection to one igni — a producer's in Fleet, or one on this machine. */
@@ -65,6 +66,11 @@ export class IgniClient extends IgniApi {
   async me(): Promise<Me> {
     requireFleet(this.target, "me");
     return this.commands.me();
+  }
+
+  /** Sign the person in to the igni in their Fleet VM again: the gateway's POST /v1/sign-in. */
+  async signIn(): Promise<SignedIn> {
+    return signIn(requireFleet(this.target, "sign_in"));
   }
 
   /** Every message igni sends from now on, from every session and every client attached. */

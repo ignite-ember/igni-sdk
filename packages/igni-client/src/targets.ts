@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Standing } from "./access.js";
 import type { TokenSource } from "./auth/tokens.js";
+import { checkedGateway, discover, insecureGatewayAllowed, type CloudIgni } from "./cloud.js";
 import {
   AuthError,
   GROUP_LOCAL_ONLY,
@@ -189,6 +190,8 @@ export class Fleet implements Target {
   readonly base: string;
   readonly connectUrl: string;
   readonly auth: TokenSource;
+  /** What igni server said of the person's cloud igni, for a Fleet made by `fromServer`. */
+  discovered: CloudIgni | null = null;
   private readonly factory: SocketFactory;
   private readonly fetchImpl: typeof fetch;
 
@@ -204,6 +207,25 @@ export class Fleet implements Target {
     this.auth = opts.auth;
     this.factory = opts.socketFactory ?? nodeSocketFactory;
     this.fetchImpl = opts.fetchImpl ?? fetch;
+  }
+
+  /**
+   * The person's igni in Fleet, its gateway found from igni server at `server`.
+   *
+   * igni server's `/v1/me/cloud` names the gateway and says whether the person
+   * may use it. When they may not, this raises what connecting would:
+   * `GroupIsLocalOnly`, `NotSupported` (no Fleet) or `NotAllowed`. The gateway
+   * must be https; `allowHttp` (or `IGNI_DEV_GATEWAY_INSECURE=1`) takes a lab one.
+   */
+  static async fromServer(
+    server: string,
+    opts: FleetOptions & { allowHttp?: boolean },
+  ): Promise<Fleet> {
+    const cloud = await discover(server, opts.auth, { fetchImpl: opts.fetchImpl });
+    const allowed = opts.allowHttp ?? insecureGatewayAllowed();
+    const fleet = new Fleet(checkedGateway(cloud, { allowHttp: allowed }), opts);
+    fleet.discovered = cloud;
+    return fleet;
   }
 
   get standing(): Standing {

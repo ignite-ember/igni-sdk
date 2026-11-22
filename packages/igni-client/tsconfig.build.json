@@ -14,5 +14,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/igni_client/**", "src/testing/**"]
+  "exclude": ["src/**/*.test.ts", "src/igni_client/**"]
 }

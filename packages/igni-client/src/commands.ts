@@ -91,7 +91,7 @@ function checkCommand(command: string, timeoutS: number): void {
 }
 
 /** A non-2xx answer from the gateway, and the error it means for the caller. */
-async function gatewayError(response: Response): Promise<IgniClientError> {
+export async function gatewayError(response: Response): Promise<IgniClientError> {
   const text = (await response.text()).trim();
   let detail = text;
   let code = "";

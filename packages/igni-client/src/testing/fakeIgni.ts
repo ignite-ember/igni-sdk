@@ -44,6 +44,22 @@ export interface FakeOptions {
   appJwk?: Jwk;
   /** The issuer the fake advertises and checks a client assertion's `aud` against. */
   issuer?: string;
+  /** Pushes to emit right after answering a given rpc method, for following a Call. */
+  streamPushes?: Record<string, Array<{ channel: string; payload: Record<string, unknown> }>>;
+  /** A status to answer /v1/me with instead of 200 (for testing the refusal mapping). */
+  meStatus?: number;
+  /** The /v1/me/cloud 200 body (cloud discovery). */
+  cloud?: Record<string, unknown>;
+  /** A status to answer /v1/me/cloud with instead of 200. */
+  cloudStatus?: number;
+  /** Omit `igni_gateway` from discovery (an igni server with no Fleet). */
+  noGateway?: boolean;
+  /** The /v1/me/cloud/events-owner answer; 409 mode_forbids when `modeForbids`. */
+  modeForbids?: boolean;
+  /** The /v1/sign-in 200 body; defaults to a ready credential. */
+  signedIn?: Record<string, unknown>;
+  /** A status to answer /v1/sign-in with instead of 200. */
+  signInStatus?: number;
 }
 
 const DEFAULT_ANSWERS: Record<string, unknown> = {
@@ -151,6 +167,9 @@ export class FakeIgni {
     const canned = method in answers ? answers[method] : null;
     const result = typeof canned === "function" ? (canned as (a: Record<string, unknown>) => unknown)(args) : canned;
     ws.send(JSON.stringify({ type: "rpc_response", id: msg.id, result }));
+    for (const push of this.opts.streamPushes?.[method] ?? []) {
+      ws.send(JSON.stringify({ type: "push_notification", channel: push.channel, payload: push.payload }));
+    }
   }
 
   private runId = "";
@@ -199,18 +218,98 @@ export class FakeIgni {
   private http(req: IncomingMessage, res: ServerResponse): void {
     const path = (req.url ?? "/").split("?")[0];
     if (path === "/v1/me") {
+      if (this.opts.meStatus && this.opts.meStatus !== 200) {
+        res.writeHead(this.opts.meStatus, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ detail: "no" }));
+        return;
+      }
       return this.json(res, this.opts.me ?? { producer: "person:p1", org: "o1", group: null, expires_at: 0, vm: { state: "running", signed_in: true } });
+    }
+    if (path === "/v1/me/cloud/events-owner") {
+      if (this.opts.modeForbids) {
+        res.writeHead(409, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "mode_forbids" }));
+        return;
+      }
+      return this.json(res, this.opts.cloud ?? this.defaultCloud());
+    }
+    if (path === "/v1/me/cloud") {
+      return this.cloud(req, res);
+    }
+    if (path === "/v1/sign-in") {
+      return this.signIn(res);
     }
     if (path === "/v1/commands") {
       return this.commands(res);
     }
     if (path === "/.well-known/openid-configuration") {
-      return this.json(res, { issuer: this.opts.issuer ?? this.httpUrl, igni_gateway: this.wsUrl });
+      const body: Record<string, unknown> = { issuer: this.opts.issuer ?? this.httpUrl };
+      if (!this.opts.noGateway) {
+        body.igni_gateway = this.httpUrl;
+      }
+      return this.json(res, body);
     }
     if (path === "/v1/oauth/token") {
       return this.token(req, res);
     }
+    const spaces = /^\/v1\/apps\/[^/]+\/spaces(?:\/(.+))?$/.exec(path);
+    if (spaces) {
+      return this.spaces(req, res, spaces[1] ? decodeURIComponent(spaces[1]) : "");
+    }
     res.writeHead(404).end();
+  }
+
+  private spaces(req: IncomingMessage, res: ServerResponse, externalId: string): void {
+    if (req.method === "GET" && !externalId) {
+      return this.json(res, { spaces: [{ space_id: "sp-1", external_id: "u1" }], next: null });
+    }
+    if (externalId === "missing" && req.method === "GET") {
+      res.writeHead(404).end();
+      return;
+    }
+    if (req.method === "DELETE") {
+      res.writeHead(204).end();
+      return;
+    }
+    this.json(res, { space_id: `sp-${externalId}`, external_id: externalId, app_id: "app-1", org_id: "o1" });
+  }
+
+  private defaultCloud(): Record<string, unknown> {
+    return {
+      cloud: "available",
+      reason: null,
+      gateway_url: this.httpUrl,
+      mode: "local_and_cloud",
+      events_owner: "local",
+      group: { id: "g1", name: "Eng" },
+      producer: "person:p1",
+    };
+  }
+
+  private cloud(_req: IncomingMessage, res: ServerResponse): void {
+    if (this.opts.cloudStatus && this.opts.cloudStatus !== 200) {
+      res.writeHead(this.opts.cloudStatus, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ detail: "refused" }));
+      return;
+    }
+    this.json(res, this.opts.cloud ?? this.defaultCloud());
+  }
+
+  private signIn(res: ServerResponse): void {
+    if (this.opts.signInStatus && this.opts.signInStatus !== 200) {
+      res.writeHead(this.opts.signInStatus, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "group_local_only", detail: "local only" }));
+      return;
+    }
+    this.json(
+      res,
+      this.opts.signedIn ?? {
+        producer: "person:p1",
+        node: "n1",
+        how: "cold",
+        credential: { state: "ready" },
+      },
+    );
   }
 
   private commands(res: ServerResponse): void {

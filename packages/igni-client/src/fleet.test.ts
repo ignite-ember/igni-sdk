@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Person } from "./auth/person.js";
 import { IgniClient } from "./client.js";
-import { NotSupported } from "./errors.js";
+import { NotAllowed, NotSupported } from "./errors.js";
 import { Fleet, Local } from "./targets.js";
 import { FakeIgni } from "./testing/fakeIgni.js";
 
@@ -57,5 +57,14 @@ describe("Fleet", () => {
   it("refuses commands on a local target with NotSupported", () => {
     const igni = new IgniClient(new Local({ url: fake.wsUrl }));
     expect(() => igni.commands).toThrow(NotSupported);
+  });
+
+  it("maps a gateway refusal of me() to the right error", async () => {
+    await fake.close();
+    fake = new FakeIgni({ requireBearer: "tok", meStatus: 403 });
+    await fake.start();
+    const igni = await fleetClient().connect();
+    await expect(igni.me()).rejects.toBeInstanceOf(NotAllowed);
+    await igni.close();
   });
 });

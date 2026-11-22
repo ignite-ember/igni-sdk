@@ -23,6 +23,16 @@ export interface Unknown {
 /** Any message igni may send that this client knows, as a discriminated union on `type`. */
 export type Event = ServerEvent;
 
+/** The envelope a message about one run carries (the base of RunStarted, RunCompleted, …). */
+export interface RunEvent {
+  type: string;
+  id?: string;
+  session_id?: string;
+  event_seq?: number;
+  run_id?: string;
+  parent_run_id?: string;
+}
+
 /** Whether this client knows the wire `type` of a message. */
 export function isKnownEvent(type: string): boolean {
   return EVENT_TYPES.has(type);

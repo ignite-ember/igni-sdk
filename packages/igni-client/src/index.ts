@@ -18,6 +18,21 @@ export { Local, Fleet, requireFleet } from "./targets.js";
 export type { Target, LocalOptions, FleetOptions } from "./targets.js";
 export { Backoff } from "./backoff.js";
 
+// Finding the cloud igni, and signing in to it
+export {
+  discover,
+  setEventsOwner,
+  checkedGateway,
+  insecureGatewayAllowed,
+  CloudIgni,
+  REASONS,
+  CLOUD_PATH,
+  EVENTS_OWNER_PATH,
+  INSECURE_GATEWAY_ENV,
+} from "./cloud.js";
+export type { CloudGroup, CloudState, Mode, EventsOwner } from "./cloud.js";
+export { signIn, SignedIn, SIGN_IN_PATH } from "./signIn.js";
+
 // Who (auth / token sources)
 export { Person, ApiKey } from "./auth/person.js";
 export { App } from "./auth/app.js";
@@ -42,7 +57,7 @@ export type { CommandOutput, CommandFinished, Me, VmState } from "./commands.js"
 
 // Events, parsing and the wire
 export { parseEvent, isKnownEvent, isTypedPush } from "./events.js";
-export type { Event, Unknown, ServerEvent } from "./events.js";
+export type { Event, Unknown, ServerEvent, RunEvent } from "./events.js";
 export type { WireMessage, Frame } from "./wire.js";
 export type { MethodSpec, Correlation } from "./methodSpec.js";
 export { METHODS, NOT_FOR_CLIENTS } from "./api.generated.js";

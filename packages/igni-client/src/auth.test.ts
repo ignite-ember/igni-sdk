@@ -76,4 +76,17 @@ describe("auth sources", () => {
     expect(igni.clientId).toBe("c-1");
     await igni.close();
   });
+
+  it("Spaces declare, read, list and delete an app's spaces", async () => {
+    const spaces = newApp(pem()).spaces;
+    const declared = await spaces.declare("u1");
+    expect(declared.spaceId).toBe("sp-u1");
+    expect(declared.externalId).toBe("u1");
+    expect((await spaces.get("u1"))?.spaceId).toBe("sp-u1");
+    expect(await spaces.get("missing")).toBeNull();
+    expect(await spaces.list()).toHaveLength(1);
+    await expect(spaces.delete("u1")).resolves.toBeUndefined();
+    expect(() => spaces.space("")).toThrow(/space id/);
+    await expect(spaces.declare("a/b")).rejects.toThrow(/external id/);
+  });
 });
