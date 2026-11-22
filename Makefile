@@ -56,10 +56,14 @@ host-sdks: ## Regenerate the SDKs' host objects from contracts/host-schema.json
 
 # igni-client's models and methods are generated from igni-core's RPC
 # contract, contracts/rpc-contract.json, as is the API reference in its
-# README. tests/test_the_client_api_is_generated.py fails when what is
-# checked in is stale; this regenerates it.
-client-api: ## Regenerate igni-client's models, methods and API reference from contracts/rpc-contract.json
+# README — both the Python client (tools/client_codegen.py) and the
+# TypeScript client (tools/client_ts.py), from the one contract.
+# tests/test_the_client_api_is_generated.py and
+# tests/test_the_ts_client_api_is_generated.py fail when either is stale;
+# this regenerates them.
+client-api: ## Regenerate igni-client's models, methods and API reference (Python + TypeScript) from contracts/rpc-contract.json
 	uv run python -m tools.client_codegen
+	uv run python -m tools.client_ts
 
 # The SDKs' documentation on igni's site (igni.sh/docs/sdk), a page
 # per topic: each README cut at its sections, igni-client's reference from
