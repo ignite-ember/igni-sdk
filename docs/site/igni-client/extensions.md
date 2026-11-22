@@ -47,6 +47,11 @@ listed = await igni.extensions.list()
 print(listed.extensions)
 ```
 
+```typescript
+const listed = await igni.extensions.list();
+console.log(listed.extensions);
+```
+
 ## igni.extensions.set_settings()
 
 Change an installed extension's settings.
@@ -91,4 +96,9 @@ listed = await igni.extensions.set_settings(
     values={"board": "PLAT", "notify": True},
 )
 print([extension.id for extension in listed.extensions])
+```
+
+```typescript
+const listed = await igni.extensions.set_settings("acme.tickets", { board: "PLAT", notify: true });
+console.log((listed.extensions ?? []).map((extension) => extension.id));
 ```

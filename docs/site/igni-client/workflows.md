@@ -60,6 +60,11 @@ cancelled = await session.workflows.cancel("wf_7")
 print("cancelled" if cancelled.cancelled else "already over")
 ```
 
+```typescript
+const cancelled = await session.workflows.cancel("wf_7");
+console.log(cancelled.cancelled ? "cancelled" : "already over");
+```
+
 ## session.workflows.list()
 
 List the workflows this session's project can run.
@@ -92,6 +97,12 @@ The client waits up to 30 seconds.
 ```python
 for workflow_list_item in await session.workflows.list():
     print(workflow_list_item.name, workflow_list_item.description)
+```
+
+```typescript
+for (const workflow_list_item of await session.workflows.list()) {
+  console.log(workflow_list_item.name, workflow_list_item.description);
+}
 ```
 
 ## session.workflows.run()
@@ -145,4 +156,13 @@ async with session.workflows.run("nightly", args={"branch": "main"}) as run:
         print(event.payload.type, event.payload.payload)
     started = await run.result()
     print(started.workflow_run_id)
+```
+
+```typescript
+const run = session.workflows.run("nightly", { branch: "main" });
+for await (const event of run) {
+  console.log(event.payload.type, event.payload.payload);
+}
+const started = await run.result();
+console.log(started.workflow_run_id);
 ```

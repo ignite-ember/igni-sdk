@@ -49,6 +49,12 @@ for hook_entry_view in await session.hooks.list():
     print(hook_entry_view.background, hook_entry_view.command)
 ```
 
+```typescript
+for (const hook_entry_view of await session.hooks.list()) {
+  console.log(hook_entry_view.background, hook_entry_view.command);
+}
+```
+
 ## session.hooks.reload()
 
 Read this session's hook configuration again.
@@ -80,6 +86,11 @@ info = await session.hooks.reload()
 print(info.text)
 ```
 
+```typescript
+const info = await session.hooks.reload();
+console.log(info.text);
+```
+
 ## session.fire_session_start_hook()
 
 Run this session's `SessionStart` hooks.
@@ -109,4 +120,8 @@ The client waits up to 600 seconds.
 
 ```python
 await session.fire_session_start_hook()
+```
+
+```typescript
+await session.fire_session_start_hook();
 ```

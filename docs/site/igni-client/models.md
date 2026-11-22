@@ -45,6 +45,11 @@ listed = await session.models.list()
 print(listed.default, listed.max_context_window)
 ```
 
+```typescript
+const listed = await session.models.list();
+console.log(listed.default, listed.max_context_window);
+```
+
 ## session.models.switch()
 
 Make another model the one this session's agent runs on.
@@ -79,4 +84,9 @@ The client waits up to 30 seconds.
 ```python
 info = await session.models.switch("igni-large")
 print(info.text)
+```
+
+```typescript
+const info = await session.models.switch("igni-large");
+console.log(info.text);
 ```

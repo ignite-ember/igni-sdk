@@ -49,6 +49,12 @@ for skill_definition in await session.skills.definitions():
     print(skill_definition.name, skill_definition.description)
 ```
 
+```typescript
+for (const skill_definition of await session.skills.definitions()) {
+  console.log(skill_definition.name, skill_definition.description);
+}
+```
+
 ## session.skills.list()
 
 Describe each of this session's skills in full.
@@ -81,6 +87,12 @@ for skill_info in await session.skills.list():
     print(skill_info.name, skill_info.agent)
 ```
 
+```typescript
+for (const skill_info of await session.skills.list()) {
+  console.log(skill_info.name, skill_info.agent);
+}
+```
+
 ## session.skills.names()
 
 List the names of the skills this session has loaded.
@@ -110,6 +122,10 @@ The client waits up to 10 seconds.
 print(await session.skills.names())
 ```
 
+```typescript
+console.log(await session.skills.names());
+```
+
 ## session.command()
 
 Run a slash command in this session, as typed in igni's composer: `/help`, `/compact`, `/model`.
@@ -137,6 +153,11 @@ async def command(self, text: str = '') -> CommandResult
 ```python
 result = await session.command("/help")
 print(result.kind, result.content)
+```
+
+```typescript
+const result = await session.command("/help");
+console.log(result.kind, result.content);
 ```
 
 ## session.slash_commands()
@@ -171,6 +192,10 @@ The client waits up to 10 seconds.
 print(await session.slash_commands())
 ```
 
+```typescript
+console.log(await session.slash_commands());
+```
+
 ## session.output_styles()
 
 List the output styles this session can answer in, and the active one.
@@ -200,4 +225,9 @@ The client waits up to 10 seconds.
 ```python
 output_styles = await session.output_styles()
 print(output_styles.active, output_styles.styles)
+```
+
+```typescript
+const output_styles = await session.output_styles();
+console.log(output_styles.active, output_styles.styles);
 ```

@@ -43,6 +43,10 @@ igni answers nothing; the sign-in's `login_result` push says it ended.
 await igni.auth.cancel_login()
 ```
 
+```typescript
+await igni.auth.cancel_login();
+```
+
 ## igni.auth.discover_server()
 
 Find the igni server an email address's organisation runs.
@@ -80,6 +84,15 @@ if found.api_url:
     await igni.auth.set_server(found.api_url, portal_url=found.portal_url)
 else:
     print("no server found:", found.reason)
+```
+
+```typescript
+const found = await igni.auth.discover_server("ada@acme.test");
+if (found.api_url) {
+  await igni.auth.set_server(found.api_url, found.portal_url);
+} else {
+  console.log("no server found:", found.reason);
+}
 ```
 
 ## igni.auth.login()
@@ -131,6 +144,17 @@ async with igni.auth.login() as sign_in:
             print("signed in" if event.payload.success else event.payload.result)
 ```
 
+```typescript
+const signIn = igni.auth.login();
+for await (const event of signIn) {
+  if (event.channel === "login_status") {
+    console.log(event.payload.text);
+  } else if (event.channel === "login_result") {
+    console.log(event.payload.success ? "signed in" : event.payload.result);
+  }
+}
+```
+
 ## igni.auth.set_server()
 
 Choose the igni server to sign in to, and remember it for the next launch.
@@ -171,6 +195,13 @@ if choice.error:
     print(choice.error)
 ```
 
+```typescript
+const choice = await igni.auth.set_server("https://igni.acme.internal");
+if (choice.error) {
+  console.log(choice.error);
+}
+```
+
 ## session.auth.plan()
 
 Read who is signed in to igni server, and their organisation's plan.
@@ -206,6 +237,13 @@ if plan is not None:
     print(plan.email, plan.full_name)
 ```
 
+```typescript
+const plan = await session.auth.plan();
+if (plan !== null) {
+  console.log(plan.email, plan.full_name);
+}
+```
+
 ## session.auth.reload_credentials()
 
 Read the saved sign-in again, so this session acts as whoever is signed in now.
@@ -237,6 +275,11 @@ The client waits up to 30 seconds.
 ```python
 status = await session.auth.reload_credentials()
 print(status.cloud_connected, status.cloud_email)
+```
+
+```typescript
+const status = await session.auth.reload_credentials();
+console.log(status.cloud_connected, status.cloud_email);
 ```
 
 ## session.auth.sign_out()
@@ -279,4 +322,12 @@ async with session.auth.sign_out() as signing_out:
     async for event in signing_out:
         print(event.payload.cause)  # "signed_out"
     print((await signing_out.result()).cloud_connected)
+```
+
+```typescript
+const signingOut = session.auth.sign_out();
+for await (const event of signingOut) {
+  console.log(event.payload.cause);  // "signed_out"
+}
+console.log((await signingOut.result()).cloud_connected);
 ```

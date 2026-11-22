@@ -48,6 +48,11 @@ cancelled = await session.loop.cancel()
 print("cancelled" if cancelled else "no loop waiting")
 ```
 
+```typescript
+const cancelled = await session.loop.cancel();
+console.log(cancelled ? "cancelled" : "no loop waiting");
+```
+
 ## session.loop.next_iteration()
 
 Take the next step of this session's `/loop`, for the client to send.
@@ -84,6 +89,13 @@ if advance is not None:
     print(advance.iteration, advance.prompt)
 ```
 
+```typescript
+const advance = await session.loop.next_iteration();
+if (advance !== null) {
+  console.log(advance.iteration, advance.prompt);
+}
+```
+
 ## session.loop.pause()
 
 Pause this session's `/loop` after the current iteration.
@@ -113,6 +125,11 @@ The client waits up to 10 seconds.
 ```python
 paused = await session.loop.pause()
 print("paused" if paused else "no loop to pause")
+```
+
+```typescript
+const paused = await session.loop.pause();
+console.log(paused ? "paused" : "no loop to pause");
 ```
 
 ## session.loop.resume()
@@ -147,6 +164,11 @@ answer = await session.loop.resume()
 print(answer)
 ```
 
+```typescript
+const answer = await session.loop.resume();
+console.log(answer);
+```
+
 ## session.loop.status()
 
 Read the state of this session's `/loop`.
@@ -178,4 +200,9 @@ The client waits up to 10 seconds.
 ```python
 status = await session.loop.status()
 print(status.active, status.announced_total)
+```
+
+```typescript
+const status = await session.loop.status();
+console.log(status.active, status.announced_total);
 ```

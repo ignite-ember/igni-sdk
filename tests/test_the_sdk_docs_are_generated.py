@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from tools.client_contract import RpcContract
+from tools.client_example_check import have_tsc, type_check_ts
 from tools.client_examples import EXAMPLES
 from tools.client_names import METHODS, NOT_FOR_CLIENTS, REFERENCE_PAGES
 from tools.markdown_pages import ReadmePages, github_anchor, site_id
@@ -215,6 +216,56 @@ def test_every_client_example_type_checks(tmp_path: Path) -> None:
         check=False,
     )
     assert done.returncode == 0, done.stdout + done.stderr
+
+
+#: Every igni-client ``**Example**``, as ``(method, Python, TypeScript)``.
+_CLIENT_EXAMPLE = re.compile(
+    r"^## (\S+)\(\).*?\*\*Example\*\*\n\n```python\n(.*?)\n```\n\n```typescript\n(.*?)\n```",
+    re.S | re.M,
+)
+
+
+def _client_examples() -> list[tuple[str, str, str]]:
+    out = []
+    for page in PAGES:
+        if page.package == "igni-client":
+            out += _CLIENT_EXAMPLE.findall(page.body)
+    return out
+
+
+def test_every_client_example_is_shown_in_python_and_typescript() -> None:
+    """Every igni-client example's Python block is followed by its TypeScript twin.
+
+    The site pairs the two adjacent fenced blocks into one language toggle, so a
+    Python example with no TypeScript beside it would render with no way to
+    switch. ``tools/client_example_check.py`` refuses to generate such a lone
+    block; this is the check on the pages themselves.
+    """
+    paired = {method for method, _, _ in _client_examples()}
+    lone = []
+    for page in PAGES:
+        if page.package != "igni-client":
+            continue
+        for match in re.finditer(r"^## (\S+)\(\).*?\*\*Example\*\*", page.body, re.S | re.M):
+            if match.group(1) not in paired:
+                lone.append(match.group(1))
+    assert not lone, f"these have a Python example but no TypeScript one: {sorted(set(lone))}"
+    assert len(paired) >= len(METHODS)
+
+
+@pytest.mark.skipif(not have_tsc(ROOT), reason="needs npx and igni-client's TypeScript")
+def test_every_client_ts_example_type_checks() -> None:
+    """Each TypeScript example, as the reader would paste it, compiles against the real client.
+
+    The twin of ``test_every_client_example_type_checks``: that one runs the
+    Python examples through igni-client's ``mypy --strict``, this one runs the
+    TypeScript ones through ``tsc`` against ``@ignite-ember/igni-client``'s own
+    source. An example that does not compile fails here.
+    """
+    examples = [(method, ts) for method, _py, ts in _client_examples()]
+    assert len(examples) >= len(METHODS)
+    ok, output = type_check_ts(ROOT, examples)
+    assert ok, output
 
 
 def test_a_long_signature_is_one_parameter_a_line_as_black_writes_it() -> None:

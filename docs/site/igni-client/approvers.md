@@ -51,6 +51,12 @@ minted = await igni.approvers.mint_token()
 print(minted.token)
 ```
 
+```typescript
+const minted = await igni.approvers.mint_token();
+// Hand it to the program that answers approvals: new Local({ approverToken: minted.token })
+console.log(minted.token);
+```
+
 ## igni.approvers.revoke_tokens()
 
 Forget every approver token, so no program answers approval requests any more.
@@ -82,4 +88,9 @@ The client waits up to 10 seconds.
 ```python
 revoked = await igni.approvers.revoke_tokens()
 print(f"{revoked.revoked} approver token(s) no longer work")
+```
+
+```typescript
+const revoked = await igni.approvers.revoke_tokens();
+console.log(`${revoked.revoked} approver token(s) no longer work`);
 ```

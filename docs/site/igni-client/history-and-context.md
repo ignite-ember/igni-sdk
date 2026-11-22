@@ -53,6 +53,10 @@ The client waits up to 30 seconds.
 print(await session.history.get())
 ```
 
+```typescript
+console.log(await session.history.get());
+```
+
 ## session.history.search()
 
 Find text in a session's conversation.
@@ -90,6 +94,12 @@ The client waits up to 30 seconds.
 ```python
 for hit in await session.history.search("migration", limit=10):
     print(hit.run_id, hit.snippet)
+```
+
+```typescript
+for (const hit of await session.history.search("migration", 10)) {
+  console.log(hit.run_id, hit.snippet);
+}
 ```
 
 ## session.history.truncate()
@@ -130,6 +140,11 @@ cut = await session.history.truncate("run_42")
 print(f"removed {cut.removed} run(s)")
 ```
 
+```typescript
+const cut = await session.history.truncate("run_42");
+console.log(`removed ${cut.removed} run(s)`);
+```
+
 ## session.context.breakdown()
 
 Split this session's context into what compaction can shrink and what it cannot.
@@ -161,6 +176,11 @@ The client waits up to 30 seconds.
 ```python
 breakdown = await session.context.breakdown()
 print(breakdown.floor, breakdown.runs)
+```
+
+```typescript
+const breakdown = await session.context.breakdown();
+console.log(breakdown.floor, breakdown.runs);
 ```
 
 ## session.context.compact()
@@ -203,6 +223,14 @@ if cleared.compacted:
     print("compacted into", cleared.new_session_id)
 ```
 
+```typescript
+const status = await session.status();
+const cleared = await session.context.compact(status.context_tokens ?? 0, status.max_context ?? 0);
+if (cleared.compacted) {
+  console.log("compacted into", cleared.new_session_id);
+}
+```
+
 ## session.context.tokens()
 
 Estimate how many tokens this session's conversation takes up.
@@ -232,4 +260,8 @@ The client waits up to 30 seconds.
 
 ```python
 print(await session.context.tokens())
+```
+
+```typescript
+console.log(await session.context.tokens());
 ```

@@ -98,6 +98,15 @@ async with igni.sessions.attach(session_id="0b7c…", project_dir="/work/api") a
     print(bound.session_id, bound.project_dir)
 ```
 
+```typescript
+const attached = igni.sessions.attach("/work/api", "0b7c…");
+for await (const event of attached) {
+  console.log(event.type);  // the approvals the session is still waiting on
+}
+const bound = await attached.result();
+console.log(bound.session_id, bound.project_dir);
+```
+
 ## session.status()
 
 Read this session's status: model, account, context size and permission mode.
@@ -131,6 +140,11 @@ status = await session.status()
 print(status.cloud_connected, status.cloud_email)
 ```
 
+```typescript
+const status = await session.status();
+console.log(status.cloud_connected, status.cloud_email);
+```
+
 ## session.current_id()
 
 Read the id of the session this request reached.
@@ -160,6 +174,10 @@ The client waits up to 10 seconds.
 
 ```python
 print(await session.current_id())
+```
+
+```typescript
+console.log(await session.current_id());
 ```
 
 ## session.get_project_dir()
@@ -192,6 +210,10 @@ The client waits up to 10 seconds.
 print(await session.get_project_dir())
 ```
 
+```typescript
+console.log(await session.get_project_dir());
+```
+
 ## session.is_processing()
 
 Say whether this session is running a turn right now.
@@ -222,6 +244,10 @@ The client waits up to 10 seconds.
 print(await session.is_processing())
 ```
 
+```typescript
+console.log(await session.is_processing());
+```
+
 ## session.run_timeout()
 
 Read how long, in seconds, a client should wait for one run.
@@ -250,6 +276,10 @@ The client waits up to 10 seconds.
 
 ```python
 print(await session.run_timeout())
+```
+
+```typescript
+console.log(await session.run_timeout());
 ```
 
 ## session.list_sessions()
@@ -283,6 +313,11 @@ The client waits up to 30 seconds.
 ```python
 list_sessions = await session.list_sessions()
 print(list_sessions.sessions)
+```
+
+```typescript
+const list_sessions = await session.list_sessions();
+console.log(list_sessions.sessions);
 ```
 
 ## session.switch()
@@ -319,6 +354,11 @@ The client waits up to 30 seconds.
 ```python
 info = await session.switch("0b7c…")
 print(info.text)
+```
+
+```typescript
+const info = await session.switch("0b7c…");
+console.log(info.text);
 ```
 
 ## session.cancel()
@@ -370,6 +410,14 @@ async with session.cancel() as stopping:
     print((await stopping.result()).cancelled)
 ```
 
+```typescript
+const stopping = session.cancel();
+for await (const event of stopping) {
+  console.log(event.type);  // the info and the stream_end of the turn
+}
+console.log((await stopping.result()).cancelled);
+```
+
 ## session.shutdown()
 
 Wind this session down: its hooks, its agents, its MCP servers, its scheduler.
@@ -405,6 +453,10 @@ The client waits up to 30 seconds.
 await session.shutdown()
 ```
 
+```typescript
+await session.shutdown();
+```
+
 ## session.typing()
 
 Show what this client is typing to every other client of this session.
@@ -432,6 +484,11 @@ async def typing(self, text: str = '') -> None
 ```python
 await session.typing("Draft: rename the")
 await session.typing("")  # clears it
+```
+
+```typescript
+await session.typing("Draft: rename the");
+await session.typing("");  // clears it
 ```
 
 ## session.upload_attachment()
@@ -481,6 +538,15 @@ uploaded = await session.upload_attachment(filename="report.pdf", content_base64
 reply = await session.ask(f"Summarise the report at {uploaded.path}")
 ```
 
+```typescript
+import { readFile } from "node:fs/promises";
+
+const data = (await readFile("report.pdf")).toString("base64");
+const uploaded = await session.upload_attachment(data, "report.pdf");
+const reply = await session.ask(`Summarise the report at ${uploaded.path}`);
+console.log(reply.text);
+```
+
 ## session.todos()
 
 Read the agent's to-do list in this session.
@@ -512,6 +578,12 @@ The client waits up to 10 seconds.
 ```python
 for todo_item in await session.todos():
     print(todo_item.status, todo_item.active_form)
+```
+
+```typescript
+for (const todo_item of await session.todos()) {
+  console.log(todo_item.status, todo_item.activeForm);
+}
 ```
 
 ## session.display_config()
@@ -546,6 +618,11 @@ display_config = await session.display_config()
 print(display_config.color_theme, display_config.markdown)
 ```
 
+```typescript
+const display_config = await session.display_config();
+console.log(display_config.color_theme, display_config.markdown);
+```
+
 ## session.toggle_verbose()
 
 Turn showing the agent's routing decisions on or off for this session.
@@ -575,6 +652,11 @@ The client waits up to 10 seconds.
 ```python
 verbose = await session.toggle_verbose()
 print("verbose" if verbose else "quiet")
+```
+
+```typescript
+const verbose = await session.toggle_verbose();
+console.log(verbose ? "verbose" : "quiet");
 ```
 
 ## session.extract_learnings()
@@ -612,6 +694,13 @@ await session.extract_learnings(
     user_msg="Use pnpm, never npm, in this repository.",
     assistant_msg="Understood: pnpm from now on.",
 )
+```
+
+```typescript
+await session.extract_learnings(
+  "Understood: pnpm from now on.",
+  "Use pnpm, never npm, in this repository.",
+);
 ```
 
 ## session.visualization_action()
@@ -663,6 +752,13 @@ The client waits up to 10 seconds.
 async with session.visualization_action(action="select", params={"row": 3}) as dispatched:
     async for event in dispatched:
         print(event.payload.action, event.payload.params)
+```
+
+```typescript
+const dispatched = session.visualization_action("select", { row: 3 });
+for await (const event of dispatched) {
+  console.log(event.payload.action, event.payload.params);
+}
 ```
 
 ## session.visualization_verdict()
@@ -722,4 +818,15 @@ verdict = await session.visualization_verdict(
     issues=["the axis has no label"],
 )
 print(verdict.drawn, "of", verdict.total, "elements drawn")
+```
+
+```typescript
+const verdict = await session.visualization_verdict(
+  "chart_42",
+  [{ type: "BarGraph", message: "the data had no rows" }],
+  ["the axis has no label"],
+  1,
+  3,
+);
+console.log(verdict.drawn, "of", verdict.total, "elements drawn");
 ```

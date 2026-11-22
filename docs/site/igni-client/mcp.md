@@ -56,6 +56,11 @@ info = await session.mcp.connect("github")
 print(info.text)
 ```
 
+```typescript
+const info = await session.mcp.connect("github");
+console.log(info.text);
+```
+
 ## session.mcp.disconnect()
 
 Disconnect one MCP server from this session.
@@ -88,6 +93,11 @@ The client waits up to 30 seconds.
 ```python
 info = await session.mcp.disconnect("github")
 print(info.text)
+```
+
+```typescript
+const info = await session.mcp.disconnect("github");
+console.log(info.text);
 ```
 
 ## session.mcp.ensure()
@@ -123,6 +133,11 @@ The client waits up to 600 seconds.
 ```python
 ready = await session.mcp.ensure()
 print("connected:", ready.connected, "failed:", ready.failed)
+```
+
+```typescript
+const ready = await session.mcp.ensure();
+console.log("connected:", ready.connected, "failed:", ready.failed);
 ```
 
 ## session.mcp.list_approvals()
@@ -161,6 +176,12 @@ for mcp_approval in await session.mcp.list_approvals():
     print(mcp_approval.name, mcp_approval.approved)
 ```
 
+```typescript
+for (const mcp_approval of await session.mcp.list_approvals()) {
+  console.log(mcp_approval.name, mcp_approval.approved);
+}
+```
+
 ## session.mcp.server_details()
 
 Describe each of this session's MCP servers in full.
@@ -195,6 +216,12 @@ for mcp_server_snapshot in await session.mcp.server_details():
     print(mcp_server_snapshot.name, mcp_server_snapshot.connected)
 ```
 
+```typescript
+for (const mcp_server_snapshot of await session.mcp.server_details()) {
+  console.log(mcp_server_snapshot.name, mcp_server_snapshot.connected);
+}
+```
+
 ## session.mcp.servers()
 
 List this session's configured MCP servers, in configuration order.
@@ -224,6 +251,12 @@ The client waits up to 10 seconds.
 ```python
 for mcp_server_summary in await session.mcp.servers():
     print(mcp_server_summary.name, mcp_server_summary.connected)
+```
+
+```typescript
+for (const mcp_server_summary of await session.mcp.servers()) {
+  console.log(mcp_server_summary.name, mcp_server_summary.connected);
+}
 ```
 
 ## session.mcp.set_approval()
@@ -265,6 +298,14 @@ The client waits up to 30 seconds.
 for server in await session.mcp.list_approvals():
     if not server.approved:
         await session.mcp.set_approval(server_name=server.name, approved=True)
+```
+
+```typescript
+for (const server of await session.mcp.list_approvals()) {
+  if (!server.approved) {
+    await session.mcp.set_approval(true, server.name);
+  }
+}
 ```
 
 ## session.mcp.set_tool_enabled()
@@ -311,6 +352,11 @@ toggled = await session.mcp.set_tool_enabled(server="github", tool="delete_repo"
 print(toggled.tool, toggled.enabled)
 ```
 
+```typescript
+const toggled = await session.mcp.set_tool_enabled(false, "github", "delete_repo");
+console.log(toggled.tool, toggled.enabled);
+```
+
 ## session.mcp.status()
 
 List this session's MCP servers and whether each is connected.
@@ -340,4 +386,10 @@ The client waits up to 10 seconds.
 ```python
 for mcp_server_status in await session.mcp.status():
     print(mcp_server_status.name, mcp_server_status.connected)
+```
+
+```typescript
+for (const mcp_server_status of await session.mcp.status()) {
+  console.log(mcp_server_status.name, mcp_server_status.connected);
+}
 ```

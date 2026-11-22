@@ -50,6 +50,11 @@ discarded = await session.agents.discard("reviewer")
 print(discarded.ok, discarded.reason)
 ```
 
+```typescript
+const discarded = await session.agents.discard("reviewer");
+console.log(discarded.ok, discarded.reason);
+```
+
 ## session.agents.list()
 
 List the agents this session can hand work to.
@@ -80,6 +85,12 @@ The client waits up to 10 seconds.
 ```python
 for agent_info in await session.agents.list():
     print(agent_info.name, agent_info.can_orchestrate)
+```
+
+```typescript
+for (const agent_info of await session.agents.list()) {
+  console.log(agent_info.name, agent_info.can_orchestrate);
+}
 ```
 
 ## session.agents.promote()
@@ -124,6 +135,11 @@ promoted = await session.agents.promote("reviewer")
 print(promoted.ok, promoted.dest or promoted.reason)
 ```
 
+```typescript
+const promoted = await session.agents.promote("reviewer");
+console.log(promoted.ok, promoted.dest || promoted.reason);
+```
+
 ## igni.agents.cancel_run()
 
 Stop one sub-agent's run, leaving the rest of the turn going.
@@ -158,4 +174,11 @@ The client waits up to 10 seconds.
 answer = await igni.agents.cancel_run("run_42")
 if not answer.ok:
     print("not cancelled:", answer.error)
+```
+
+```typescript
+const answer = await igni.agents.cancel_run("run_42");
+if (!answer.ok) {
+  console.log("not cancelled:", answer.error);
+}
 ```

@@ -48,6 +48,13 @@ if check_for_update is not None:
     print(check_for_update.available, check_for_update.current_version)
 ```
 
+```typescript
+const check_for_update = await igni.check_for_update();
+if (check_for_update !== null) {
+  console.log(check_for_update.available, check_for_update.current_version);
+}
+```
+
 ## igni.group_policy()
 
 Read which organisation group's policy igni follows.
@@ -78,4 +85,9 @@ The client waits up to 30 seconds.
 ```python
 group_policy = await igni.group_policy()
 print(group_policy.default_model, group_policy.entry_count)
+```
+
+```typescript
+const group_policy = await igni.group_policy();
+console.log(group_policy.default_model, group_policy.entry_count);
 ```

@@ -68,6 +68,18 @@ async with session.run_shell("git status --short") as run:
     print(result.output)
 ```
 
+```typescript
+const run = session.run_shell("git status --short");
+for await (const event of run) {
+  if (event.channel === "process_line") {
+    console.log(event.payload.line);  // a command that outlives the wait
+  }
+}
+const result = await run.result();
+console.log(result.exit_code);
+console.log(result.output);
+```
+
 ## igni.processes.list()
 
 List the background processes igni is tracking, in every session.
@@ -98,6 +110,12 @@ The client waits up to 10 seconds.
 ```python
 for process_row in await igni.processes.list():
     print(process_row.pid, process_row.cmd)
+```
+
+```typescript
+for (const process_row of await igni.processes.list()) {
+  console.log(process_row.pid, process_row.cmd);
+}
 ```
 
 ## igni.processes.stop()
@@ -149,6 +167,19 @@ async with igni.processes.stop(4242) as stopping:
     print(answer.killed, answer.message)
 ```
 
+```typescript
+const stopping = igni.processes.stop(4242);
+for await (const event of stopping) {
+  if (event.channel === "process_line") {
+    console.log(event.payload.line);
+  } else if (event.channel === "background_process_done") {
+    console.log("exited with", event.payload.exit_code);
+  }
+}
+const answer = await stopping.result();
+console.log(answer.killed, answer.message);
+```
+
 ## igni.processes.tail()
 
 Read the last lines a background process printed.
@@ -185,4 +216,12 @@ tail = await igni.processes.tail(4242, tail=50)
 print(tail.output)
 if not tail.is_running:
     print("exit code", tail.exit_code)
+```
+
+```typescript
+const tail = await igni.processes.tail(4242, 50);
+console.log(tail.output);
+if (!tail.is_running) {
+  console.log("exit code", tail.exit_code);
+}
 ```
