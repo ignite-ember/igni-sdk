@@ -1,0 +1,61 @@
+{
+  "name": "@ignite-ember/igni-client",
+  "version": "0.1.0",
+  "description": "Drive an igni and reach Fleet from a Node/TypeScript backend: connect, sessions, ask()/send() streaming with approvals, typed methods and models generated from igni-core's contract. The Node twin of the Python igni-client.",
+  "keywords": [
+    "igni",
+    "client",
+    "sdk",
+    "fleet",
+    "websocket",
+    "agent"
+  ],
+  "license": "Apache-2.0",
+  "author": "Ignite Ember (https://igni.sh/)",
+  "homepage": "https://igni.sh/docs/sdk/igni-client",
+  "documentation": "https://igni.sh/docs/sdk/igni-client",
+  "bugs": {
+    "url": "https://github.com/ignite-ember/igni-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ignite-ember/igni-sdk.git",
+    "directory": "packages/igni-client"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "node": "./dist/index.js",
+      "default": "./src/index.ts"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "node": "./dist/testing/index.js",
+      "default": "./src/testing/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/igni_client",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
