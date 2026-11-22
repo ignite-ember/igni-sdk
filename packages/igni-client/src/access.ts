@@ -12,7 +12,7 @@ export type Access = "client" | "approver" | "window";
 export type Standing = "program" | "approver" | "window" | "unknown";
 
 /** What each standing reaches. `null` (unknown) is left for igni to check. */
-const REACHES: Record<Standing, ReadonlySet<Access> | null> = {
+export const REACHES: Record<Standing, ReadonlySet<Access> | null> = {
   program: new Set<Access>(["client"]),
   approver: new Set<Access>(["client", "approver"]),
   window: new Set<Access>(["client", "approver", "window"]),

@@ -5,7 +5,8 @@
 // — so everything above the target is the same code.
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import type { Standing } from "./access.js";
 import type { TokenSource } from "./auth/tokens.js";
 import { checkedGateway, discover, insecureGatewayAllowed, type CloudIgni } from "./cloud.js";
@@ -24,6 +25,17 @@ import type { Socket, SocketFactory } from "./socket.js";
 const SUBPROTOCOL = "igni.v1";
 const TOKEN_PROTOCOL_PREFIX = "igni-token.";
 const APPROVER_TOKEN_ENV = "IGNI_APPROVER_TOKEN";
+
+/** Expand a leading `~` to the home directory, as Python's `expanduser` does. */
+function expandHome(path: string): string {
+  if (path === "~") {
+    return homedir();
+  }
+  if (path.startsWith("~/")) {
+    return join(homedir(), path.slice(2));
+  }
+  return path;
+}
 
 /** How to reach one igni. */
 export interface Target {
@@ -93,10 +105,10 @@ export class Local implements Target {
   private standingValue: Standing = "unknown";
 
   constructor(opts: LocalOptions = {}) {
-    this.projectDir = resolve(opts.projectDir ?? ".");
+    this.projectDir = resolve(expandHome(opts.projectDir ?? "."));
     this.url = opts.url;
     this.token = opts.token;
-    this.approverToken = opts.approverToken ?? process.env[APPROVER_TOKEN_ENV] ?? undefined;
+    this.approverToken = opts.approverToken || process.env[APPROVER_TOKEN_ENV] || undefined;
     this.factory = opts.socketFactory ?? nodeSocketFactory;
   }
 
@@ -125,9 +137,9 @@ export class Local implements Target {
       return { url: this.url, token: this.approverToken ?? this.token };
     }
     const lock = resolve(this.projectDir, ".igni", "backend.lock");
-    let payload: { port: number; ws_token?: string | null };
+    let raw: string;
     try {
-      payload = JSON.parse(readFileSync(lock, "utf-8")) as { port: number; ws_token?: string | null };
+      raw = readFileSync(lock, "utf-8");
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Unavailable(
@@ -136,7 +148,19 @@ export class Local implements Target {
       }
       throw new Unavailable(`${lock} is not an igni lockfile`);
     }
-    const lockToken = payload.ws_token || undefined;
+    let payload: { port?: unknown; ws_token?: unknown };
+    try {
+      payload = JSON.parse(raw) as { port?: unknown; ws_token?: unknown };
+    } catch {
+      throw new Unavailable(`${lock} is not an igni lockfile`);
+    }
+    if (typeof payload !== "object" || payload === null || typeof payload.port !== "number") {
+      throw new Unavailable(`${lock} is not an igni lockfile`);
+    }
+    if (payload.ws_token !== undefined && payload.ws_token !== null && typeof payload.ws_token !== "string") {
+      throw new Unavailable(`${lock} is not an igni lockfile`);
+    }
+    const lockToken = (payload.ws_token as string) || undefined;
     this.stand(lockToken ?? this.token, lockToken === undefined);
     return {
       url: `ws://127.0.0.1:${payload.port}`,

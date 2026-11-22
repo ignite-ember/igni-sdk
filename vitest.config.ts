@@ -39,16 +39,16 @@ export default defineConfig({
       include: ["packages/*/src/**/*.{ts,tsx}"],
       exclude: ["**/node_modules/**", "**/*.test.*", "**/*.spec.*", "**/*.generated.ts", "**/*.d.ts"],
       reporter: ["text-summary"],
-      // The floor: statements / branches / functions / lines when it was
-      // set (81.8 / 69.0 / 78.2 / 84.1, when the SDKs moved here from
-      // igni's monorepo, where the web client's floor measured them),
-      // minus one point, so the number can only go up. Raise it when
-      // coverage rises; never lower it to let a change through.
+      // The floor: statements / branches / functions / lines, about a point
+      // below where coverage stands (91.5 / 85.2 / 94.1 / 91.5 once the
+      // igni-client client and its end-to-end suite landed), so the number
+      // can only go up. Raise it when coverage rises; never lower it to let
+      // a change through.
       thresholds: {
-        statements: 80.8,
-        branches: 68,
-        functions: 77.2,
-        lines: 83.1,
+        statements: 90,
+        branches: 84,
+        functions: 92,
+        lines: 90,
       },
     },
   },

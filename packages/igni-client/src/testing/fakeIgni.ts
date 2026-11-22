@@ -10,6 +10,7 @@ import { createHash, createVerify } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
+import { METHODS } from "../api.generated.js";
 
 interface Jwk {
   n: string;
@@ -29,15 +30,20 @@ export interface RunScript {
   error?: string;
 }
 
+type Ev = Record<string, unknown>;
+type Answer = unknown | ((args: Record<string, unknown>) => unknown | Promise<unknown>);
+
 export interface FakeOptions {
   /** A local socket needs this token offered as `igni-token.<t>`; omit for a dev backend. */
   requireToken?: string;
   /** Fleet's /v1/connect requires this bearer; omit to accept any. */
   requireBearer?: string;
   /** rpc_request answers, by method name. A value is `result`; a function gets the args. */
-  answers?: Record<string, unknown | ((args: Record<string, unknown>) => unknown)>;
+  answers?: Record<string, Answer>;
   /** The run the fake plays for a user_message. */
   run?: RunScript;
+  /** A full event list to stream for a user_message (fills session_id/id/run_id). */
+  runScript?: (text: string) => Ev[];
   /** The gateway's /v1/me body. */
   me?: Record<string, unknown>;
   /** The app public JWK the fake verifies a client assertion against. */
@@ -60,11 +66,22 @@ export interface FakeOptions {
   signedIn?: Record<string, unknown>;
   /** A status to answer /v1/sign-in with instead of 200. */
   signInStatus?: number;
+  /** Refuse every ws handshake with this status (and `handshakeBody`). */
+  handshakeStatus?: number;
+  /** The body of a refused handshake. */
+  handshakeBody?: string;
+  /** The NDJSON lines /v1/commands streams; defaults to a short successful run. */
+  commandLines?: Ev[];
+  /** A status to answer /v1/commands with instead of 200. */
+  commandStatus?: number;
+  /** Refuse an approval answer with an error on its own stream (igni said no). */
+  refuseApproval?: boolean;
+  /** When set, a `command` message is answered with this error instead of a result. */
+  commandError?: string;
 }
 
-const DEFAULT_ANSWERS: Record<string, unknown> = {
-  attach_session: { session_id: "s-1", project_dir: "/work" },
-  get_session_id: "s-1",
+const DEFAULT_ANSWERS: Record<string, Answer> = {
+  get_session_id: "s-default",
   list_sessions: { sessions: [{ session_id: "s-1", title: "one" }] },
   check_for_update: null,
 };
@@ -73,19 +90,46 @@ const DEFAULT_ANSWERS: Record<string, unknown> = {
 export class FakeIgni {
   readonly server: Server;
   readonly wss: WebSocketServer;
+  /** rpc_request answers, by method name — mutable, read live per request. */
+  readonly answers: Record<string, Answer>;
   /** Every attach_session the fake answered, by its args. */
   readonly attachCalls: Array<Record<string, unknown>> = [];
+  /** Every rpc_request, in order. */
+  readonly calls: Array<{ method: string; args: Record<string, unknown>; id: string }> = [];
+  /** Every message the client sent, raw. */
+  readonly frames: Ev[] = [];
+  /** Every approval batch the client sent (its decisions). */
+  readonly decisions: Ev[][] = [];
   /** Every token request's form, for asserting the grant. */
   readonly tokenForms: Array<Record<string, string>> = [];
   readonly sockets = new Set<WebSocket>();
   private port = 0;
+  private pending: { events: Ev[]; next: number; id: string; session: string } | null = null;
+  private projects = new Map<string, string>();
+  private seq = 0;
 
   constructor(private readonly opts: FakeOptions = {}) {
+    this.answers = { ...DEFAULT_ANSWERS, ...(opts.answers ?? {}) };
+    if (!(opts.answers && "attach_session" in opts.answers)) {
+      this.answers.attach_session = (args: Record<string, unknown>) => {
+        const id = String(args.session_id || `s-${(this.seq += 1)}`);
+        const project = String(args.project_dir || this.projects.get(id) || "");
+        this.projects.set(id, project);
+        return { session_id: id, project_dir: project };
+      };
+    }
     this.server = createServer((req, res) => this.http(req, res));
     this.wss = new WebSocketServer({ noServer: true });
     this.server.on("upgrade", (req, socket, head) => {
-      const url = req.url ?? "/";
-      const path = url.split("?")[0];
+      const path = (req.url ?? "/").split("?")[0];
+      if (opts.handshakeStatus) {
+        const body = opts.handshakeBody ?? "";
+        socket.write(
+          `HTTP/1.1 ${opts.handshakeStatus} Refused\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`,
+        );
+        socket.destroy();
+        return;
+      }
       if (path === "/v1/connect" && opts.requireBearer) {
         if (req.headers.authorization !== `Bearer ${opts.requireBearer}`) {
           socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -123,11 +167,16 @@ export class FakeIgni {
     this.opts.appJwk = jwk;
   }
 
+  /** Broadcast a raw message to every open socket (as igni does). */
+  broadcast(ev: Ev): void {
+    for (const ws of this.sockets) {
+      ws.send(JSON.stringify(ev));
+    }
+  }
+
   /** Send a second `welcome` on every open socket: igni moved behind the gateway. */
   move(clientId = "c-moved"): void {
-    for (const ws of this.sockets) {
-      ws.send(JSON.stringify({ type: "welcome", client_id: clientId }));
-    }
+    this.broadcast({ type: "welcome", client_id: clientId });
   }
 
   async close(): Promise<void> {
@@ -142,75 +191,128 @@ export class FakeIgni {
     this.sockets.add(ws);
     ws.on("close", () => this.sockets.delete(ws));
     ws.send(JSON.stringify({ type: "welcome", client_id: "c-1" }));
-    ws.on("message", (data) => this.onMessage(ws, String(data)));
+    ws.on("message", (data) => void this.onMessage(ws, String(data)));
   }
 
-  private onMessage(ws: WebSocket, raw: string): void {
+  private async onMessage(ws: WebSocket, raw: string): Promise<void> {
     const msg = JSON.parse(raw) as Record<string, unknown>;
+    this.frames.push(msg);
     const type = String(msg.type ?? "");
     if (type === "rpc_request") {
-      this.answer(ws, msg);
+      await this.answer(ws, msg);
     } else if (type === "user_message") {
-      void this.playRun(ws, String(msg.id ?? ""), String(msg.session_id ?? ""));
+      this.playRun(ws, String(msg.id ?? ""), String(msg.session_id ?? ""), String(msg.text ?? ""));
     } else if (type === "hitl_response_batch") {
-      void this.resume(ws, String(msg.id ?? ""), String(msg.session_id ?? ""));
+      this.decisions.push((msg.decisions as Ev[]) ?? []);
+      if (this.opts.refuseApproval) {
+        ws.send(JSON.stringify({ type: "error", id: msg.id, session_id: msg.session_id, text: "igni refused" }));
+        return;
+      }
+      this.resume(ws, String(msg.id ?? ""), String(msg.session_id ?? ""));
+    } else if (type === "command") {
+      if (this.opts.commandError) {
+        ws.send(JSON.stringify({ type: "error", id: msg.id, text: this.opts.commandError }));
+      } else {
+        ws.send(JSON.stringify({ type: "command_result", id: msg.id, content: "ok", action: "" }));
+      }
     }
   }
 
-  private answer(ws: WebSocket, msg: Record<string, unknown>): void {
+  private async answer(ws: WebSocket, msg: Record<string, unknown>): Promise<void> {
     const method = String(msg.method ?? "");
     const args = (msg.args as Record<string, unknown>) ?? {};
+    this.calls.push({ method, args, id: String(msg.id ?? "") });
     if (method === "attach_session") {
       this.attachCalls.push(args);
     }
-    const answers = { ...DEFAULT_ANSWERS, ...(this.opts.answers ?? {}) };
-    const canned = method in answers ? answers[method] : null;
-    const result = typeof canned === "function" ? (canned as (a: Record<string, unknown>) => unknown)(args) : canned;
-    ws.send(JSON.stringify({ type: "rpc_response", id: msg.id, result }));
+    const canned = method in this.answers ? this.answers[method] : null;
+    let result: unknown = canned;
+    if (typeof canned === "function") {
+      result = await (canned as (a: Record<string, unknown>) => unknown | Promise<unknown>)(args);
+    }
+    const asMessage = METHODS[method]?.reply === "message";
+    if (isErrorAnswer(result)) {
+      if (asMessage) {
+        ws.send(JSON.stringify({ type: "error", id: msg.id, text: result.error }));
+      } else {
+        ws.send(JSON.stringify({ type: "rpc_response", id: msg.id, error: result.error, code: result.code }));
+      }
+      return;
+    }
+    if (asMessage) {
+      const body = result && typeof result === "object" ? result : {};
+      ws.send(JSON.stringify({ ...(body as object), type: `${method}_result`, id: msg.id }));
+    } else {
+      ws.send(JSON.stringify({ type: "rpc_response", id: msg.id, result }));
+    }
     for (const push of this.opts.streamPushes?.[method] ?? []) {
       ws.send(JSON.stringify({ type: "push_notification", channel: push.channel, payload: push.payload }));
     }
   }
 
-  private runId = "";
-  private runSession = "";
-
-  private async playRun(ws: WebSocket, id: string, session: string): Promise<void> {
-    this.runId = id;
-    this.runSession = session;
+  private playRun(ws: WebSocket, id: string, session: string, text: string): void {
+    if (this.opts.runScript) {
+      this.pending = { events: this.opts.runScript(text), next: 0, id, session };
+      this.stream(ws);
+      return;
+    }
     const run = this.opts.run ?? { chunks: ["hello"] };
-    const send = (ev: Record<string, unknown>) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
+    const send = (ev: Ev) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
     send({ type: "run_started", run_id: id });
     for (const chunk of run.chunks ?? []) {
       send({ type: "content_delta", run_id: id, text: chunk });
     }
     if (run.pause) {
+      this.pending = { events: [], next: 0, id, session };
       send({ type: "run_paused", run_id: id, requirements: run.pause });
-      return; // wait for hitl_response_batch
+      return;
     }
     this.endRun(ws, id, session, run);
   }
 
   private resume(ws: WebSocket, hitlId: string, session: string): void {
-    const id = this.runId;
+    if (this.opts.runScript && this.pending) {
+      this.stream(ws, hitlId);
+      return;
+    }
+    const id = this.pending?.id ?? "";
     const run = this.opts.run ?? {};
-    const send = (ev: Record<string, unknown>) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
+    const send = (ev: Ev) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
     for (const chunk of run.afterApproval ?? ["done"]) {
       send({ type: "content_delta", run_id: id, text: chunk });
     }
     this.endRun(ws, id, session, run);
-    // close the answer's own stream too
     ws.send(JSON.stringify({ type: "stream_end", id: hitlId, session_id: session }));
   }
 
+  /** Walk the scripted events, pausing at a run_paused until an answer resumes it. */
+  private stream(ws: WebSocket, hitlId = ""): void {
+    const s = this.pending!;
+    const send = (ev: Ev) => ws.send(JSON.stringify({ session_id: s.session, id: s.id, run_id: s.id, ...ev }));
+    for (let i = s.next; i < s.events.length; i++) {
+      const ev = s.events[i];
+      send(ev);
+      if (ev.type === "run_paused") {
+        s.next = i + 1;
+        return; // wait for the answer
+      }
+    }
+    send({ type: "stream_end" });
+    if (hitlId) {
+      ws.send(JSON.stringify({ type: "stream_end", id: hitlId, session_id: s.session }));
+    }
+    this.pending = null;
+  }
+
   private endRun(ws: WebSocket, id: string, session: string, run: RunScript): void {
-    const send = (ev: Record<string, unknown>) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
+    const send = (ev: Ev) => ws.send(JSON.stringify({ session_id: session, id, ...ev }));
     if (run.error) {
       send({ type: "run_error", run_id: id, error: run.error });
     } else {
       send({ type: "run_completed", run_id: id, duration: 1 });
     }
     send({ type: "stream_end" });
+    this.pending = null;
   }
 
   // ── HTTP: gateway + igni server ──
@@ -234,7 +336,7 @@ export class FakeIgni {
       return this.json(res, this.opts.cloud ?? this.defaultCloud());
     }
     if (path === "/v1/me/cloud") {
-      return this.cloud(req, res);
+      return this.cloud(res);
     }
     if (path === "/v1/sign-in") {
       return this.signIn(res);
@@ -267,6 +369,11 @@ export class FakeIgni {
       res.writeHead(404).end();
       return;
     }
+    if (externalId === "refused") {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ detail: "no" }));
+      return;
+    }
     if (req.method === "DELETE") {
       res.writeHead(204).end();
       return;
@@ -286,7 +393,7 @@ export class FakeIgni {
     };
   }
 
-  private cloud(_req: IncomingMessage, res: ServerResponse): void {
+  private cloud(res: ServerResponse): void {
     if (this.opts.cloudStatus && this.opts.cloudStatus !== 200) {
       res.writeHead(this.opts.cloudStatus, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ detail: "refused" }));
@@ -303,21 +410,26 @@ export class FakeIgni {
     }
     this.json(
       res,
-      this.opts.signedIn ?? {
-        producer: "person:p1",
-        node: "n1",
-        how: "cold",
-        credential: { state: "ready" },
-      },
+      this.opts.signedIn ?? { producer: "person:p1", node: "n1", how: "cold", credential: { state: "ready" } },
     );
   }
 
   private commands(res: ServerResponse): void {
+    if (this.opts.commandStatus && this.opts.commandStatus !== 200) {
+      res.writeHead(this.opts.commandStatus, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "group_local_only", detail: "refused" }));
+      return;
+    }
+    const lines = this.opts.commandLines ?? [
+      { command: { command_id: "cmd-1", state: "running" } },
+      { woken: { how: "cold", node: "n1" } },
+      { stream: "stdout", data_b64: Buffer.from("hi\n").toString("base64") },
+      { done: true, exit_code: 0, duration_ms: 5 },
+    ];
     res.writeHead(200, { "Content-Type": "application/x-ndjson" });
-    res.write(JSON.stringify({ command: { command_id: "cmd-1", state: "running" } }) + "\n");
-    res.write(JSON.stringify({ woken: { how: "cold", node: "n1" } }) + "\n");
-    res.write(JSON.stringify({ stream: "stdout", data_b64: Buffer.from("hi\n").toString("base64") }) + "\n");
-    res.write(JSON.stringify({ done: true, exit_code: 0, duration_ms: 5 }) + "\n");
+    for (const line of lines) {
+      res.write(JSON.stringify(line) + "\n");
+    }
     res.end();
   }
 
@@ -344,7 +456,7 @@ export class FakeIgni {
       return false;
     }
     const jwk = this.opts.appJwk!;
-    const claims = JSON.parse(Buffer.from(payload, "base64url").toString()) as { aud?: string; iss?: string; sub?: string };
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString()) as { aud?: string };
     if (claims.aud !== (this.opts.issuer ?? this.httpUrl)) {
       return false;
     }
@@ -352,7 +464,6 @@ export class FakeIgni {
     const ok = createVerify("RSA-SHA256")
       .update(`${header}.${payload}`)
       .verify({ key: key as never, format: "jwk" }, Buffer.from(signature, "base64url"));
-    // and the header's kid must be the key's thumbprint
     const head = JSON.parse(Buffer.from(header, "base64url").toString()) as { kid?: string };
     const thumbprint = createHash("sha256")
       .update(JSON.stringify({ e: jwk.e, kty: "RSA", n: jwk.n }))
@@ -364,4 +475,9 @@ export class FakeIgni {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(body));
   }
+}
+
+/** An answer shaped `{ error, code? }` makes the fake reply with an rpc error. */
+function isErrorAnswer(value: unknown): value is { error: string; code?: string } {
+  return Boolean(value) && typeof value === "object" && typeof (value as { error?: unknown }).error === "string";
 }
