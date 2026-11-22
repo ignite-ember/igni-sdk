@@ -13,10 +13,16 @@ repository, which is public under Apache-2.0:
 | `@ignite-ember/extension-bridge` | npmjs | `packages/extension-bridge` | an extension's page: `connect()`, RPC, navigation, theme |
 | `@ignite-ember/ui-react` | npmjs | `packages/ui-react` | the React components under the compatibility floor |
 | `@ignite-ember/ui-css` | npmjs | `clients/ui` | the stylesheet `@ignite-ember/ui-react` is drawn with |
+| `@ignite-ember/igni-client` | npmjs | `packages/igni-client` | the TypeScript twin of the PyPI `igni-client`: a Node/TypeScript backend driving an igni from outside — a producer's in Fleet through the gateway, or a local one — sessions, runs, approvals, commands in the VM |
 
-`@ignite-ember/ui-css` is the sixth because `@ignite-ember/ui-react`'s README
+`@ignite-ember/ui-css` is on the list because `@ignite-ember/ui-react`'s README
 tells every extension to install it beside it, and a component package whose
 stylesheet cannot be installed is not installable either.
+
+`packages/igni-client` carries two packages from the one folder: the PyPI
+`igni-client` (its `pyproject.toml`, under `src/igni_client/`) and the npm
+`@ignite-ember/igni-client` (its `package.json`, the TypeScript source under
+`src/`). Both carry the one SDK version.
 
 The npm scope is `@ignite-ember`, the organisation's name on npmjs; `@igni`
 there is not ours. The Python names are the import names' (`igni_service`,
@@ -31,9 +37,9 @@ take instead of a registry.
 
 ## Versions
 
-**One version for all six (lockstep), semver.** §8 of
+**One version for all seven (lockstep), semver.** §8 of
 [EXTENSIBILITY.md](https://github.com/ignite-ember/igni-core/blob/main/docs/EXTENSIBILITY.md) versions the floor independently of the
-product, as semver, declared as a range — and the six packages *are* the
+product, as semver, declared as a range — and the seven packages *are* the
 floor's code: the bridge's protocol is the host's, `@ignite-ember/ui-react` is drawn
 with `@ignite-ember/ui-css`, `igni-service` builds the bundles `igni-extension` runs
 in. Independent versions would ask every extension author to find a
@@ -52,8 +58,8 @@ read a changelog for it.
   npm publishes a pre-release under the dist-tag `next`, so `npm install
   @ignite-ember/ui-react` never picks one; uv and pip skip pre-releases unless asked.
 
-The versions live in the six manifests (`pyproject.toml`, `package.json`) and
-nowhere else. `make sdk-version VERSION=0.4.0` sets all six (and the Python
+The versions live in the seven manifests (`pyproject.toml`, `package.json`) and
+nowhere else. `make sdk-version VERSION=0.4.0` sets all seven (and the Python
 packages' `uv.lock`); `make sdk-version-check` lists them and fails when they
 disagree, or disagree with `VERSION=` when it is given.
 
@@ -243,7 +249,7 @@ uses a token, and the token is removed straight after.
    expiry (7 days), and *Bypass two-factor authentication* ticked so CI can
    use it. Store it as the secret **`NPM_TOKEN`** of the GitHub environment
    `npm` (below) — of the environment, not of the repository.
-4. After the first release has published the three packages, on each
+4. After the first release has published the npm packages, on each
    package's page → Settings → *Trusted Publisher* → GitHub Actions:
 
    | Field | Value |
@@ -253,15 +259,24 @@ uses a token, and the token is removed straight after.
    | Workflow filename | `sdk-release.yml` |
    | Environment name | `npm` |
 
-   for `@ignite-ember/extension-bridge`, `@ignite-ember/ui-react` and
-   `@ignite-ember/ui-css`. Then delete the `NPM_TOKEN` secret and revoke the
+   for `@ignite-ember/extension-bridge`, `@ignite-ember/ui-react`,
+   `@ignite-ember/ui-css` and `@ignite-ember/igni-client`. Then delete the `NPM_TOKEN` secret and revoke the
    token, and on each package → Settings → Publishing access choose *Require
    two-factor authentication and disallow tokens*. From then on the workflow
    publishes with its OIDC token alone, and nothing else can.
 
+   **`@ignite-ember/igni-client` is new in 0.2.2** — it did not exist for
+   earlier releases — so it has no trusted publisher yet. Like every npm
+   package here, its first publish needs a token (`NPM_TOKEN` above covers
+   the whole `@ignite-ember` scope, so no extra token is needed), after which
+   its own per-package trusted-publisher config (the table above: org
+   `ignite-ember`, repo `igni-sdk`, workflow `sdk-release.yml`, environment
+   `npm`) must be added on its npmjs package page before the next tagged
+   release, the same as the others.
+
 (The alternative to step 3 is to publish by hand, from a laptop signed in
 with `npm login`: build the tarballs with `make sdk-build` and publish each
-of the three it writes under `dist/sdk/npm/` —
+of the four it writes under `dist/sdk/npm/` —
 
 ```bash
 for t in dist/sdk/npm/*.tgz; do npm publish "$t" --access public; done
@@ -270,7 +285,7 @@ for t in dist/sdk/npm/*.tgz; do npm publish "$t" --access public; done
 — then configure step 4 before the first tagged release. The workflow skips
 a version that is already published.
 
-Publish **the version the manifests carry** (0.2.1 now). The extension
+Publish **the version the manifests carry** (0.2.2 now). The extension
 pages in the module repositories depend on `@ignite-ember/extension-bridge`,
 `@ignite-ember/ui-react` and `@ignite-ember/ui-css` at `^0.2.0`, so an
 older version does not satisfy them and the module images do not build.)
@@ -428,7 +443,8 @@ set registry <mirror>`; `package-lock.json`'s integrity hashes still hold.
 
 ## Not done
 
-- **A changelog.** The release writes a run summary and a one-paragraph
-  GitHub Release, not release notes.
+- **Automated release notes.** `CHANGELOG.md` keeps the per-version
+  highlights by hand; the release itself writes a run summary and a
+  one-paragraph GitHub Release, not generated notes.
 - **A PyPI organisation.** The projects belong to the account that first
   publishes them until they are moved into one.
