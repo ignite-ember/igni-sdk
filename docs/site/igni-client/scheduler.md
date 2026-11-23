@@ -53,6 +53,13 @@ for task in await session.scheduler.list(include_done=False):
     print(info.text)
 ```
 
+```typescript
+for (const task of await session.scheduler.list(false)) {
+  const info = await session.scheduler.cancel(task.id);
+  console.log(info.text);
+}
+```
+
 ## session.scheduler.execute()
 
 Run a scheduled task's work now, in this session, and wait for the answer.
@@ -109,6 +116,14 @@ async with session.scheduler.execute("Summarise yesterday's failed builds") as t
     print((await task.result()).result)
 ```
 
+```typescript
+const task = session.scheduler.execute("Summarise yesterday's failed builds");
+for await (const event of task) {
+  console.log(event.channel);  // what the run's tools do while it works
+}
+console.log((await task.result()).result);
+```
+
 ## session.scheduler.list()
 
 List the scheduled tasks of this session's project.
@@ -143,6 +158,12 @@ The client waits up to 30 seconds.
 ```python
 for scheduled_task in await session.scheduler.list():
     print(scheduled_task.id, scheduled_task.status)
+```
+
+```typescript
+for (const scheduled_task of await session.scheduler.list()) {
+  console.log(scheduled_task.id, scheduled_task.status);
+}
 ```
 
 ## session.scheduler.start()
@@ -190,4 +211,15 @@ async with session.scheduler.start() as scheduler:
             print("started", event.payload.description)
         elif isinstance(event, SchedulerCompletedPush):
             print("done", event.payload.task_id, event.payload.result)
+```
+
+```typescript
+const scheduler = session.scheduler.start();
+for await (const event of scheduler) {
+  if (event.channel === "scheduler_started") {
+    console.log("started", event.payload.description);
+  } else if (event.channel === "scheduler_completed") {
+    console.log("done", event.payload.task_id, event.payload.result);
+  }
+}
 ```

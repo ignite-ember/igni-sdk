@@ -57,6 +57,11 @@ contents = await session.plugins.contents("acme-review")
 print(contents.skills, contents.agents)
 ```
 
+```typescript
+const contents = await session.plugins.contents("acme-review");
+console.log(contents.skills, contents.agents);
+```
+
 ## session.plugins.install()
 
 Install a plugin from a git repository or a marketplace.
@@ -96,6 +101,11 @@ info = await session.plugins.install("@acme/acme-review")
 print(info.text)
 ```
 
+```typescript
+const info = await session.plugins.install("@acme/acme-review");
+console.log(info.text);
+```
+
 ## session.plugins.list()
 
 List the installed plugins.
@@ -127,6 +137,12 @@ The client waits up to 30 seconds.
 ```python
 for plugin_info in await session.plugins.list():
     print(plugin_info.name, plugin_info.description)
+```
+
+```typescript
+for (const plugin_info of await session.plugins.list()) {
+  console.log(plugin_info.name, plugin_info.description);
+}
 ```
 
 ## session.plugins.preview()
@@ -176,6 +192,11 @@ preview = await session.plugins.preview("https://github.com/acme/review-plugin",
 print(preview.name, preview.readme[:200])
 ```
 
+```typescript
+const preview = await session.plugins.preview("https://github.com/acme/review-plugin", "main");
+console.log(preview.name, (preview.readme ?? "").slice(0, 200));
+```
+
 ## session.plugins.remove()
 
 Uninstall a plugin.
@@ -208,6 +229,11 @@ The client waits up to 30 seconds.
 ```python
 info = await session.plugins.remove("acme-review")
 print(info.text)
+```
+
+```typescript
+const info = await session.plugins.remove("acme-review");
+console.log(info.text);
 ```
 
 ## session.plugins.set_enabled()
@@ -247,6 +273,11 @@ info = await session.plugins.set_enabled(name="acme-review", enabled=False)
 print(info.text)
 ```
 
+```typescript
+const info = await session.plugins.set_enabled(false, "acme-review");
+console.log(info.text);
+```
+
 ## session.plugins.update()
 
 Move an installed plugin to another commit.
@@ -281,6 +312,11 @@ The client waits up to 600 seconds.
 ```python
 info = await session.plugins.update("acme-review")
 print(info.text)
+```
+
+```typescript
+const info = await session.plugins.update("acme-review");
+console.log(info.text);
 ```
 
 ## igni.marketplaces.add()
@@ -318,6 +354,11 @@ info = await igni.marketplaces.add("https://github.com/acme/igni-plugins")
 print(info.text)
 ```
 
+```typescript
+const info = await igni.marketplaces.add("https://github.com/acme/igni-plugins");
+console.log(info.text);
+```
+
 ## igni.marketplaces.list()
 
 List the plugin marketplaces igni knows, with their catalogues.
@@ -347,6 +388,12 @@ The client waits up to 30 seconds.
 ```python
 for marketplace_info in await igni.marketplaces.list():
     print(marketplace_info.name, marketplace_info.last_fetched)
+```
+
+```typescript
+for (const marketplace_info of await igni.marketplaces.list()) {
+  console.log(marketplace_info.name, marketplace_info.last_fetched);
+}
 ```
 
 ## igni.marketplaces.refresh()
@@ -383,6 +430,11 @@ info = await igni.marketplaces.refresh()  # every marketplace; or refresh("acme"
 print(info.text)
 ```
 
+```typescript
+const info = await igni.marketplaces.refresh();  // every marketplace; or refresh("acme")
+console.log(info.text);
+```
+
 ## igni.marketplaces.remove()
 
 Forget a plugin marketplace.
@@ -415,4 +467,9 @@ The client waits up to 30 seconds.
 ```python
 info = await igni.marketplaces.remove("acme")
 print(info.text)
+```
+
+```typescript
+const info = await igni.marketplaces.remove("acme");
+console.log(info.text);
 ```

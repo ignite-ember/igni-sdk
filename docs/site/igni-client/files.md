@@ -54,6 +54,11 @@ completion = await session.files.complete(query="src/app", limit=10)
 print(completion.total, completion.matches)
 ```
 
+```typescript
+const completion = await session.files.complete(10, "src/app");
+console.log(completion.total, completion.matches);
+```
+
 ## session.files.pick_dir()
 
 Open the operating system's folder picker on igni's machine and return the choice.
@@ -89,6 +94,13 @@ The client waits as long as it takes.
 picked = await session.files.pick_dir()
 if not picked.cancelled:
     print(picked.path)
+```
+
+```typescript
+const picked = await session.files.pick_dir();
+if (!picked.cancelled) {
+  console.log(picked.path);
+}
 ```
 
 ## session.files.read()
@@ -128,6 +140,11 @@ read = await session.files.read("pyproject.toml")
 print(read.error or read.contents)
 ```
 
+```typescript
+const read = await session.files.read("pyproject.toml");
+console.log(read.error || read.contents);
+```
+
 ## session.files.search()
 
 Find where a snippet of code appears in this session's project.
@@ -162,6 +179,13 @@ The client waits up to 30 seconds.
 found = await session.files.search("def create_app")
 for match in found.matches:
     print(match)
+```
+
+```typescript
+const found = await session.files.search("def create_app");
+for (const match of found.matches ?? []) {
+  console.log(match);
+}
 ```
 
 ## igni.files.list_dirs()
@@ -205,4 +229,11 @@ The client waits up to 30 seconds.
 listing = await igni.files.list_dirs(path="/work", show_hidden=False)
 for folder in listing.dirs:
     print(folder)
+```
+
+```typescript
+const listing = await igni.files.list_dirs("/work", false);
+for (const folder of listing.dirs) {
+  console.log(folder);
+}
 ```

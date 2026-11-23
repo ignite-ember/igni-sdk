@@ -64,6 +64,11 @@ verdict = await session.permissions.check(
 print(verdict)  # "allow", "ask" or "deny"
 ```
 
+```typescript
+const verdict = await session.permissions.check("run", { command: "rm -rf build" }, "bash");
+console.log(verdict);  // "allow", "ask" or "deny"
+```
+
 ## session.permissions.save_rule()
 
 Save a permission rule for this session's project.
@@ -99,4 +104,8 @@ The client waits up to 30 seconds.
 
 ```python
 await session.permissions.save_rule(rule="Bash(git status:*)", level="allow")
+```
+
+```typescript
+await session.permissions.save_rule("allow", "Bash(git status:*)");
 ```

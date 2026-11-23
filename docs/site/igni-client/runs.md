@@ -53,6 +53,12 @@ for run in await session.runs.interrupted():
     await session.runs.discard_interrupted(run.message_id)
 ```
 
+```typescript
+for (const run of await session.runs.interrupted()) {
+  await session.runs.discard_interrupted(run.message_id);
+}
+```
+
 ## session.runs.discard_pending()
 
 Forget one pending message, so it is not offered again.
@@ -93,6 +99,12 @@ for message in await session.runs.pending_messages():
     await session.runs.discard_pending(message.message_id)
 ```
 
+```typescript
+for (const message of await session.runs.pending_messages()) {
+  await session.runs.discard_pending(message.message_id);
+}
+```
+
 ## session.runs.interrupted()
 
 List a session's runs that stopped before they finished.
@@ -128,6 +140,12 @@ for interrupted_run in await session.runs.interrupted():
     print(interrupted_run.content, interrupted_run.interrupted_at)
 ```
 
+```typescript
+for (const interrupted_run of await session.runs.interrupted()) {
+  console.log(interrupted_run.content, interrupted_run.interrupted_at);
+}
+```
+
 ## session.runs.pending_messages()
 
 List a session's messages whose run started but never finished.
@@ -160,4 +178,10 @@ The client waits up to 30 seconds.
 ```python
 for pending_message in await session.runs.pending_messages():
     print(pending_message.role, pending_message.content)
+```
+
+```typescript
+for (const pending_message of await session.runs.pending_messages()) {
+  console.log(pending_message.role, pending_message.content);
+}
 ```

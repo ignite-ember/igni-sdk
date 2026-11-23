@@ -82,3 +82,11 @@ async with igni.window.model(op="toast", window="main", value={"text": "Deployed
         print(event.payload.window, event.payload.field)
     print((await changed.result()).rev)
 ```
+
+```typescript
+const changed = igni.window.model("toast", "main", undefined, undefined, undefined, undefined, undefined, { text: "Deployed" });
+for await (const event of changed) {
+  console.log(event.payload.window, event.payload.field);
+}
+console.log((await changed.result()).rev);
+```

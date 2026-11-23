@@ -62,6 +62,14 @@ async with session.workspace.set_trust("trust") as trusting:
     print((await trusting.result()).state)
 ```
 
+```typescript
+const trusting = session.workspace.set_trust("trust");
+for await (const event of trusting) {
+  console.log(event.payload.state);
+}
+console.log((await trusting.result()).state);
+```
+
 ## session.workspace.trust()
 
 Read whether this session's project folder is trusted.
@@ -95,4 +103,9 @@ The client waits up to 30 seconds.
 ```python
 trust = await session.workspace.trust()
 print(trust.can_trust, trust.gated)
+```
+
+```typescript
+const trust = await session.workspace.trust();
+console.log(trust.can_trust, trust.gated);
 ```

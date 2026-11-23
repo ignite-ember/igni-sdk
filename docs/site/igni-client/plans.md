@@ -64,6 +64,17 @@ async with session.plan.approve("run_42") as approving:
     print(decided.ok, decided.mode_status)
 ```
 
+```typescript
+const approving = session.plan.approve("run_42");
+for await (const event of approving) {
+  if (event.channel === "plan_decided") {
+    console.log("plan", event.payload.decision);
+  }
+}
+const decided = await approving.result();
+console.log(decided.ok, decided.mode_status);
+```
+
 ## session.plan.dismiss()
 
 Send the submitted plan back for refining, staying in plan mode.
@@ -106,6 +117,13 @@ if not decided.ok:
     print(decided.error)
 ```
 
+```typescript
+const decided = await session.plan.dismiss("run_42");
+if (!decided.ok) {
+  console.log(decided.error);
+}
+```
+
 ## session.plan.latest()
 
 Read the plan the agent last submitted in this session, with its task list.
@@ -137,4 +155,9 @@ The client waits up to 10 seconds.
 ```python
 latest = await session.plan.latest()
 print(latest.history, latest.latest)
+```
+
+```typescript
+const latest = await session.plan.latest();
+console.log(latest.history, latest.latest);
 ```

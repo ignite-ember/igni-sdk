@@ -45,6 +45,11 @@ counts = await igni.notifications.counts()
 print(counts.by_source, counts.unread)
 ```
 
+```typescript
+const counts = await igni.notifications.counts();
+console.log(counts.by_source, counts.unread);
+```
+
 ## igni.notifications.list()
 
 List the signed-in person's notifications, newest first.
@@ -87,6 +92,15 @@ async with igni.notifications.list() as listing:
         print(event.payload.counts.unread)
     listed = await listing.result()
     print([n.title for n in listed.notifications])
+```
+
+```typescript
+const listing = igni.notifications.list();
+for await (const event of listing) {
+  console.log(event.payload.counts?.unread);
+}
+const listed = await listing.result();
+console.log((listed.notifications ?? []).map((n) => n.title));
 ```
 
 ## igni.notifications.mark_read()
@@ -138,4 +152,13 @@ async with igni.notifications.mark_read(source="acme.tickets") as marking:
         print(event.payload.counts.unread)
     read = await marking.result()
     print(read.counts.unread, "unread left")
+```
+
+```typescript
+const marking = igni.notifications.mark_read(undefined, "acme.tickets");
+for await (const event of marking) {
+  console.log(event.payload.counts?.unread);
+}
+const read = await marking.result();
+console.log(read.counts?.unread, "unread left");
 ```

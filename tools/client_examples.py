@@ -11,6 +11,20 @@ method with arguments the method takes.
 
 Each runs inside an ``async`` function with ``igni`` an open
 ``IgniClient`` and ``session`` one of its ``Session``\\ s.
+
+Every example is shown in both Python and TypeScript: the site pairs the
+``python`` block below with the matching ``TS_EXAMPLES`` ``typescript``
+block into one language toggle. The TypeScript twin drives the same igni
+through ``@ignite-ember/igni-client`` (the Node client at surface parity):
+method and field names are the same ``snake_case``, so a call translates
+directly, but its positional arguments are in the TypeScript signature's
+order (alphabetical), a streaming call is followed with ``for await`` and
+its result read from ``.result()`` rather than ``async with``, and an
+``isinstance`` check becomes narrowing on the push's ``channel``. A method
+that only reads gets a generated twin in both languages; every Python
+example here has a TypeScript counterpart (``TS_EXAMPLES`` or generated),
+and ``tools/client_example_check.py`` type-checks the TypeScript against
+the real client, as it mypy-checks the Python.
 """
 
 from __future__ import annotations
@@ -395,4 +409,399 @@ async with session.auth.sign_out() as signing_out:
 """,
 }
 
-__all__ = ["EXAMPLES"]
+#: The TypeScript twin of each example in ``EXAMPLES``, by the same wire name.
+#: Each runs inside an ``async`` function with ``igni`` an open ``IgniClient``
+#: and ``session`` one of its ``Session``\\ s, from ``@ignite-ember/igni-client``.
+TS_EXAMPLES: dict[str, str] = {
+    # ── igni as a whole ──────────────────────────────────────────────
+    "attach_session": """
+const attached = igni.sessions.attach("/work/api", "0b7c…");
+for await (const event of attached) {
+  console.log(event.type);  // the approvals the session is still waiting on
+}
+const bound = await attached.result();
+console.log(bound.session_id, bound.project_dir);
+""",
+    "cancel_agent_run": """
+const answer = await igni.agents.cancel_run("run_42");
+if (!answer.ok) {
+  console.log("not cancelled:", answer.error);
+}
+""",
+    "mint_approver_token": """
+const minted = await igni.approvers.mint_token();
+// Hand it to the program that answers approvals: new Local({ approverToken: minted.token })
+console.log(minted.token);
+""",
+    "revoke_approver_tokens": """
+const revoked = await igni.approvers.revoke_tokens();
+console.log(`${revoked.revoked} approver token(s) no longer work`);
+""",
+    "discover_server": """
+const found = await igni.auth.discover_server("ada@acme.test");
+if (found.api_url) {
+  await igni.auth.set_server(found.api_url, found.portal_url);
+} else {
+  console.log("no server found:", found.reason);
+}
+""",
+    "set_server": """
+const choice = await igni.auth.set_server("https://igni.acme.internal");
+if (choice.error) {
+  console.log(choice.error);
+}
+""",
+    "login": """
+const signIn = igni.auth.login();
+for await (const event of signIn) {
+  if (event.channel === "login_status") {
+    console.log(event.payload.text);
+  } else if (event.channel === "login_result") {
+    console.log(event.payload.success ? "signed in" : event.payload.result);
+  }
+}
+""",
+    "cancel_login": """
+await igni.auth.cancel_login();
+""",
+    "set_extension_settings": """
+const listed = await igni.extensions.set_settings("acme.tickets", { board: "PLAT", notify: true });
+console.log((listed.extensions ?? []).map((extension) => extension.id));
+""",
+    "list_dirs": """
+const listing = await igni.files.list_dirs("/work", false);
+for (const folder of listing.dirs) {
+  console.log(folder);
+}
+""",
+    "add_marketplace": """
+const info = await igni.marketplaces.add("https://github.com/acme/igni-plugins");
+console.log(info.text);
+""",
+    "refresh_marketplaces": """
+const info = await igni.marketplaces.refresh();  // every marketplace; or refresh("acme")
+console.log(info.text);
+""",
+    "remove_marketplace": """
+const info = await igni.marketplaces.remove("acme");
+console.log(info.text);
+""",
+    "notifications_list": """
+const listing = igni.notifications.list();
+for await (const event of listing) {
+  console.log(event.payload.counts?.unread);
+}
+const listed = await listing.result();
+console.log((listed.notifications ?? []).map((n) => n.title));
+""",
+    "notifications_mark_read": """
+const marking = igni.notifications.mark_read(undefined, "acme.tickets");
+for await (const event of marking) {
+  console.log(event.payload.counts?.unread);
+}
+const read = await marking.result();
+console.log(read.counts?.unread, "unread left");
+""",
+    "stop_background_process": """
+const stopping = igni.processes.stop(4242);
+for await (const event of stopping) {
+  if (event.channel === "process_line") {
+    console.log(event.payload.line);
+  } else if (event.channel === "background_process_done") {
+    console.log("exited with", event.payload.exit_code);
+  }
+}
+const answer = await stopping.result();
+console.log(answer.killed, answer.message);
+""",
+    "read_process_tail": """
+const tail = await igni.processes.tail(4242, 50);
+console.log(tail.output);
+if (!tail.is_running) {
+  console.log("exit code", tail.exit_code);
+}
+""",
+    "window_model": """
+const changed = igni.window.model("toast", "main", undefined, undefined, undefined, undefined, undefined, { text: "Deployed" });
+for await (const event of changed) {
+  console.log(event.payload.window, event.payload.field);
+}
+console.log((await changed.result()).rev);
+""",
+    # ── One session ──────────────────────────────────────────────────
+    "cancel_run": """
+const stopping = session.cancel();
+for await (const event of stopping) {
+  console.log(event.type);  // the info and the stream_end of the turn
+}
+console.log((await stopping.result()).cancelled);
+""",
+    "shutdown": """
+await session.shutdown();
+""",
+    "switch_session": """
+const info = await session.switch("0b7c…");
+console.log(info.text);
+""",
+    "fire_session_start_hook": """
+await session.fire_session_start_hook();
+""",
+    "upload_attachment": """
+import { readFile } from "node:fs/promises";
+
+const data = (await readFile("report.pdf")).toString("base64");
+const uploaded = await session.upload_attachment(data, "report.pdf");
+const reply = await session.ask(`Summarise the report at ${uploaded.path}`);
+console.log(reply.text);
+""",
+    "toggle_verbose": """
+const verbose = await session.toggle_verbose();
+console.log(verbose ? "verbose" : "quiet");
+""",
+    "extract_learnings": """
+await session.extract_learnings(
+  "Understood: pnpm from now on.",
+  "Use pnpm, never npm, in this repository.",
+);
+""",
+    "run_shell": """
+const run = session.run_shell("git status --short");
+for await (const event of run) {
+  if (event.channel === "process_line") {
+    console.log(event.payload.line);  // a command that outlives the wait
+  }
+}
+const result = await run.result();
+console.log(result.exit_code);
+console.log(result.output);
+""",
+    "dispatch_visualization_action": """
+const dispatched = session.visualization_action("select", { row: 3 });
+for await (const event of dispatched) {
+  console.log(event.payload.action, event.payload.params);
+}
+""",
+    "report_visualization_verdict": """
+const verdict = await session.visualization_verdict(
+  "chart_42",
+  [{ type: "BarGraph", message: "the data had no rows" }],
+  ["the axis has no label"],
+  1,
+  3,
+);
+console.log(verdict.drawn, "of", verdict.total, "elements drawn");
+""",
+    "command": """
+const result = await session.command("/help");
+console.log(result.kind, result.content);
+""",
+    "typing": """
+await session.typing("Draft: rename the");
+await session.typing("");  // clears it
+""",
+    "discard_interrupted_run": """
+for (const run of await session.runs.interrupted()) {
+  await session.runs.discard_interrupted(run.message_id);
+}
+""",
+    "discard_pending_message": """
+for (const message of await session.runs.pending_messages()) {
+  await session.runs.discard_pending(message.message_id);
+}
+""",
+    "search_chat": """
+for (const hit of await session.history.search("migration", 10)) {
+  console.log(hit.run_id, hit.snippet);
+}
+""",
+    "truncate_history": """
+const cut = await session.history.truncate("run_42");
+console.log(`removed ${cut.removed} run(s)`);
+""",
+    "compact_if_needed": """
+const status = await session.status();
+const cleared = await session.context.compact(status.context_tokens ?? 0, status.max_context ?? 0);
+if (cleared.compacted) {
+  console.log("compacted into", cleared.new_session_id);
+}
+""",
+    "loop_pause": """
+const paused = await session.loop.pause();
+console.log(paused ? "paused" : "no loop to pause");
+""",
+    "loop_resume": """
+const answer = await session.loop.resume();
+console.log(answer);
+""",
+    "pop_pending_loop_iteration": """
+const advance = await session.loop.next_iteration();
+if (advance !== null) {
+  console.log(advance.iteration, advance.prompt);
+}
+""",
+    "cancel_pending_loop": """
+const cancelled = await session.loop.cancel();
+console.log(cancelled ? "cancelled" : "no loop waiting");
+""",
+    "approve_plan": """
+const approving = session.plan.approve("run_42");
+for await (const event of approving) {
+  if (event.channel === "plan_decided") {
+    console.log("plan", event.payload.decision);
+  }
+}
+const decided = await approving.result();
+console.log(decided.ok, decided.mode_status);
+""",
+    "dismiss_plan": """
+const decided = await session.plan.dismiss("run_42");
+if (!decided.ok) {
+  console.log(decided.error);
+}
+""",
+    "switch_model": """
+const info = await session.models.switch("igni-large");
+console.log(info.text);
+""",
+    "check_permission": """
+const verdict = await session.permissions.check("run", { command: "rm -rf build" }, "bash");
+console.log(verdict);  // "allow", "ask" or "deny"
+""",
+    "save_permission_rule": """
+await session.permissions.save_rule("allow", "Bash(git status:*)");
+""",
+    "set_workspace_trust": """
+const trusting = session.workspace.set_trust("trust");
+for await (const event of trusting) {
+  console.log(event.payload.state);
+}
+console.log((await trusting.result()).state);
+""",
+    "complete_files": """
+const completion = await session.files.complete(10, "src/app");
+console.log(completion.total, completion.matches);
+""",
+    "read_file": """
+const read = await session.files.read("pyproject.toml");
+console.log(read.error || read.contents);
+""",
+    "search_code": """
+const found = await session.files.search("def create_app");
+for (const match of found.matches ?? []) {
+  console.log(match);
+}
+""",
+    "pick_dir_native": """
+const picked = await session.files.pick_dir();
+if (!picked.cancelled) {
+  console.log(picked.path);
+}
+""",
+    "promote_ephemeral_agent": """
+const promoted = await session.agents.promote("reviewer");
+console.log(promoted.ok, promoted.dest || promoted.reason);
+""",
+    "discard_ephemeral_agent": """
+const discarded = await session.agents.discard("reviewer");
+console.log(discarded.ok, discarded.reason);
+""",
+    "reload_hooks": """
+const info = await session.hooks.reload();
+console.log(info.text);
+""",
+    "start_scheduler": """
+const scheduler = session.scheduler.start();
+for await (const event of scheduler) {
+  if (event.channel === "scheduler_started") {
+    console.log("started", event.payload.description);
+  } else if (event.channel === "scheduler_completed") {
+    console.log("done", event.payload.task_id, event.payload.result);
+  }
+}
+""",
+    "execute_scheduled_task": """
+const task = session.scheduler.execute("Summarise yesterday's failed builds");
+for await (const event of task) {
+  console.log(event.channel);  // what the run's tools do while it works
+}
+console.log((await task.result()).result);
+""",
+    "cancel_scheduled_task": """
+for (const task of await session.scheduler.list(false)) {
+  const info = await session.scheduler.cancel(task.id);
+  console.log(info.text);
+}
+""",
+    "run_workflow": """
+const run = session.workflows.run("nightly", { branch: "main" });
+for await (const event of run) {
+  console.log(event.payload.type, event.payload.payload);
+}
+const started = await run.result();
+console.log(started.workflow_run_id);
+""",
+    "cancel_workflow": """
+const cancelled = await session.workflows.cancel("wf_7");
+console.log(cancelled.cancelled ? "cancelled" : "already over");
+""",
+    "ensure_mcp": """
+const ready = await session.mcp.ensure();
+console.log("connected:", ready.connected, "failed:", ready.failed);
+""",
+    "mcp_connect": """
+const info = await session.mcp.connect("github");
+console.log(info.text);
+""",
+    "mcp_disconnect": """
+const info = await session.mcp.disconnect("github");
+console.log(info.text);
+""",
+    "set_mcp_tool_enabled": """
+const toggled = await session.mcp.set_tool_enabled(false, "github", "delete_repo");
+console.log(toggled.tool, toggled.enabled);
+""",
+    "set_mcp_approval": """
+for (const server of await session.mcp.list_approvals()) {
+  if (!server.approved) {
+    await session.mcp.set_approval(true, server.name);
+  }
+}
+""",
+    "get_plugin_contents": """
+const contents = await session.plugins.contents("acme-review");
+console.log(contents.skills, contents.agents);
+""",
+    "preview_plugin": """
+const preview = await session.plugins.preview("https://github.com/acme/review-plugin", "main");
+console.log(preview.name, (preview.readme ?? "").slice(0, 200));
+""",
+    "install_plugin": """
+const info = await session.plugins.install("@acme/acme-review");
+console.log(info.text);
+""",
+    "update_plugin": """
+const info = await session.plugins.update("acme-review");
+console.log(info.text);
+""",
+    "remove_plugin": """
+const info = await session.plugins.remove("acme-review");
+console.log(info.text);
+""",
+    "set_plugin_enabled": """
+const info = await session.plugins.set_enabled(false, "acme-review");
+console.log(info.text);
+""",
+    "reload_cloud_credentials": """
+const status = await session.auth.reload_credentials();
+console.log(status.cloud_connected, status.cloud_email);
+""",
+    "clear_cloud_credentials": """
+const signingOut = session.auth.sign_out();
+for await (const event of signingOut) {
+  console.log(event.payload.cause);  // "signed_out"
+}
+console.log((await signingOut.result()).cloud_connected);
+""",
+}
+
+__all__ = ["EXAMPLES", "TS_EXAMPLES"]
