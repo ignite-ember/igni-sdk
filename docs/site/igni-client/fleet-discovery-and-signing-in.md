@@ -31,6 +31,26 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
         print(await (await igni.sessions.create()).ask("ping"))
 ```
 
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({ run: { chunks: ["PONG"] } });
+await fake.start();
+const fleet = await Fleet.fromServer(
+  fake.httpUrl,                // igni server's address: "https://igni.acme.internal"; the fake is both it and the gateway
+  {
+    auth: new Person("t-ada"),
+    allowHttp: true,           // the fake's gateway is plain HTTP on loopback
+  },
+);
+console.log(fleet.discovered?.mode, fleet.discovered?.group?.name);
+const igni = await new IgniClient(fleet).connect();
+console.log((await (await igni.sessions.create()).ask("ping")).text);
+await igni.close();
+await fake.close();
+```
+
 `discover(server, auth)` is the question alone: a `CloudIgni`, whose
 `available` says whether there is a cloud igni to connect to.
 
@@ -44,6 +64,9 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
 | `group` | the person's group (`id`, `name`), or `None` |
 | `producer` | the gateway's id for the person, `person:<id>` |
 
+In TypeScript the two-word fields are camelCase: `gatewayUrl` and
+`eventsOwner`.
+
 Only a person's session is answered: an app or a space gets `NotAllowed`
 (they know their gateway; `Fleet(url, auth=app)`). The answer is read in
 the safe direction: a `cloud` value this igni-client does not know reads
@@ -53,7 +76,8 @@ document advertises: available in `local_and_cloud` when it names one.
 
 The person's session goes only to igni server and to the gateway igni
 server itself names, and only over TLS: a plain-HTTP gateway raises
-`NotAllowed`, unless `allow_http=True` (or `IGNI_DEV_GATEWAY_INSECURE=1`)
+`NotAllowed`, unless `allow_http=True` (`allowHttp: true` in TypeScript;
+or `IGNI_DEV_GATEWAY_INSECURE=1`)
 says a lab gateway will do. The shape of igni server's answer is
 igni-sdk's own contract, `contracts/cloud-discovery.schema.json`, which
 igni server and igni's desktop app are tested against too.
@@ -89,6 +113,33 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
     print(cloud.cloud, cloud.reason)                # unavailable group_local_only
 ```
 
+```typescript
+import { Fleet, GroupIsLocalOnly, IgniClient, Person, discover } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  cloud: { cloud: "unavailable", reason: "group_local_only", mode: "local" },  // what igni server says once the group is local
+});
+await fake.start();
+const igni = await new IgniClient(new Fleet(fake.httpUrl, { auth: new Person("t-ada") })).connect();
+for (const socket of fake.sockets) {
+  socket.close(1008, "group_local_only");          // an admin moves the group to local: the gateway kicks the connection
+}
+try {
+  await igni.sessions.create();
+} catch (kicked) {
+  if (!(kicked instanceof GroupIsLocalOnly)) {
+    throw kicked;
+  }
+  console.log("kicked:", kicked.message);
+}
+await igni.close();
+
+const cloud = await discover(fake.httpUrl, new Person("t-ada"));
+console.log(cloud.cloud, cloud.reason);            // unavailable group_local_only
+await fake.close();
+```
+
 ## Who pulls the person's events
 
 Service events for a person (an extension's backend telling their igni
@@ -106,6 +157,17 @@ from igni_client.testing import FakeGateway, FakeIgni
 async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
     cloud = await set_events_owner(fake.server_url, Person("t-ada"), "cloud", http=fake.server_http())
     print(cloud.events_owner)                       # cloud
+```
+
+```typescript
+import { Person, setEventsOwner } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({ cloud: { cloud: "available", events_owner: "cloud" } });  // igni server's answer once the owner is the cloud
+await fake.start();
+const cloud = await setEventsOwner(fake.httpUrl, new Person("t-ada"), "cloud");
+console.log(cloud.eventsOwner);                    // cloud
+await fake.close();
 ```
 
 An owner the group's mode does not allow (`cloud` in `local` mode,
@@ -129,6 +191,19 @@ gateway.vm_states["person:u-ada"] = VmState(state="asleep", signed_in=True)
 async with FakeIgni(gateway=gateway) as fake:
     me = await IgniClient(fake.fleet(Person("t-ada"))).me()   # not opened: nothing wakes
     print(me.vm.state, me.vm.signed_in)                       # asleep True
+```
+
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  me: { producer: "person:u-ada", org: "acme", group: null, expires_at: 0, vm: { state: "asleep", signed_in: true } },
+});
+await fake.start();
+const me = await new IgniClient(new Fleet(fake.httpUrl, { auth: new Person("t-ada") })).me();  // not opened: nothing wakes
+console.log(me.vm?.state, me.vm?.signed_in);                 // asleep true
+await fake.close();
 ```
 
 A gateway older than the field leaves `vm` as `None`. Opening the client
@@ -165,6 +240,31 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
         while getattr(igni.vm_credential, "state", None) != "ready":   # igni says so on its socket too
             await asyncio.sleep(0.01)
 ```
+
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const credential = (state: string) =>
+  ({ type: "push_notification", channel: "vm_credential", payload: { state, message: "" } });
+
+const fake = new FakeIgni();
+await fake.start();
+const igni = await new IgniClient(new Fleet(fake.httpUrl, { auth: new Person("t-ada") })).connect();
+fake.broadcast(credential("needs_sign_in"));
+const signed = await igni.signIn();
+console.log(signed.credential?.state, signed.ready);        // ready true
+fake.broadcast(credential("ready"));                          // what igni says once it holds the new credential
+while (igni.vmCredential?.state !== "ready") {                // igni says so on its socket too
+  await new Promise((resolve) => setTimeout(resolve, 10));
+}
+await igni.close();
+await fake.close();
+```
+
+The TypeScript `FakeIgni` does not play igni's side of a sign-in, so the
+twin pushes igni's `ready` itself. In TypeScript the two are
+`igni.vmCredential` and `igni.signIn()`.
 
 `sign_in()` answers a `SignedIn`: the node the VM woke on and the
 credential's state — `ready`, or `needs_sign_in` when the session itself

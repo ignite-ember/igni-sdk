@@ -27,6 +27,10 @@ Read a session's conversation, turn by turn, as a client draws it.
 async def get(self) -> list[ChatTurn]
 ```
 
+```typescript
+get(): Promise<ChatTurn[]>
+```
+
 Returns the conversation in
 order, one entry per item, told apart by `role`: the person's
 message (`user`), the agent's answer (`assistant`), its
@@ -64,6 +68,10 @@ Find text in a session's conversation.
 
 ```python
 async def search(self, query: str, *, limit: int = 50) -> list[ChatSearchHit]
+```
+
+```typescript
+search(query: string, limit?: number): Promise<ChatSearchHit[]>
 ```
 
 `query` is the text to find
@@ -111,6 +119,10 @@ Find text across every session in the project, not just one.
 async def search_all(self, query: str, *, limit: int = 50) -> list[GlobalChatSearchHit]
 ```
 
+```typescript
+search_all(query: string, limit?: number): Promise<GlobalChatSearchHit[]>
+```
+
 `query` is the text to find (case-insensitive; blank finds
 nothing); `limit` caps the total hits (default 50). Returns one
 hit per match, newest session first, each carrying the
@@ -152,6 +164,10 @@ Drop a run from a session's history, with every run after it.
 
 ```python
 async def truncate(self, run_id: str) -> TruncateHistoryResult
+```
+
+```typescript
+truncate(run_id: string): Promise<TruncateHistoryResult>
 ```
 
 `run_id` the first run to drop
@@ -197,6 +213,10 @@ Split this session's context into what compaction can shrink and what it cannot.
 async def breakdown(self) -> ContextBreakdown
 ```
 
+```typescript
+breakdown(): Promise<ContextBreakdown>
+```
+
 Returns the `total` tokens, the part taken by
 the conversation's runs (`runs`, which `/compact` can shrink),
 and the `floor` — instructions, tools and the rest that stays.
@@ -233,6 +253,10 @@ Compact this session's conversation when its context is nearly full.
 
 ```python
 async def compact(self, *, ctx_tokens: int, max_ctx: int) -> CompactionOutcome
+```
+
+```typescript
+compact(ctx_tokens: number, max_ctx: number): Promise<CompactionOutcome>
 ```
 
 `ctx_tokens` is the context the last turn used and `max_ctx`
@@ -281,6 +305,10 @@ Estimate how many tokens this session's conversation takes up.
 
 ```python
 async def tokens(self) -> int
+```
+
+```typescript
+tokens(): Promise<number>
 ```
 
 Returns the estimate (`0` when it cannot be

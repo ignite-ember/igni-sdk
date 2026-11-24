@@ -21,6 +21,10 @@ List the installed extensions, including the ones that failed to start.
 async def list(self) -> ExtensionListResult
 ```
 
+```typescript
+list(): Promise<ExtensionListResult>
+```
+
 Returns each extension's id, name, version and
 `state` — a failed one with its `reason`, rather than left out —
 with what it adds to igni's window (pages, menu items, indicators),
@@ -63,6 +67,13 @@ async def set_settings(
     extension_id: str,
     values: dict[str, JsonValue],
 ) -> ExtensionListResult
+```
+
+```typescript
+set_settings(
+  extension_id: string,
+  values: Record<string, JsonValue>,
+): Promise<ExtensionListResult>
 ```
 
 `extension_id` is the extension; `values` the settings to

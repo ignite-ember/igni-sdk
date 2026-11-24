@@ -39,7 +39,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from tools.client_contract import CONTRACT_FILE, RpcContract
-from tools.client_errors_doc import read_errors
+from tools.client_errors_doc import read_errors, with_ts_bases
 from tools.client_site import ClientReference
 from tools.markdown_pages import ReadmePages
 from tools.package_reference import package_reference
@@ -78,7 +78,10 @@ class SdkDocs:
         description = package.project(self.root).description
         if package.name == CLIENT:
             readme = ReadmePages(text, f"{package.path}/README.md")
-            errors = read_errors(self.root / package.path / "src/igni_client/errors.py")
+            errors = with_ts_bases(
+                read_errors(self.root / package.path / "src/igni_client/errors.py"),
+                self.root / package.path / "src/errors.ts",
+            )
             return ClientReference(contract, errors, readme).site_pages(package, description)
         guide = ReadmeSite(package, text, description=description).pages()
         reference = package_reference(package, self.root).pages(len(guide))

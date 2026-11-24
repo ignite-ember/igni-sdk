@@ -31,6 +31,10 @@ Show what an installed plugin contains.
 async def contents(self, name: str) -> PluginContents
 ```
 
+```typescript
+contents(name: string): Promise<PluginContents>
+```
+
 `name` is the installed plugin. Returns its folder and its
 skills, agents, hooks, MCP servers and tools, with its README; or
 `error` when no such plugin is installed.
@@ -68,6 +72,10 @@ Install a plugin from a git repository or a marketplace.
 
 ```python
 async def install(self, ref: str, *, install_ref: str | None = None) -> InfoMessage
+```
+
+```typescript
+install(ref: string, install_ref?: string | null): Promise<InfoMessage>
 ```
 
 `ref` is a git URL or `@<marketplace>/<plugin>`; `install_ref`
@@ -114,6 +122,10 @@ List the installed plugins.
 async def list(self) -> list[PluginInfo]
 ```
 
+```typescript
+list(): Promise<PluginInfo[]>
+```
+
 Returns each plugin's name, version,
 description, where it came from, whether it is enabled (a plugin
 the organisation manages always is), the commit it is pinned to,
@@ -157,6 +169,14 @@ async def preview(
     branch: str | None = None,
     subdir: str | None = None,
 ) -> PluginContents
+```
+
+```typescript
+preview(
+  source: string,
+  branch?: string | null,
+  subdir?: string | null,
+): Promise<PluginContents>
 ```
 
 `source` is the plugin's git URL (optionally followed by a
@@ -205,6 +225,10 @@ Uninstall a plugin.
 async def remove(self, name: str) -> InfoMessage
 ```
 
+```typescript
+remove(name: string): Promise<InfoMessage>
+```
+
 `name` is the installed plugin. Returns an `info` message, sent
 in place of an `rpc_response`, whose text says it was removed, or
 why not.
@@ -242,6 +266,10 @@ Switch an installed plugin on or off.
 
 ```python
 async def set_enabled(self, *, enabled: bool, name: str) -> InfoMessage
+```
+
+```typescript
+set_enabled(enabled: boolean, name: string): Promise<InfoMessage>
 ```
 
 `name` is the installed plugin; `enabled` its new state. The
@@ -286,6 +314,10 @@ Move an installed plugin to another commit.
 async def update(self, name: str, *, install_ref: str | None = None) -> InfoMessage
 ```
 
+```typescript
+update(name: string, install_ref?: string | null): Promise<InfoMessage>
+```
+
 `name` is the installed plugin; `install_ref` the branch, tag
 or commit to move to (the remote's default branch when absent).
 Returns an `info` message, sent in place of an `rpc_response`,
@@ -325,6 +357,10 @@ Add a plugin marketplace and read its catalogue.
 
 ```python
 async def add(self, url: str) -> InfoMessage
+```
+
+```typescript
+add(url: string): Promise<InfoMessage>
 ```
 
 `url` is the marketplace's git URL. Returns an `info` message,
@@ -367,6 +403,10 @@ List the plugin marketplaces igni knows, with their catalogues.
 async def list(self) -> list[MarketplaceInfo]
 ```
 
+```typescript
+list(): Promise<MarketplaceInfo[]>
+```
+
 Returns each marketplace's name, URL, when it
 was last fetched, and the plugins it offers.
 
@@ -402,6 +442,10 @@ Fetch marketplaces' catalogues again.
 
 ```python
 async def refresh(self, name: str | None = None) -> InfoMessage
+```
+
+```typescript
+refresh(name?: string | null): Promise<InfoMessage>
 ```
 
 `name` is one marketplace; absent or empty refreshes every one.
@@ -441,6 +485,10 @@ Forget a plugin marketplace.
 
 ```python
 async def remove(self, name: str) -> InfoMessage
+```
+
+```typescript
+remove(name: string): Promise<InfoMessage>
 ```
 
 `name` is the marketplace. Returns an `info` message, sent in

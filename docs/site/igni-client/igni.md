@@ -21,6 +21,10 @@ Ask whether a newer igni release is available.
 async def check_for_update(self) -> UpdateAvailable | None
 ```
 
+```typescript
+check_for_update(): Promise<UpdateAvailable | null>
+```
+
 Returns the newer release — its version, the
 version installed, where to get it — or `null` when there is none
 (or update checks are switched off). Fails when the check could not
@@ -61,6 +65,10 @@ Read which organisation group's policy igni follows.
 
 ```python
 async def group_policy(self) -> GroupPolicyPackResult
+```
+
+```typescript
+group_policy(): Promise<GroupPolicyPackResult>
 ```
 
 Returns the group's id and name, when its

@@ -23,6 +23,10 @@ Cancel a scheduled task of this session's project.
 async def cancel(self, task_id: str) -> InfoMessage
 ```
 
+```typescript
+cancel(task_id: string): Promise<InfoMessage>
+```
+
 `task_id` is the task's `id` (from `session.scheduler.list()`). The
 task is marked cancelled, so it does not run again; a run already
 going is not stopped, but its outcome is not recorded. Returns an
@@ -71,6 +75,13 @@ def execute(
     *,
     run_id: str = '',
 ) -> Call[ScheduledTaskRunResult, ExecuteScheduledTaskEvent]
+```
+
+```typescript
+execute(
+  description: string,
+  run_id?: string,
+): Call<ScheduledTaskRunResult, ExecuteScheduledTaskEvent>
 ```
 
 `description` is what the task asks the agent to do (a scheduled
@@ -132,6 +143,10 @@ List the scheduled tasks of this session's project.
 async def list(self, include_done: bool = True) -> list[ScheduledTask]
 ```
 
+```typescript
+list(include_done?: boolean): Promise<ScheduledTask[]>
+```
+
 `include_done` (default `true`) lists finished, failed and
 cancelled tasks too. Returns the tasks, latest scheduled first:
 each one's `id`, `description`, when it is scheduled and was
@@ -172,6 +187,10 @@ Start running this project's scheduled tasks as they fall due.
 
 ```python
 def start(self) -> Call[None, StartSchedulerEvent]
+```
+
+```typescript
+start(): Call<null, StartSchedulerEvent>
 ```
 
 Takes no arguments and returns nothing; a scheduler already running

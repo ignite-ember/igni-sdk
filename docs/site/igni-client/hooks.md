@@ -23,6 +23,10 @@ List the hooks this session runs.
 async def list(self) -> list[HookEntryView]
 ```
 
+```typescript
+list(): Promise<HookEntryView[]>
+```
+
 Returns one row per hook: the `event` it runs
 on, its `type` (`command`, `http`, `prompt` or `mcp_tool`)
 and the `command` or `url` it runs, the `matcher` that narrows
@@ -63,6 +67,10 @@ Read this session's hook configuration again.
 async def reload(self) -> InfoMessage
 ```
 
+```typescript
+reload(): Promise<InfoMessage>
+```
+
 Returns an `info` message, sent in place of an
 `rpc_response`, saying how many hooks are now active.
 
@@ -97,6 +105,10 @@ Run this session's `SessionStart` hooks.
 
 ```python
 async def fire_session_start_hook(self) -> None
+```
+
+```typescript
+fire_session_start_hook(): Promise<null>
 ```
 
 Takes no arguments and returns nothing. The organisation's group

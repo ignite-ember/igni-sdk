@@ -27,6 +27,14 @@ async def check(
 ) -> Literal['allow', 'ask', 'deny']
 ```
 
+```typescript
+check(
+  func_name: string,
+  tool_args: ToolCallArgs,
+  tool_name: string,
+): Promise<"allow" | "ask" | "deny">
+```
+
 `tool_name` and `func_name` name the tool and its function;
 `tool_args` are the call's arguments, which argument rules match
 against. The rules are read from this session's project and the
@@ -75,6 +83,10 @@ Save a permission rule for this session's project.
 
 ```python
 async def save_rule(self, *, level: Literal['allow', 'ask', 'deny'], rule: str) -> None
+```
+
+```typescript
+save_rule(level: "allow" | "ask" | "deny", rule: string): Promise<null>
 ```
 
 `rule` is a permission rule (`Bash(git status)`, a tool name);
