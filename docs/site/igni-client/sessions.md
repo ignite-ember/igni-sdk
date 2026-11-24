@@ -12,6 +12,8 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 | Method | What it does |
 |---|---|
 | [`igni.sessions.attach()`](/docs/sdk/igni-client/sessions#igni-sessions-attach) | Bind to a session — an existing one, or a new one in a project folder. |
+| [`igni.sessions.mark_seen()`](/docs/sdk/igni-client/sessions#igni-sessions-mark-seen) | Mark a chat as seen, so it is no longer unread. |
+| [`igni.sessions.states()`](/docs/sdk/igni-client/sessions#igni-sessions-states) | List the chats that are running, waiting on the person, or unread. |
 | [`session.status()`](/docs/sdk/igni-client/sessions#session-status) | Read this session's status: model, account, context size and permission mode. |
 | [`session.current_id()`](/docs/sdk/igni-client/sessions#session-current-id) | Read the id of the session this request reached. |
 | [`session.get_project_dir()`](/docs/sdk/igni-client/sessions#session-get-project-dir) | Read the folder this session is locked to. |
@@ -105,6 +107,99 @@ for await (const event of attached) {
 }
 const bound = await attached.result();
 console.log(bound.session_id, bound.project_dir);
+```
+
+## igni.sessions.mark_seen()
+
+Mark a chat as seen, so it is no longer unread.
+
+```python
+def mark_seen(self, session_id: str) -> Call[SessionStates, MarkSessionSeenEvent]
+```
+
+`session_id` is the chat the person looked at. Its runs that
+finished until now are read, wherever the person looks next; a run
+that finishes later makes it unread again. Returns the chats'
+states afterwards, also pushed to every window as
+`session_states_changed`. An unknown id is recorded all the same.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `str` | required | The chat the person looked at. |
+
+**Returns** a [`Call`](/docs/sdk/igni-client/api-reference#call) — await it for the result, [`SessionStates`](/docs/sdk/igni-client/models-reference#sessionstates), or `async with` it to follow its events too.
+
+**Events** `MarkSessionSeenEvent` is any of [`SessionStatesChangedPush`](/docs/sdk/igni-client/events-reference#sessionstateschangedpush) (igni streams `session_states_changed`).
+
+**How they are told apart** `async with` the call to follow it: it yields the `session_states_changed` push that tells every window the chat was seen, and ends with the answer.
+
+**Told apart by** the message's `cause` is `seen` — igni's contract says so.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) · [`RunInterrupted`](/docs/sdk/igni-client/errors-reference#runinterrupted) when the connection moves or drops while the call is followed ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `mark_session_seen`, scope `igni`, area `session_states`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+async with igni.sessions.mark_seen("0b7c…") as marking:
+    async for event in marking:
+        print(len(event.payload.sessions), "chats still running, waiting or unread")
+    states = await marking.result()
+    print([s.session_id for s in states.sessions if s.unread])
+```
+
+```typescript
+const marking = igni.sessions.mark_seen("0b7c…");
+for await (const event of marking) {
+  console.log(event.payload.sessions?.length, "chats still running, waiting or unread");
+}
+const states = await marking.result();
+console.log((states.sessions ?? []).filter((s) => s.unread).map((s) => s.session_id));
+```
+
+## igni.sessions.states()
+
+List the chats that are running, waiting on the person, or unread.
+
+```python
+async def states(self) -> SessionStates
+```
+
+Returns `sessions`: each chat that is doing
+something or has a finished run the person has not seen, with its
+`state` (`running`, `waiting` or `idle`), how many approvals
+wait in it, and `unread`. A chat not listed is idle and read.
+`session_states_changed` pushes the same shape whenever it moves.
+
+Takes no arguments.
+
+**Returns** [`SessionStates`](/docs/sdk/igni-client/models-reference#sessionstates).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `list_session_states`, scope `igni`, area `session_states`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+states = await igni.sessions.states()
+print(states.cause, states.sessions)
+```
+
+```typescript
+const states = await igni.sessions.states();
+console.log(states.cause, states.sessions);
 ```
 
 ## session.status()

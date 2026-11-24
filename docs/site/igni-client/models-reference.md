@@ -93,9 +93,34 @@ do not know.
 | `run_count` | `int` | `0` | How many runs the session holds. |
 | `session_id` | `str` | `''` | The session's id. |
 | `summary` | `str` | `''` | A short summary of the conversation; empty when there is none. |
+| `unread` | `bool` | `False` | True when a run in this session finished after the person last looked at it (`mark_session_seen`). |
 | `updated_at` | `int` | `0` | When the session last changed, in Unix seconds. |
 
 **Part of** [`SessionListResult`](/docs/sdk/igni-client/events-reference#sessionlistresult).
+
+### SessionState
+
+One chat's state, and whether it is unread.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `session_id` | `str` | required | The chat's session id. |
+| `state` | [`ActivityState`](/docs/sdk/igni-client/models-reference#activitystate) | `'idle'` | What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing — also every chat that is not loaded. |
+| `unread` | `bool` | `False` | True when a run in the chat finished after the person last looked at it (`mark_session_seen`). Read state is the person's, across windows and devices. |
+| `waiting_approvals` | `int` | `0` | How many approvals in the chat wait on the person. |
+
+**Part of** [`SessionStates`](/docs/sdk/igni-client/models-reference#sessionstates).
+
+### SessionStates
+
+Every chat that is doing something or is unread; any other chat is idle and read.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cause` | `Literal['activity', 'seen']` | `'activity'` | Why this was sent. `activity`: a run started, finished, paused or resumed, or the states were asked for. `seen`: a `mark_session_seen` call. |
+| `sessions` | `list[`[`SessionState`](/docs/sdk/igni-client/models-reference#sessionstate)`]` | `[]` | The chats that are running, waiting or unread, each once. |
+
+**Returned by** [`igni.sessions.states()`](/docs/sdk/igni-client/sessions#igni-sessions-states), [`igni.sessions.mark_seen()`](/docs/sdk/igni-client/sessions#igni-sessions-mark-seen).
 
 ### TodoItem
 
@@ -273,6 +298,24 @@ and tool definitions.
 | `total` | `int` | required | Total tokens currently in the context. |
 
 **Returned by** [`session.context.breakdown()`](/docs/sdk/igni-client/history-and-context#session-context-breakdown).
+
+### GlobalChatSearchHit
+
+One match from searching across every session in the project.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `created_at` | `int` | `0` | When the turn was created, in Unix epoch seconds; `0` if unknown. |
+| `history_index` | `int` | `0` | Index of the matching turn in the list returned by `get_chat_history`; use it to jump to that turn. |
+| `match_end` | `int` | `0` | End offset (exclusive) of the match within `snippet`. |
+| `match_start` | `int` | `0` | Start offset of the match within `snippet` (not the full text). |
+| `role` | `str` | `''` | Kind of the matching turn, e.g. `user`, `assistant` or `tool`. |
+| `run_id` | `str` | `''` | Id of the agent run the matching turn belongs to. |
+| `session_id` | `str` | `''` | Id of the session the match is in; open it to read the turn. |
+| `session_name` | `str` | `''` | Name of that session, or empty when it has none. |
+| `snippet` | `str` | `''` | Excerpt of the turn's text around the match. |
+
+**Returned by** [`session.history.search_all()`](/docs/sdk/igni-client/history-and-context#session-history-search-all).
 
 ### PlanTurn
 
@@ -639,6 +682,24 @@ The folder the user chose in the operating system's own folder picker.
 | `path` | `str` | required | The chosen folder; empty when none was chosen. |
 
 **Returned by** [`session.files.pick_dir()`](/docs/sdk/igni-client/files#session-files-pick-dir).
+
+### ReadFileBytesResult
+
+The raw bytes of a file, base64-encoded, for previewing an image
+or a PDF the text reader cannot show.
+
+Same sandbox as `ReadFileResult`; a larger cap, since an image
+or a PDF is bigger than a source file.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `data` | `str` | required | The file's bytes, base64-encoded; empty when `error` is set. |
+| `error` | `str` | `''` | Why the file could not be read; empty on success. |
+| `media_type` | `str` | `''` | The file's media type guessed from its extension (e.g. `image/png`); empty if unknown or on error. |
+| `path` | `str` | required | The file's path (resolved when the read got that far). |
+| `size` | `int` | required | The file's size in bytes. |
+
+**Returned by** [`session.files.read_bytes()`](/docs/sdk/igni-client/files#session-files-read-bytes).
 
 ### ReadFileResult
 
@@ -1164,6 +1225,7 @@ One plugin listed in a marketplace's catalog, available to install.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `branch` | `str` | `''` | Git branch to install from. Empty for the repository's default branch. |
+| `category` | `str` | `''` | Category the catalog files the plugin under (e.g. `development`, `security`). Empty when the catalog gives none. |
 | `description` | `str` | `''` | What the plugin does. Empty when not given. |
 | `name` | `str` | required | Plugin name; install it as `@<marketplace>/<name>`. |
 | `source` | `str` | required | Where the plugin is fetched from: a git URL, followed by `[<subdirectory>]` when the plugin lives in a subdirectory of that repository. |
@@ -2258,6 +2320,14 @@ Told apart by `op`.
 
 ## Enumerations
 
+### ActivityState
+
+What igni, or one of its chats, is doing: running, waiting on a person, or nothing.
+
+One of `'idle'`, `'waiting'`, `'running'`.
+
+**Part of** [`SessionState`](/docs/sdk/igni-client/models-reference#sessionstate).
+
 ### CommandAction
 
 What a command result asks the client to do.
@@ -2373,6 +2443,7 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `InterruptedRunArgs` | [`session.runs.discard_interrupted()`](/docs/sdk/igni-client/runs#session-runs-discard-interrupted) |
 | `ListDirsArgs` | [`igni.files.list_dirs()`](/docs/sdk/igni-client/files#igni-files-list-dirs) |
 | `MarkReadArgs` | [`igni.notifications.mark_read()`](/docs/sdk/igni-client/notifications#igni-notifications-mark-read) |
+| `MarkSessionSeenArgs` | [`igni.sessions.mark_seen()`](/docs/sdk/igni-client/sessions#igni-sessions-mark-seen) |
 | `MarketplaceNameArgs` | [`igni.marketplaces.remove()`](/docs/sdk/igni-client/plugins#igni-marketplaces-remove) |
 | `MarketplaceUrlArgs` | [`igni.marketplaces.add()`](/docs/sdk/igni-client/plugins#igni-marketplaces-add) |
 | `McpApprovalArgs` | [`session.mcp.set_approval()`](/docs/sdk/igni-client/mcp#session-mcp-set-approval) |
@@ -2389,11 +2460,13 @@ Each method's arguments are a model of their own, which igni-client fills from t
 | `ProcessTailArgs` | [`igni.processes.tail()`](/docs/sdk/igni-client/shell-and-processes#igni-processes-tail) |
 | `PromoteAgentArgs` | [`session.agents.promote()`](/docs/sdk/igni-client/agents#session-agents-promote) |
 | `ReadFileArgs` | [`session.files.read()`](/docs/sdk/igni-client/files#session-files-read) |
+| `ReadFileBytesArgs` | [`session.files.read_bytes()`](/docs/sdk/igni-client/files#session-files-read-bytes) |
 | `RefreshMarketplacesArgs` | [`igni.marketplaces.refresh()`](/docs/sdk/igni-client/plugins#igni-marketplaces-refresh) |
 | `RunShellArgs` | [`session.run_shell()`](/docs/sdk/igni-client/shell-and-processes#session-run-shell) |
 | `SavePermissionRuleArgs` | [`session.permissions.save_rule()`](/docs/sdk/igni-client/permissions#session-permissions-save-rule) |
 | `ScheduledTaskArgs` | [`session.scheduler.cancel()`](/docs/sdk/igni-client/scheduler#session-scheduler-cancel) |
 | `ScheduledTasksArgs` | [`session.scheduler.list()`](/docs/sdk/igni-client/scheduler#session-scheduler-list) |
+| `SearchAllChatsArgs` | [`session.history.search_all()`](/docs/sdk/igni-client/history-and-context#session-history-search-all) |
 | `SearchChatArgs` | [`session.history.search()`](/docs/sdk/igni-client/history-and-context#session-history-search) |
 | `SearchCodeArgs` | [`session.files.search()`](/docs/sdk/igni-client/files#session-files-search) |
 | `SessionIdArgs` | [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get), [`session.runs.interrupted()`](/docs/sdk/igni-client/runs#session-runs-interrupted), [`session.runs.pending_messages()`](/docs/sdk/igni-client/runs#session-runs-pending-messages), [`session.switch()`](/docs/sdk/igni-client/sessions#session-switch) |

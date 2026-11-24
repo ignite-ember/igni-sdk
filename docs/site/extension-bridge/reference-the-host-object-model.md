@@ -44,6 +44,8 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 | [`SessionList`](#sessionlist) | interface | `hostModel.generated.ts` | The session list, as it was just read. |
 | [`SessionCleared`](#sessioncleared) | interface | `hostModel.generated.ts` | `/clear`: a session carries on under a new id. |
 | [`SessionNamed`](#sessionnamed) | interface | `hostModel.generated.ts` | A session was given its name. |
+| [`SessionState`](#sessionstate) | interface | `hostModel.generated.ts` | What one chat is doing, and whether it has a finished run the person has not seen. |
+| [`SessionStates`](#sessionstates) | interface | `hostModel.generated.ts` | The chats that are running, waiting or unread; any other chat is idle and read. |
 | [`SessionAttached`](#sessionattached) | interface | `hostModel.generated.ts` | A session bound, and the folder it works in. |
 | [`ChatMessage`](#chatmessage) | interface | `hostModel.generated.ts` | A message posted in a chat. |
 | [`HistoryChange`](#historychange) | interface | `hostModel.generated.ts` | Turns were removed from a session's history. |
@@ -690,6 +692,34 @@ A session was given its name.
 |---|---|---|
 | `session_id` | field | `string` |
 | `name` | field | `string` |
+
+## SessionState
+
+```typescript
+interface SessionState
+```
+
+What one chat is doing, and whether it has a finished run the person has not seen.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `session_id` | field | `string` |  |
+| `state` | field | `string` | `idle`, `waiting` or `running`. |
+| `waiting_approvals` | field | `number` |  |
+| `unread` | field | `boolean` | A run finished after the person last looked at the chat. Read state is the person's, across windows and devices. |
+
+## SessionStates
+
+```typescript
+interface SessionStates
+```
+
+The chats that are running, waiting or unread; any other chat is idle and read.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `sessions` | field | `SessionState[]` |  |
+| `cause` | field | `string` | `activity`: a run moved. `seen`: a chat was marked seen. |
 
 ## SessionAttached
 
@@ -2481,14 +2511,17 @@ The sessions of this project, and which one the active window shows. Reach any s
 |---|---|---|---|
 | `list` | field | `Property<SessionInfo[]>` | Every session, newest first. |
 | `current` | field | `Property<string>` | The session the active window shows. Writable: setting it switches, and is refused where the person's switch would be. |
+| `states` | field | `Property<SessionState[]>` | The chats that are running, waiting on the person, or have a finished run the person has not seen. A chat not listed is idle and read. |
 | `current_changed` | field | `Signal<SessionChange>` | A window moved to another session. |
 | `listed` | field | `Signal<SessionList>` | The session list was read. |
 | `cleared` | field | `Signal<SessionCleared>` | `/clear` renewed a session. |
 | `named` | field | `Signal<SessionNamed>` | A session got its name. |
+| `states_changed` | field | `Signal<SessionStates>` | A chat started or finished a run, began or stopped waiting, or was seen. |
 | `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `open` | method | `(session_id: string) => Promise<SessionChange>` | Show a session in the active window. |
 | `create` | method | `(project_dir?: string, title?: string, focus?: boolean) => Promise<SessionAttached>` | Start a new session, in a folder or in this project. It moves no window unless `focus` is true: reach it with `host.sessions.chat(session_id)`. |
 | `attach` | method | `(session_id: string, project_dir?: string) => Promise<SessionAttached>` | Make sure a session is live, without showing it. |
+| `mark_seen` | method | `(session_id: string) => Promise<SessionStates>` | Mark a chat seen, so its finished runs are no longer unread — for the person, in every window. |
 | `chat` | method | `(sessionId: string) => HostChat` | `host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself. |
 
 ### HostSessions.constructor()
@@ -2519,6 +2552,12 @@ The sessions of this project, and which one the active window shows. Reach any s
 |---|---|---|---|
 | `session_id` | `string` | required | The session to make live, by its id. |
 | `project_dir` | `string` | optional | The folder the session works in; it must belong to that session. |
+
+### HostSessions.mark_seen()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | `string` | required | The chat the person looked at, by its id. |
 
 ### HostSessions.chat()
 
@@ -2574,6 +2613,7 @@ The conversation in the current session. Signals carry the session they happened
 | `append` | method | `(view: JsonValue, title?: string) => Promise<string>` | Show a json-render block in the transcript. Shown to the person, never sent to the model. Returns its id. |
 | `replace` | method | `(view_id: string, view: JsonValue, title?: string) => Promise<void>` | Replace a block this extension appended. |
 | `search` | method | `(query: string, limit?: number) => Promise<JsonValue[]>` | Search the transcript. |
+| `search_all` | method | `(query: string, limit?: number) => Promise<JsonValue[]>` | Search the transcripts of every session in the project. |
 | `cancel` | method | `() => Promise<void>` | Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. |
 | `cancel_agent` | method | `(run_id: string) => Promise<void>` | Stop one sub-agent's run. |
 | `truncate` | method | `(run_id: string) => Promise<JsonValue>` | Remove a run and everything after it. |
@@ -2625,6 +2665,13 @@ The conversation in the current session. Signals carry the session they happened
 |---|---|---|---|
 | `query` | `string` | required | The text to find in the transcript. |
 | `limit` | `number` | optional | At most this many; 50 by default. |
+
+### HostChat.search_all()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `query` | `string` | required | The text to find in every session's transcript. |
+| `limit` | `number` | optional | At most this many in total; 50 by default. |
 
 ### HostChat.cancel_agent()
 

@@ -242,6 +242,23 @@ export interface SessionNamed {
   name: string;
 }
 
+/** What one chat is doing, and whether it has a finished run the person has not seen. */
+export interface SessionState {
+  session_id: string;
+  /** `idle`, `waiting` or `running`. */
+  state: string;
+  waiting_approvals: number;
+  /** A run finished after the person last looked at the chat. Read state is the person's, across windows and devices. */
+  unread: boolean;
+}
+
+/** The chats that are running, waiting or unread; any other chat is idle and read. */
+export interface SessionStates {
+  sessions: SessionState[];
+  /** `activity`: a run moved. `seen`: a chat was marked seen. */
+  cause: string;
+}
+
 /** A session bound, and the folder it works in. */
 export interface SessionAttached {
   session_id: string;
@@ -1674,6 +1691,8 @@ export class HostSessions extends HostObject {
   readonly list: Property<SessionInfo[]>;
   /** The session the active window shows. Writable: setting it switches, and is refused where the person's switch would be. */
   readonly current: Property<string>;
+  /** The chats that are running, waiting on the person, or have a finished run the person has not seen. A chat not listed is idle and read. */
+  readonly states: Property<SessionState[]>;
   /** A window moved to another session. */
   readonly current_changed: Signal<SessionChange>;
   /** The session list was read. */
@@ -1682,6 +1701,8 @@ export class HostSessions extends HostObject {
   readonly cleared: Signal<SessionCleared>;
   /** A session got its name. */
   readonly named: Signal<SessionNamed>;
+  /** A chat started or finished a run, began or stopped waiting, or was seen. */
+  readonly states_changed: Signal<SessionStates>;
 
   /**
    * The object igni hands a page, bound to a host and to the window
@@ -1704,10 +1725,12 @@ export class HostSessions extends HostObject {
     super(link, "sessions", window, session);
     this.list = new Property(this, "list", false);
     this.current = new Property(this, "current", true);
+    this.states = new Property(this, "states", false);
     this.current_changed = new Signal("session.switched");
     this.listed = new Signal("sessions.listed");
     this.cleared = new Signal("sessions.cleared");
     this.named = new Signal("sessions.named");
+    this.states_changed = new Signal("sessions.states_changed");
   }
 
   /**
@@ -1738,6 +1761,15 @@ export class HostSessions extends HostObject {
    */
   attach(session_id: string, project_dir?: string): Promise<SessionAttached> {
     return this.call<SessionAttached>("attach", { session_id, project_dir });
+  }
+
+  /**
+   * Mark a chat seen, so its finished runs are no longer unread — for the person, in every window.
+   *
+   * @param session_id — The chat the person looked at, by its id.
+   */
+  mark_seen(session_id: string): Promise<SessionStates> {
+    return this.call<SessionStates>("mark_seen", { session_id });
   }
 
   /**
@@ -1913,6 +1945,16 @@ export class HostChat extends HostObject {
    */
   search(query: string, limit?: number): Promise<JsonValue[]> {
     return this.call<JsonValue[]>("search", { query, limit });
+  }
+
+  /**
+   * Search the transcripts of every session in the project.
+   *
+   * @param query — The text to find in every session's transcript.
+   * @param limit — At most this many in total; 50 by default.
+   */
+  search_all(query: string, limit?: number): Promise<JsonValue[]> {
+    return this.call<JsonValue[]>("search_all", { query, limit });
   }
 
   /** Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. Either way the chat then gets an `info` saying the run was cancelled and its `streaming_done`. */

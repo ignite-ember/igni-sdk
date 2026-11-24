@@ -434,6 +434,12 @@ NOTIFICATIONS = Rule(
     yields=("notifications_changed",),
 )
 
+#: A chat marked seen: the push says so (``cause: seen``), and the answer ends it.
+SESSION_STATES = Rule(
+    ends_with=lambda c: c.has_result,
+    yields=("session_states_changed",),
+)
+
 #: A folder's trust: the push carries the path, which the answer gives;
 #: the push comes before the answer, so it waits for it.
 WORKSPACE_TRUST = Rule(
@@ -478,6 +484,7 @@ RULES: dict[str, Rule] = {
     "notifications_list": NOTIFICATIONS,
     "notifications_mark_read": NOTIFICATIONS,
     "clear_cloud_credentials": NOTIFICATIONS,
+    "mark_session_seen": SESSION_STATES,
     "set_workspace_trust": WORKSPACE_TRUST,
     "window_model": WINDOW_MODEL,
     "run_shell": RUN_SHELL,

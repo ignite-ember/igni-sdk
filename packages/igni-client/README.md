@@ -1169,14 +1169,14 @@ by the token it offers:
 | [`igni.marketplaces`](#ignimarketplaces) | `add`, `list`, `refresh`, `remove` |
 | [`igni.notifications`](#igninotifications) | `counts`, `list`, `mark_read` |
 | [`igni.processes`](#igniprocesses) | `list`, `stop`, `tail` |
-| [`igni.sessions`](#ignisessions) | `attach` |
+| [`igni.sessions`](#ignisessions) | `attach`, `mark_seen`, `states` |
 | [`igni.window`](#igniwindow) | `model` |
 | [`session`](#session) | `cancel`, `command`, `current_id`, `display_config`, `extract_learnings`, `fire_session_start_hook`, `get_project_dir`, `is_processing`, `list_sessions`, `output_styles`, `run_shell`, `run_timeout`, `shutdown`, `slash_commands`, `status`, `switch`, `todos`, `toggle_verbose`, `typing`, `upload_attachment`, `visualization_action`, `visualization_verdict` |
 | [`session.agents`](#sessionagents) | `discard`, `list`, `promote` |
 | [`session.auth`](#sessionauth) | `plan`, `reload_credentials`, `sign_out` |
 | [`session.context`](#sessioncontext) | `breakdown`, `compact`, `tokens` |
-| [`session.files`](#sessionfiles) | `complete`, `pick_dir`, `read`, `search` |
-| [`session.history`](#sessionhistory) | `get`, `search`, `truncate` |
+| [`session.files`](#sessionfiles) | `complete`, `pick_dir`, `read`, `read_bytes`, `search` |
+| [`session.history`](#sessionhistory) | `get`, `search`, `search_all`, `truncate` |
 | [`session.hooks`](#sessionhooks) | `list`, `reload` |
 | [`session.loop`](#sessionloop) | `cancel`, `next_iteration`, `pause`, `resume`, `status` |
 | [`session.mcp`](#sessionmcp) | `connect`, `disconnect`, `ensure`, `list_approvals`, `server_details`, `servers`, `set_approval`, `set_tool_enabled`, `status` |
@@ -1567,7 +1567,7 @@ output, not running.
 
 #### igni.sessions
 
-igni's sessions: attach one, or make a new one in a project folder.
+igni's sessions: attach one, or make a new one in a project folder; which are running, waiting or unread, and marking one seen.
 
 <details>
 <summary><code>igni.sessions.attach(*, project_dir: str = '', session_id: str = '')</code> → <code>Call[AttachSessionResult, AttachSessionEvent]</code></summary>
@@ -1598,6 +1598,38 @@ Fails when `project_dir` is not a directory, or the session belongs
 to another project folder — an attach never moves a session.
 
 Followed: `async with` the call to follow it: it yields the approvals the session is still waiting for and the run it continues again — every message of them carries the attach's own request id — and ends with the `stream_end` that closes them.
+
+</details>
+
+<details>
+<summary><code>igni.sessions.mark_seen(session_id: str)</code> → <code>Call[SessionStates, MarkSessionSeenEvent]</code></summary>
+
+Wire method `mark_session_seen` · access `client` · streams `session_states_changed`
+
+Mark a chat as seen, so it is no longer unread.
+
+`session_id` is the chat the person looked at. Its runs that
+finished until now are read, wherever the person looks next; a run
+that finishes later makes it unread again. Returns the chats'
+states afterwards, also pushed to every window as
+`session_states_changed`. An unknown id is recorded all the same.
+
+Followed: `async with` the call to follow it: it yields the `session_states_changed` push that tells every window the chat was seen, and ends with the answer.
+
+</details>
+
+<details>
+<summary><code>await igni.sessions.states()</code> → <code>SessionStates</code></summary>
+
+Wire method `list_session_states` · access `client`
+
+List the chats that are running, waiting on the person, or unread.
+
+Takes no arguments. Returns `sessions`: each chat that is doing
+something or has a finished run the person has not seen, with its
+`state` (`running`, `waiting` or `idle`), how many approvals
+wait in it, and `unread`. A chat not listed is idle and read.
+`session_states_changed` pushes the same shape whenever it moves.
 
 </details>
 
@@ -2159,6 +2191,21 @@ client read.
 </details>
 
 <details>
+<summary><code>await session.files.read_bytes(path: str)</code> → <code>ReadFileBytesResult</code></summary>
+
+Wire method `read_file_bytes` · access `client`
+
+Read a file's raw bytes (base64) to preview an image or a PDF.
+
+The same sandbox as `read_file` with a larger cap (10 MiB).
+Returns the resolved `path`, the base64 `data`, its `size`
+and a `media_type` hint; or `error` when the file is missing,
+a directory, too large, unreadable, or outside the folders igni
+lets a client read.
+
+</details>
+
+<details>
 <summary><code>await session.files.search(query: str)</code> → <code>SearchCodeResult</code></summary>
 
 Wire method `search_code` · access `client`
@@ -2205,6 +2252,21 @@ Find text in a session's conversation.
 (default 50). Returns one hit per match, in conversation order:
 its index in `get_chat_history`, its role and run, a snippet
 around it, and where the match sits in the snippet.
+
+</details>
+
+<details>
+<summary><code>await session.history.search_all(query: str, *, limit: int = 50)</code> → <code>list[GlobalChatSearchHit]</code></summary>
+
+Wire method `search_all_chats` · access `client`
+
+Find text across every session in the project, not just one.
+
+`query` is the text to find (case-insensitive; blank finds
+nothing); `limit` caps the total hits (default 50). Returns one
+hit per match, newest session first, each carrying the
+`session_id` and `session_name` it was found in alongside the
+same fields `search_chat` returns.
 
 </details>
 

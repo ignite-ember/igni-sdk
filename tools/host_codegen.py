@@ -81,6 +81,7 @@ PARAM_MEANINGS: dict[tuple[str, str, str], str] = {
         "The folder the new session works in; this project when left out."
     ),
     ("sessions", "attach", "session_id"): "The session to make live, by its id.",
+    ("sessions", "mark_seen", "session_id"): "The chat the person looked at, by its id.",
     ("sessions", "attach", "project_dir"): (
         "The folder the session works in; it must belong to that session."
     ),
@@ -91,6 +92,7 @@ PARAM_MEANINGS: dict[tuple[str, str, str], str] = {
     ("chat", "replace", "view"): "The new json-render spec: `{root, elements}`.",
     ("chat", "replace", "title"): "The view's new title.",
     ("chat", "search", "query"): "The text to find in the transcript.",
+    ("chat", "search_all", "query"): "The text to find in every session's transcript.",
     ("chat", "cancel_agent", "run_id"): "The sub-agent's run to stop, by its id.",
     ("chat", "truncate", "run_id"): "The run to remove, with every run after it.",
     ("chat", "extract_learnings", "user_msg"): "The turn's message, the one the person wrote.",

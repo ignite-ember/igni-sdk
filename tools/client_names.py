@@ -25,6 +25,8 @@ from __future__ import annotations
 METHODS: dict[str, str] = {
     # ── igni as a whole ──────────────────────────────────────────────
     "attach_session": "igni.sessions.attach",
+    "list_session_states": "igni.sessions.states",
+    "mark_session_seen": "igni.sessions.mark_seen",
     "check_for_update": "igni.check_for_update",
     "cancel_agent_run": "igni.agents.cancel_run",
     "get_group_policy": "igni.group_policy",
@@ -74,6 +76,7 @@ METHODS: dict[str, str] = {
     "discard_pending_message": "session.runs.discard_pending",
     "get_chat_history": "session.history.get",
     "search_chat": "session.history.search",
+    "search_all_chats": "session.history.search_all",
     "truncate_history": "session.history.truncate",
     "count_context_tokens": "session.context.tokens",
     "get_context_breakdown": "session.context.breakdown",
@@ -94,6 +97,7 @@ METHODS: dict[str, str] = {
     "set_workspace_trust": "session.workspace.set_trust",
     "complete_files": "session.files.complete",
     "read_file": "session.files.read",
+    "read_file_bytes": "session.files.read_bytes",
     "search_code": "session.files.search",
     "pick_dir_native": "session.files.pick_dir",
     "get_agent_details": "session.agents.list",
@@ -173,7 +177,10 @@ OWN_SESSION_ARG: frozenset[str] = frozenset(
 
 #: What each namespace is, for its class's docstring and the README.
 NAMESPACES: dict[str, str] = {
-    "igni.sessions": "igni's sessions: attach one, or make a new one in a project folder.",
+    "igni.sessions": (
+        "igni's sessions: attach one, or make a new one in a project folder; which are "
+        "running, waiting or unread, and marking one seen."
+    ),
     "igni.agents": "Sub-agents' runs, wherever they are going.",
     "igni.files": "Folders on the machine igni runs on.",
     "igni.processes": "Background processes igni tracks, in every session.",
@@ -347,6 +354,10 @@ FOLLOWED: dict[str, str] = {
     "notifications_mark_read": (
         "``async with`` the call to follow it: it yields the ``notifications_changed`` "
         "push that says the notifications were marked read, and ends with the answer."
+    ),
+    "mark_session_seen": (
+        "``async with`` the call to follow it: it yields the ``session_states_changed`` "
+        "push that tells every window the chat was seen, and ends with the answer."
     ),
     "clear_cloud_credentials": (
         "``async with`` the call to follow it: it yields the ``notifications_changed`` "

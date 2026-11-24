@@ -13,6 +13,9 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 
+/** What igni, or one of its chats, is doing: running, waiting on a person, or nothing. */
+export type ActivityState = "idle" | "waiting" | "running";
+
 /**
  * What a command result asks the client to do.
  *
@@ -808,6 +811,28 @@ export interface FloorNotification {
   title?: string;
 }
 
+/** One match from searching across every session in the project. */
+export interface GlobalChatSearchHit {
+  /** When the turn was created, in Unix epoch seconds; `0` if unknown. */
+  created_at?: number;
+  /** Index of the matching turn in the list returned by `get_chat_history`; use it to jump to that turn. */
+  history_index?: number;
+  /** End offset (exclusive) of the match within `snippet`. */
+  match_end?: number;
+  /** Start offset of the match within `snippet` (not the full text). */
+  match_start?: number;
+  /** Kind of the matching turn, e.g. `user`, `assistant` or `tool`. */
+  role?: string;
+  /** Id of the agent run the matching turn belongs to. */
+  run_id?: string;
+  /** Id of the session the match is in; open it to read the turn. */
+  session_id?: string;
+  /** Name of that session, or empty when it has none. */
+  session_name?: string;
+  /** Excerpt of the turn's text around the match. */
+  snippet?: string;
+}
+
 /**
  * The policy pack of the group the current user belongs to on igni
  * server. Every field is empty when the user belongs to no group.
@@ -1277,6 +1302,12 @@ export interface MarkReadArgs {
   source?: string | null;
 }
 
+/** Arguments for marking a chat as seen. */
+export interface MarkSessionSeenArgs {
+  /** The chat the person looked at. */
+  session_id: string;
+}
+
 /** A slash command the user wrote as a Markdown file. */
 export interface MarkdownSlashCommand {
   /** A hint for the arguments it takes; empty when it takes none. */
@@ -1311,6 +1342,8 @@ export interface MarketplaceNameArgs {
 export interface MarketplacePluginInfo {
   /** Git branch to install from. Empty for the repository's default branch. */
   branch?: string;
+  /** Category the catalog files the plugin under (e.g. `development`, `security`). Empty when the catalog gives none. */
+  category?: string;
   /** What the plugin does. Empty when not given. */
   description?: string;
   /** Plugin name; install it as `@<marketplace>/<name>`. */
@@ -2076,6 +2109,32 @@ export interface ReadFileArgs {
   path: string;
 }
 
+/** Arguments for reading a file's raw bytes to preview an image or PDF. */
+export interface ReadFileBytesArgs {
+  /** The file: relative to the project, absolute, or an `attachment:<id>` reference. */
+  path: string;
+}
+
+/**
+ * The raw bytes of a file, base64-encoded, for previewing an image
+ * or a PDF the text reader cannot show.
+ *
+ * Same sandbox as `ReadFileResult`; a larger cap, since an image
+ * or a PDF is bigger than a source file.
+ */
+export interface ReadFileBytesResult {
+  /** The file's bytes, base64-encoded; empty when `error` is set. */
+  data: string;
+  /** Why the file could not be read; empty on success. */
+  error?: string;
+  /** The file's media type guessed from its extension (e.g. `image/png`); empty if unknown or on error. */
+  media_type?: string;
+  /** The file's path (resolved when the read got that far). */
+  path: string;
+  /** The file's size in bytes. */
+  size: number;
+}
+
 /**
  * The contents of a text file, for previewing it.
  *
@@ -2402,6 +2461,14 @@ export interface Scroll {
   message_id?: string | null;
 }
 
+/** Arguments for searching across every session in the project. */
+export interface SearchAllChatsArgs {
+  /** Maximum number of hits to return in total. */
+  limit?: number;
+  /** Text to find, case-insensitive; blank finds nothing. */
+  query: string;
+}
+
 /** Arguments for searching a session's conversation. */
 export interface SearchChatArgs {
   /** Maximum number of hits to return. */
@@ -2547,6 +2614,8 @@ export interface SessionListEntry {
   session_id?: string;
   /** A short summary of the conversation; empty when there is none. */
   summary?: string;
+  /** True when a run in this session finished after the person last looked at it (`mark_session_seen`). */
+  unread?: boolean;
   /** When the session last changed, in Unix seconds. */
   updated_at?: number;
 }
@@ -2578,6 +2647,26 @@ export interface SessionNamedPayload {
   name: string;
   /** The session that was named. */
   session_id: string;
+}
+
+/** One chat's state, and whether it is unread. */
+export interface SessionState {
+  /** The chat's session id. */
+  session_id: string;
+  /** What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing — also every chat that is not loaded. */
+  state?: ActivityState;
+  /** True when a run in the chat finished after the person last looked at it (`mark_session_seen`). Read state is the person's, across windows and devices. */
+  unread?: boolean;
+  /** How many approvals in the chat wait on the person. */
+  waiting_approvals?: number;
+}
+
+/** Every chat that is doing something or is unread; any other chat is idle and read. */
+export interface SessionStates {
+  /** Why this was sent. `activity`: a run started, finished, paused or resumed, or the states were asked for. `seen`: a `mark_session_seen` call. */
+  cause?: "activity" | "seen";
+  /** The chats that are running, waiting or unread, each once. */
+  sessions?: SessionState[];
 }
 
 /**
@@ -3901,6 +3990,16 @@ export interface SessionNamedPush extends Omit<PushNotification, "channel" | "pa
 }
 
 /**
+ * Which chats are running, waiting on the person, or finished unseen moved.
+ *
+ * On the wire: `push_notification` on the channel `session_states_changed`.
+ */
+export interface SessionStatesChangedPush extends Omit<PushNotification, "channel" | "payload"> {
+  channel: "session_states_changed";
+  payload: SessionStates;
+}
+
+/**
  * The agent's to-do list, whole, after it changed.
  *
  * On the wire: `push_notification` on the channel `todos_updated`.
@@ -4051,6 +4150,7 @@ export const PUSH_CHANNELS: ReadonlySet<string> = new Set([
   "scheduler_completed",
   "scheduler_started",
   "session_named",
+  "session_states_changed",
   "todos_updated",
   "visualization_action_dispatched",
   "vm_credential",

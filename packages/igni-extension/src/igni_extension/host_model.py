@@ -340,6 +340,29 @@ class SessionNamed(BaseModel):
     name: str
 
 
+class SessionState(BaseModel):
+    """What one chat is doing, and whether it has a finished run the person has not seen."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    session_id: str
+    state: str
+    """`idle`, `waiting` or `running`."""
+    waiting_approvals: int
+    unread: bool
+    """A run finished after the person last looked at the chat. Read state is the person's, across windows and devices."""
+
+
+class SessionStates(BaseModel):
+    """The chats that are running, waiting or unread; any other chat is idle and read."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    sessions: list[SessionState]
+    cause: str
+    """`activity`: a run moved. `seen`: a chat was marked seen."""
+
+
 class SessionAttached(BaseModel):
     """A session bound, and the folder it works in."""
 
@@ -1923,6 +1946,8 @@ class HostSessions(HostObject):
         """Every session, newest first."""
         self.current: Property[str] = Property(self, "current", str, writable=True)
         """The session the active window shows. Writable: setting it switches, and is refused where the person's switch would be."""
+        self.states: Property[list[SessionState]] = Property(self, "states", list[SessionState], writable=False)
+        """The chats that are running, waiting on the person, or have a finished run the person has not seen. A chat not listed is idle and read."""
         self.current_changed: Signal[SessionChange] = Signal("session.switched", SessionChange)
         """A window moved to another session."""
         self.listed: Signal[SessionList] = Signal("sessions.listed", SessionList)
@@ -1931,6 +1956,8 @@ class HostSessions(HostObject):
         """`/clear` renewed a session."""
         self.named: Signal[SessionNamed] = Signal("sessions.named", SessionNamed)
         """A session got its name."""
+        self.states_changed: Signal[SessionStates] = Signal("sessions.states_changed", SessionStates)
+        """A chat started or finished a run, began or stopped waiting, or was seen."""
 
     async def open(self, session_id: str) -> SessionChange:
         """Show a session in the active window.
@@ -1958,6 +1985,14 @@ class HostSessions(HostObject):
             project_dir: The folder the session works in; it must belong to that session.
         """
         return cast(SessionAttached, await self._call("attach", {"session_id": session_id, "project_dir": project_dir}, SessionAttached))
+
+    async def mark_seen(self, session_id: str) -> SessionStates:
+        """Mark a chat seen, so its finished runs are no longer unread — for the person, in every window.
+
+        Args:
+            session_id: The chat the person looked at, by its id.
+        """
+        return cast(SessionStates, await self._call("mark_seen", {"session_id": session_id}, SessionStates))
 
     def chat(self, session_id: str) -> HostChat:
         """`host.chat` of any session of this project, by its id, without showing it. The session on screen's id is `host.chat` itself.
@@ -2088,6 +2123,15 @@ class HostChat(HostObject):
             limit: At most this many; 50 by default.
         """
         return cast(list[JsonValue], await self._call("search", {"query": query, "limit": limit}, list[JsonValue]))
+
+    async def search_all(self, query: str, limit: int | None = None) -> list[JsonValue]:
+        """Search the transcripts of every session in the project.
+
+        Args:
+            query: The text to find in every session's transcript.
+            limit: At most this many in total; 50 by default.
+        """
+        return cast(list[JsonValue], await self._call("search_all", {"query": query, "limit": limit}, list[JsonValue]))
 
     async def cancel(self) -> None:
         """Stop the run. A run waiting on an approval is ended only with `chat.approvals` too: ending it refuses the approval. Either way the chat then gets an `info` saying the run was cancelled and its `streaming_done`.
@@ -3147,6 +3191,8 @@ __all__ = [
     "SessionInfo",
     "SessionList",
     "SessionNamed",
+    "SessionState",
+    "SessionStates",
     "SettingsChange",
     "ShellResult",
     "Sidebar",

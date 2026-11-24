@@ -52,6 +52,7 @@ from igni_client.models import (
     ExtractLearningsArgs,
     FileCompletion,
     FileEditedPush,
+    GlobalChatSearchHit,
     GroupPolicyPackResult,
     HookEntryView,
     HttpRetryAttemptPush,
@@ -71,6 +72,7 @@ from igni_client.models import (
     MarketplaceNameArgs,
     MarketplaceUrlArgs,
     MarkReadArgs,
+    MarkSessionSeenArgs,
     McpApproval,
     McpApprovalArgs,
     McpInitResult,
@@ -114,6 +116,8 @@ from igni_client.models import (
     PromoteAgentArgs,
     PromoteEphemeralResult,
     ReadFileArgs,
+    ReadFileBytesArgs,
+    ReadFileBytesResult,
     ReadFileResult,
     ReasoningStarted,
     RefreshMarketplacesArgs,
@@ -131,6 +135,7 @@ from igni_client.models import (
     ScheduledTasksArgs,
     SchedulerCompletedPush,
     SchedulerStartedPush,
+    SearchAllChatsArgs,
     SearchChatArgs,
     SearchCodeArgs,
     SearchCodeResult,
@@ -138,6 +143,8 @@ from igni_client.models import (
     ServerFound,
     SessionIdArgs,
     SessionListResult,
+    SessionStates,
+    SessionStatesChangedPush,
     SetExtensionSettingsArgs,
     SetServerArgs,
     SkillDefinition,
@@ -253,12 +260,14 @@ _LIST_BACKGROUND_PROCESSES: TypeAdapter[list[ProcessRow]] = TypeAdapter(list[Pro
 _LIST_DIRS: TypeAdapter[DirListResult] = TypeAdapter(DirListResult)
 _LIST_EXTENSIONS: TypeAdapter[ExtensionListResult] = TypeAdapter(ExtensionListResult)
 _LIST_MCP_APPROVALS: TypeAdapter[list[McpApproval]] = TypeAdapter(list[McpApproval])
+_LIST_SESSION_STATES: TypeAdapter[SessionStates] = TypeAdapter(SessionStates)
 _LIST_SESSIONS: TypeAdapter[SessionListResult] = TypeAdapter(SessionListResult)
 _LIST_WORKFLOWS: TypeAdapter[list[WorkflowListItem]] = TypeAdapter(list[WorkflowListItem])
 _LOGIN: TypeAdapter[LoginStarted] = TypeAdapter(LoginStarted)
 _LOOP_PAUSE: TypeAdapter[bool] = TypeAdapter(bool)
 _LOOP_RESUME: TypeAdapter[str] = TypeAdapter(str)
 _LOOP_STATUS: TypeAdapter[LoopStatusSnapshot] = TypeAdapter(LoopStatusSnapshot)
+_MARK_SESSION_SEEN: TypeAdapter[SessionStates] = TypeAdapter(SessionStates)
 _MCP_CONNECT: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _MCP_DISCONNECT: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _MINT_APPROVER_TOKEN: TypeAdapter[ApproverTokenMinted] = TypeAdapter(ApproverTokenMinted)
@@ -272,6 +281,7 @@ _POP_PENDING_LOOP_ITERATION: TypeAdapter[LoopAdvance | None] = TypeAdapter(LoopA
 _PREVIEW_PLUGIN: TypeAdapter[PluginContents] = TypeAdapter(PluginContents)
 _PROMOTE_EPHEMERAL_AGENT: TypeAdapter[PromoteEphemeralResult] = TypeAdapter(PromoteEphemeralResult)
 _READ_FILE: TypeAdapter[ReadFileResult] = TypeAdapter(ReadFileResult)
+_READ_FILE_BYTES: TypeAdapter[ReadFileBytesResult] = TypeAdapter(ReadFileBytesResult)
 _READ_PROCESS_TAIL: TypeAdapter[ProcessTailResult] = TypeAdapter(ProcessTailResult)
 _REFRESH_MARKETPLACES: TypeAdapter[InfoMessage] = TypeAdapter(InfoMessage)
 _RELOAD_CLOUD_CREDENTIALS: TypeAdapter[StatusUpdate] = TypeAdapter(StatusUpdate)
@@ -285,6 +295,7 @@ _REVOKE_APPROVER_TOKENS: TypeAdapter[ApproverTokensRevoked] = TypeAdapter(Approv
 _RUN_SHELL: TypeAdapter[RunShellResult] = TypeAdapter(RunShellResult)
 _RUN_WORKFLOW: TypeAdapter[WorkflowRunResponse] = TypeAdapter(WorkflowRunResponse)
 _SAVE_PERMISSION_RULE: TypeAdapter[None] = TypeAdapter(None)
+_SEARCH_ALL_CHATS: TypeAdapter[list[GlobalChatSearchHit]] = TypeAdapter(list[GlobalChatSearchHit])
 _SEARCH_CHAT: TypeAdapter[list[ChatSearchHit]] = TypeAdapter(list[ChatSearchHit])
 _SEARCH_CODE: TypeAdapter[SearchCodeResult] = TypeAdapter(SearchCodeResult)
 _SET_EXTENSION_SETTINGS: TypeAdapter[ExtensionListResult] = TypeAdapter(ExtensionListResult)
@@ -359,6 +370,7 @@ type ExecuteScheduledTaskEvent = (
     | TodosUpdatedPush
 )
 type LoginEvent = LoginResultPush | LoginStatusPush | NotificationsChangedPush
+type MarkSessionSeenEvent = SessionStatesChangedPush
 type NotificationsListEvent = NotificationsChangedPush
 type NotificationsMarkReadEvent = NotificationsChangedPush
 type RunShellEvent = (
@@ -1204,6 +1216,19 @@ METHODS: dict[str, MethodSpec] = {
         correlate=None,
         followed=False,
     ),
+    "list_session_states": MethodSpec(
+        wire="list_session_states",
+        python="igni.sessions.states",
+        scope="igni",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
     "list_sessions": MethodSpec(
         wire="list_sessions",
         python="session.list_sessions",
@@ -1285,6 +1310,19 @@ METHODS: dict[str, MethodSpec] = {
         timeout_seconds=10,
         correlate=None,
         followed=False,
+    ),
+    "mark_session_seen": MethodSpec(
+        wire="mark_session_seen",
+        python="igni.sessions.mark_seen",
+        scope="igni",
+        access="client",
+        reply="rpc_response",
+        streams=("push_notification:session_states_changed",),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=Correlation(by="payload.cause", equals="seen"),
+        followed=True,
     ),
     "mcp_connect": MethodSpec(
         wire="mcp_connect",
@@ -1419,6 +1457,19 @@ METHODS: dict[str, MethodSpec] = {
     "read_file": MethodSpec(
         wire="read_file",
         python="session.files.read",
+        scope="session",
+        access="client",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
+    "read_file_bytes": MethodSpec(
+        wire="read_file_bytes",
+        python="session.files.read_bytes",
         scope="session",
         access="client",
         reply="rpc_response",
@@ -1569,6 +1620,19 @@ METHODS: dict[str, MethodSpec] = {
         python="session.permissions.save_rule",
         scope="session",
         access="window",
+        reply="rpc_response",
+        streams=(),
+        may_stream=(),
+        duration="io",
+        timeout_seconds=30,
+        correlate=None,
+        followed=False,
+    ),
+    "search_all_chats": MethodSpec(
+        wire="search_all_chats",
+        python="session.history.search_all",
+        scope="session",
+        access="client",
         reply="rpc_response",
         streams=(),
         may_stream=(),
@@ -2171,7 +2235,7 @@ class IgniProcesses:
 
 
 class IgniSessions:
-    """igni's sessions: attach one, or make a new one in a project folder.
+    """igni's sessions: attach one, or make a new one in a project folder; which are running, waiting or unread, and marking one seen.
 
     The generated base of ``igni_client.sessions.Sessions``, which is ``igni.sessions``.
     """
@@ -2213,6 +2277,32 @@ class IgniSessions:
             {"project_dir": project_dir, "session_id": session_id},
             _ATTACH_SESSION,
         )
+
+    def mark_seen(self, session_id: str) -> Call[SessionStates, MarkSessionSeenEvent]:
+        """Mark a chat as seen, so it is no longer unread.
+
+        `session_id` is the chat the person looked at. Its runs that
+        finished until now are read, wherever the person looks next; a run
+        that finishes later makes it unread again. Returns the chats'
+        states afterwards, also pushed to every window as
+        `session_states_changed`. An unknown id is recorded all the same.
+
+        ``async with`` the call to follow it: it yields the ``session_states_changed`` push that tells every window the chat was seen, and ends with the answer.
+        """
+        return self._caller.follow(
+            "mark_session_seen", MarkSessionSeenArgs, {"session_id": session_id}, _MARK_SESSION_SEEN
+        )
+
+    async def states(self) -> SessionStates:
+        """List the chats that are running, waiting on the person, or unread.
+
+        Takes no arguments. Returns `sessions`: each chat that is doing
+        something or has a finished run the person has not seen, with its
+        `state` (`running`, `waiting` or `idle`), how many approvals
+        wait in it, and `unread`. A chat not listed is idle and read.
+        `session_states_changed` pushes the same shape whenever it moves.
+        """
+        return await self._caller.rpc("list_session_states", NoArgs, {}, _LIST_SESSION_STATES)
 
 
 class IgniWindow:
@@ -2448,6 +2538,19 @@ class SessionFiles:
         """
         return await self._caller.rpc("read_file", ReadFileArgs, {"path": path}, _READ_FILE)
 
+    async def read_bytes(self, path: str) -> ReadFileBytesResult:
+        """Read a file's raw bytes (base64) to preview an image or a PDF.
+
+        The same sandbox as `read_file` with a larger cap (10 MiB).
+        Returns the resolved `path`, the base64 `data`, its `size`
+        and a `media_type` hint; or `error` when the file is missing,
+        a directory, too large, unreadable, or outside the folders igni
+        lets a client read.
+        """
+        return await self._caller.rpc(
+            "read_file_bytes", ReadFileBytesArgs, {"path": path}, _READ_FILE_BYTES
+        )
+
     async def search(self, query: str) -> SearchCodeResult:
         """Find where a snippet of code appears in this session's project.
 
@@ -2497,6 +2600,22 @@ class SessionHistory:
             SearchChatArgs,
             {"limit": limit, "query": query, "session_id": self._caller.session_id},
             _SEARCH_CHAT,
+        )
+
+    async def search_all(self, query: str, *, limit: int = 50) -> list[GlobalChatSearchHit]:
+        """Find text across every session in the project, not just one.
+
+        `query` is the text to find (case-insensitive; blank finds
+        nothing); `limit` caps the total hits (default 50). Returns one
+        hit per match, newest session first, each carrying the
+        `session_id` and `session_name` it was found in alongside the
+        same fields `search_chat` returns.
+        """
+        return await self._caller.rpc(
+            "search_all_chats",
+            SearchAllChatsArgs,
+            {"limit": limit, "query": query},
+            _SEARCH_ALL_CHATS,
         )
 
     async def truncate(self, run_id: str) -> TruncateHistoryResult:

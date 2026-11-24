@@ -341,7 +341,7 @@
       "package": "igni-client",
       "slug": "sessions",
       "title": "Sessions",
-      "description": "igni's sessions: attach one, or make a new one in a project folder. The methods igni answers for one session; Session is one.",
+      "description": "igni's sessions: attach one, or make a new one in a project folder; which are running, waiting or unread, and marking one seen. The methods igni answers for one session; Session is one.",
       "category": "reference",
       "order": 10,
       "file": "igni-client/sessions.md",
@@ -350,6 +350,16 @@
           "level": 2,
           "id": "igni-sessions-attach",
           "title": "igni.sessions.attach()"
+        },
+        {
+          "level": 2,
+          "id": "igni-sessions-mark-seen",
+          "title": "igni.sessions.mark_seen()"
+        },
+        {
+          "level": 2,
+          "id": "igni-sessions-states",
+          "title": "igni.sessions.states()"
         },
         {
           "level": 2,
@@ -487,6 +497,11 @@
           "level": 2,
           "id": "session-history-search",
           "title": "session.history.search()"
+        },
+        {
+          "level": 2,
+          "id": "session-history-search-all",
+          "title": "session.history.search_all()"
         },
         {
           "level": 2,
@@ -658,6 +673,11 @@
           "level": 2,
           "id": "session-files-read",
           "title": "session.files.read()"
+        },
+        {
+          "level": 2,
+          "id": "session-files-read-bytes",
+          "title": "session.files.read_bytes()"
         },
         {
           "level": 2,
@@ -1186,6 +1206,16 @@
         },
         {
           "level": 3,
+          "id": "sessionstate",
+          "title": "SessionState"
+        },
+        {
+          "level": 3,
+          "id": "sessionstates",
+          "title": "SessionStates"
+        },
+        {
+          "level": 3,
           "id": "todoitem",
           "title": "TodoItem"
         },
@@ -1253,6 +1283,11 @@
           "level": 3,
           "id": "contextbreakdown",
           "title": "ContextBreakdown"
+        },
+        {
+          "level": 3,
+          "id": "globalchatsearchhit",
+          "title": "GlobalChatSearchHit"
         },
         {
           "level": 3,
@@ -1378,6 +1413,11 @@
           "level": 3,
           "id": "pickdirresult",
           "title": "PickDirResult"
+        },
+        {
+          "level": 3,
+          "id": "readfilebytesresult",
+          "title": "ReadFileBytesResult"
         },
         {
           "level": 3,
@@ -2081,6 +2121,11 @@
         },
         {
           "level": 3,
+          "id": "activitystate",
+          "title": "ActivityState"
+        },
+        {
+          "level": 3,
           "id": "commandaction",
           "title": "CommandAction"
         },
@@ -2399,6 +2444,11 @@
           "level": 3,
           "id": "sessionnamedpush",
           "title": "SessionNamedPush"
+        },
+        {
+          "level": 3,
+          "id": "sessionstateschangedpush",
+          "title": "SessionStatesChangedPush"
         },
         {
           "level": 3,
@@ -5862,6 +5912,16 @@
         },
         {
           "level": 2,
+          "id": "sessionstate",
+          "title": "SessionState"
+        },
+        {
+          "level": 2,
+          "id": "sessionstates",
+          "title": "SessionStates"
+        },
+        {
+          "level": 2,
           "id": "sessionattached",
           "title": "SessionAttached"
         },
@@ -6517,6 +6577,11 @@
         },
         {
           "level": 3,
+          "id": "hostsessions-mark-seen",
+          "title": "HostSessions.mark_seen()"
+        },
+        {
+          "level": 3,
           "id": "hostsessions-chat",
           "title": "HostSessions.chat()"
         },
@@ -6554,6 +6619,11 @@
           "level": 3,
           "id": "hostchat-search",
           "title": "HostChat.search()"
+        },
+        {
+          "level": 3,
+          "id": "hostchat-search-all",
+          "title": "HostChat.search_all()"
         },
         {
           "level": 3,
