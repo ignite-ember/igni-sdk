@@ -271,6 +271,7 @@ const CANCEL_RUN = rule({
 
 const SCHEDULED_TASK = rule({ endsWith: (c) => c.hasResult });
 const NOTIFICATIONS = rule({ endsWith: (c) => c.hasResult });
+const SESSION_STATES = rule({ endsWith: (c) => c.hasResult });
 const WORKSPACE_TRUST = rule({ needsResult: true, endsWith: (c) => c.hasResult });
 const WINDOW_MODEL = rule({ endsWith: (c) => c.hasResult });
 const RUN_SHELL = rule({
@@ -295,6 +296,7 @@ export const RULES: Record<string, Rule> = {
   notifications_list: NOTIFICATIONS,
   notifications_mark_read: NOTIFICATIONS,
   clear_cloud_credentials: NOTIFICATIONS,
+  mark_session_seen: SESSION_STATES,
   set_workspace_trust: WORKSPACE_TRUST,
   window_model: WINDOW_MODEL,
   run_shell: RUN_SHELL,

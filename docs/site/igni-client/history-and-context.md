@@ -13,6 +13,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 |---|---|
 | [`session.history.get()`](/docs/sdk/igni-client/history-and-context#session-history-get) | Read a session's conversation, turn by turn, as a client draws it. |
 | [`session.history.search()`](/docs/sdk/igni-client/history-and-context#session-history-search) | Find text in a session's conversation. |
+| [`session.history.search_all()`](/docs/sdk/igni-client/history-and-context#session-history-search-all) | Find text across every session in the project, not just one. |
 | [`session.history.truncate()`](/docs/sdk/igni-client/history-and-context#session-history-truncate) | Drop a run from a session's history, with every run after it. |
 | [`session.context.breakdown()`](/docs/sdk/igni-client/history-and-context#session-context-breakdown) | Split this session's context into what compaction can shrink and what it cannot. |
 | [`session.context.compact()`](/docs/sdk/igni-client/history-and-context#session-context-compact) | Compact this session's conversation when its context is nearly full. |
@@ -107,6 +108,53 @@ for hit in await session.history.search("migration", limit=10):
 ```typescript
 for (const hit of await session.history.search("migration", 10)) {
   console.log(hit.run_id, hit.snippet);
+}
+```
+
+## session.history.search_all()
+
+Find text across every session in the project, not just one.
+
+```python
+async def search_all(self, query: str, *, limit: int = 50) -> list[GlobalChatSearchHit]
+```
+
+```typescript
+search_all(query: string, limit?: number): Promise<GlobalChatSearchHit[]>
+```
+
+`query` is the text to find (case-insensitive; blank finds
+nothing); `limit` caps the total hits (default 50). Returns one
+hit per match, newest session first, each carrying the
+`session_id` and `session_name` it was found in alongside the
+same fields `session.history.search()` returns.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `limit` | `int` | `50` | Maximum number of hits to return in total. |
+| `query` | `str` | required | Text to find, case-insensitive; blank finds nothing. |
+
+**Returns** `list[`[`GlobalChatSearchHit`](/docs/sdk/igni-client/models-reference#globalchatsearchhit)`]`.
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `search_all_chats`, scope `session`, area `session_history`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+for hit in await session.history.search_all("migration", limit=10):
+    print(hit.session_name or hit.session_id, hit.snippet)
+```
+
+```typescript
+for (const hit of await session.history.search_all("migration", 10)) {
+  console.log(hit.session_name || hit.session_id, hit.snippet);
 }
 ```
 

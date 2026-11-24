@@ -778,6 +778,60 @@
       ]
     },
     {
+      "name": "SessionState",
+      "doc": "What one chat is doing, and whether it has a finished run the person has not seen.",
+      "fields": [
+        {
+          "name": "session_id",
+          "type": "str",
+          "doc": "",
+          "optional": false
+        },
+        {
+          "name": "state",
+          "type": "str",
+          "doc": "`idle`, `waiting` or `running`.",
+          "optional": false
+        },
+        {
+          "name": "waiting_approvals",
+          "type": "int",
+          "doc": "",
+          "optional": false
+        },
+        {
+          "name": "unread",
+          "type": "bool",
+          "doc": "A run finished after the person last looked at the chat. Read state is the person's, across windows and devices.",
+          "optional": false
+        },
+        {
+          "name": "last_message_at",
+          "type": "int",
+          "doc": "When a message last went in or a reply came out, in Unix milliseconds; `0` when none was recorded.",
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "SessionStates",
+      "doc": "The chats that are running, waiting or unread; any other chat is idle and read.",
+      "fields": [
+        {
+          "name": "sessions",
+          "type": "list[SessionState]",
+          "doc": "",
+          "optional": false
+        },
+        {
+          "name": "cause",
+          "type": "str",
+          "doc": "`activity`: a run moved. `seen`: a chat was marked seen.",
+          "optional": false
+        }
+      ]
+    },
+    {
       "name": "SessionAttached",
       "doc": "A session bound, and the folder it works in.",
       "fields": [
@@ -2003,6 +2057,42 @@
           "name": "payload",
           "type": "json",
           "doc": "",
+          "optional": false
+        }
+      ]
+    },
+    {
+      "name": "FileBytes",
+      "doc": "A file's bytes, for showing an image or a PDF.",
+      "fields": [
+        {
+          "name": "path",
+          "type": "str",
+          "doc": "The file, as it was resolved.",
+          "optional": false
+        },
+        {
+          "name": "data",
+          "type": "str",
+          "doc": "Its bytes, base64-encoded; empty when `error` is set.",
+          "optional": false
+        },
+        {
+          "name": "size",
+          "type": "int",
+          "doc": "Its size in bytes.",
+          "optional": false
+        },
+        {
+          "name": "media_type",
+          "type": "str",
+          "doc": "What kind of file it is, e.g. `image/png`.",
+          "optional": false
+        },
+        {
+          "name": "error",
+          "type": "str",
+          "doc": "Why it could not be read; empty when it was.",
           "optional": false
         }
       ]
@@ -4703,6 +4793,19 @@
           "permission": null,
           "inherit_permission": true,
           "stage": 1
+        },
+        {
+          "name": "states",
+          "type": "list[SessionState]",
+          "doc": "The chats that are running, waiting on the person, or have a finished run the person has not seen. A chat not listed is idle and read.",
+          "writable": false,
+          "changed_by": [
+            "states_changed"
+          ],
+          "constant": false,
+          "permission": null,
+          "inherit_permission": true,
+          "stage": 1
         }
       ],
       "signals": [
@@ -4737,6 +4840,15 @@
           "name": "named",
           "type": "SessionNamed",
           "doc": "A session got its name.",
+          "wire": null,
+          "permission": null,
+          "inherit_permission": true,
+          "stage": 1
+        },
+        {
+          "name": "states_changed",
+          "type": "SessionStates",
+          "doc": "A chat started or finished a run, began or stopped waiting, or was seen.",
           "wire": null,
           "permission": null,
           "inherit_permission": true,
@@ -4808,6 +4920,23 @@
           ],
           "result": "SessionAttached",
           "doc": "Make sure a session is live, without showing it.",
+          "permission": null,
+          "inherit_permission": true,
+          "stage": 1,
+          "elsewhere": null
+        },
+        {
+          "name": "mark_seen",
+          "params": [
+            {
+              "name": "session_id",
+              "type": "str",
+              "doc": "",
+              "optional": false
+            }
+          ],
+          "result": "SessionStates",
+          "doc": "Mark a chat seen, so its finished runs are no longer unread — for the person, in every window.",
           "permission": null,
           "inherit_permission": true,
           "stage": 1,
@@ -5227,6 +5356,29 @@
           ],
           "result": "list[json]",
           "doc": "Search the transcript.",
+          "permission": null,
+          "inherit_permission": true,
+          "stage": 1,
+          "elsewhere": "chat.read"
+        },
+        {
+          "name": "search_all",
+          "params": [
+            {
+              "name": "query",
+              "type": "str",
+              "doc": "",
+              "optional": false
+            },
+            {
+              "name": "limit",
+              "type": "int",
+              "doc": "At most this many in total; 50 by default.",
+              "optional": true
+            }
+          ],
+          "result": "list[json]",
+          "doc": "Search the transcripts of every session in the project.",
           "permission": null,
           "inherit_permission": true,
           "stage": 1,
@@ -6234,6 +6386,23 @@
           ],
           "result": "json",
           "doc": "Read a file in the project.",
+          "permission": null,
+          "inherit_permission": true,
+          "stage": 1,
+          "elsewhere": null
+        },
+        {
+          "name": "read_bytes",
+          "params": [
+            {
+              "name": "path",
+              "type": "str",
+              "doc": "",
+              "optional": false
+            }
+          ],
+          "result": "FileBytes",
+          "doc": "Read a file in the project as bytes: base64-encoded, with its media type.",
           "permission": null,
           "inherit_permission": true,
           "stage": 1,

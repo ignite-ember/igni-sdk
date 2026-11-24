@@ -19,7 +19,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from igni_client import Call, IgniClient
-from igni_client.api import METHODS, IgniApi, SessionApi
+from igni_client.api import METHODS, IgniApi, IgniSessions, SessionApi
 from igni_client.errors import MethodFailed, UnexpectedAnswer
 from igni_client.testing import FakeIgni, sample
 
@@ -37,11 +37,15 @@ def _method(owner: Any, path: str) -> Any:
     return node
 
 
+#: Namespaces the client extends by hand, by the generated base their methods are on.
+HAND_EXTENDED: dict[str, Any] = {"sessions": IgniSessions}
+
+
 def _function(spec_python: str, scope: str) -> Any:
     node: Any = IgniApi if scope == "igni" else SessionApi
     parts = spec_python.split(".")[1:]
     for part in parts[:-1]:
-        node = typing.get_type_hints(node)[part]
+        node = typing.get_type_hints(node).get(part) or HAND_EXTENDED[part]
     return getattr(node, parts[-1])
 
 
