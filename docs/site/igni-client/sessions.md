@@ -124,6 +124,10 @@ Mark a chat as seen, so it is no longer unread.
 def mark_seen(self, session_id: str) -> Call[SessionStates, MarkSessionSeenEvent]
 ```
 
+```typescript
+mark_seen(session_id: string): Call<SessionStates, MarkSessionSeenEvent>
+```
+
 `session_id` is the chat the person looked at. Its runs that
 finished until now are read, wherever the person looks next; a run
 that finishes later makes it unread again. Returns the chats'
@@ -176,6 +180,10 @@ List the chats that are running, waiting on the person, or unread.
 
 ```python
 async def states(self) -> SessionStates
+```
+
+```typescript
+states(): Promise<SessionStates>
 ```
 
 Returns `sessions`: each chat that is doing

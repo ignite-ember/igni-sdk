@@ -166,6 +166,10 @@ Read a file's raw bytes (base64) to preview an image or a PDF.
 async def read_bytes(self, path: str) -> ReadFileBytesResult
 ```
 
+```typescript
+read_bytes(path: string): Promise<ReadFileBytesResult>
+```
+
 The same sandbox as `session.files.read()` with a larger cap (10 MiB).
 Returns the resolved `path`, the base64 `data`, its `size`
 and a `media_type` hint; or `error` when the file is missing,

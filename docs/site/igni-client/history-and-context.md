@@ -119,6 +119,10 @@ Find text across every session in the project, not just one.
 async def search_all(self, query: str, *, limit: int = 50) -> list[GlobalChatSearchHit]
 ```
 
+```typescript
+search_all(query: string, limit?: number): Promise<GlobalChatSearchHit[]>
+```
+
 `query` is the text to find (case-insensitive; blank finds
 nothing); `limit` caps the total hits (default 50). Returns one
 hit per match, newest session first, each carrying the
