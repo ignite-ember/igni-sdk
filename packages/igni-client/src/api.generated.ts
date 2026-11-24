@@ -37,6 +37,7 @@ import type {
   ExtensionSlashCommand,
   FileCompletion,
   FileEditedPush,
+  GlobalChatSearchHit,
   GroupPolicyPackResult,
   HookEntryView,
   HttpRetryAttemptPush,
@@ -83,6 +84,7 @@ import type {
   ProcessStartedPush,
   ProcessTailResult,
   PromoteEphemeralResult,
+  ReadFileBytesResult,
   ReadFileResult,
   ReasoningStarted,
   RequirementDetails,
@@ -100,6 +102,8 @@ import type {
   ServerChoice,
   ServerFound,
   SessionListResult,
+  SessionStates,
+  SessionStatesChangedPush,
   SkillDefinition,
   SkillInfo,
   SkillSlashCommand,
@@ -154,6 +158,7 @@ export type DismissPlanEvent = PlanDecidedPush;
 export type DispatchVisualizationActionEvent = VisualizationActionDispatchedPush;
 export type ExecuteScheduledTaskEvent = BackgroundProcessDonePush | FileEditedPush | HttpRetryAttemptPush | HttpRetrySucceededPush | OrchestrateEventPush | PermissionModeChangedPush | PlanSubmittedPush | ProcessExitedPush | ProcessLinePush | ProcessStartedPush | TodosUpdatedPush;
 export type LoginEvent = LoginResultPush | LoginStatusPush | NotificationsChangedPush;
+export type MarkSessionSeenEvent = SessionStatesChangedPush;
 export type NotificationsListEvent = NotificationsChangedPush;
 export type NotificationsMarkReadEvent = NotificationsChangedPush;
 export type RunShellEvent = BackgroundProcessDonePush | ProcessExitedPush | ProcessLinePush | ProcessStartedPush;
@@ -227,12 +232,14 @@ export const METHODS: Record<string, MethodSpec> = {
   "list_dirs": { wire: "list_dirs", python: "igni.files.list_dirs", scope: "igni", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "list_extensions": { wire: "list_extensions", python: "igni.extensions.list", scope: "igni", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
   "list_mcp_approvals": { wire: "list_mcp_approvals", python: "session.mcp.list_approvals", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
+  "list_session_states": { wire: "list_session_states", python: "igni.sessions.states", scope: "igni", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "list_sessions": { wire: "list_sessions", python: "session.list_sessions", scope: "session", access: "client", reply: "message", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "list_workflows": { wire: "list_workflows", python: "session.workflows.list", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "login": { wire: "login", python: "igni.auth.login", scope: "igni", access: "window", reply: "rpc_response", streams: ["push_notification:login_result", "push_notification:login_status", "push_notification:notifications_changed"], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: { by: "payload.flow_id", source: "result.flow_id" }, followed: true },
   "loop_pause": { wire: "loop_pause", python: "session.loop.pause", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
   "loop_resume": { wire: "loop_resume", python: "session.loop.resume", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
   "loop_status": { wire: "loop_status", python: "session.loop.status", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
+  "mark_session_seen": { wire: "mark_session_seen", python: "igni.sessions.mark_seen", scope: "igni", access: "client", reply: "rpc_response", streams: ["push_notification:session_states_changed"], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: { by: "payload.cause", equals: "seen" }, followed: true },
   "mcp_connect": { wire: "mcp_connect", python: "session.mcp.connect", scope: "session", access: "client", reply: "message", streams: [], mayStream: [], duration: "network", timeoutSeconds: 60, correlate: null, followed: false },
   "mcp_disconnect": { wire: "mcp_disconnect", python: "session.mcp.disconnect", scope: "session", access: "client", reply: "message", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "mint_approver_token": { wire: "mint_approver_token", python: "igni.approvers.mint_token", scope: "igni", access: "window", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
@@ -244,6 +251,7 @@ export const METHODS: Record<string, MethodSpec> = {
   "preview_plugin": { wire: "preview_plugin", python: "session.plugins.preview", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "long", timeoutSeconds: 600, correlate: null, followed: false },
   "promote_ephemeral_agent": { wire: "promote_ephemeral_agent", python: "session.agents.promote", scope: "session", access: "window", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "read_file": { wire: "read_file", python: "session.files.read", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
+  "read_file_bytes": { wire: "read_file_bytes", python: "session.files.read_bytes", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "read_process_tail": { wire: "read_process_tail", python: "igni.processes.tail", scope: "igni", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "instant", timeoutSeconds: 10, correlate: null, followed: false },
   "refresh_marketplaces": { wire: "refresh_marketplaces", python: "igni.marketplaces.refresh", scope: "igni", access: "client", reply: "message", streams: [], mayStream: [], duration: "long", timeoutSeconds: 600, correlate: null, followed: false },
   "reload_cloud_credentials": { wire: "reload_cloud_credentials", python: "session.auth.reload_credentials", scope: "session", access: "window", reply: "message", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
@@ -255,6 +263,7 @@ export const METHODS: Record<string, MethodSpec> = {
   "run_shell": { wire: "run_shell", python: "session.run_shell", scope: "session", access: "window", reply: "rpc_response", streams: ["push_notification:background_process_done", "push_notification:process_exited", "push_notification:process_line", "push_notification:process_started"], mayStream: [], duration: "long", timeoutSeconds: 600, correlate: { by: "payload.pid", source: "result.pid" }, followed: true },
   "run_workflow": { wire: "run_workflow", python: "session.workflows.run", scope: "session", access: "client", reply: "rpc_response", streams: ["push_notification:workflow_event"], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: { by: "payload.workflow_run_id", source: "result.workflow_run_id" }, followed: true },
   "save_permission_rule": { wire: "save_permission_rule", python: "session.permissions.save_rule", scope: "session", access: "window", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
+  "search_all_chats": { wire: "search_all_chats", python: "session.history.search_all", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "search_chat": { wire: "search_chat", python: "session.history.search", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "search_code": { wire: "search_code", python: "session.files.search", scope: "session", access: "client", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
   "set_extension_settings": { wire: "set_extension_settings", python: "igni.extensions.set_settings", scope: "igni", access: "window", reply: "rpc_response", streams: [], mayStream: [], duration: "io", timeoutSeconds: 30, correlate: null, followed: false },
@@ -596,7 +605,7 @@ export class IgniProcesses {
   }
 }
 
-/** igni's sessions: attach one, or make a new one in a project folder. */
+/** igni's sessions: attach one, or make a new one in a project folder; which are running, waiting or unread, and marking one seen. */
 export class IgniSessions {
   constructor(readonly caller: Caller) {}
 
@@ -628,6 +637,34 @@ export class IgniSessions {
    */
   attach(project_dir?: string, session_id?: string): Call<AttachSessionResult, AttachSessionEvent> {
     return this.caller.follow<AttachSessionResult, AttachSessionEvent>("attach_session", { project_dir: project_dir, session_id: session_id });
+  }
+
+  /**
+   * Mark a chat as seen, so it is no longer unread.
+   *
+   * `session_id` is the chat the person looked at. Its runs that
+   * finished until now are read, wherever the person looks next; a run
+   * that finishes later makes it unread again. Returns the chats'
+   * states afterwards, also pushed to every window as
+   * `session_states_changed`. An unknown id is recorded all the same.
+   *
+   * ``async with`` the call to follow it: it yields the ``session_states_changed`` push that tells every window the chat was seen, and ends with the answer.
+   */
+  mark_seen(session_id: string): Call<SessionStates, MarkSessionSeenEvent> {
+    return this.caller.follow<SessionStates, MarkSessionSeenEvent>("mark_session_seen", { session_id: session_id });
+  }
+
+  /**
+   * List the chats that are running, waiting on the person, or unread.
+   *
+   * Takes no arguments. Returns `sessions`: each chat that is doing
+   * something or has a finished run the person has not seen, with its
+   * `state` (`running`, `waiting` or `idle`), how many approvals
+   * wait in it, and `unread`. A chat not listed is idle and read.
+   * `session_states_changed` pushes the same shape whenever it moves.
+   */
+  states(): Promise<SessionStates> {
+    return this.caller.rpc<SessionStates>("list_session_states", {});
   }
 }
 
@@ -838,6 +875,19 @@ export class SessionFiles {
   }
 
   /**
+   * Read a file's raw bytes (base64) to preview an image or a PDF.
+   *
+   * The same sandbox as `read_file` with a larger cap (10 MiB).
+   * Returns the resolved `path`, the base64 `data`, its `size`
+   * and a `media_type` hint; or `error` when the file is missing,
+   * a directory, too large, unreadable, or outside the folders igni
+   * lets a client read.
+   */
+  read_bytes(path: string): Promise<ReadFileBytesResult> {
+    return this.caller.rpc<ReadFileBytesResult>("read_file_bytes", { path: path });
+  }
+
+  /**
    * Find where a snippet of code appears in this session's project.
    *
    * `query` is the snippet, matched exactly; one shorter than five
@@ -880,6 +930,19 @@ export class SessionHistory {
    */
   search(query: string, limit?: number): Promise<ChatSearchHit[]> {
     return this.caller.rpc<ChatSearchHit[]>("search_chat", { limit: limit, query: query, session_id: this.caller.sessionId });
+  }
+
+  /**
+   * Find text across every session in the project, not just one.
+   *
+   * `query` is the text to find (case-insensitive; blank finds
+   * nothing); `limit` caps the total hits (default 50). Returns one
+   * hit per match, newest session first, each carrying the
+   * `session_id` and `session_name` it was found in alongside the
+   * same fields `search_chat` returns.
+   */
+  search_all(query: string, limit?: number): Promise<GlobalChatSearchHit[]> {
+    return this.caller.rpc<GlobalChatSearchHit[]>("search_all_chats", { limit: limit, query: query });
   }
 
   /**
@@ -1016,10 +1079,14 @@ export class SessionMcp {
   }
 
   /**
-   * Connect this session's configured MCP servers, once.
+   * Connect this session's configured MCP servers, re-reading their config.
    *
-   * Takes no arguments. The first call connects every configured server
-   * and rebuilds the agent with their tools; later calls do nothing.
+   * Takes no arguments. Every call re-reads the `.mcp.json` files
+   * first, so a server added, edited or removed since the backend
+   * started takes effect without a restart. The first call connects
+   * every configured server and rebuilds the agent with their tools;
+   * a later call reconnects only the servers whose config changed,
+   * drops the removed ones, and does nothing when nothing changed.
    * Returns the servers `connected`, the ones that `failed` with
    * their errors, whether the agent was `rebuilt`, and, when nothing
    * was done, `skipped_reason` (`already_initialized`,
@@ -1595,7 +1662,7 @@ export class IgniApi {
   readonly notifications: IgniNotifications;
   /** Background processes igni tracks, in every session. */
   readonly processes: IgniProcesses;
-  /** igni's sessions: attach one, or make a new one in a project folder. */
+  /** igni's sessions: attach one, or make a new one in a project folder; which are running, waiting or unread, and marking one seen. */
   readonly sessions: IgniSessions;
   /** igni's own window's model — its fields, toasts and dialog. */
   readonly window: IgniWindow;

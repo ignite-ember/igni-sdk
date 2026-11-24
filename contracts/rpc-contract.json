@@ -1,6 +1,16 @@
 {
   "access": "Who may make a call, as igni enforces it.\n\n* `client` \u2014 any connection igni admitted.\n* `approver` \u2014 igni's window, or a connection standing as an approver.\n* `window` \u2014 a connection standing as igni's window only.\n* `page` \u2014 an extension's page, through a window that sets the\n  request's `caller`, where the deployment lets a connection speak\n  for an extension.\n* `platform` \u2014 the platform. Where the deployment requires it (the\n  cloud), only on the gateway's control connection; elsewhere any\n  connection.\n\nA connection's standing is decided once, at the WebSocket handshake,\nby the token it offers:\n\n* **Local client, on the desktop.** igni's desktop app launches igni\n  with a per-launch secret that only the app holds, so only the app's\n  own window stands as the window. A client attaching with the token\n  igni publishes in its owner-only lockfile stands as a *program*: it\n  reaches every `client` call and the `platform` calls (the\n  desktop does not require a control connection for them), and is\n  refused every `window` and `approver` call, every approval\n  answer (`hitl_response`), any `caller`, and the window-only\n  slash commands. A client given an approver token (minted in igni's\n  window with `mint_approver_token`) stands as an *approver*: it\n  also answers approval requests and calls `approve_plan`, each\n  time once \u2014 no saved rule, no permission-mode change. It still\n  reaches no `window` call.\n* **Local client, igni started by hand.** With no launcher to give it\n  a secret, igni mints its own window token and prints it once to the\n  terminal; the connection that offers it stands as the window, and\n  the lockfile's program token makes a program, as on the desktop.\n* **Local client, igni started with the development switch**\n  (`IGNI_DEV_NO_WS_TOKEN=1`): no token at all, so every connection\n  stands as the window and reaches `client`, `approver` and\n  `window` calls.\n* **Through Fleet's gateway** (a cloud VM): the gateway authenticates\n  the client \u2014 with a person's key or an app's \u2014 and igni on the VM\n  takes no token, so every connection stands as the window and\n  reaches `client`, `approver` and `window` calls alike; igni\n  cannot tell a person's key from an app's. No connection there may\n  speak for an extension, so `page` calls are refused, and the\n  `platform` calls are taken only from the gateway's control\n  connection, which a client never has.",
   "defs": {
+    "ActivityState": {
+      "description": "What igni, or one of its chats, is doing: running, waiting on a person, or nothing.",
+      "enum": [
+        "idle",
+        "waiting",
+        "running"
+      ],
+      "title": "ActivityState",
+      "type": "string"
+    },
     "AgentCompletedEvent": {
       "description": "A sub-agent finished its run, with its token usage.",
       "properties": {
@@ -2141,6 +2151,67 @@
       "title": "FloorNotification",
       "type": "object"
     },
+    "GlobalChatSearchHit": {
+      "description": "One match from searching across every session in the project.",
+      "properties": {
+        "created_at": {
+          "default": 0,
+          "description": "When the turn was created, in Unix epoch seconds; `0` if unknown.",
+          "title": "Created At",
+          "type": "integer"
+        },
+        "history_index": {
+          "default": 0,
+          "description": "Index of the matching turn in the list returned by `get_chat_history`; use it to jump to that turn.",
+          "title": "History Index",
+          "type": "integer"
+        },
+        "match_end": {
+          "default": 0,
+          "description": "End offset (exclusive) of the match within `snippet`.",
+          "title": "Match End",
+          "type": "integer"
+        },
+        "match_start": {
+          "default": 0,
+          "description": "Start offset of the match within `snippet` (not the full text).",
+          "title": "Match Start",
+          "type": "integer"
+        },
+        "role": {
+          "default": "",
+          "description": "Kind of the matching turn, e.g. `user`, `assistant` or `tool`.",
+          "title": "Role",
+          "type": "string"
+        },
+        "run_id": {
+          "default": "",
+          "description": "Id of the agent run the matching turn belongs to.",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "session_id": {
+          "default": "",
+          "description": "Id of the session the match is in; open it to read the turn.",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "session_name": {
+          "default": "",
+          "description": "Name of that session, or empty when it has none.",
+          "title": "Session Name",
+          "type": "string"
+        },
+        "snippet": {
+          "default": "",
+          "description": "Excerpt of the turn's text around the match.",
+          "title": "Snippet",
+          "type": "string"
+        }
+      },
+      "title": "GlobalChatSearchHit",
+      "type": "object"
+    },
     "GroupPolicyPackResult": {
       "description": "The policy pack of the group the current user belongs to on igni\nserver. Every field is empty when the user belongs to no group.",
       "properties": {
@@ -3401,6 +3472,23 @@
       "title": "MarkReadArgs",
       "type": "object"
     },
+    "MarkSessionSeenArgs": {
+      "additionalProperties": false,
+      "description": "Arguments for marking a chat as seen.",
+      "properties": {
+        "session_id": {
+          "description": "The chat the person looked at.",
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "MarkSessionSeenArgs",
+      "type": "object"
+    },
     "MarkdownSlashCommand": {
       "description": "A slash command the user wrote as a Markdown file.",
       "properties": {
@@ -3493,6 +3581,12 @@
           "default": "",
           "description": "Git branch to install from. Empty for the repository's default branch.",
           "title": "Branch",
+          "type": "string"
+        },
+        "category": {
+          "default": "",
+          "description": "Category the catalog files the plugin under (e.g. `development`, `security`). Empty when the catalog gives none.",
+          "title": "Category",
           "type": "string"
         },
         "description": {
@@ -5922,6 +6016,60 @@
       "title": "ReadFileArgs",
       "type": "object"
     },
+    "ReadFileBytesArgs": {
+      "description": "Arguments for reading a file's raw bytes to preview an image or PDF.",
+      "properties": {
+        "path": {
+          "description": "The file: relative to the project, absolute, or an `attachment:<id>` reference.",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ReadFileBytesArgs",
+      "type": "object"
+    },
+    "ReadFileBytesResult": {
+      "description": "The raw bytes of a file, base64-encoded, for previewing an image\nor a PDF the text reader cannot show.\n\nSame sandbox as `ReadFileResult`; a larger cap, since an image\nor a PDF is bigger than a source file.",
+      "properties": {
+        "data": {
+          "description": "The file's bytes, base64-encoded; empty when `error` is set.",
+          "title": "Data",
+          "type": "string"
+        },
+        "error": {
+          "default": "",
+          "description": "Why the file could not be read; empty on success.",
+          "title": "Error",
+          "type": "string"
+        },
+        "media_type": {
+          "default": "",
+          "description": "The file's media type guessed from its extension (e.g. `image/png`); empty if unknown or on error.",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "description": "The file's path (resolved when the read got that far).",
+          "title": "Path",
+          "type": "string"
+        },
+        "size": {
+          "description": "The file's size in bytes.",
+          "title": "Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "data",
+        "size"
+      ],
+      "title": "ReadFileBytesResult",
+      "type": "object"
+    },
     "ReadFileResult": {
       "description": "The contents of a text file, for previewing it.\n\nOnly files inside the project or igni's data folder can be read,\nand large files are refused.",
       "properties": {
@@ -6790,6 +6938,27 @@
       "title": "Scroll",
       "type": "object"
     },
+    "SearchAllChatsArgs": {
+      "description": "Arguments for searching across every session in the project.",
+      "properties": {
+        "limit": {
+          "default": 50,
+          "description": "Maximum number of hits to return in total.",
+          "title": "Limit",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Text to find, case-insensitive; blank finds nothing.",
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "SearchAllChatsArgs",
+      "type": "object"
+    },
     "SearchChatArgs": {
       "description": "Arguments for searching a session's conversation.",
       "properties": {
@@ -7366,6 +7535,12 @@
           "title": "Has Paused Run",
           "type": "boolean"
         },
+        "last_message_at": {
+          "default": 0,
+          "description": "When a message last went into this session or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The list is newest first by it, or by `updated_at` for a session without one.",
+          "title": "Last Message At",
+          "type": "integer"
+        },
         "name": {
           "default": "",
           "description": "The session's name; empty when it has none.",
@@ -7389,6 +7564,12 @@
           "description": "A short summary of the conversation; empty when there is none.",
           "title": "Summary",
           "type": "string"
+        },
+        "unread": {
+          "default": false,
+          "description": "True when a run in this session finished after the person last looked at it (`mark_session_seen`).",
+          "title": "Unread",
+          "type": "boolean"
         },
         "updated_at": {
           "default": 0,
@@ -7460,6 +7641,70 @@
         "name"
       ],
       "title": "SessionNamedPayload",
+      "type": "object"
+    },
+    "SessionState": {
+      "description": "One chat's state, and whether it is unread.",
+      "properties": {
+        "last_message_at": {
+          "default": 0,
+          "description": "When a message last went into the chat or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The sidebar lists chats by it, newest first.",
+          "title": "Last Message At",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "The chat's session id.",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/defs/ActivityState",
+          "default": "idle",
+          "description": "What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing \u2014 also every chat that is not loaded."
+        },
+        "unread": {
+          "default": false,
+          "description": "True when a run in the chat finished after the person last looked at it (`mark_session_seen`). Read state is the person's, across windows and devices.",
+          "title": "Unread",
+          "type": "boolean"
+        },
+        "waiting_approvals": {
+          "default": 0,
+          "description": "How many approvals in the chat wait on the person.",
+          "title": "Waiting Approvals",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "SessionState",
+      "type": "object"
+    },
+    "SessionStates": {
+      "description": "Every chat that is doing something or is unread; any other chat is idle and read.",
+      "properties": {
+        "cause": {
+          "default": "activity",
+          "description": "Why this was sent. `activity`: a run started, finished, paused or resumed, or the states were asked for. `seen`: a `mark_session_seen` call.",
+          "enum": [
+            "activity",
+            "seen"
+          ],
+          "title": "Cause",
+          "type": "string"
+        },
+        "sessions": {
+          "default": [],
+          "description": "The chats that are running, waiting or unread, each once.",
+          "items": {
+            "$ref": "#/defs/SessionState"
+          },
+          "title": "Sessions",
+          "type": "array"
+        }
+      },
+      "title": "SessionStates",
       "type": "object"
     },
     "SessionSwitch": {
@@ -11369,7 +11614,7 @@
         "$ref": "#/defs/NoArgs"
       },
       "correlate": null,
-      "doc": "Connect this session's configured MCP servers, once.\n\nTakes no arguments. The first call connects every configured server\nand rebuilds the agent with their tools; later calls do nothing.\nReturns the servers `connected`, the ones that `failed` with\ntheir errors, whether the agent was `rebuilt`, and, when nothing\nwas done, `skipped_reason` (`already_initialized`,\n`no_configured_servers`, `no_clients_connected`).",
+      "doc": "Connect this session's configured MCP servers, re-reading their config.\n\nTakes no arguments. Every call re-reads the `.mcp.json` files\nfirst, so a server added, edited or removed since the backend\nstarted takes effect without a restart. The first call connects\nevery configured server and rebuilds the agent with their tools;\na later call reconnects only the servers whose config changed,\ndrops the removed ones, and does nothing when nothing changed.\nReturns the servers `connected`, the ones that `failed` with\ntheir errors, whether the agent was `rebuilt`, and, when nothing\nwas done, `skipped_reason` (`already_initialized`,\n`no_configured_servers`, `no_clients_connected`).",
       "duration": "long",
       "may_stream": [],
       "reply": "rpc_response",
@@ -11378,7 +11623,7 @@
       },
       "scope": "session",
       "streams": [],
-      "summary": "Connect this session's configured MCP servers, once.",
+      "summary": "Connect this session's configured MCP servers, re-reading their config.",
       "timeout_seconds": 600
     },
     "execute_scheduled_task": {
@@ -12320,6 +12565,25 @@
       "summary": "List this session's MCP servers that need a first-use approval.",
       "timeout_seconds": 10
     },
+    "list_session_states": {
+      "access": "client",
+      "area": "session_states",
+      "args": {
+        "$ref": "#/defs/NoArgs"
+      },
+      "correlate": null,
+      "doc": "List the chats that are running, waiting on the person, or unread.\n\nTakes no arguments. Returns `sessions`: each chat that is doing\nsomething or has a finished run the person has not seen, with its\n`state` (`running`, `waiting` or `idle`), how many approvals\nwait in it, and `unread`. A chat not listed is idle and read.\n`session_states_changed` pushes the same shape whenever it moves.",
+      "duration": "io",
+      "may_stream": [],
+      "reply": "rpc_response",
+      "result": {
+        "$ref": "#/defs/SessionStates"
+      },
+      "scope": "igni",
+      "streams": [],
+      "summary": "List the chats that are running, waiting on the person, or unread.",
+      "timeout_seconds": 30
+    },
     "list_sessions": {
       "access": "client",
       "area": "session",
@@ -12443,6 +12707,30 @@
       "streams": [],
       "summary": "Read the state of this session's `/loop`.",
       "timeout_seconds": 10
+    },
+    "mark_session_seen": {
+      "access": "client",
+      "area": "session_states",
+      "args": {
+        "$ref": "#/defs/MarkSessionSeenArgs"
+      },
+      "correlate": {
+        "by": "payload.cause",
+        "equals": "seen"
+      },
+      "doc": "Mark a chat as seen, so it is no longer unread.\n\n`session_id` is the chat the person looked at. Its runs that\nfinished until now are read, wherever the person looks next; a run\nthat finishes later makes it unread again. Returns the chats'\nstates afterwards, also pushed to every window as\n`session_states_changed`. An unknown id is recorded all the same.",
+      "duration": "io",
+      "may_stream": [],
+      "reply": "rpc_response",
+      "result": {
+        "$ref": "#/defs/SessionStates"
+      },
+      "scope": "igni",
+      "streams": [
+        "push_notification:session_states_changed"
+      ],
+      "summary": "Mark a chat as seen, so it is no longer unread.",
+      "timeout_seconds": 30
     },
     "mcp_connect": {
       "access": "client",
@@ -12670,6 +12958,25 @@
       "summary": "Read a file for preview: one of this session's project, igni's data, or an attachment.",
       "timeout_seconds": 30
     },
+    "read_file_bytes": {
+      "access": "client",
+      "area": "panels",
+      "args": {
+        "$ref": "#/defs/ReadFileBytesArgs"
+      },
+      "correlate": null,
+      "doc": "Read a file's raw bytes (base64) to preview an image or a PDF.\n\nThe same sandbox as `read_file` with a larger cap (10 MiB).\nReturns the resolved `path`, the base64 `data`, its `size`\nand a `media_type` hint; or `error` when the file is missing,\na directory, too large, unreadable, or outside the folders igni\nlets a client read.",
+      "duration": "io",
+      "may_stream": [],
+      "reply": "rpc_response",
+      "result": {
+        "$ref": "#/defs/ReadFileBytesResult"
+      },
+      "scope": "session",
+      "streams": [],
+      "summary": "Read a file's raw bytes (base64) to preview an image or a PDF.",
+      "timeout_seconds": 30
+    },
     "read_process_tail": {
       "access": "client",
       "area": "panels",
@@ -12890,6 +13197,28 @@
       "scope": "session",
       "streams": [],
       "summary": "Save a permission rule for this session's project.",
+      "timeout_seconds": 30
+    },
+    "search_all_chats": {
+      "access": "client",
+      "area": "session_history",
+      "args": {
+        "$ref": "#/defs/SearchAllChatsArgs"
+      },
+      "correlate": null,
+      "doc": "Find text across every session in the project, not just one.\n\n`query` is the text to find (case-insensitive; blank finds\nnothing); `limit` caps the total hits (default 50). Returns one\nhit per match, newest session first, each carrying the\n`session_id` and `session_name` it was found in alongside the\nsame fields `search_chat` returns.",
+      "duration": "io",
+      "may_stream": [],
+      "reply": "rpc_response",
+      "result": {
+        "items": {
+          "$ref": "#/defs/GlobalChatSearchHit"
+        },
+        "type": "array"
+      },
+      "scope": "session",
+      "streams": [],
+      "summary": "Find text across every session in the project, not just one.",
       "timeout_seconds": 30
     },
     "search_chat": {
@@ -13444,6 +13773,12 @@
       "doc": "A session was given a name.",
       "schema": {
         "$ref": "#/defs/SessionNamedPayload"
+      }
+    },
+    "session_states_changed": {
+      "doc": "Which chats are running, waiting on the person, or finished unseen moved.",
+      "schema": {
+        "$ref": "#/defs/SessionStates"
       }
     },
     "todos_updated": {

@@ -843,6 +843,19 @@ Channel `session_named`; `payload` is [`SessionNamedPayload`](/docs/sdk/igni-cli
 | `name` | `str` | required | Its new display name. |
 | `session_id` | `str` | required | The session that was named. |
 
+### SessionStatesChangedPush
+
+Which chats are running, waiting on the person, or finished unseen moved.
+
+Channel `session_states_changed`; `payload` is [`SessionStates`](/docs/sdk/igni-client/models-reference#sessionstates).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `cause` | `Literal['activity', 'seen']` | `'activity'` | Why this was sent. `activity`: a run started, finished, paused or resumed, or the states were asked for. `seen`: a `mark_session_seen` call. |
+| `sessions` | `list[`[`SessionState`](/docs/sdk/igni-client/models-reference#sessionstate)`]` | `[]` | The chats that are running, waiting or unread, each once. |
+
+**Streamed by** [`igni.sessions.mark_seen()`](/docs/sdk/igni-client/sessions#igni-sessions-mark-seen).
+
 ### TodosUpdatedPush
 
 The agent's to-do list, whole, after it changed.

@@ -16,6 +16,10 @@ from pydantic import ConfigDict, Field, JsonValue
 
 from igni_client.wire import Args, Event, Frame, Model, RunEvent
 
+#: What igni, or one of its chats, is doing: running, waiting on a person, or nothing.
+type ActivityState = Literal["idle", "waiting", "running"]
+
+
 #: What a command result asks the client to do.
 #:
 #: * empty: nothing; just show `content`.
@@ -878,6 +882,29 @@ class FloorNotification(Model):
     """A one-line headline."""
 
 
+class GlobalChatSearchHit(Model):
+    """One match from searching across every session in the project."""
+
+    created_at: int = 0
+    """When the turn was created, in Unix epoch seconds; `0` if unknown."""
+    history_index: int = 0
+    """Index of the matching turn in the list returned by `get_chat_history`; use it to jump to that turn."""
+    match_end: int = 0
+    """End offset (exclusive) of the match within `snippet`."""
+    match_start: int = 0
+    """Start offset of the match within `snippet` (not the full text)."""
+    role: str = ""
+    """Kind of the matching turn, e.g. `user`, `assistant` or `tool`."""
+    run_id: str = ""
+    """Id of the agent run the matching turn belongs to."""
+    session_id: str = ""
+    """Id of the session the match is in; open it to read the turn."""
+    session_name: str = ""
+    """Name of that session, or empty when it has none."""
+    snippet: str = ""
+    """Excerpt of the turn's text around the match."""
+
+
 class GroupPolicyPackResult(Model):
     """The policy pack of the group the current user belongs to on igni
     server. Every field is empty when the user belongs to no group.
@@ -1355,6 +1382,13 @@ class MarkReadArgs(Args):
     """An extension id: marks all of that extension's notifications read."""
 
 
+class MarkSessionSeenArgs(Args):
+    """Arguments for marking a chat as seen."""
+
+    session_id: str = Field(min_length=1)
+    """The chat the person looked at."""
+
+
 class MarkdownSlashCommand(Model):
     """A slash command the user wrote as a Markdown file."""
 
@@ -1393,6 +1427,8 @@ class MarketplacePluginInfo(Model):
 
     branch: str = ""
     """Git branch to install from. Empty for the repository's default branch."""
+    category: str = ""
+    """Category the catalog files the plugin under (e.g. `development`, `security`). Empty when the catalog gives none."""
     description: str = ""
     """What the plugin does. Empty when not given."""
     name: str
@@ -2207,6 +2243,33 @@ class ReadFileArgs(Args):
     """The file: relative to the project, absolute, or an `attachment:<id>` reference."""
 
 
+class ReadFileBytesArgs(Args):
+    """Arguments for reading a file's raw bytes to preview an image or PDF."""
+
+    path: str
+    """The file: relative to the project, absolute, or an `attachment:<id>` reference."""
+
+
+class ReadFileBytesResult(Model):
+    """The raw bytes of a file, base64-encoded, for previewing an image
+    or a PDF the text reader cannot show.
+
+    Same sandbox as `ReadFileResult`; a larger cap, since an image
+    or a PDF is bigger than a source file.
+    """
+
+    data: str
+    """The file's bytes, base64-encoded; empty when `error` is set."""
+    error: str = ""
+    """Why the file could not be read; empty on success."""
+    media_type: str = ""
+    """The file's media type guessed from its extension (e.g. `image/png`); empty if unknown or on error."""
+    path: str
+    """The file's path (resolved when the read got that far)."""
+    size: int
+    """The file's size in bytes."""
+
+
 class ReadFileResult(Model):
     """The contents of a text file, for previewing it.
 
@@ -2544,6 +2607,15 @@ class Scroll(Model):
     """The message the transcript is scrolled to; null when it is at the end."""
 
 
+class SearchAllChatsArgs(Args):
+    """Arguments for searching across every session in the project."""
+
+    limit: int = 50
+    """Maximum number of hits to return in total."""
+    query: str
+    """Text to find, case-insensitive; blank finds nothing."""
+
+
 class SearchChatArgs(Args):
     """Arguments for searching a session's conversation."""
 
@@ -2686,6 +2758,8 @@ class SessionListEntry(Model):
     """When the session was created, in Unix seconds."""
     has_paused_run: bool = False
     """True when this session has a run waiting for the person to answer an approval."""
+    last_message_at: int = 0
+    """When a message last went into this session or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The list is newest first by it, or by `updated_at` for a session without one."""
     name: str = ""
     """The session's name; empty when it has none."""
     run_count: int = 0
@@ -2694,6 +2768,8 @@ class SessionListEntry(Model):
     """The session's id."""
     summary: str = ""
     """A short summary of the conversation; empty when there is none."""
+    unread: bool = False
+    """True when a run in this session finished after the person last looked at it (`mark_session_seen`)."""
     updated_at: int = 0
     """When the session last changed, in Unix seconds."""
 
@@ -2725,6 +2801,30 @@ class SessionNamedPayload(Model):
     """Its new display name."""
     session_id: str
     """The session that was named."""
+
+
+class SessionState(Model):
+    """One chat's state, and whether it is unread."""
+
+    last_message_at: int = 0
+    """When a message last went into the chat or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The sidebar lists chats by it, newest first."""
+    session_id: str
+    """The chat's session id."""
+    state: ActivityState = "idle"
+    """What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing — also every chat that is not loaded."""
+    unread: bool = False
+    """True when a run in the chat finished after the person last looked at it (`mark_session_seen`). Read state is the person's, across windows and devices."""
+    waiting_approvals: int = 0
+    """How many approvals in the chat wait on the person."""
+
+
+class SessionStates(Model):
+    """Every chat that is doing something or is unread; any other chat is idle and read."""
+
+    cause: Literal["activity", "seen"] = "activity"
+    """Why this was sent. `activity`: a run started, finished, paused or resumed, or the states were asked for. `seen`: a `mark_session_seen` call."""
+    sessions: list[SessionState] = Field(default_factory=list)
+    """The chats that are running, waiting or unread, each once."""
 
 
 class SessionSwitch(Frame):
@@ -4097,6 +4197,16 @@ class SessionNamedPush(PushNotification):
     payload: SessionNamedPayload  # type: ignore[assignment]
 
 
+class SessionStatesChangedPush(PushNotification):
+    """Which chats are running, waiting on the person, or finished unseen moved.
+
+    On the wire: ``push_notification`` on the channel ``session_states_changed``.
+    """
+
+    channel: Literal["session_states_changed"] = "session_states_changed"
+    payload: SessionStates  # type: ignore[assignment]
+
+
 class TodosUpdatedPush(PushNotification):
     """The agent's to-do list, whole, after it changed.
 
@@ -4266,6 +4376,7 @@ PUSH_TYPES: dict[str, type[PushNotification]] = {
     "scheduler_completed": SchedulerCompletedPush,
     "scheduler_started": SchedulerStartedPush,
     "session_named": SessionNamedPush,
+    "session_states_changed": SessionStatesChangedPush,
     "todos_updated": TodosUpdatedPush,
     "visualization_action_dispatched": VisualizationActionDispatchedPush,
     "vm_credential": VmCredentialPush,

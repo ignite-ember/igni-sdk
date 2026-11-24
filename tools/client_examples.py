@@ -109,6 +109,13 @@ async with igni.notifications.list() as listing:
     listed = await listing.result()
     print([n.title for n in listed.notifications])
 """,
+    "mark_session_seen": """
+async with igni.sessions.mark_seen("0b7c…") as marking:
+    async for event in marking:
+        print(len(event.payload.sessions), "chats still running, waiting or unread")
+    states = await marking.result()
+    print([s.session_id for s in states.sessions if s.unread])
+""",
     "notifications_mark_read": """
 async with igni.notifications.mark_read(source="acme.tickets") as marking:
     async for event in marking:
@@ -223,6 +230,10 @@ for message in await session.runs.pending_messages():
 for hit in await session.history.search("migration", limit=10):
     print(hit.run_id, hit.snippet)
 """,
+    "search_all_chats": """
+for hit in await session.history.search_all("migration", limit=10):
+    print(hit.session_name or hit.session_id, hit.snippet)
+""",
     "truncate_history": """
 cut = await session.history.truncate("run_42")
 print(f"removed {cut.removed} run(s)")
@@ -297,6 +308,15 @@ print(completion.total, completion.matches)
     "read_file": """
 read = await session.files.read("pyproject.toml")
 print(read.error or read.contents)
+""",
+    "read_file_bytes": """
+import base64
+
+read = await session.files.read_bytes("docs/diagram.png")
+if read.error:
+    print(read.error)
+else:
+    print(read.media_type, len(base64.b64decode(read.data)), "bytes")
 """,
     "search_code": """
 found = await session.files.search("def create_app")
@@ -494,6 +514,14 @@ for await (const event of listing) {
 const listed = await listing.result();
 console.log((listed.notifications ?? []).map((n) => n.title));
 """,
+    "mark_session_seen": """
+const marking = igni.sessions.mark_seen("0b7c…");
+for await (const event of marking) {
+  console.log(event.payload.sessions?.length, "chats still running, waiting or unread");
+}
+const states = await marking.result();
+console.log((states.sessions ?? []).filter((s) => s.unread).map((s) => s.session_id));
+""",
     "notifications_mark_read": """
 const marking = igni.notifications.mark_read(undefined, "acme.tickets");
 for await (const event of marking) {
@@ -614,6 +642,11 @@ for (const hit of await session.history.search("migration", 10)) {
   console.log(hit.run_id, hit.snippet);
 }
 """,
+    "search_all_chats": """
+for (const hit of await session.history.search_all("migration", 10)) {
+  console.log(hit.session_name || hit.session_id, hit.snippet);
+}
+""",
     "truncate_history": """
 const cut = await session.history.truncate("run_42");
 console.log(`removed ${cut.removed} run(s)`);
@@ -684,6 +717,14 @@ console.log(completion.total, completion.matches);
     "read_file": """
 const read = await session.files.read("pyproject.toml");
 console.log(read.error || read.contents);
+""",
+    "read_file_bytes": """
+const read = await session.files.read_bytes("docs/diagram.png");
+if (read.error) {
+  console.log(read.error);
+} else {
+  console.log(read.media_type, Buffer.from(read.data, "base64").length, "bytes");
+}
 """,
     "search_code": """
 const found = await session.files.search("def create_app");

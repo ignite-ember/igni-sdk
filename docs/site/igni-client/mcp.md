@@ -12,7 +12,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 |---|---|
 | [`session.mcp.connect()`](/docs/sdk/igni-client/mcp#session-mcp-connect) | Connect one configured MCP server to this session. |
 | [`session.mcp.disconnect()`](/docs/sdk/igni-client/mcp#session-mcp-disconnect) | Disconnect one MCP server from this session. |
-| [`session.mcp.ensure()`](/docs/sdk/igni-client/mcp#session-mcp-ensure) | Connect this session's configured MCP servers, once. |
+| [`session.mcp.ensure()`](/docs/sdk/igni-client/mcp#session-mcp-ensure) | Connect this session's configured MCP servers, re-reading their config. |
 | [`session.mcp.list_approvals()`](/docs/sdk/igni-client/mcp#session-mcp-list-approvals) | List this session's MCP servers that need a first-use approval. |
 | [`session.mcp.server_details()`](/docs/sdk/igni-client/mcp#session-mcp-server-details) | Describe each of this session's MCP servers in full. |
 | [`session.mcp.servers()`](/docs/sdk/igni-client/mcp#session-mcp-servers) | List this session's configured MCP servers, in configuration order. |
@@ -110,7 +110,7 @@ console.log(info.text);
 
 ## session.mcp.ensure()
 
-Connect this session's configured MCP servers, once.
+Connect this session's configured MCP servers, re-reading their config.
 
 ```python
 async def ensure(self) -> McpInitResult
@@ -120,8 +120,12 @@ async def ensure(self) -> McpInitResult
 ensure(): Promise<McpInitResult>
 ```
 
-The first call connects every configured server
-and rebuilds the agent with their tools; later calls do nothing.
+Every call re-reads the `.mcp.json` files
+first, so a server added, edited or removed since the backend
+started takes effect without a restart. The first call connects
+every configured server and rebuilds the agent with their tools;
+a later call reconnects only the servers whose config changed,
+drops the removed ones, and does nothing when nothing changed.
 Returns the servers `connected`, the ones that `failed` with
 their errors, whether the agent was `rebuilt`, and, when nothing
 was done, `skipped_reason` (`already_initialized`,

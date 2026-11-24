@@ -21,7 +21,14 @@ from jsonschema import Draft202012Validator
 from pydantic import BaseModel
 
 from igni_client import Call, IgniClient, Session
-from igni_client.api import METHODS, NOT_FOR_CLIENTS, UNFOLLOWED, IgniApi, SessionApi
+from igni_client.api import (
+    METHODS,
+    NOT_FOR_CLIENTS,
+    UNFOLLOWED,
+    IgniApi,
+    IgniSessions,
+    SessionApi,
+)
 from igni_client.calls import MethodSpec
 from igni_client.follow import RULES
 from igni_client.models import EVENT_TYPES, FRAME_TYPES, RpcRequest, Typing
@@ -30,6 +37,9 @@ from igni_client.wire import Event, to_wire
 
 CONTRACT_FILE = Path(__file__).resolve().parents[3] / "contracts" / "rpc-contract.json"
 CONTRACT: dict[str, Any] = json.loads(CONTRACT_FILE.read_text(encoding="utf-8"))
+
+#: Namespaces the client extends by hand, by the generated base their methods are on.
+HAND_EXTENDED: dict[str, Any] = {"sessions": IgniSessions}
 
 
 def _validator(schema: dict[str, Any]) -> Draft202012Validator:
@@ -90,7 +100,7 @@ def test_every_method_is_where_its_scope_says() -> None:
         node: Any = owner
         parts = spec.python.split(".")[1:]
         for part in parts[:-1]:
-            node = typing.get_type_hints(node)[part]
+            node = typing.get_type_hints(node).get(part) or HAND_EXTENDED[part]
         assert inspect.isfunction(getattr(node, parts[-1])), spec.python
 
 

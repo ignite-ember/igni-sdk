@@ -14,6 +14,7 @@ Every method here is generated from igni-core's RPC contract; its documentation 
 | [`session.files.complete()`](/docs/sdk/igni-client/files#session-files-complete) | Complete a file path typed after `@`, from this session's project. |
 | [`session.files.pick_dir()`](/docs/sdk/igni-client/files#session-files-pick-dir) | Open the operating system's folder picker on igni's machine and return the choice. |
 | [`session.files.read()`](/docs/sdk/igni-client/files#session-files-read) | Read a file for preview: one of this session's project, igni's data, or an attachment. |
+| [`session.files.read_bytes()`](/docs/sdk/igni-client/files#session-files-read-bytes) | Read a file's raw bytes (base64) to preview an image or a PDF. |
 | [`session.files.search()`](/docs/sdk/igni-client/files#session-files-search) | Find where a snippet of code appears in this session's project. |
 | [`igni.files.list_dirs()`](/docs/sdk/igni-client/files#igni-files-list-dirs) | List the folders inside a folder on igni's machine, for picking a project. |
 
@@ -155,6 +156,60 @@ print(read.error or read.contents)
 ```typescript
 const read = await session.files.read("pyproject.toml");
 console.log(read.error || read.contents);
+```
+
+## session.files.read_bytes()
+
+Read a file's raw bytes (base64) to preview an image or a PDF.
+
+```python
+async def read_bytes(self, path: str) -> ReadFileBytesResult
+```
+
+```typescript
+read_bytes(path: string): Promise<ReadFileBytesResult>
+```
+
+The same sandbox as `session.files.read()` with a larger cap (10 MiB).
+Returns the resolved `path`, the base64 `data`, its `size`
+and a `media_type` hint; or `error` when the file is missing,
+a directory, too large, unreadable, or outside the folders igni
+lets a client read.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `str` | required | The file: relative to the project, absolute, or an `attachment:<id>` reference. |
+
+**Returns** [`ReadFileBytesResult`](/docs/sdk/igni-client/models-reference#readfilebytesresult).
+
+**How long** `io` — Reads or writes the project, the session's database or the disk; a few seconds at most.
+The client waits up to 30 seconds.
+
+**Access** [`client`](/docs/sdk/igni-client/access) — any connection igni admitted.
+
+**Raises** [`InvalidArguments`](/docs/sdk/igni-client/errors-reference#invalidarguments) · [`MethodFailed`](/docs/sdk/igni-client/errors-reference#methodfailed) · [`UnknownMethod`](/docs/sdk/igni-client/errors-reference#unknownmethod) · [`UnexpectedAnswer`](/docs/sdk/igni-client/errors-reference#unexpectedanswer) · [`Unavailable`](/docs/sdk/igni-client/errors-reference#unavailable) ([when each is raised](/docs/sdk/igni-client/errors-reference))
+
+**On the wire** RPC method `read_file_bytes`, scope `session`, area `panels`; igni answers with `rpc_response`.
+
+**Example**
+
+```python
+import base64
+
+read = await session.files.read_bytes("docs/diagram.png")
+if read.error:
+    print(read.error)
+else:
+    print(read.media_type, len(base64.b64decode(read.data)), "bytes")
+```
+
+```typescript
+const read = await session.files.read_bytes("docs/diagram.png");
+if (read.error) {
+  console.log(read.error);
+} else {
+  console.log(read.media_type, Buffer.from(read.data, "base64").length, "bytes");
+}
 ```
 
 ## session.files.search()
