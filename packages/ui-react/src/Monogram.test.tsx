@@ -13,7 +13,7 @@
  */
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { hexOf, hueOf, initialsOf, Monogram } from "./Monogram.js";
+import { hexOf, hueOf, initialsOf, Monogram, monogramBackground } from "./Monogram.js";
 
 afterEach(cleanup);
 
@@ -222,7 +222,7 @@ describe("Monogram", () => {
     const el = draw({ name: "Maya Okafor" });
     // What the browser makes of the hsl() it was given, read back.
     const probe = document.createElement("i");
-    probe.style.background = `hsl(${hueOf("Maya Okafor")} 42% 42%)`;
+    probe.style.background = `hsl(${hueOf("Maya Okafor")} 42% 32%)`;
     expect(probe.style.background).not.toBe("");
     expect(el.style.background).toBe(probe.style.background);
   });
@@ -232,5 +232,36 @@ describe("Monogram", () => {
       draw({ name: "Maya" }).style.background,
     );
     expect(draw({ name: "" }).textContent).toBe("?");
+  });
+});
+
+describe("monogramBackground", () => {
+  /** WCAG's relative luminance of an ``hsl(h s% l%)`` colour. */
+  function luminance(css: string): number {
+    const [h, s, l] = css.match(/[\d.]+/g)!.map(Number);
+    const sat = s / 100;
+    const light = l / 100;
+    const channel = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const value = light - sat * Math.min(light, 1 - light) * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(0) + 0.7152 * channel(8) + 0.0722 * channel(4);
+  }
+
+  it("lets white letters read on every hue, at AA's 4.5:1", () => {
+    const failing: string[] = [];
+    for (let hue = 0; hue < 360; hue += 1) {
+      const ratio = 1.05 / (luminance(monogramBackground(hue)) + 0.05);
+      if (ratio < 4.5) failing.push(`${hue}°: ${ratio.toFixed(2)}`);
+    }
+    expect(failing).toEqual([]);
+  });
+
+  it("is the monogram's own background", () => {
+    const { container } = render(<Monogram name="Maya Okafor" />);
+    const probe = document.createElement("i");
+    probe.style.background = monogramBackground(hueOf("Maya Okafor"));
+    expect((container.firstChild as HTMLElement).style.background).toBe(probe.style.background);
   });
 });
