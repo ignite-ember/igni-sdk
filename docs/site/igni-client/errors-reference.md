@@ -46,12 +46,20 @@ igni names its refusals and failures with a code (`RpcResponse.code`), and says 
 class IgniClientError(Exception)
 ```
 
+```typescript
+class IgniClientError extends Error
+```
+
 Anything this SDK raises on purpose.
 
 ## Unavailable
 
 ```python
 class Unavailable(IgniClientError)
+```
+
+```typescript
+class Unavailable extends IgniClientError
 ```
 
 igni could not be reached, went away, or is busy — trying again later may work.
@@ -66,12 +74,20 @@ answer in time.
 class RunFailed(IgniClientError)
 ```
 
+```typescript
+class RunFailed extends IgniClientError
+```
+
 The run ended with an error (`run_error`), or `ask()`'s prompt got an `error` and no run.
 
 ## AuthError
 
 ```python
 class AuthError(IgniClientError)
+```
+
+```typescript
+class AuthError extends IgniClientError
 ```
 
 The credential was refused: an expired or wrong token, or an app key igni does not know.
@@ -81,6 +97,12 @@ The credential was refused: an expired or wrong token, or an app key igni does n
 ```python
 class CredentialRefused(AuthError, RunFailed)
 ```
+
+```typescript
+class CredentialRefused extends RunFailed
+```
+
+In TypeScript it extends only `RunFailed`, so `instanceof AuthError` is false for it.
 
 The igni on a Fleet VM lost its own credential: igni server refused it.
 
@@ -102,6 +124,10 @@ does not replace it on its own: the program decides when to sign in.
 class SignInRequired(CredentialRefused)
 ```
 
+```typescript
+class SignInRequired extends CredentialRefused
+```
+
 A person's VM credential was refused: they sign in again at the gateway.
 
 The gateway's `POST /v1/sign-in` (with the person's bearer token)
@@ -115,6 +141,10 @@ then works. igni-client does not sign in by itself.
 class ReissueRequired(CredentialRefused)
 ```
 
+```typescript
+class ReissueRequired extends CredentialRefused
+```
+
 An app's VM credential was refused: an organisation admin re-issues it.
 
 An app does not sign in. The VM picks the re-issued credential up at
@@ -126,6 +156,10 @@ its next start.
 class NotAllowed(IgniClientError)
 ```
 
+```typescript
+class NotAllowed extends IgniClientError
+```
+
 igni answered and said no, and asking again will not change it.
 
 A producer that is no longer active (removed, deactivated), a lapsed
@@ -135,6 +169,10 @@ licence, or a command in a VM that is not the caller's.
 
 ```python
 class GroupIsLocalOnly(NotAllowed)
+```
+
+```typescript
+class GroupIsLocalOnly extends NotAllowed
 ```
 
 The person's group runs igni only on the desktop: there is no cloud igni to reach.
@@ -152,12 +190,20 @@ the igni on the person's own machine (`Local`) instead.
 class NotSupported(IgniClientError)
 ```
 
+```typescript
+class NotSupported extends IgniClientError
+```
+
 The target cannot do this: commands and identity exist only through Fleet's gateway.
 
 ## RpcError
 
 ```python
 class RpcError(IgniClientError)
+```
+
+```typescript
+class RpcError extends IgniClientError
 ```
 
 A call igni answered with an error, or whose answer could not be read.
@@ -174,6 +220,12 @@ its sentence instead.
 class AccessRefused(RpcError, NotAllowed)
 ```
 
+```typescript
+class AccessRefused extends RpcError
+```
+
+In TypeScript it extends only `RpcError`, so `instanceof NotAllowed` is false for it.
+
 igni refused the call from this connection: it is igni's window's, or an approver's.
 
 A program attached with the lockfile's token may run sessions but not
@@ -188,12 +240,20 @@ method (`igni_client.access`).
 class UnknownMethod(RpcError)
 ```
 
+```typescript
+class UnknownMethod extends RpcError
+```
+
 igni does not have the method: it is older than this igni-client.
 
 ## InvalidArguments
 
 ```python
 class InvalidArguments(RpcError, ValueError)
+```
+
+```typescript
+class InvalidArguments extends RpcError
 ```
 
 The arguments are not what the method takes — refused before sending, or by igni.
@@ -204,6 +264,10 @@ The arguments are not what the method takes — refused before sending, or by ig
 class UnexpectedAnswer(RpcError)
 ```
 
+```typescript
+class UnexpectedAnswer extends RpcError
+```
+
 igni's answer is not what the method returns: igni and this igni-client disagree.
 
 ## MethodFailed
@@ -212,12 +276,20 @@ igni's answer is not what the method returns: igni and this igni-client disagree
 class MethodFailed(RpcError)
 ```
 
+```typescript
+class MethodFailed extends RpcError
+```
+
 The method ran and failed; `message` is igni's reason.
 
 ## RunInterrupted
 
 ```python
 class RunInterrupted(IgniClientError)
+```
+
+```typescript
+class RunInterrupted extends IgniClientError
 ```
 
 The connection to igni moved or dropped while the run was going.
@@ -230,6 +302,10 @@ node drains or fails, and every run in flight then ends with this.
 
 ```python
 class ApprovalRequired(IgniClientError)
+```
+
+```typescript
+class ApprovalRequired extends IgniClientError
 ```
 
 `ask()` reached an approval and was given no policy to answer it with.

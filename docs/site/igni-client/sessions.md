@@ -45,6 +45,13 @@ def attach(
 ) -> Call[AttachSessionResult, AttachSessionEvent]
 ```
 
+```typescript
+attach(
+  project_dir?: string,
+  session_id?: string,
+): Call<AttachSessionResult, AttachSessionEvent>
+```
+
 `session_id` names the session to resume; `project_dir` the folder
 it works in. Neither: the default session. Only `project_dir`: a new
 session locked to that folder. Both: that session, which must belong
@@ -210,6 +217,10 @@ Read this session's status: model, account, context size and permission mode.
 async def status(self) -> StatusUpdate
 ```
 
+```typescript
+status(): Promise<StatusUpdate>
+```
+
 Returns a `status_update` message, sent in
 place of an `rpc_response`: the model and whether it is
 configured, the igni server connection and account, the context
@@ -248,6 +259,10 @@ Read the id of the session this request reached.
 async def current_id(self) -> str
 ```
 
+```typescript
+current_id(): Promise<string>
+```
+
 Returns the session's current id, which can
 differ from the one the request was routed by after `/clear` or
 `session.switch()`.
@@ -281,6 +296,10 @@ Read the folder this session is locked to.
 
 ```python
 async def get_project_dir(self) -> str
+```
+
+```typescript
+get_project_dir(): Promise<string>
 ```
 
 Returns the absolute path the agent's tools and
@@ -317,6 +336,10 @@ Say whether this session is running a turn right now.
 async def is_processing(self) -> bool
 ```
 
+```typescript
+is_processing(): Promise<boolean>
+```
+
 Returns `true` while a turn the person (or a
 client) started is starting, streaming or finishing.
 
@@ -351,6 +374,10 @@ Read how long, in seconds, a client should wait for one run.
 async def run_timeout(self) -> int
 ```
 
+```typescript
+run_timeout(): Promise<number>
+```
+
 Returns the configured maximum run time; igni
 does not stop a run at it, the client decides what to do.
 
@@ -383,6 +410,10 @@ List the sessions kept in this session's project.
 
 ```python
 async def list_sessions(self) -> SessionListResult
+```
+
+```typescript
+list_sessions(): Promise<SessionListResult>
 ```
 
 Returns a `session_list_result` message, sent
@@ -421,6 +452,10 @@ Make the session this request is routed to continue another stored session.
 
 ```python
 async def switch(self, session_id: str) -> InfoMessage
+```
+
+```typescript
+switch(session_id: string): Promise<InfoMessage>
 ```
 
 `session_id` is the stored session to continue; the conversation,
@@ -462,6 +497,10 @@ Stop the turn this session is running.
 
 ```python
 def cancel(self) -> Call[CancelRunResult, CancelRunEvent]
+```
+
+```typescript
+cancel(): Call<CancelRunResult, CancelRunEvent>
 ```
 
 Returns `cancelled`: whether a turn was
@@ -521,6 +560,10 @@ Wind this session down: its hooks, its agents, its MCP servers, its scheduler.
 async def shutdown(self) -> None
 ```
 
+```typescript
+shutdown(): Promise<null>
+```
+
 Takes no arguments and returns nothing once done. Runs the session's
 `SessionEnd` hooks, cleans up its ephemeral agents, disconnects its
 MCP servers and stops its scheduler — once: a session already wound
@@ -560,6 +603,10 @@ Show what this client is typing to every other client of this session.
 async def typing(self, text: str = '') -> None
 ```
 
+```typescript
+typing(text?: string): Promise<void>
+```
+
 `text` is the whole draft, not a change to it; empty clears it. igni relays it to every client attached, this one included, as a `Typing` event.
 
 | Parameter | Type | Default | Meaning |
@@ -597,6 +644,13 @@ async def upload_attachment(
     content_base64: str,
     filename: str,
 ) -> UploadAttachmentResult
+```
+
+```typescript
+upload_attachment(
+  content_base64: string,
+  filename: string,
+): Promise<UploadAttachmentResult>
 ```
 
 `filename` is the file's name (made safe for the disk; a clash gets
@@ -650,6 +704,10 @@ Read the agent's to-do list in this session.
 async def todos(self) -> list[TodoItem]
 ```
 
+```typescript
+todos(): Promise<TodoItem[]>
+```
+
 Returns each item's `content`, `status`
 (`pending`, `in_progress`, `completed`) and `active_form`
 (how it reads while in progress). `todos_updated` pushes the list
@@ -689,6 +747,10 @@ Read this session's display settings.
 async def display_config(self) -> DisplayConfig
 ```
 
+```typescript
+display_config(): Promise<DisplayConfig>
+```
+
 Returns how output is shown: markdown rendering,
 tool calls, routing, reasoning, the colour theme, and how many lines
 of a tool result and a message are shown before truncating.
@@ -726,6 +788,10 @@ Turn showing the agent's routing decisions on or off for this session.
 async def toggle_verbose(self) -> bool
 ```
 
+```typescript
+toggle_verbose(): Promise<boolean>
+```
+
 Returns the new setting: `true` when routing is
 now shown. Not saved; the session's next settings reload resets it.
 
@@ -760,6 +826,10 @@ Let igni learn from one finished turn, in the background.
 
 ```python
 async def extract_learnings(self, *, assistant_msg: str, user_msg: str) -> None
+```
+
+```typescript
+extract_learnings(assistant_msg: string, user_msg: string): Promise<null>
 ```
 
 `user_msg` and `assistant_msg` are the turn's message and
@@ -809,6 +879,13 @@ def visualization_action(
     action: str = '',
     params: dict[str, JsonValue] | None = None,
 ) -> Call[VisualizationActionResult, DispatchVisualizationActionEvent]
+```
+
+```typescript
+visualization_action(
+  action?: string,
+  params?: Record<string, JsonValue> | null,
+): Call<VisualizationActionResult, DispatchVisualizationActionEvent>
 ```
 
 `action` is the control's action name; `params` the values the
@@ -870,6 +947,16 @@ async def visualization_verdict(
     revision: int = 0,
     total: int = 0,
 ) -> VisualizationVerdictResult
+```
+
+```typescript
+visualization_verdict(
+  spec_id: string,
+  failed?: ElementFailureArgs[],
+  issues?: string[],
+  revision?: number,
+  total?: number,
+): Promise<VisualizationVerdictResult>
 ```
 
 `spec_id` is the card, `revision` which draw of it (the first

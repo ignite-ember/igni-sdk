@@ -19,7 +19,7 @@ import pytest
 from tools import client_doc_layout, sdk_docs
 from tools.client_codegen import README_END, README_START, Placement, push_class
 from tools.client_contract import RpcContract
-from tools.client_errors_doc import read_errors
+from tools.client_errors_doc import ErrorCatalog, ErrorClass, ErrorsPage, read_errors, with_ts_bases
 from tools.client_example_check import check_example
 from tools.client_method_notes import place_text, source_text
 from tools.client_names import (
@@ -391,6 +391,42 @@ def test_igni_clients_real_exceptions_are_read_with_their_docstrings() -> None:
     }
     assert {"InvalidArguments", "AccessRefused", "MethodFailed", "UnknownMethod"} <= set(errors)
     assert all(e.doc for e in errors.values())
+
+
+def test_each_error_takes_its_typescript_parent_and_a_missing_class_is_refused(
+    tmp_path: Path,
+) -> None:
+    ts = tmp_path / "errors.ts"
+    ts.write_text(
+        "export class Root extends Error {}\n"
+        "export class Two extends Root {\n  readonly x = 1;\n}\n",
+        encoding="utf-8",
+    )
+    root = ErrorClass(name="Root", bases=["Exception"], doc="")
+    two = ErrorClass(name="Two", bases=["Root", "Other"], doc="")
+
+    assert [e.ts_base for e in with_ts_bases([root, two], ts)] == ["Error", "Root"]
+    with pytest.raises(DocsError, match="no class for Gone"):
+        with_ts_bases([root, ErrorClass(name="Gone", bases=["Root"], doc="")], ts)
+
+
+def test_the_errors_page_shows_both_declarations_and_says_what_instanceof_misses() -> None:
+    errors = with_ts_bases(
+        read_errors(ROOT / "packages/igni-client/src/igni_client/errors.py"),
+        ROOT / "packages/igni-client/src/errors.ts",
+    )
+    body = ErrorsPage(ErrorCatalog(errors), RpcContract.read()).page(1).body
+
+    assert (
+        "```python\nclass CredentialRefused(AuthError, RunFailed)\n```\n\n```typescript\nclass CredentialRefused extends RunFailed\n```"
+        in body
+    )
+    assert "so `instanceof AuthError` is false for it." in body
+    # A Python built-in is not a parent TypeScript is missing.
+    assert "instanceof ValueError" not in body
+    assert "instanceof Exception" not in body
+    # Every Python declaration has its TypeScript twin right after it.
+    assert body.count("```python\nclass ") == body.count("```typescript\nclass ") == len(errors)
 
 
 # ── igni-client's reference ──────────────────────────────────────────────

@@ -15,9 +15,20 @@ async with IgniClient(Fleet("https://gw.acme.internal", auth=key)) as igni:
     print(reply)
 ```
 
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+
+const key = Person.fromApiKey("igpak1.…", { server: "https://igni.acme.internal" });
+await using igni = await new IgniClient(new Fleet("https://gw.acme.internal", { auth: key })).connect();
+const session = await igni.sessions.create("/workspace/payments");
+const reply = await session.ask("Summarise the open pull requests", { approve: false });
+console.log(reply.text);
+```
+
 Every example below runs as it is pasted. Instead of a real igni they use
-`FakeIgni`, from `igni_client.testing`, which plays igni on a loopback
-socket — so this one runs anywhere:
+`FakeIgni`, from `igni_client.testing` (`@ignite-ember/igni-client/testing`
+in TypeScript), which plays igni on a loopback socket — so this one runs
+anywhere:
 
 ```python
 from igni_client import IgniClient
@@ -35,4 +46,29 @@ async with FakeIgni() as fake:
         print(status.model, status.permission_mode)
         todos = await session.todos()                # list[TodoItem]
         print(todos)
+```
+
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  run: { chunks: ["Two pull requests are open."] },
+  answers: {
+    get_todos: [],                                   // what the fake answers igni's get_todos
+    get_status: { model: "igni-1", permission_mode: "default" },
+  },
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create("/workspace/payments");
+const reply = await session.ask("Summarise the open pull requests", { approve: false });
+console.log(reply.text);                             // Two pull requests are open.
+
+const status = await session.status();               // a StatusUpdate
+console.log(status.model, status.permission_mode);
+const todos = await session.todos();                 // TodoItem[]
+console.log(todos);
+await igni.close();
+await fake.close();
 ```

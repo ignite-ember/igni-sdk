@@ -26,6 +26,10 @@ Complete a file path typed after `@`, from this session's project.
 async def complete(self, *, limit: int = 50, query: str = '') -> FileCompletion
 ```
 
+```typescript
+complete(limit?: number, query?: string): Promise<FileCompletion>
+```
+
 `query` is what was typed so far (empty matches everything);
 `limit` caps the matches returned (default 50). Returns the
 matching project-relative paths, best first, and `total`: how
@@ -66,6 +70,10 @@ Open the operating system's folder picker on igni's machine and return the choic
 
 ```python
 async def pick_dir(self, start: str | None = None) -> PickDirResult
+```
+
+```typescript
+pick_dir(start?: string | null): Promise<PickDirResult>
 ```
 
 `start` is the folder the picker opens in (this session's project
@@ -110,6 +118,10 @@ Read a file for preview: one of this session's project, igni's data, or an attac
 
 ```python
 async def read(self, path: str) -> ReadFileResult
+```
+
+```typescript
+read(path: string): Promise<ReadFileResult>
 ```
 
 `path` is relative to the project, absolute, or an
@@ -204,6 +216,10 @@ Find where a snippet of code appears in this session's project.
 async def search(self, query: str) -> SearchCodeResult
 ```
 
+```typescript
+search(query: string): Promise<SearchCodeResult>
+```
+
 `query` is the snippet, matched exactly; one shorter than five
 characters finds nothing. Returns up to 20 `matches` (path, first
 and last line, a preview), `truncated` when there may be more or
@@ -250,6 +266,10 @@ async def list_dirs(
     path: str | None = None,
     show_hidden: bool = False,
 ) -> DirListResult
+```
+
+```typescript
+list_dirs(path?: string | null, show_hidden?: boolean): Promise<DirListResult>
 ```
 
 `path` is the folder to list (the home folder when absent or

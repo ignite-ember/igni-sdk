@@ -24,6 +24,10 @@ Run a shell command in this session's project folder and return its output.
 def run_shell(self, command: str = '') -> Call[RunShellResult, RunShellEvent]
 ```
 
+```typescript
+run_shell(command?: string): Call<RunShellResult, RunShellEvent>
+```
+
 `command` is the command line (what follows `$` in the
 composer); blank runs nothing. Output is captured, not interactive.
 Returns `output` (the tail, at most 100 KB) and `exit_code`
@@ -88,6 +92,10 @@ List the background processes igni is tracking, in every session.
 async def list(self) -> list[ProcessRow]
 ```
 
+```typescript
+list(): Promise<ProcessRow[]>
+```
+
 Returns each process's `pid`, command, how
 long it has run, whether it is still running, and its exit code
 once it has ended.
@@ -124,6 +132,10 @@ Stop a background process.
 
 ```python
 def stop(self, pid: int) -> Call[StopProcessResult, StopBackgroundProcessEvent]
+```
+
+```typescript
+stop(pid: number): Call<StopProcessResult, StopBackgroundProcessEvent>
 ```
 
 `pid` is the process. Returns `killed: true` once it was told to
@@ -186,6 +198,10 @@ Read the last lines a background process printed.
 
 ```python
 async def tail(self, pid: int, *, tail: int = 200) -> ProcessTailResult
+```
+
+```typescript
+tail(pid: number, tail?: number): Promise<ProcessTailResult>
 ```
 
 `pid` is the process; `tail` how many lines (default 200).
