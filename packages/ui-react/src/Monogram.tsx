@@ -80,6 +80,17 @@ export function hexOf(
 }
 
 /**
+ * A monogram's background for a hue: dark enough that its white letters
+ * read on every hue. At this saturation the brightest hue (yellow, 60°)
+ * is the hardest; at 32% lightness it is 4.9:1 against white, over the
+ * 4.5:1 WCAG AA asks of text this small. (42% left greens and yellows at
+ * 3.0–3.6:1.)
+ */
+export function monogramBackground(hue: number): string {
+  return `hsl(${hue} 42% 32%)`;
+}
+
+/**
  * Two letters standing in for a face.
  *
  * Not an avatar: nothing stores an uploaded picture, so the two
@@ -103,7 +114,7 @@ export function Monogram({ name, size = 18 }: { name: string; size?: number }) {
         // Fixed saturation and lightness so every generated colour
         // clears contrast against white text, rather than hoping the
         // hash lands somewhere readable.
-        background: `hsl(${hue} 42% 42%)`,
+        background: monogramBackground(hue),
       }}
     >
       {initialsOf(name)}
