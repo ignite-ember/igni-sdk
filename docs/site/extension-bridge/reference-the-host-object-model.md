@@ -707,6 +707,7 @@ What one chat is doing, and whether it has a finished run the person has not see
 | `state` | field | `string` | `idle`, `waiting` or `running`. |
 | `waiting_approvals` | field | `number` |  |
 | `unread` | field | `boolean` | A run finished after the person last looked at the chat. Read state is the person's, across windows and devices. |
+| `last_message_at` | field | `number` | When a message last went in or a reply came out, in Unix milliseconds; `0` when none was recorded. |
 
 ## SessionStates
 

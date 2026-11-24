@@ -351,6 +351,8 @@ class SessionState(BaseModel):
     waiting_approvals: int
     unread: bool
     """A run finished after the person last looked at the chat. Read state is the person's, across windows and devices."""
+    last_message_at: int
+    """When a message last went in or a reply came out, in Unix milliseconds; `0` when none was recorded."""
 
 
 class SessionStates(BaseModel):

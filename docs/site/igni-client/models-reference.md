@@ -89,6 +89,7 @@ do not know.
 | `agent_name` | `str` | `''` | The agent the session talks to. |
 | `created_at` | `int` | `0` | When the session was created, in Unix seconds. |
 | `has_paused_run` | `bool` | `False` | True when this session has a run waiting for the person to answer an approval. |
+| `last_message_at` | `int` | `0` | When a message last went into this session or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The list is newest first by it, or by `updated_at` for a session without one. |
 | `name` | `str` | `''` | The session's name; empty when it has none. |
 | `run_count` | `int` | `0` | How many runs the session holds. |
 | `session_id` | `str` | `''` | The session's id. |
@@ -104,6 +105,7 @@ One chat's state, and whether it is unread.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
+| `last_message_at` | `int` | `0` | When a message last went into the chat or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The sidebar lists chats by it, newest first. |
 | `session_id` | `str` | required | The chat's session id. |
 | `state` | [`ActivityState`](/docs/sdk/igni-client/models-reference#activitystate) | `'idle'` | What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing — also every chat that is not loaded. |
 | `unread` | `bool` | `False` | True when a run in the chat finished after the person last looked at it (`mark_session_seen`). Read state is the person's, across windows and devices. |

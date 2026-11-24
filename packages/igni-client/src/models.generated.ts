@@ -2606,6 +2606,8 @@ export interface SessionListEntry {
   created_at?: number;
   /** True when this session has a run waiting for the person to answer an approval. */
   has_paused_run?: boolean;
+  /** When a message last went into this session or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The list is newest first by it, or by `updated_at` for a session without one. */
+  last_message_at?: number;
   /** The session's name; empty when it has none. */
   name?: string;
   /** How many runs the session holds. */
@@ -2651,6 +2653,8 @@ export interface SessionNamedPayload {
 
 /** One chat's state, and whether it is unread. */
 export interface SessionState {
+  /** When a message last went into the chat or a reply came out, in Unix milliseconds; `0` when igni has not recorded one. The sidebar lists chats by it, newest first. */
+  last_message_at?: number;
   /** The chat's session id. */
   session_id: string;
   /** What the chat is doing. `running`: a run is working. `waiting`: a run waits on the person's answer to an approval. `idle`: nothing — also every chat that is not loaded. */

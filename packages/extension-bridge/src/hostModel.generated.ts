@@ -250,6 +250,8 @@ export interface SessionState {
   waiting_approvals: number;
   /** A run finished after the person last looked at the chat. Read state is the person's, across windows and devices. */
   unread: boolean;
+  /** When a message last went in or a reply came out, in Unix milliseconds; `0` when none was recorded. */
+  last_message_at: number;
 }
 
 /** The chats that are running, waiting or unread; any other chat is idle and read. */
