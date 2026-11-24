@@ -93,7 +93,7 @@ class MethodSection:
             note = next((t.note for t in taken if t.note), "")
         out = [f"## {sources.layout.heading(placement)}", ""]
         out += [summary, ""] if summary else []
-        out += ["```python", code, "```", ""]
+        out += ["```python", code, "```", "", "```typescript", sources.ts.of(wire), "```", ""]
         for paragraph in rest:
             out += [paragraph, ""] if paragraph else []
         own_session = prose.own_session(wire)
@@ -175,6 +175,10 @@ class MethodSection:
             "",
             "```python",
             signature(f"async def {placement.name}", sig, f" -> {result}"),
+            "```",
+            "",
+            "```typescript",
+            sources.ts.of(wire),
             "```",
             "",
         ]

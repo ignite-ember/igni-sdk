@@ -1,8 +1,9 @@
-"""igni-client's exceptions, read from its ``errors.py``, and the errors reference page."""
+"""igni-client's exceptions, read from its ``errors.py`` and ``errors.ts``, and the errors reference page."""
 
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -10,7 +11,7 @@ from pydantic import BaseModel
 from tools.client_contract import RpcContract
 from tools.client_doc_layout import CLIENT_PACKAGE, ERRORS_PAGE
 from tools.markdown_pages import tidy
-from tools.site_page import REFERENCE, Page
+from tools.site_page import REFERENCE, DocsError, Page
 from tools.wire_prose import cell, rst
 
 
@@ -20,6 +21,8 @@ class ErrorClass(BaseModel):
     name: str
     bases: list[str]
     doc: str
+    #: Its TypeScript class's one parent, from ``errors.ts``; empty when that was not read.
+    ts_base: str = ""
 
     @property
     def summary(self) -> str:
@@ -38,6 +41,23 @@ def read_errors(path: Path) -> list[ErrorClass]:
         for node in tree.body
         if isinstance(node, ast.ClassDef)
     ]
+
+
+#: Python's own exceptions, which a TypeScript class neither has nor needs.
+_PYTHON_BUILTINS = frozenset({"Exception", "ValueError", "RuntimeError", "TypeError"})
+
+_TS_CLASS = re.compile(r"^export (?:abstract )?class (\w+) extends (\w+)", re.M)
+
+
+def with_ts_bases(errors: list[ErrorClass], path: Path) -> list[ErrorClass]:
+    """``errors``, each with its TypeScript class's parent; a class ``errors.ts`` lacks is refused."""
+    ts = dict(_TS_CLASS.findall(path.read_text(encoding="utf-8")))
+    missing = [e.name for e in errors if e.name not in ts]
+    if missing:
+        raise DocsError(
+            f"errors.ts has no class for {', '.join(missing)}: igni-client's two SDKs differ"
+        )
+    return [e.model_copy(update={"ts_base": ts[e.name]}) for e in errors]
 
 
 class ErrorCatalog:
@@ -89,6 +109,9 @@ class ErrorsPage:
                 "```",
                 "",
             ]
+            if error.ts_base:
+                body += ["```typescript", f"class {name} extends {error.ts_base}", "```", ""]
+                body += self._ts_parents(error)
             if error.doc:
                 body += [rst(error.doc), ""]
         return Page(
@@ -101,6 +124,18 @@ class ErrorsPage:
             tidy(body),
             source="packages/igni-client/src/igni_client/errors.py",
         )
+
+    @staticmethod
+    def _ts_parents(error: ErrorClass) -> list[str]:
+        """What a TypeScript ``instanceof`` does not match, where Python's parents are more."""
+        lost = [b for b in error.bases if b not in _PYTHON_BUILTINS and b != error.ts_base]
+        if not lost:
+            return []
+        names = " or ".join(f"`instanceof {b}`" for b in lost)
+        return [
+            f"In TypeScript it extends only `{error.ts_base}`, so {names} is false for it.",
+            "",
+        ]
 
     def _tree(self, name: str, depth: int, children: dict[str, list[str]]) -> list[str]:
         extra = self.errors.by_name[name].bases[1:]
@@ -130,4 +165,4 @@ class ErrorsPage:
         return out
 
 
-__all__ = ["ErrorCatalog", "ErrorClass", "ErrorsPage", "read_errors"]
+__all__ = ["ErrorCatalog", "ErrorClass", "ErrorsPage", "read_errors", "with_ts_bases"]

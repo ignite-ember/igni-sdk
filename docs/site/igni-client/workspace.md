@@ -24,6 +24,12 @@ def set_trust(
 ) -> Call[WorkspaceTrustStatus, SetWorkspaceTrustEvent]
 ```
 
+```typescript
+set_trust(
+  decision: "trust" | "distrust" | "once",
+): Call<WorkspaceTrustStatus, SetWorkspaceTrustEvent>
+```
+
 `decision` is `trust` (remembered), `once` (until igni exits)
 or `distrust`. When trust changed, the session is rebuilt so the
 folder's tools, hooks, plugins, language servers and configuration
@@ -76,6 +82,10 @@ Read whether this session's project folder is trusted.
 
 ```python
 async def trust(self) -> WorkspaceTrustStatus
+```
+
+```typescript
+trust(): Promise<WorkspaceTrustStatus>
 ```
 
 Returns the folder's trust `state`
