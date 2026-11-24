@@ -21,6 +21,10 @@ List the models this session can run on.
 async def list(self) -> ModelRegistryResult
 ```
 
+```typescript
+list(): Promise<ModelRegistryResult>
+```
+
 Returns the `default` model's name, the
 largest context window configured, and `registry`: every model by
 name, with its provider and settings.
@@ -56,6 +60,10 @@ Make another model the one this session's agent runs on.
 
 ```python
 async def switch(self, model_name: str) -> ModelSwitched
+```
+
+```typescript
+switch(model_name: string): Promise<ModelSwitched>
 ```
 
 `model_name` is a name from the model registry

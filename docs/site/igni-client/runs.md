@@ -23,6 +23,10 @@ Forget one interrupted run, so it is not offered again.
 async def discard_interrupted(self, message_id: str) -> DiscardInterruptedRunResult
 ```
 
+```typescript
+discard_interrupted(message_id: string): Promise<DiscardInterruptedRunResult>
+```
+
 `message_id` names the run (from `session.runs.interrupted()`);
 `session_id` the session it belongs to; only that session's
 interrupted run is deleted. Returns `ok: true` — also when no such
@@ -65,6 +69,10 @@ Forget one pending message, so it is not offered again.
 
 ```python
 async def discard_pending(self, message_id: str) -> DiscardPendingMessageResult
+```
+
+```typescript
+discard_pending(message_id: string): Promise<DiscardPendingMessageResult>
 ```
 
 `message_id` names the message (from `session.runs.pending_messages()`);
@@ -113,6 +121,10 @@ List a session's runs that stopped before they finished.
 async def interrupted(self) -> list[InterruptedRun]
 ```
 
+```typescript
+interrupted(): Promise<InterruptedRun[]>
+```
+
 Returns one row per run that was
 cancelled, failed or never finished: the `message_id` and text of
 the message that started it, when it arrived and when it stopped, why
@@ -152,6 +164,10 @@ List a session's messages whose run started but never finished.
 
 ```python
 async def pending_messages(self) -> list[PendingMessage]
+```
+
+```typescript
+pending_messages(): Promise<PendingMessage[]>
 ```
 
 Returns the user messages still

@@ -27,6 +27,10 @@ Cancel the sign-in to igni server that `igni.auth.login()` started.
 async def cancel_login(self) -> None
 ```
 
+```typescript
+cancel_login(): Promise<void>
+```
+
 igni answers nothing; the sign-in's `login_result` push says it ended.
 
 **Returns** `None`.
@@ -53,6 +57,10 @@ Find the igni server an email address's organisation runs.
 
 ```python
 async def discover_server(self, email: str) -> ServerFound
+```
+
+```typescript
+discover_server(email: string): Promise<ServerFound>
 ```
 
 `email` is the person's work address. igni reads the record the
@@ -101,6 +109,10 @@ Start signing in to igni server through the person's browser.
 
 ```python
 def login(self) -> Call[LoginStarted, LoginEvent]
+```
+
+```typescript
+login(): Call<LoginStarted, LoginEvent>
 ```
 
 Takes no arguments, and answers at once with `started: true`; a
@@ -163,6 +175,10 @@ Choose the igni server to sign in to, and remember it for the next launch.
 async def set_server(self, api_url: str, *, portal_url: str = '') -> ServerChoice
 ```
 
+```typescript
+set_server(api_url: string, portal_url?: string): Promise<ServerChoice>
+```
+
 `api_url` is the server's API address: `https`, or `http` to
 `localhost`, `127.0.0.1` or `::1` for a local deployment;
 `portal_url` its portal, empty to derive it from `api_url`, and
@@ -210,6 +226,10 @@ Read who is signed in to igni server, and their organisation's plan.
 async def plan(self) -> CloudPlan | None
 ```
 
+```typescript
+plan(): Promise<CloudPlan | null>
+```
+
 Asks igni server with this session's sign-in and
 returns the person's `email` and `full_name`, the organisation's
 display name (`org_name`) and plan `tier`; any of them may be
@@ -252,6 +272,10 @@ Read the saved sign-in again, so this session acts as whoever is signed in now.
 async def reload_credentials(self) -> StatusUpdate
 ```
 
+```typescript
+reload_credentials(): Promise<StatusUpdate>
+```
+
 Use it after a sign-in made elsewhere (another
 session, another window). Returns the session's status afterwards —
 model, cloud connection, account, context size, permission mode — as
@@ -288,6 +312,10 @@ Sign this session out of igni server.
 
 ```python
 def sign_out(self) -> Call[StatusUpdate, ClearCloudCredentialsEvent]
+```
+
+```typescript
+sign_out(): Call<StatusUpdate, ClearCloudCredentialsEvent>
 ```
 
 The session forgets its cloud credentials, and

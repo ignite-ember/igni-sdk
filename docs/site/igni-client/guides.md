@@ -32,15 +32,58 @@ async with FakeIgni() as fake:
                     print(f"\n{tokens} tokens")
 ```
 
+```typescript
+import { ApprovalRequested, IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  runScript: () => [
+    { type: "run_started" },
+    { type: "content_delta", text: "The payments service charges cards" },
+    { type: "tool_started", tool_name: "read_file", friendly_name: "Read file" },
+    { type: "tool_completed", summary: "src/charge.py" },
+    { type: "content_delta", text: " and refunds them." },
+    { type: "run_completed", input_tokens: 900, output_tokens: 12 },
+  ],
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+for await (const event of session.send("What does the payments service do?")) {
+  if (event instanceof ApprovalRequested) {
+    continue;
+  }
+  switch (event.type) {
+    case "content_delta":
+      if (!event.is_thinking) {
+        process.stdout.write(event.text ?? "");
+      }
+      break;
+    case "tool_started":
+      process.stdout.write(`\n[${event.friendly_name}] `);
+      break;
+    case "run_completed":
+      if (!event.parent_run_id) {
+        console.log(`\n${event.output_tokens} tokens`);
+      }
+      break;
+  }
+}
+await igni.close();
+await fake.close();
+```
+
 Each event is a typed model of igni's message — `ContentDelta`,
 `ReasoningStarted`, `ToolStarted`, `ToolCompleted`, `ToolError`,
 `RunStarted`, `ModelCompleted`, `StreamingDone`, `RunCompleted`,
 `RunError`, `TaskCreated`, a push notification and the rest; see
 [Models, events and frames](/docs/sdk/igni-client/api-reference#models-events-and-frames). A sub-agent's
-events carry its `parent_run_id`.
+events carry its `parent_run_id`. In TypeScript an event is told apart by
+its `type`, which narrows it to its interface.
 
 `files={path: content}` attaches files to the prompt as the app attaches
-them; `force=True` discards a run left interrupted in the session first.
+them; `force=True` discards a run left interrupted in the session first
+(`send(text, { files, force })` in TypeScript).
 The loop ends when the run does. Breaking out of it stops following the
 run; the run goes on in igni. `await session.cancel()` stops it.
 
@@ -69,14 +112,47 @@ async with FakeIgni() as fake:
                 await event.approve()
 ```
 
-- `approve(choice)` lets every call of the pause run: `"once"`, or
-  `"always"` / `"similar"` to save a permission rule (igni's window only).
-- `reject(remember=False)` refuses them; `remember=True` saves a rule
-  refusing such calls from now on (igni's window only).
+```typescript
+import { ApprovalRequested, IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  runScript: () => [
+    { type: "run_started" },
+    {
+      type: "run_paused",
+      requirements: [{ requirement_id: "q-1", tool_name: "run_shell_command", tool_args: { command: "rm -rf build" } }],
+    },
+    { type: "content_delta", text: "Cleaned the build directory." },
+    { type: "run_completed" },
+  ],
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+for await (const event of session.send("Clean the build directory")) {
+  if (event instanceof ApprovalRequested) {
+    for (const requirement of event.requirements) {
+      console.log("asks for", requirement.tool_name, requirement.tool_args);
+    }
+    await event.allow();
+  }
+}
+await igni.close();
+await fake.close();
+```
+
+- `approve(choice)` (`allow(choice)` in TypeScript) lets every call of the
+  pause run: `"once"`, or `"always"` / `"similar"` to save a permission
+  rule (igni's window only).
+- `reject(remember=False)` (`deny(remember)` in TypeScript) refuses them;
+  `remember=True` saves a rule refusing such calls from now on (igni's
+  window only).
 - From an approver, an answer that saves a rule raises `AccessRefused`
   before it is sent, and the pause stays open for an answer of `"once"`.
 - `decide({requirement_id: Decision, ...})` answers each call on its own,
-  with `Decision.allow(choice)` or `Decision.deny(remember=...)`.
+  with `Decision.allow(choice)` or `Decision.deny(remember=...)`; in
+  TypeScript it takes a `Map` from requirement id to `Decision`.
 
 A refused call never starts, so the resumed run sends no `ToolStarted`,
 `ToolCompleted` or `ToolError` for it: the model reads the refusal as the
@@ -86,7 +162,7 @@ tool events counts only the calls that ran. (`FakeIgni` plays it so.)
 igni asks about every call of one pause together and counts a call left
 out as refused, so every answer covers them all: `decide()` raises
 `ValueError` for a call it leaves out, and `RuntimeError` when the pause
-was already answered. A loop that ends without
+was already answered (a plain `Error` for both in TypeScript). A loop that ends without
 answering leaves the run waiting on igni's side; the next time the
 session is attached igni shows the approval again, and
 [`session.events()`](#watching-an-igni) offers it as an
@@ -118,7 +194,8 @@ refusal comes as `NotAllowed` from the `send()` loop.
 `session.ask()` runs the prompt to the end and returns a `Reply`: the
 answer's `text`, the model's `thinking`, every `ToolCompleted` in
 `tools`, and the main run's `RunCompleted` with its token counts.
-`approve=` answers approvals as they come: `True` allows every call,
+`approve=` (the `approve` option in TypeScript) answers approvals as they
+come: `True` allows every call,
 `False` refuses every call, or a function of each `Requirement` — sync or
 async — returns a `bool` or a `Decision`:
 
@@ -136,6 +213,35 @@ async with FakeIgni() as fake:
         reply = await session.ask("Explain src/auth.py", approve=only_reads)
         print(reply.text, reply.completed.output_tokens if reply.completed else 0)
         await session.queue("Then write tests for it")   # starts after the run going
+```
+
+```typescript
+import { Decision, IgniClient, Local, type Requirement } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+function onlyReads(requirement: Requirement): Decision {
+  return requirement.tool_name === "read_file" ? Decision.allow() : Decision.deny();
+}
+
+const fake = new FakeIgni({
+  runScript: () => [
+    { type: "run_started" },
+    {
+      type: "run_paused",
+      requirements: [{ requirement_id: "q-1", tool_name: "read_file", tool_args: { path: "src/auth.py" } }],
+    },
+    { type: "content_delta", text: "It checks tokens." },
+    { type: "run_completed", output_tokens: 4 },
+  ],
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+const reply = await session.ask("Explain src/auth.py", { approve: onlyReads });
+console.log(reply.text, reply.completed?.output_tokens ?? 0);
+await session.queue("Then write tests for it");   // starts after the run going
+await igni.close();
+await fake.close();
 ```
 
 Without `approve=`, a pause raises `ApprovalRequired` (its
@@ -165,6 +271,21 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     session = await igni.sessions.create()
     started = await session.workflows.run("nightly", args={"branch": "main"})
     print(started.workflow_run_id)
+```
+
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni();
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+fake.answers.run_workflow = { workflow_run_id: "wf-1", name: "nightly" };
+const session = await igni.sessions.create();
+const started = await session.workflows.run("nightly", { branch: "main" });
+console.log(started.workflow_run_id);
+await igni.close();
+await fake.close();
 ```
 
 **Enter it** with `async with` to follow the events this call causes,
@@ -202,6 +323,42 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
             print(event.payload.seq, event.payload.type)
         print("run", (await run.result()).workflow_run_id)
 ```
+
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const step = (runId: string, kind: string, seq: number) => ({
+  workflow_run_id: runId, name: "nightly", ts: seq, seq, type: kind, payload: {},
+});
+
+const fake = new FakeIgni();
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+const push = (payload: object) =>
+  fake.broadcast({ type: "push_notification", channel: "workflow_event", payload, session_id: session.id });
+
+fake.answers.run_workflow = (args: Record<string, unknown>) => {
+  setTimeout(() => {
+    push(step("wf-someone-else", "step", 1));
+    push(step("wf-1", "step", 1));
+    push(step("wf-1", "workflow_completed", 2));
+  }, 50);
+  return { workflow_run_id: "wf-1", name: args.name };
+};
+
+const run = session.workflows.run("nightly");
+for await (const event of run) {                    // WorkflowEventPush, this run's only
+  console.log(event.payload.seq, event.payload.type);
+}
+console.log("run", (await run.result()).workflow_run_id);
+await igni.close();
+await fake.close();
+```
+
+In TypeScript there is no block to enter: `for await` starts listening
+before it sends the call, and breaking out of it stops listening.
 
 Leaving the block stops listening; the work itself is igni's and goes on.
 A call whose answer is an error raises it from `async for` as from
@@ -254,6 +411,30 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     print(await asyncio.wait_for(watching, 5))
 ```
 
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni();
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const watching = (async () => {
+  for await (const event of igni.events()) {
+    if (event.type === "push_notification" && event.channel === "session_named") {
+      return event.payload?.name;
+    }
+  }
+})();
+await new Promise((resolve) => setTimeout(resolve, 50));
+fake.broadcast({ type: "push_notification", channel: "session_named", payload: { session_id: "s-1", name: "Payments refactor" } });
+console.log(await watching);
+await igni.close();
+await fake.close();
+```
+
+In TypeScript `igni.events()` yields a push as a `PushNotification`, its
+`payload` not yet typed by channel: tell it apart by its `channel`.
+
 `session.events()` is the same for one session, and offers each pause it
 sees as an `ApprovalRequested` — among them the approvals a session was
 waiting on, which igni shows again when it is attached. Answering one
@@ -274,6 +455,21 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     result = await session.command("/help")
     print(result.kind, result.content)   # against a real igni, /help is an action for the window: kind "action", content empty
     await session.typing("half a tho")              # every client sees the draft
+```
+
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni();
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+const result = await session.command("/help");
+console.log(result.kind, result.content);   // against a real igni, /help is an action for the window: kind "action", content empty
+await session.typing("half a tho");         // every client sees the draft
+await igni.close();
+await fake.close();
 ```
 
 The commands that switch approvals off, change what igni loads or whom it
@@ -301,9 +497,33 @@ async with FakeIgni(gateway=gateway) as fake:
         print(await igni.me())
 ```
 
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  requireBearer: "t-ada",
+  commandLines: [                                   // what the gateway streams for the command
+    { stream: "stdout", data_b64: Buffer.from("12 passed\n").toString("base64") },
+    { done: true, exit_code: 0, duration_ms: 900 },
+  ],
+});
+await fake.start();
+const igni = await new IgniClient(new Fleet(fake.httpUrl, { auth: new Person("t-ada") })).connect();
+const run = await igni.commands.run("pytest -q", { timeoutS: 300 });
+for await (const output of run) {
+  process.stdout.write(output.text);
+}
+console.log("exit", run.finished?.exit_code);
+console.log(await igni.me());
+await igni.close();
+await fake.close();
+```
+
 `await run.wait()` collects it instead (into `run.stdout` and
 `run.stderr`). A producer runs commands in its own VM; an org admin may
-name another with `producer="person:<id>"`. `igni.me()` says who the
+name another with `producer="person:<id>"` (`{ producer: "person:<id>" }`
+in TypeScript). `igni.me()` says who the
 gateway takes you for. A local igni has no gateway, so neither is
 available there: both raise `NotSupported`.
 
@@ -360,6 +580,16 @@ async with FakeIgni(gateway=FakeGateway({"t-ada": "person:u-ada"})) as fake:
         print("connected on attempt", fake.socket.connections)
 ```
 
+```typescript
+import { Backoff, Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+
+const fleet = new Fleet("https://gw.acme.internal", { auth: Person.fromCli() });
+await using igni = await new IgniClient(fleet, { backoff: new Backoff({ first: 0.01 }) }).connect();  // "busy, retry" is tried again, backing off
+```
+
+The TypeScript `FakeIgni` cannot play a busy gateway yet (it has no
+`busy_next`), so this twin is written against a real one.
+
 A local igni is not reconnected: one that closed has stopped, and the
 client raises `Unavailable`.
 
@@ -388,9 +618,43 @@ async with FakeIgni() as fake:
     assert call.args == {"pid": 1, "tail": 200}
 ```
 
+```typescript
+import assert from "node:assert/strict";
+
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const tail = { pid: 1, output: "", is_running: false, exit_code: 0 };
+const fake = new FakeIgni({
+  runScript: (text) => [
+    { type: "run_started" },
+    { type: "content_delta", text: `you said ${text}` },
+    { type: "run_completed" },
+  ],
+  answers: {
+    read_process_tail: tail,                         // any valid answer
+    get_todos: () => [],                             // or a function of the args
+  },
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create();
+assert.equal(String(await session.ask("hi")), "you said hi");
+assert.deepEqual(await igni.processes.tail(1), tail);
+await igni.close();
+await fake.close();
+
+const [call] = fake.calls.filter((c) => c.method === "read_process_tail");
+assert.deepEqual(call.args, { pid: 1 });            // tail left out: igni's own default
+```
+
 It records what your program did — `fake.socket.received` (the typed
 frames it sent), `fake.methods.calls`, `fake.runs.decisions`,
 `gateway.commands_run` — and plays what igni and Fleet do under you:
 `fake.socket.push(channel, payload)`, `fake.socket.move()`,
 `drop(code)`, `busy_next(n)` and `fake.methods.unbound_for(n)`. See
 [igni_client.testing](/docs/sdk/igni-client/api-reference#igni-client-testing).
+
+The TypeScript `FakeIgni` records `fake.frames`, `fake.calls` and
+`fake.decisions`, and plays `fake.broadcast(message)` and `fake.move()`;
+it has no `drop`, `busy_next` or `unbound_for` yet.

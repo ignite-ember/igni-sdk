@@ -26,6 +26,10 @@ List this session's skills with what each tells the agent.
 async def definitions(self) -> list[SkillDefinition]
 ```
 
+```typescript
+definitions(): Promise<SkillDefinition[]>
+```
+
 Returns each skill's `name`, `description`
 and `prompt` (the skill's body).
 
@@ -61,6 +65,10 @@ Describe each of this session's skills in full.
 
 ```python
 async def list(self) -> list[SkillInfo]
+```
+
+```typescript
+list(): Promise<SkillInfo[]>
 ```
 
 Returns each skill's name, description,
@@ -101,6 +109,10 @@ List the names of the skills this session has loaded.
 async def names(self) -> list[str]
 ```
 
+```typescript
+names(): Promise<string[]>
+```
+
 Returns the names, each usable as `/<name>`.
 
 Takes no arguments.
@@ -132,6 +144,10 @@ Run a slash command in this session, as typed in igni's composer: `/help`, `/com
 
 ```python
 async def command(self, text: str = '') -> CommandResult
+```
+
+```typescript
+command(text?: string): Promise<CommandResult>
 ```
 
 `text` is the command line, its leading `/` optional. Returns igni's `command_result`: its `kind` (`markdown`, `info`, `error` or `action`), the `content` to show and the `action` the command asks a client to take. The commands that switch approvals off, change what igni loads or whom it signs in to (`/bypass`, `/accept`, `/plugin`, `/eject`, `/login`, `/logout`) answer an `error` to anything but igni's window.
@@ -168,6 +184,10 @@ List every slash command this session takes.
 async def slash_commands(self) -> list[SlashCommand]
 ```
 
+```typescript
+slash_commands(): Promise<SlashCommand[]>
+```
+
 Returns igni's built-in commands, commands
 written as markdown files, skills a person can invoke, and
 extensions' commands, told apart by `source`; each with its
@@ -202,6 +222,10 @@ List the output styles this session can answer in, and the active one.
 
 ```python
 async def output_styles(self) -> OutputStylesResult
+```
+
+```typescript
+output_styles(): Promise<OutputStylesResult>
 ```
 
 Returns the `active` style's name (empty for

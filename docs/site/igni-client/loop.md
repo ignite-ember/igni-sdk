@@ -24,6 +24,10 @@ End this session's running `/loop`.
 async def cancel(self) -> bool
 ```
 
+```typescript
+cancel(): Promise<boolean>
+```
+
 Returns `true` when a loop was ended;
 `false` when there was none or it is paused (a paused loop is
 resumed or left alone, not cancelled).
@@ -59,6 +63,10 @@ Take the next step of this session's `/loop`, for the client to send.
 
 ```python
 async def next_iteration(self) -> LoopAdvance | None
+```
+
+```typescript
+next_iteration(): Promise<LoopAdvance | null>
 ```
 
 Returns `null` when there is no loop or it is
@@ -104,6 +112,10 @@ Pause this session's `/loop` after the current iteration.
 async def pause(self) -> bool
 ```
 
+```typescript
+pause(): Promise<boolean>
+```
+
 Returns `true` when the loop is now paused
 (or already was), `false` when there is no loop.
 
@@ -138,6 +150,10 @@ Resume this session's paused `/loop`.
 
 ```python
 async def resume(self) -> str
+```
+
+```typescript
+resume(): Promise<string>
 ```
 
 Returns the prompt of the iteration to run next,
@@ -175,6 +191,10 @@ Read the state of this session's `/loop`.
 
 ```python
 async def status(self) -> LoopStatusSnapshot
+```
+
+```typescript
+status(): Promise<LoopStatusSnapshot>
 ```
 
 Returns whether a loop is `active` and

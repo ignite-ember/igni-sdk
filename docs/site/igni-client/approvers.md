@@ -21,6 +21,10 @@ Make a token that lets a program answer the agent's approval requests.
 async def mint_token(self) -> ApproverTokenMinted
 ```
 
+```typescript
+mint_token(): Promise<ApproverTokenMinted>
+```
+
 Returns `token`: a program that connects with it
 stands as an approver — it may answer approval requests and approve a
 plan, once each time, but saves no rule and changes no permission mode.
@@ -63,6 +67,10 @@ Forget every approver token, so no program answers approval requests any more.
 
 ```python
 async def revoke_tokens(self) -> ApproverTokensRevoked
+```
+
+```typescript
+revoke_tokens(): Promise<ApproverTokensRevoked>
 ```
 
 Returns `revoked`: how many tokens were

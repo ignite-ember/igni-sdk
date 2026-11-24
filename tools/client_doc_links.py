@@ -22,6 +22,8 @@ from tools.client_doc_layout import (
 from tools.client_errors_doc import ErrorCatalog
 from tools.client_names import FOLLOWED
 from tools.client_plan import Plan, push_class
+from tools.client_ts import API_OUTPUT
+from tools.client_ts_signatures import TsSignatures
 from tools.client_types import Types
 from tools.markdown_pages import ReadmePages, plain, site_id
 from tools.site_page import url
@@ -105,6 +107,8 @@ class ClientSources:
     layout: ClientLayout
     links: ClientLinks
     prose: WireProse
+    #: Each method's TypeScript signature, from ``api.generated.ts``.
+    ts: TsSignatures
 
     @classmethod
     def build(
@@ -120,6 +124,7 @@ class ClientSources:
             layout=layout,
             links=ClientLinks(layout, api, errors, readme),
             prose=WireProse(plan.contract, layout.placements),
+            ts=TsSignatures.read(API_OUTPUT),
         )
 
     @property

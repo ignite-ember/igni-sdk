@@ -24,6 +24,10 @@ Delete an agent made during this session.
 async def discard(self, name: str) -> DiscardEphemeralResult
 ```
 
+```typescript
+discard(name: string): Promise<DiscardEphemeralResult>
+```
+
 `name` is the ephemeral agent. Returns `ok` with its `name`;
 or `ok: false` with `reason` when it is unknown or not
 ephemeral.
@@ -61,6 +65,10 @@ List the agents this session can hand work to.
 
 ```python
 async def list(self) -> list[AgentInfo]
+```
+
+```typescript
+list(): Promise<AgentInfo[]>
 ```
 
 Returns each agent's name, description, tools,
@@ -106,6 +114,10 @@ async def promote(
 ) -> PromoteEphemeralResult
 ```
 
+```typescript
+promote(name: string, target?: string | null): Promise<PromoteEphemeralResult>
+```
+
 `name` is the ephemeral agent; `target` is `project` (the
 default: the project's agents) or `personal` (the person's own).
 Returns `ok` with the agent's `name` and where it was saved
@@ -146,6 +158,10 @@ Stop one sub-agent's run, leaving the rest of the turn going.
 
 ```python
 async def cancel_run(self, run_id: str = '') -> CancelAgentRunResult
+```
+
+```typescript
+cancel_run(run_id?: string): Promise<CancelAgentRunResult>
 ```
 
 `run_id` is the sub-agent run's id, as its events carry it.
