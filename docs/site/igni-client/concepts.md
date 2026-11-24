@@ -38,6 +38,15 @@ here = Local(project_dir="~/code/payments")          # the desktop app's igni fo
 by_hand = Local(url="ws://127.0.0.1:8765", token="<the printed token>")  # `python -m igni_core.backend --ws-port 8765`
 ```
 
+```typescript
+import { Fleet, Local, Person } from "@ignite-ember/igni-client";
+
+const fleet = new Fleet("https://gw.acme.internal", { auth: Person.fromCli() });
+const found = await Fleet.fromServer("https://igni.acme.internal", { auth: Person.fromCli() });  // igni server names the gateway
+const here = new Local({ projectDir: "~/code/payments" });  // the desktop app's igni for that project
+const byHand = new Local({ url: "ws://127.0.0.1:8765", token: "<the printed token>" });  // `python -m igni_core.backend --ws-port 8765`
+```
+
 Both speak the same protocol once open, so everything above the target is
 the same code. Two things differ: only Fleet has `igni.commands` and
 `igni.me()` (they are the gateway's), and only Fleet reconnects on its own
@@ -62,9 +71,18 @@ async with IgniClient(Fleet("https://gw.acme.internal", auth=key)) as igni:
     ...
 ```
 
+```typescript
+import { Fleet, IgniClient, Person } from "@ignite-ember/igni-client";
+
+const key = Person.fromApiKey("igpak1.…", { server: "https://igni.acme.internal" });
+// or Person.fromApiKey() with IGNI_API_KEY and IGNI_SERVER_URL set
+await using igni = await new IgniClient(new Fleet("https://gw.acme.internal", { auth: key })).connect();
+```
+
 On their own machine, a person can also use the session `igni login`
 keeps (`Person.from_cli()`, 30 days), or an organisation-pinned session
-token (`Person("eyJ…")`).
+token (`Person("eyJ…")`); in TypeScript, `Person.fromCli()` and
+`new Person("eyJ…")`.
 
 **An app** — a review bot, an integration — signs in as itself with its
 own key. Make the key once, give its public half to an org admin to
@@ -78,8 +96,20 @@ app = App("app-review-bot", server="https://igni.acme.internal", key_file="app-k
 print(app.public_jwks().model_dump_json())  # what the org admin registers
 ```
 
+```typescript
+import { App } from "@ignite-ember/igni-client";
+
+App.generateKey("app-key.pem");
+const app = new App("app-review-bot", { server: "https://igni.acme.internal", keyFile: "app-key.pem" });
+console.log(JSON.stringify(app.publicJwks()));  // what the org admin registers
+```
+
 ```python
 await app.aclose()
+```
+
+```typescript
+// Nothing to close: a TypeScript App keeps no connection of its own.
 ```
 
 Its tokens last ten minutes and are renewed for you.
@@ -91,6 +121,14 @@ declares it by your own id for the user, then connects as it:
 space = await app.spaces.declare("customer-42")      # the same space every time for that id
 async with IgniClient(Fleet("https://gw.acme.internal", auth=space)) as igni:
     ...
+```
+
+```typescript
+import { App, Fleet, IgniClient } from "@ignite-ember/igni-client";
+
+const app = new App("app-review-bot", { server: "https://igni.acme.internal", keyFile: "app-key.pem" });
+const space = await app.spaces.declare("customer-42");  // the same space every time for that id
+await using igni = await new IgniClient(new Fleet("https://gw.acme.internal", { auth: space })).connect();
 ```
 
 `app.spaces.get(id)`, `.list()` and `.delete(id)` manage them; deleting a
@@ -117,6 +155,33 @@ async with FakeIgni() as fake, IgniClient(fake.local()) as igni:
     print(registry.default, list(registry.registry))
     notice = await session.models.switch("igni-1")   # a ModelSwitched
     print(notice.text)
+```
+
+```typescript
+import { IgniClient, Local } from "@ignite-ember/igni-client";
+import { FakeIgni } from "@ignite-ember/igni-client/testing";
+
+const fake = new FakeIgni({
+  answers: {
+    get_model_registry: { default: "igni-1", max_context_window: 200000, registry: { "igni-1": {} } },
+    switch_model: { text: "Switched to igni-1." },
+  },
+});
+await fake.start();
+const igni = await new IgniClient(new Local({ url: fake.wsUrl })).connect();
+const session = await igni.sessions.create("/workspace/payments");
+const again = await igni.sessions.open(session.id);  // the same Session object; an id igni does not know is opened new, not an error
+const atStart = await igni.sessions.default();       // the one igni opened at start
+for (const entry of await igni.sessions.list()) {
+  console.log(entry.session_id, entry.name, entry.run_count);
+}
+
+const registry = await session.models.list();        // a ModelRegistryResult
+console.log(registry.default, Object.keys(registry.registry));
+const notice = await session.models.switch("igni-1"); // a ModelSwitched
+console.log(notice.text);
+await igni.close();
+await fake.close();
 ```
 
 The rest act on igni as a whole — the machine, the account, every
@@ -162,6 +227,13 @@ here = Local(project_dir="~/code/payments", approver_token="…")
 # or set IGNI_APPROVER_TOKEN
 ```
 
+```typescript
+import { Local } from "@ignite-ember/igni-client";
+
+const here = new Local({ projectDir: "~/code/payments", approverToken: "…" });
+// or set IGNI_APPROVER_TOKEN
+```
+
 igni forgets approver tokens when it quits, and revoking them in
 `/programs` disconnects the programs using one.
 
@@ -198,6 +270,9 @@ notification's payload, as JSON Schema. igni-client is generated from it:
   namespace, igni's documentation as its docstring;
 - the [method reference](/docs/sdk/igni-client/api-reference#igni-s-methods-by-namespace) at the end of this
   page.
+
+In TypeScript both come from `@ignite-ember/igni-client` itself: an
+interface for every model, and the methods on `IgniClient` and `Session`.
 
 A model of something igni sends keeps a field a newer igni adds, so an
 older igni-client keeps working against a newer igni; a message type
