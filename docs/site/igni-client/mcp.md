@@ -28,6 +28,10 @@ Connect one configured MCP server to this session.
 async def connect(self, server_name: str) -> InfoMessage
 ```
 
+```typescript
+connect(server_name: string): Promise<InfoMessage>
+```
+
 `server_name` is the server's name in the MCP configuration.
 Returns an `info` message, sent in place of an `rpc_response`,
 once it is connected. Fails with the reason when it did not connect
@@ -69,6 +73,10 @@ Disconnect one MCP server from this session.
 async def disconnect(self, server_name: str) -> InfoMessage
 ```
 
+```typescript
+disconnect(server_name: string): Promise<InfoMessage>
+```
+
 `server_name` is the server's name in the MCP configuration.
 Returns an `info` message, sent in place of an `rpc_response`,
 whether or not the server was connected.
@@ -106,6 +114,10 @@ Connect this session's configured MCP servers, once.
 
 ```python
 async def ensure(self) -> McpInitResult
+```
+
+```typescript
+ensure(): Promise<McpInitResult>
 ```
 
 The first call connects every configured server
@@ -146,6 +158,10 @@ List this session's MCP servers that need a first-use approval.
 
 ```python
 async def list_approvals(self) -> list[McpApproval]
+```
+
+```typescript
+list_approvals(): Promise<McpApproval[]>
 ```
 
 Returns one row per configured server — its
@@ -190,6 +206,10 @@ Describe each of this session's MCP servers in full.
 async def server_details(self) -> list[McpServerSnapshot]
 ```
 
+```typescript
+server_details(): Promise<McpServerSnapshot[]>
+```
+
 Returns one row per server: whether it is
 connected, its transport, its tools (names, descriptions, the ones
 switched off), its resources and prompts, the last error connecting
@@ -230,6 +250,10 @@ List this session's configured MCP servers, in configuration order.
 async def servers(self) -> list[McpServerSummary]
 ```
 
+```typescript
+servers(): Promise<McpServerSummary[]>
+```
+
 Returns one `{name, connected}` row per
 server.
 
@@ -265,6 +289,10 @@ Approve a configured MCP server, or withdraw its approval.
 
 ```python
 async def set_approval(self, *, approved: bool, server_name: str) -> McpApproval
+```
+
+```typescript
+set_approval(approved: boolean, server_name: string): Promise<McpApproval>
 ```
 
 `server_name` names the server; `approved` is the answer.
@@ -322,6 +350,14 @@ async def set_tool_enabled(
 ) -> McpToolToggleResult
 ```
 
+```typescript
+set_tool_enabled(
+  enabled: boolean,
+  server: string,
+  tool: string,
+): Promise<McpToolToggleResult>
+```
+
 `server` and `tool` name the tool; `enabled` is its new state.
 The choice is saved in the project's `.igni/mcp-tool-state.json`.
 Returns the `server`, `tool` and `enabled` as recorded; the
@@ -363,6 +399,10 @@ List this session's MCP servers and whether each is connected.
 
 ```python
 async def status(self) -> list[McpServerStatus]
+```
+
+```typescript
+status(): Promise<McpServerStatus[]>
 ```
 
 Returns one `{name, connected}` row per

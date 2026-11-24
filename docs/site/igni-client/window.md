@@ -31,6 +31,19 @@ def model(
 ) -> Call[WindowModelResult, WindowModelEvent]
 ```
 
+```typescript
+model(
+  op: "hydrate" | "write" | "toast" | "dismiss_toast" | "open_dialog" | "answer_dialog",
+  window: string,
+  connection_id?: string,
+  dialog_id?: string,
+  field?: string,
+  kind?: string,
+  token?: string,
+  value?: JsonValue,
+): Call<WindowModelResult, WindowModelEvent>
+```
+
 A window spans sessions, so this is not tied to one. `op` says what
 to do (see the arguments); `window` is the window's own stable id.
 The window is the one on the connection the request came on.

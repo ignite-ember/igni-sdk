@@ -2,6 +2,8 @@
 
 # Installing
 
+**Python.**
+
 ```bash
 pip install igni-client        # or: uv add igni-client
 ```
@@ -9,7 +11,17 @@ pip install igni-client        # or: uv add igni-client
 It needs Python 3.12 or later, and brings httpx, websockets, Pydantic and
 PyJWT with `cryptography`.
 
-Each release's wheels and sdists are also attached to igni-sdk's GitHub
-release (`sdk-v<version>`), for a machine that cannot reach PyPI. The
+**TypeScript and JavaScript.**
+
+```bash
+npm install @ignite-ember/igni-client
+```
+
+It needs Node 20 or later, and brings `ws`. It is an ES module with its
+types included; its testing kit is `@ignite-ember/igni-client/testing`.
+
+Each release's wheels, sdists and npm tarballs are also attached to
+igni-sdk's GitHub release (`sdk-v<version>`), for a machine that cannot
+reach PyPI or npm. The
 versions, and working from an igni-sdk checkout, are in
 [PUBLISHING_THE_SDKS.md](https://github.com/ignite-ember/igni-sdk/blob/main/docs/PUBLISHING_THE_SDKS.md).

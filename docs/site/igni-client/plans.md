@@ -22,6 +22,10 @@ Approve the plan the agent submitted, so it leaves plan mode and carries it out.
 def approve(self, run_id: str = '') -> Call[PlanDecisionResult, ApprovePlanEvent]
 ```
 
+```typescript
+approve(run_id?: string): Call<PlanDecisionResult, ApprovePlanEvent>
+```
+
 `run_id` is the run that submitted the plan (`plan_submitted`
 carries it). The decision is recorded, the session's permission
 mode returns to the one it started in (`permission_mode_changed`
@@ -83,6 +87,10 @@ Send the submitted plan back for refining, staying in plan mode.
 def dismiss(self, run_id: str = '') -> Call[PlanDecisionResult, DismissPlanEvent]
 ```
 
+```typescript
+dismiss(run_id?: string): Call<PlanDecisionResult, DismissPlanEvent>
+```
+
 `run_id` is the run that submitted the plan. The decision is
 recorded and `plan_decided` tells every window. Returns the same
 shape as `session.plan.approve()`, with an empty `mode_status`; `ok:
@@ -130,6 +138,10 @@ Read the plan the agent last submitted in this session, with its task list.
 
 ```python
 async def latest(self) -> LatestPlanResult
+```
+
+```typescript
+latest(): Promise<LatestPlanResult>
 ```
 
 Returns the `latest` plan's text, every plan

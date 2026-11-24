@@ -22,6 +22,10 @@ Count the person's unread notifications, in all and per extension.
 async def counts(self) -> NotificationCounts
 ```
 
+```typescript
+counts(): Promise<NotificationCounts>
+```
+
 Answers from what was last read, asking nobody;
 `notifications_changed` pushes the counts whenever they move.
 
@@ -56,6 +60,10 @@ List the signed-in person's notifications, newest first.
 
 ```python
 def list(self) -> Call[NotificationsListResult, NotificationsListEvent]
+```
+
+```typescript
+list(): Call<NotificationsListResult, NotificationsListEvent>
 ```
 
 Reads igni server again and merges in what
@@ -114,6 +122,13 @@ def mark_read(
     ids: list[str] | None = None,
     source: str | None = None,
 ) -> Call[NotificationsReadResult, NotificationsMarkReadEvent]
+```
+
+```typescript
+mark_read(
+  ids?: string[] | null,
+  source?: string | null,
+): Call<NotificationsReadResult, NotificationsMarkReadEvent>
 ```
 
 `ids` names the notifications; `source` (an extension id) marks

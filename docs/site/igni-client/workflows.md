@@ -25,6 +25,10 @@ def cancel(
 ) -> Call[WorkflowCancelResponse, CancelWorkflowEvent]
 ```
 
+```typescript
+cancel(workflow_run_id: string): Call<WorkflowCancelResponse, CancelWorkflowEvent>
+```
+
 `workflow_run_id` is the run (from `session.workflows.run()`). The
 workflow is asked to stop, then terminated after a grace period;
 its last `workflow_event` says it was cancelled. Returns
@@ -73,6 +77,10 @@ List the workflows this session's project can run.
 async def list(self) -> list[WorkflowListItem]
 ```
 
+```typescript
+list(): Promise<WorkflowListItem[]>
+```
+
 Returns each workflow in
 `.igni/workflows/*.mjs` (a project's shadowing the person's own
 of the same name), sorted by name: its `name`, `description`,
@@ -116,6 +124,13 @@ def run(
     *,
     args: dict[str, JsonValue] | None = None,
 ) -> Call[WorkflowRunResponse, RunWorkflowEvent]
+```
+
+```typescript
+run(
+  name: string,
+  args?: Record<string, JsonValue>,
+): Call<WorkflowRunResponse, RunWorkflowEvent>
 ```
 
 `name` is the workflow (from `session.workflows.list()`); `args` its
