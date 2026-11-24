@@ -88,6 +88,7 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 | [`WorkflowRun`](#workflowrun) | interface | `hostModel.generated.ts` | A workflow started. |
 | [`SchedulerEvent`](#schedulerevent) | interface | `hostModel.generated.ts` | A scheduled task started, finished or changed. |
 | [`ProcessEvent`](#processevent) | interface | `hostModel.generated.ts` | A background shell started, printed, or exited. |
+| [`FileBytes`](#filebytes) | interface | `hostModel.generated.ts` | A file's bytes, for showing an image or a PDF. |
 | [`Head`](#head) | interface | `hostModel.generated.ts` | The project's git HEAD. |
 | [`FilesChanged`](#fileschanged) | interface | `hostModel.generated.ts` | Files git sees as changed, within the extension's workspace grant. |
 | [`ModelChange`](#modelchange) | interface | `hostModel.generated.ts` | The model in use changed. |
@@ -1346,6 +1347,22 @@ A background shell started, printed, or exited.
 |---|---|---|---|
 | `kind` | field | `string` | `started`, `line`, `exited` or `done`. |
 | `payload` | field | `JsonValue` |  |
+
+## FileBytes
+
+```typescript
+interface FileBytes
+```
+
+A file's bytes, for showing an image or a PDF.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `path` | field | `string` | The file, as it was resolved. |
+| `data` | field | `string` | Its bytes, base64-encoded; empty when `error` is set. |
+| `size` | field | `number` | Its size in bytes. |
+| `media_type` | field | `string` | What kind of file it is, e.g. `image/png`. |
+| `error` | field | `string` | Why it could not be read; empty when it was. |
 
 ## Head
 
@@ -3020,6 +3037,7 @@ The project, as far as the extension's workspace grant reaches.
 | `files_changed` | field | `Signal<FilesChanged>` | Files changed, as git sees them, within the grant. |
 | `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `read` | method | `(path: string) => Promise<JsonValue>` | Read a file in the project. |
+| `read_bytes` | method | `(path: string) => Promise<FileBytes>` | Read a file in the project as bytes: base64-encoded, with its media type. |
 | `list` | method | `(dir?: string) => Promise<JsonValue>` | List a directory in the project. |
 | `complete` | method | `(prefix: string) => Promise<JsonValue>` | Complete a path, as `@` does. |
 | `search` | method | `(query: string) => Promise<JsonValue>` | Search the code. |
@@ -3035,6 +3053,12 @@ The project, as far as the extension's workspace grant reaches.
 | `session` | `string \| null` | `null` | The session it was reached through, or null for the one on screen. |
 
 ### HostWorkspace.read()
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | `string` | required | The file to read, by its path in the project. |
+
+### HostWorkspace.read_bytes()
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|

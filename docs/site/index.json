@@ -6132,6 +6132,11 @@
         },
         {
           "level": 2,
+          "id": "filebytes",
+          "title": "FileBytes"
+        },
+        {
+          "level": 2,
           "id": "head",
           "title": "Head"
         },
@@ -6809,6 +6814,11 @@
           "level": 3,
           "id": "hostworkspace-read",
           "title": "HostWorkspace.read()"
+        },
+        {
+          "level": 3,
+          "id": "hostworkspace-read-bytes",
+          "title": "HostWorkspace.read_bytes()"
         },
         {
           "level": 3,

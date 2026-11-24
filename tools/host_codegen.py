@@ -121,6 +121,7 @@ PARAM_MEANINGS: dict[tuple[str, str, str], str] = {
     ("processes", "stop", "pid"): "The shell to stop, by its process id.",
     ("processes", "run", "command"): "The command line to run in the project.",
     ("workspace", "read", "path"): "The file to read, by its path in the project.",
+    ("workspace", "read_bytes", "path"): "The file to read, by its path in the project.",
     ("workspace", "list", "dir"): (
         "The directory to list, by its path in the project; the project itself when left out."
     ),

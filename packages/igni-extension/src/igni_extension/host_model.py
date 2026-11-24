@@ -857,6 +857,23 @@ class ProcessEvent(BaseModel):
     payload: JsonValue
 
 
+class FileBytes(BaseModel):
+    """A file's bytes, for showing an image or a PDF."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    path: str
+    """The file, as it was resolved."""
+    data: str
+    """Its bytes, base64-encoded; empty when `error` is set."""
+    size: int
+    """Its size in bytes."""
+    media_type: str
+    """What kind of file it is, e.g. `image/png`."""
+    error: str
+    """Why it could not be read; empty when it was."""
+
+
 class Head(BaseModel):
     """The project's git HEAD."""
 
@@ -2532,6 +2549,14 @@ class HostWorkspace(HostObject):
         """
         return cast(JsonValue, await self._call("read", {"path": path}, JsonValue))
 
+    async def read_bytes(self, path: str) -> FileBytes:
+        """Read a file in the project as bytes: base64-encoded, with its media type.
+
+        Args:
+            path: The file to read, by its path in the project.
+        """
+        return cast(FileBytes, await self._call("read_bytes", {"path": path}, FileBytes))
+
     async def list(self, dir: str | None = None) -> JsonValue:
         """List a directory in the project.
 
@@ -3098,6 +3123,7 @@ __all__ = [
     "Display",
     "ExtensionInfo",
     "ExtensionStateChange",
+    "FileBytes",
     "FileEdited",
     "FilesChanged",
     "Head",

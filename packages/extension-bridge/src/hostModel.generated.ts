@@ -627,6 +627,20 @@ export interface ProcessEvent {
   payload: JsonValue;
 }
 
+/** A file's bytes, for showing an image or a PDF. */
+export interface FileBytes {
+  /** The file, as it was resolved. */
+  path: string;
+  /** Its bytes, base64-encoded; empty when `error` is set. */
+  data: string;
+  /** Its size in bytes. */
+  size: number;
+  /** What kind of file it is, e.g. `image/png`. */
+  media_type: string;
+  /** Why it could not be read; empty when it was. */
+  error: string;
+}
+
 /** The project's git HEAD. */
 export interface Head {
   commit_sha: string;
@@ -2480,6 +2494,15 @@ export class HostWorkspace extends HostObject {
    */
   read(path: string): Promise<JsonValue> {
     return this.call<JsonValue>("read", { path });
+  }
+
+  /**
+   * Read a file in the project as bytes: base64-encoded, with its media type.
+   *
+   * @param path — The file to read, by its path in the project.
+   */
+  read_bytes(path: string): Promise<FileBytes> {
+    return this.call<FileBytes>("read_bytes", { path });
   }
 
   /**
