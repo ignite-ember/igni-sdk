@@ -20,9 +20,9 @@ Every custom property the stylesheet defines, and the value it falls back to. Th
 | `--danger` | `#ef6a5a` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.diagram-copy`, `.mermaid-error` … | The strong red: the border of a destructive button, the rule on an error. |
 | `--danger-text` | `#f28376` | `.ui-error`, `.btn-danger`, `.chip`, `.ui-badge`, `.overflow-item-danger` | The same red, lightened until it clears WCAG AA as text. |
 | `--accent-blue` | `#6aa3f7` | `.ui-select`, `.ui-textarea`, `.panel-input`, `.btn`, `.ui-item`, `.ui-tab` … | The blue that marks focus, and the row that is selected. |
-| `--igni-orange` | `#f97316` | `.ui-check`, `.ui-switch`, `.ui-spinner`, `.ui-tab` | The brand colour of igni: the ticked box, the selected tab, the spinner. |
+| `--igni-orange` | `#ee6138` | `.ui-check`, `.ui-switch`, `.ui-spinner`, `.ui-tab` | The brand colour of igni: the ticked box, the selected tab, the spinner. |
 | `--igni-red` | `#dc2626` | nothing here | The red end of the brand gradient, for the brand colour on its own. |
-| `--igni-gradient` | `linear-gradient(135deg, #f97316, #dc2626)` | `.ui-progress-fill`, `.btn-primary` | The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar. |
+| `--igni-gradient` | `linear-gradient(135deg, #ee6138, #dc2626)` | `.ui-progress-fill`, `.btn-primary` | The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar. |
 | `--space-1` | `2px` | `.ui-badge`, `.ui-code`, `.btn-xs`, `.ui-toast-dismiss` | The hairline step: the padding inside a badge, a code span, a tiny button. |
 | `--space-2` | `4px` | `.ui-list`, `.ui-badge`, `.ui-tabs`, `.btn-sm`, `.diagram-copy`, `.ui-th-sort` … | The gap between the parts of one small thing: a badge and its icon, the items of a list. |
 | `--space-3` | `6px` | `.ui-item`, `.ui-badge`, `.ui-field`, `.ui-tab`, `.ui-code`, `.chip` … | The gap between a label and its control, and the padding of a table cell. |
@@ -36,9 +36,9 @@ Every custom property the stylesheet defines, and the value it falls back to. Th
 | `--space-16` | `32px` | `.ui-toasts` | The margin kept between a toast stack and the screen edge. |
 | `--accent-blue-text` | `#8eb9f9` | `.ui-prose` | The blue lightened until it clears WCAG AA as text: a link in prose. |
 | `--accent-green-text` | `#7cc57f` | `.ui-badge` | The green lightened for text: the lettering of a success badge. |
-| `--accent-orange-text` | `#fb9c5a` | `.btn-warn`, `.ui-badge` | The orange lightened for text: the lettering of a warning button. |
+| `--accent-orange-text` | `#f5a088` | `.btn-warn`, `.ui-badge` | The orange lightened for text: the lettering of a warning button. |
 | `--accent-red-text` | `#f09393` | nothing here | The red lightened for text: the lettering of a failure. |
-| `--igni-orange-hover` | `#fb923c` | nothing here | The brand orange one step brighter, for a control under the pointer. |
+| `--igni-orange-hover` | `#f18160` | nothing here | The brand orange one step brighter, for a control under the pointer. |
 | `--shadow-pop` | `0 12px 40px rgba(0, 0, 0, 0.45)` | `.overflow-list`, `.ui-toast` | The shadow a floating surface casts: a toast, an open menu. |
 | `--radius-sm` | `8px` | `.ui-item`, `.ui-select`, `.ui-textarea`, `.ui-code`, `.btn`, `.panel-input` … | The corner on a small control: a button, a field, a block of code. |
 | `--radius` | `12px` | `.ui-card`, `.panel`, `.skeleton-block`, `.overflow-list`, `.mermaid-diagram`, `.mermaid-error` … | The default corner: a card, a panel, a badge. |
@@ -171,7 +171,7 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 ## --igni-orange
 
-`#f97316`
+`#ee6138`
 
 The brand colour of igni: the ticked box, the selected tab, the spinner.
 
@@ -187,7 +187,7 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 ## --igni-gradient
 
-`linear-gradient(135deg, #f97316, #dc2626)`
+`linear-gradient(135deg, #ee6138, #dc2626)`
 
 The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar.
 
@@ -299,7 +299,7 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 ## --accent-orange-text
 
-`#fb9c5a`
+`#f5a088`
 
 The orange lightened for text: the lettering of a warning button.
 
@@ -315,7 +315,7 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 
 ## --igni-orange-hover
 
-`#fb923c`
+`#f18160`
 
 The brand orange one step brighter, for a control under the pointer.
 

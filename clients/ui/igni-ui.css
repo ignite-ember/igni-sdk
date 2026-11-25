@@ -68,11 +68,11 @@
   --accent-blue: #6aa3f7;
 
   /* The brand colour of igni: the ticked box, the selected tab, the spinner. */
-  --igni-orange: #f97316;
+  --igni-orange: #ee6138;
   /* The red end of the brand gradient, for the brand colour on its own. */
   --igni-red: #dc2626;
   /* The brand gradient, orange to red: the fill of a primary button, the fill of a progress bar. */
-  --igni-gradient: linear-gradient(135deg, #f97316, #dc2626);
+  --igni-gradient: linear-gradient(135deg, #ee6138, #dc2626);
 
   /* The hairline step: the padding inside a badge, a code span, a tiny button. */
   --space-1: 2px;
@@ -102,11 +102,11 @@
   /* The green lightened for text: the lettering of a success badge. */
   --accent-green-text: #7cc57f;
   /* The orange lightened for text: the lettering of a warning button. */
-  --accent-orange-text: #fb9c5a;
+  --accent-orange-text: #f5a088;
   /* The red lightened for text: the lettering of a failure. */
   --accent-red-text: #f09393;
   /* The brand orange one step brighter, for a control under the pointer. */
-  --igni-orange-hover: #fb923c;
+  --igni-orange-hover: #f18160;
   /* The shadow a floating surface casts: a toast, an open menu. */
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45);
 
@@ -550,7 +550,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 6px 18px rgba(238, 97, 56, 0.3);
   background: var(--igni-gradient);
 }
 
