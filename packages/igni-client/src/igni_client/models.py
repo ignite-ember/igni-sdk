@@ -113,6 +113,10 @@ type RpcErrorCode = Literal[
 ]
 
 
+#: How the person feels about igni or its last answer, as Laya read their message.
+type SentimentKind = Literal["positive", "negative"]
+
+
 #: Lifecycle of one scheduled task.
 #:
 #: `pending` (waiting for its time), `running` (executing now),
@@ -1147,6 +1151,15 @@ class InterruptedRunArgs(Args):
     """Id of the message that started the run, as listed by `get_interrupted_runs`; must not be empty."""
     session_id: str
     """Id of the session to act on."""
+
+
+class LabelProbability(Model):
+    """One option, level, or `yes` / `no`, and how likely Laya found it."""
+
+    label: str
+    """The option, level, or `yes` / `no`."""
+    probability: float
+    """Its probability, from 0 to 1."""
 
 
 class LatestPlanResult(Model):
@@ -2676,6 +2689,36 @@ class Selection(Model):
     """The selected text; null when none is."""
 
 
+class SentimentAspect(Model):
+    """The label Laya chose, and every label's probability, to threshold again later."""
+
+    answer: str
+    """The label Laya chose."""
+    probabilities: list[LabelProbability]
+    """Every label's probability, in the question's order."""
+
+
+class SentimentAspects(Model):
+    """What Laya read in the message besides the verdict, for whoever learns from the turn."""
+
+    feeling: SentimentAspect
+    """`positive`, `negative` or `neutral`."""
+    gesture: SentimentAspect
+    """`gratitude`, `compliment`, `insult` or `neither`."""
+    intensity: SentimentAspect
+    """`none`, `mild`, `strong` or `angry`."""
+    negative_reason: SentimentAspect
+    """What displeased the person: `wrong_or_incorrect`, `misunderstood_request`, `incomplete`, `ignored_instruction`, `unwanted_action`, `too_slow`, `wrong_length`, `tone`, `refused_or_gave_up` or `other`."""
+    positive_reason: SentimentAspect
+    """What pleased the person: `solved_or_correct`, `fast`, `clear_explanation`, `beyond_expectations` or `other`."""
+    redo_requested: SentimentAspect
+    """Whether the person asks to redo or undo something."""
+    repeat: SentimentAspect
+    """Whether the same problem happened again."""
+    task_done: SentimentAspect
+    """Whether the person says the task is done."""
+
+
 class ServerChoice(Model):
     """The igni server now in use, or why the choice was refused."""
 
@@ -3587,6 +3630,23 @@ class UserMessageReceived(Event):
     """Always `user_message_received`: what kind of message this is."""
 
 
+class UserSentimentPayload(Model):
+    """Channel `user_sentiment`. The person's message was pleased or displeased with igni."""
+
+    aspects: SentimentAspects
+    """Every question Laya answered about the message, with every probability."""
+    confidence: float
+    """How sure Laya is, from 0 to 1."""
+    message_run_id: str | None
+    """The run the judged message started; `null` when none started."""
+    reply_run_id: str | None
+    """The run whose reply the message reacts to; `null` when the session had none."""
+    sentiment: SentimentKind
+    """`positive` or `negative`; neutral is never sent."""
+    session_id: str
+    """The session the message was sent in."""
+
+
 class UserTurn(Model):
     """A message the user sent."""
 
@@ -4217,6 +4277,16 @@ class TodosUpdatedPush(PushNotification):
     payload: TodosUpdatedEventPayload  # type: ignore[assignment]
 
 
+class UserSentimentPush(PushNotification):
+    """Laya read the person's message as pleased or displeased with igni.
+
+    On the wire: ``push_notification`` on the channel ``user_sentiment``.
+    """
+
+    channel: Literal["user_sentiment"] = "user_sentiment"
+    payload: UserSentimentPayload  # type: ignore[assignment]
+
+
 class VisualizationActionDispatchedPush(PushNotification):
     """The person used a control in a view.
 
@@ -4378,6 +4448,7 @@ PUSH_TYPES: dict[str, type[PushNotification]] = {
     "session_named": SessionNamedPush,
     "session_states_changed": SessionStatesChangedPush,
     "todos_updated": TodosUpdatedPush,
+    "user_sentiment": UserSentimentPush,
     "visualization_action_dispatched": VisualizationActionDispatchedPush,
     "vm_credential": VmCredentialPush,
     "window_model_changed": WindowModelChangedPush,

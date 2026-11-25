@@ -670,6 +670,68 @@ class ContextUsage(BaseModel):
     breakdown: JsonValue
 
 
+class Sentiment(BaseModel):
+    """Laya read the person's message as pleased or displeased with igni."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    session_id: str
+    sentiment: str
+    """`positive` or `negative`."""
+    confidence: float
+    """How sure Laya is, from 0 to 1."""
+    message_run_id: str | None = None
+    """The run the judged message started."""
+    reply_run_id: str | None = None
+    """The run whose reply the message reacts to."""
+    aspects: SentimentAspects
+    """Every question Laya answered about the message."""
+
+
+class LabelProbability(BaseModel):
+    """One label of a question Laya answered, and its probability."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    label: str
+    """The option, level, or `yes` / `no`."""
+    probability: float
+    """From 0 to 1."""
+
+
+class SentimentAspect(BaseModel):
+    """The label Laya chose, and every label's probability."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    answer: str
+    probabilities: list[LabelProbability]
+    """In the question's order."""
+
+
+class SentimentAspects(BaseModel):
+    """What Laya read in the message besides the verdict."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    feeling: SentimentAspect
+    """`positive`, `negative` or `neutral`."""
+    gesture: SentimentAspect
+    """`gratitude`, `compliment`, `insult` or `neither`."""
+    negative_reason: SentimentAspect
+    """What displeased the person."""
+    positive_reason: SentimentAspect
+    """What pleased the person."""
+    repeat: SentimentAspect
+    """Whether the same problem happened again."""
+    redo_requested: SentimentAspect
+    """Whether the person asks to redo or undo."""
+    task_done: SentimentAspect
+    """Whether the person says the task is done."""
+    intensity: SentimentAspect
+    """`none`, `mild`, `strong` or `angry`."""
+
+
 class FileEdited(BaseModel):
     """The agent wrote a file."""
 
@@ -2097,6 +2159,8 @@ class HostChat(HostObject):
         """A network call is being retried."""
         self.history_changed: Signal[HistoryChange] = Signal("chat.history_changed", HistoryChange)
         """Turns were truncated or discarded."""
+        self.sentiment: Signal[Sentiment] = Signal("chat.sentiment", Sentiment)
+        """The person was pleased or displeased with igni."""
 
     async def post(self, text: str, attachments: dict[str, str] | None = None) -> None:
         """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments. In the session on screen a run waiting on an approval ends with it, which refuses the approval, so there it needs `chat.approvals` too.
@@ -3157,6 +3221,7 @@ __all__ = [
     "HostWindows",
     "HostWorkflows",
     "HostWorkspace",
+    "LabelProbability",
     "LocalNotification",
     "LoopAdvance",
     "LoopStatus",
@@ -3212,6 +3277,9 @@ __all__ = [
     "Scroll",
     "SelectionChange",
     "SelectionState",
+    "Sentiment",
+    "SentimentAspect",
+    "SentimentAspects",
     "SessionActivity",
     "SessionAttached",
     "SessionChange",

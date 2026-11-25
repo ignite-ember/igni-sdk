@@ -1936,6 +1936,11 @@
         },
         {
           "level": 3,
+          "id": "labelprobability",
+          "title": "LabelProbability"
+        },
+        {
+          "level": 3,
           "id": "loginresultpayload",
           "title": "LoginResultPayload"
         },
@@ -2016,6 +2021,16 @@
         },
         {
           "level": 3,
+          "id": "sentimentaspect",
+          "title": "SentimentAspect"
+        },
+        {
+          "level": 3,
+          "id": "sentimentaspects",
+          "title": "SentimentAspects"
+        },
+        {
+          "level": 3,
           "id": "sessionnamedpayload",
           "title": "SessionNamedPayload"
         },
@@ -2048,6 +2063,11 @@
           "level": 3,
           "id": "toolstartedevent",
           "title": "ToolStartedEvent"
+        },
+        {
+          "level": 3,
+          "id": "usersentimentpayload",
+          "title": "UserSentimentPayload"
         },
         {
           "level": 3,
@@ -2153,6 +2173,11 @@
           "level": 3,
           "id": "rpcerrorcode",
           "title": "RpcErrorCode"
+        },
+        {
+          "level": 3,
+          "id": "sentimentkind",
+          "title": "SentimentKind"
         },
         {
           "level": 3,
@@ -2454,6 +2479,11 @@
           "level": 3,
           "id": "todosupdatedpush",
           "title": "TodosUpdatedPush"
+        },
+        {
+          "level": 3,
+          "id": "usersentimentpush",
+          "title": "UserSentimentPush"
         },
         {
           "level": 3,
@@ -6044,6 +6074,26 @@
           "level": 2,
           "id": "contextusage",
           "title": "ContextUsage"
+        },
+        {
+          "level": 2,
+          "id": "sentiment",
+          "title": "Sentiment"
+        },
+        {
+          "level": 2,
+          "id": "labelprobability",
+          "title": "LabelProbability"
+        },
+        {
+          "level": 2,
+          "id": "sentimentaspect",
+          "title": "SentimentAspect"
+        },
+        {
+          "level": 2,
+          "id": "sentimentaspects",
+          "title": "SentimentAspects"
         },
         {
           "level": 2,

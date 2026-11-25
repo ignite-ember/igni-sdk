@@ -82,6 +82,9 @@ export type PlanDecision = "approved" | "dismissed";
  */
 export type RpcErrorCode = "unknown_method" | "invalid" | "forbidden" | "not_found" | "refused" | "unavailable" | "cancelled" | "failed";
 
+/** How the person feels about igni or its last answer, as Laya read their message. */
+export type SentimentKind = "positive" | "negative";
+
 /**
  * Lifecycle of one scheduled task.
  *
@@ -1069,6 +1072,14 @@ export interface InterruptedRunArgs {
   message_id: string;
   /** Id of the session to act on. */
   session_id: string;
+}
+
+/** One option, level, or `yes` / `no`, and how likely Laya found it. */
+export interface LabelProbability {
+  /** The option, level, or `yes` / `no`. */
+  label: string;
+  /** Its probability, from 0 to 1. */
+  probability: number;
 }
 
 /**
@@ -2526,6 +2537,34 @@ export interface Selection {
   text?: string | null;
 }
 
+/** The label Laya chose, and every label's probability, to threshold again later. */
+export interface SentimentAspect {
+  /** The label Laya chose. */
+  answer: string;
+  /** Every label's probability, in the question's order. */
+  probabilities: LabelProbability[];
+}
+
+/** What Laya read in the message besides the verdict, for whoever learns from the turn. */
+export interface SentimentAspects {
+  /** `positive`, `negative` or `neutral`. */
+  feeling: SentimentAspect;
+  /** `gratitude`, `compliment`, `insult` or `neither`. */
+  gesture: SentimentAspect;
+  /** `none`, `mild`, `strong` or `angry`. */
+  intensity: SentimentAspect;
+  /** What displeased the person: `wrong_or_incorrect`, `misunderstood_request`, `incomplete`, `ignored_instruction`, `unwanted_action`, `too_slow`, `wrong_length`, `tone`, `refused_or_gave_up` or `other`. */
+  negative_reason: SentimentAspect;
+  /** What pleased the person: `solved_or_correct`, `fast`, `clear_explanation`, `beyond_expectations` or `other`. */
+  positive_reason: SentimentAspect;
+  /** Whether the person asks to redo or undo something. */
+  redo_requested: SentimentAspect;
+  /** Whether the same problem happened again. */
+  repeat: SentimentAspect;
+  /** Whether the person says the task is done. */
+  task_done: SentimentAspect;
+}
+
 /** The igni server now in use, or why the choice was refused. */
 export interface ServerChoice {
   /** The server's API URL; empty when refused. */
@@ -3410,6 +3449,22 @@ export interface UserMessageReceived {
   type?: "user_message_received";
 }
 
+/** Channel `user_sentiment`. The person's message was pleased or displeased with igni. */
+export interface UserSentimentPayload {
+  /** Every question Laya answered about the message, with every probability. */
+  aspects: SentimentAspects;
+  /** How sure Laya is, from 0 to 1. */
+  confidence: number;
+  /** The run the judged message started; `null` when none started. */
+  message_run_id: string | null;
+  /** The run whose reply the message reacts to; `null` when the session had none. */
+  reply_run_id: string | null;
+  /** `positive` or `negative`; neutral is never sent. */
+  sentiment: SentimentKind;
+  /** The session the message was sent in. */
+  session_id: string;
+}
+
 /** A message the user sent. */
 export interface UserTurn {
   /** The text the user sent. */
@@ -4014,6 +4069,16 @@ export interface TodosUpdatedPush extends Omit<PushNotification, "channel" | "pa
 }
 
 /**
+ * Laya read the person's message as pleased or displeased with igni.
+ *
+ * On the wire: `push_notification` on the channel `user_sentiment`.
+ */
+export interface UserSentimentPush extends Omit<PushNotification, "channel" | "payload"> {
+  channel: "user_sentiment";
+  payload: UserSentimentPayload;
+}
+
+/**
  * The person used a control in a view.
  *
  * On the wire: `push_notification` on the channel `visualization_action_dispatched`.
@@ -4156,6 +4221,7 @@ export const PUSH_CHANNELS: ReadonlySet<string> = new Set([
   "session_named",
   "session_states_changed",
   "todos_updated",
+  "user_sentiment",
   "visualization_action_dispatched",
   "vm_credential",
   "window_model_changed",

@@ -1948,6 +1948,17 @@ A web fetch succeeded after at least one retry.
 | `delay_seconds` | `float` | required | Total seconds spent waiting between attempts. |
 | `url` | `str` | required | URL that was fetched. |
 
+### LabelProbability
+
+One option, level, or `yes` / `no`, and how likely Laya found it.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `label` | `str` | required | The option, level, or `yes` / `no`. |
+| `probability` | `float` | required | Its probability, from 0 to 1. |
+
+**Part of** [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect).
+
 ### LoginResultPayload
 
 Channel `login_result`. How a sign-in ended. Sent once, after
@@ -2113,6 +2124,34 @@ Channel `scheduler_started`. A scheduled task has started running.
 | `description` | `str` | required | What the task does, as it was scheduled. |
 | `task_id` | `str` | required | The scheduled task's id. |
 
+### SentimentAspect
+
+The label Laya chose, and every label's probability, to threshold again later.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `answer` | `str` | required | The label Laya chose. |
+| `probabilities` | `list[`[`LabelProbability`](/docs/sdk/igni-client/models-reference#labelprobability)`]` | required | Every label's probability, in the question's order. |
+
+**Part of** [`SentimentAspects`](/docs/sdk/igni-client/models-reference#sentimentaspects).
+
+### SentimentAspects
+
+What Laya read in the message besides the verdict, for whoever learns from the turn.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `feeling` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | `positive`, `negative` or `neutral`. |
+| `gesture` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | `gratitude`, `compliment`, `insult` or `neither`. |
+| `intensity` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | `none`, `mild`, `strong` or `angry`. |
+| `negative_reason` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | What displeased the person: `wrong_or_incorrect`, `misunderstood_request`, `incomplete`, `ignored_instruction`, `unwanted_action`, `too_slow`, `wrong_length`, `tone`, `refused_or_gave_up` or `other`. |
+| `positive_reason` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | What pleased the person: `solved_or_correct`, `fast`, `clear_explanation`, `beyond_expectations` or `other`. |
+| `redo_requested` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | Whether the person asks to redo or undo something. |
+| `repeat` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | Whether the same problem happened again. |
+| `task_done` | [`SentimentAspect`](/docs/sdk/igni-client/models-reference#sentimentaspect) | required | Whether the person says the task is done. |
+
+**Part of** [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
+
 ### SessionNamedPayload
 
 Channel `session_named`. igni has given a new session a
@@ -2194,6 +2233,19 @@ A tool call started: a sub-agent began calling a tool.
 | `tool` | `str` | required | Name of the tool being called. |
 | `tool_call_id` | `str \| None` | `None` | Identifier of this tool call; matches the `tool_completed` event for the same call. Null when the model did not supply one. |
 | `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. Always `tool_started`: what kind of message this is. |
+
+### UserSentimentPayload
+
+Channel `user_sentiment`. The person's message was pleased or displeased with igni.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `aspects` | [`SentimentAspects`](/docs/sdk/igni-client/models-reference#sentimentaspects) | required | Every question Laya answered about the message, with every probability. |
+| `confidence` | `float` | required | How sure Laya is, from 0 to 1. |
+| `message_run_id` | `str \| None` | required | The run the judged message started; `null` when none started. |
+| `reply_run_id` | `str \| None` | required | The run whose reply the message reacts to; `null` when the session had none. |
+| `sentiment` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | `positive` or `negative`; neutral is never sent. |
+| `session_id` | `str` | required | The session the message was sent in. |
 
 ### VisualizationActionDispatchedEventPayload
 
@@ -2413,6 +2465,14 @@ it is the sentence for a person.
 One of `'unknown_method'`, `'invalid'`, `'forbidden'`, `'not_found'`, `'refused'`, `'unavailable'`, `'cancelled'`, `'failed'`.
 
 **Part of** [`RpcResponse`](/docs/sdk/igni-client/events-reference#rpcresponse).
+
+### SentimentKind
+
+How the person feels about igni or its last answer, as Laya read their message.
+
+One of `'positive'`, `'negative'`.
+
+**Part of** [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
 
 ### TaskStatus
 
