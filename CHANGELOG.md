@@ -5,6 +5,33 @@ igni's SDKs are released in lockstep under one version
 release; the automated release also writes a one-paragraph GitHub Release and a
 run summary. Releases before 0.2.2 predate this file.
 
+## 0.2.3
+
+0.2.3 adds one push and one extension signal: Laya's read of whether the
+person is pleased or displeased with igni. Nothing is removed or changed.
+`contracts/` is igni-core's again, after its sentiment work.
+
+### `igni-client` (PyPI) and `@ignite-ember/igni-client` (npm)
+
+- The typed `user_sentiment` push (`UserSentimentPush`, payload
+  `UserSentimentPayload`): `sentiment` (`positive` or `negative`; neutral is
+  never sent), `confidence`, `session_id`, and `message_run_id` /
+  `reply_run_id` — the run the judged message started and the run whose reply
+  it reacts to. `aspects` (`SentimentAspects`) carries every question Laya
+  answered about the message — feeling, gesture, intensity, the positive and
+  negative reason, repeat, redo requested, task done — each as the chosen label
+  and every label's probability (`SentimentAspect`, `LabelProbability`).
+
+### `igni-extension` (PyPI) and `@ignite-ember/extension-bridge` (npm)
+
+- The host model gains the `chat.sentiment` signal (`host.chat.sentiment`,
+  typed `Sentiment`), with the same fields and aspects as the push.
+
+### Unchanged
+
+- `igni-service`, `@ignite-ember/ui-react` and `@ignite-ember/ui-css`: their
+  versions move for lockstep only.
+
 ## 0.2.2
 
 Besides fixes, 0.2.2 adds a package, new calls and new host-model members, and

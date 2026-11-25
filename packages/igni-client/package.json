@@ -1,6 +1,6 @@
 {
   "name": "@ignite-ember/igni-client",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Drive an igni and reach Fleet from a Node/TypeScript backend: connect, sessions, ask()/send() streaming with approvals, typed methods and models generated from igni-core's contract. The Node twin of the Python igni-client.",
   "keywords": [
     "igni",

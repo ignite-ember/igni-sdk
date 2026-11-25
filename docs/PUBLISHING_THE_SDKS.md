@@ -285,7 +285,7 @@ for t in dist/sdk/npm/*.tgz; do npm publish "$t" --access public; done
 — then configure step 4 before the first tagged release. The workflow skips
 a version that is already published.
 
-Publish **the version the manifests carry** (0.2.2 now). The extension
+Publish **the version the manifests carry** (0.2.3 now). The extension
 pages in the module repositories depend on `@ignite-ember/extension-bridge`,
 `@ignite-ember/ui-react` and `@ignite-ember/ui-css` at `^0.2.0`, so an
 older version does not satisfy them and the module images do not build.)
