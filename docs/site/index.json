@@ -2051,6 +2051,11 @@
         },
         {
           "level": 3,
+          "id": "userappreciationpayload",
+          "title": "UserAppreciationPayload"
+        },
+        {
+          "level": 3,
           "id": "visualizationactiondispatchedeventpayload",
           "title": "VisualizationActionDispatchedEventPayload"
         },
@@ -2123,6 +2128,11 @@
           "level": 3,
           "id": "activitystate",
           "title": "ActivityState"
+        },
+        {
+          "level": 3,
+          "id": "appreciationkind",
+          "title": "AppreciationKind"
         },
         {
           "level": 3,
@@ -2454,6 +2464,11 @@
           "level": 3,
           "id": "todosupdatedpush",
           "title": "TodosUpdatedPush"
+        },
+        {
+          "level": 3,
+          "id": "userappreciationpush",
+          "title": "UserAppreciationPush"
         },
         {
           "level": 3,
@@ -6044,6 +6059,11 @@
           "level": 2,
           "id": "contextusage",
           "title": "ContextUsage"
+        },
+        {
+          "level": 2,
+          "id": "appreciation",
+          "title": "Appreciation"
         },
         {
           "level": 2,

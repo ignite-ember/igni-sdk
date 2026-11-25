@@ -866,6 +866,17 @@ Channel `todos_updated`; `payload` is [`TodosUpdatedEventPayload`](/docs/sdk/ign
 |---|---|---|---|
 | `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required | The full checklist, in order. Replaces any list received before; empty when the agent cleared it. |
 
+### UserAppreciationPush
+
+Laya read the person's message as thanks or praise for igni.
+
+Channel `user_appreciation`; `payload` is [`UserAppreciationPayload`](/docs/sdk/igni-client/models-reference#userappreciationpayload).
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `kind` | [`AppreciationKind`](/docs/sdk/igni-client/models-reference#appreciationkind) | required | Whether it was thanks or praise. |
+| `session_id` | `str` | required | The session the message was sent in. |
+
 ### VisualizationActionDispatchedPush
 
 The person used a control in a view.

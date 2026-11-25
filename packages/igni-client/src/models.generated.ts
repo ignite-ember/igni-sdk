@@ -16,6 +16,9 @@ export type JsonValue =
 /** What igni, or one of its chats, is doing: running, waiting on a person, or nothing. */
 export type ActivityState = "idle" | "waiting" | "running";
 
+/** What Laya heard in a message that appreciates igni. */
+export type AppreciationKind = "gratitude" | "compliment";
+
 /**
  * What a command result asks the client to do.
  *
@@ -3353,6 +3356,14 @@ export interface UploadAttachmentResult {
   size: number;
 }
 
+/** Channel `user_appreciation`. The person's message thanked or praised igni. */
+export interface UserAppreciationPayload {
+  /** Whether it was thanks or praise. */
+  kind: AppreciationKind;
+  /** The session the message was sent in. */
+  session_id: string;
+}
+
 /**
  * The person sends a chat message, starting a run.
  *
@@ -4014,6 +4025,16 @@ export interface TodosUpdatedPush extends Omit<PushNotification, "channel" | "pa
 }
 
 /**
+ * Laya read the person's message as thanks or praise for igni.
+ *
+ * On the wire: `push_notification` on the channel `user_appreciation`.
+ */
+export interface UserAppreciationPush extends Omit<PushNotification, "channel" | "payload"> {
+  channel: "user_appreciation";
+  payload: UserAppreciationPayload;
+}
+
+/**
  * The person used a control in a view.
  *
  * On the wire: `push_notification` on the channel `visualization_action_dispatched`.
@@ -4156,6 +4177,7 @@ export const PUSH_CHANNELS: ReadonlySet<string> = new Set([
   "session_named",
   "session_states_changed",
   "todos_updated",
+  "user_appreciation",
   "visualization_action_dispatched",
   "vm_credential",
   "window_model_changed",

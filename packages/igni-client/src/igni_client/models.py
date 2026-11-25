@@ -20,6 +20,10 @@ from igni_client.wire import Args, Event, Frame, Model, RunEvent
 type ActivityState = Literal["idle", "waiting", "running"]
 
 
+#: What Laya heard in a message that appreciates igni.
+type AppreciationKind = Literal["gratitude", "compliment"]
+
+
 #: What a command result asks the client to do.
 #:
 #: * empty: nothing; just show `content`.
@@ -3530,6 +3534,15 @@ class UploadAttachmentResult(Model):
     """Size of the stored file in bytes; `0` on error."""
 
 
+class UserAppreciationPayload(Model):
+    """Channel `user_appreciation`. The person's message thanked or praised igni."""
+
+    kind: AppreciationKind
+    """Whether it was thanks or praise."""
+    session_id: str
+    """The session the message was sent in."""
+
+
 class UserMessage(Frame):
     """The person sends a chat message, starting a run.
 
@@ -4217,6 +4230,16 @@ class TodosUpdatedPush(PushNotification):
     payload: TodosUpdatedEventPayload  # type: ignore[assignment]
 
 
+class UserAppreciationPush(PushNotification):
+    """Laya read the person's message as thanks or praise for igni.
+
+    On the wire: ``push_notification`` on the channel ``user_appreciation``.
+    """
+
+    channel: Literal["user_appreciation"] = "user_appreciation"
+    payload: UserAppreciationPayload  # type: ignore[assignment]
+
+
 class VisualizationActionDispatchedPush(PushNotification):
     """The person used a control in a view.
 
@@ -4378,6 +4401,7 @@ PUSH_TYPES: dict[str, type[PushNotification]] = {
     "session_named": SessionNamedPush,
     "session_states_changed": SessionStatesChangedPush,
     "todos_updated": TodosUpdatedPush,
+    "user_appreciation": UserAppreciationPush,
     "visualization_action_dispatched": VisualizationActionDispatchedPush,
     "vm_credential": VmCredentialPush,
     "window_model_changed": WindowModelChangedPush,
