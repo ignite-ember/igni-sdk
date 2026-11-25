@@ -1936,6 +1936,11 @@
         },
         {
           "level": 3,
+          "id": "labelprobability",
+          "title": "LabelProbability"
+        },
+        {
+          "level": 3,
           "id": "loginresultpayload",
           "title": "LoginResultPayload"
         },
@@ -2013,6 +2018,16 @@
           "level": 3,
           "id": "schedulerstartedpayload",
           "title": "SchedulerStartedPayload"
+        },
+        {
+          "level": 3,
+          "id": "sentimentaspect",
+          "title": "SentimentAspect"
+        },
+        {
+          "level": 3,
+          "id": "sentimentaspects",
+          "title": "SentimentAspects"
         },
         {
           "level": 3,
@@ -6064,6 +6079,21 @@
           "level": 2,
           "id": "sentiment",
           "title": "Sentiment"
+        },
+        {
+          "level": 2,
+          "id": "labelprobability",
+          "title": "LabelProbability"
+        },
+        {
+          "level": 2,
+          "id": "sentimentaspect",
+          "title": "SentimentAspect"
+        },
+        {
+          "level": 2,
+          "id": "sentimentaspects",
+          "title": "SentimentAspects"
         },
         {
           "level": 2,

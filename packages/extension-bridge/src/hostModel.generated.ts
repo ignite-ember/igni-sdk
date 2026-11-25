@@ -502,6 +502,43 @@ export interface Sentiment {
   message_run_id?: string | null;
   /** The run whose reply the message reacts to. */
   reply_run_id?: string | null;
+  /** Every question Laya answered about the message. */
+  aspects: SentimentAspects;
+}
+
+/** One label of a question Laya answered, and its probability. */
+export interface LabelProbability {
+  /** The option, level, or `yes` / `no`. */
+  label: string;
+  /** From 0 to 1. */
+  probability: number;
+}
+
+/** The label Laya chose, and every label's probability. */
+export interface SentimentAspect {
+  answer: string;
+  /** In the question's order. */
+  probabilities: LabelProbability[];
+}
+
+/** What Laya read in the message besides the verdict. */
+export interface SentimentAspects {
+  /** `positive`, `negative` or `neutral`. */
+  feeling: SentimentAspect;
+  /** `gratitude`, `compliment`, `insult` or `neither`. */
+  gesture: SentimentAspect;
+  /** What displeased the person. */
+  negative_reason: SentimentAspect;
+  /** What pleased the person. */
+  positive_reason: SentimentAspect;
+  /** Whether the same problem happened again. */
+  repeat: SentimentAspect;
+  /** Whether the person asks to redo or undo. */
+  redo_requested: SentimentAspect;
+  /** Whether the person says the task is done. */
+  task_done: SentimentAspect;
+  /** `none`, `mild`, `strong` or `angry`. */
+  intensity: SentimentAspect;
 }
 
 /** The agent wrote a file. */

@@ -1074,6 +1074,14 @@ export interface InterruptedRunArgs {
   session_id: string;
 }
 
+/** One option, level, or `yes` / `no`, and how likely Laya found it. */
+export interface LabelProbability {
+  /** The option, level, or `yes` / `no`. */
+  label: string;
+  /** Its probability, from 0 to 1. */
+  probability: number;
+}
+
 /**
  * The session's current plan-mode plan and task list.
  *
@@ -2529,6 +2537,34 @@ export interface Selection {
   text?: string | null;
 }
 
+/** The label Laya chose, and every label's probability, to threshold again later. */
+export interface SentimentAspect {
+  /** The label Laya chose. */
+  answer: string;
+  /** Every label's probability, in the question's order. */
+  probabilities: LabelProbability[];
+}
+
+/** What Laya read in the message besides the verdict, for whoever learns from the turn. */
+export interface SentimentAspects {
+  /** `positive`, `negative` or `neutral`. */
+  feeling: SentimentAspect;
+  /** `gratitude`, `compliment`, `insult` or `neither`. */
+  gesture: SentimentAspect;
+  /** `none`, `mild`, `strong` or `angry`. */
+  intensity: SentimentAspect;
+  /** What displeased the person: `wrong_or_incorrect`, `misunderstood_request`, `incomplete`, `ignored_instruction`, `unwanted_action`, `too_slow`, `wrong_length`, `tone`, `refused_or_gave_up` or `other`. */
+  negative_reason: SentimentAspect;
+  /** What pleased the person: `solved_or_correct`, `fast`, `clear_explanation`, `beyond_expectations` or `other`. */
+  positive_reason: SentimentAspect;
+  /** Whether the person asks to redo or undo something. */
+  redo_requested: SentimentAspect;
+  /** Whether the same problem happened again. */
+  repeat: SentimentAspect;
+  /** Whether the person says the task is done. */
+  task_done: SentimentAspect;
+}
+
 /** The igni server now in use, or why the choice was refused. */
 export interface ServerChoice {
   /** The server's API URL; empty when refused. */
@@ -3415,6 +3451,8 @@ export interface UserMessageReceived {
 
 /** Channel `user_sentiment`. The person's message was pleased or displeased with igni. */
 export interface UserSentimentPayload {
+  /** Every question Laya answered about the message, with every probability. */
+  aspects: SentimentAspects;
   /** How sure Laya is, from 0 to 1. */
   confidence: number;
   /** The run the judged message started; `null` when none started. */

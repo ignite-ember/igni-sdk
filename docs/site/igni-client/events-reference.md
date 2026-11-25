@@ -874,6 +874,7 @@ Channel `user_sentiment`; `payload` is [`UserSentimentPayload`](/docs/sdk/igni-c
 
 | Field | Type | Default | Description |
 |---|---|---|---|
+| `aspects` | [`SentimentAspects`](/docs/sdk/igni-client/models-reference#sentimentaspects) | required | Every question Laya answered about the message, with every probability. |
 | `confidence` | `float` | required | How sure Laya is, from 0 to 1. |
 | `message_run_id` | `str \| None` | required | The run the judged message started; `null` when none started. |
 | `reply_run_id` | `str \| None` | required | The run whose reply the message reacts to; `null` when the session had none. |

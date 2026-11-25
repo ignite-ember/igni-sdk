@@ -684,6 +684,52 @@ class Sentiment(BaseModel):
     """The run the judged message started."""
     reply_run_id: str | None = None
     """The run whose reply the message reacts to."""
+    aspects: SentimentAspects
+    """Every question Laya answered about the message."""
+
+
+class LabelProbability(BaseModel):
+    """One label of a question Laya answered, and its probability."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    label: str
+    """The option, level, or `yes` / `no`."""
+    probability: float
+    """From 0 to 1."""
+
+
+class SentimentAspect(BaseModel):
+    """The label Laya chose, and every label's probability."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    answer: str
+    probabilities: list[LabelProbability]
+    """In the question's order."""
+
+
+class SentimentAspects(BaseModel):
+    """What Laya read in the message besides the verdict."""
+
+    model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
+
+    feeling: SentimentAspect
+    """`positive`, `negative` or `neutral`."""
+    gesture: SentimentAspect
+    """`gratitude`, `compliment`, `insult` or `neither`."""
+    negative_reason: SentimentAspect
+    """What displeased the person."""
+    positive_reason: SentimentAspect
+    """What pleased the person."""
+    repeat: SentimentAspect
+    """Whether the same problem happened again."""
+    redo_requested: SentimentAspect
+    """Whether the person asks to redo or undo."""
+    task_done: SentimentAspect
+    """Whether the person says the task is done."""
+    intensity: SentimentAspect
+    """`none`, `mild`, `strong` or `angry`."""
 
 
 class FileEdited(BaseModel):
@@ -3175,6 +3221,7 @@ __all__ = [
     "HostWindows",
     "HostWorkflows",
     "HostWorkspace",
+    "LabelProbability",
     "LocalNotification",
     "LoopAdvance",
     "LoopStatus",
@@ -3231,6 +3278,8 @@ __all__ = [
     "SelectionChange",
     "SelectionState",
     "Sentiment",
+    "SentimentAspect",
+    "SentimentAspects",
     "SessionActivity",
     "SessionAttached",
     "SessionChange",

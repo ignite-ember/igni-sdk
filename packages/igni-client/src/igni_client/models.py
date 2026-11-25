@@ -1153,6 +1153,15 @@ class InterruptedRunArgs(Args):
     """Id of the session to act on."""
 
 
+class LabelProbability(Model):
+    """One option, level, or `yes` / `no`, and how likely Laya found it."""
+
+    label: str
+    """The option, level, or `yes` / `no`."""
+    probability: float
+    """Its probability, from 0 to 1."""
+
+
 class LatestPlanResult(Model):
     """The session's current plan-mode plan and task list.
 
@@ -2680,6 +2689,36 @@ class Selection(Model):
     """The selected text; null when none is."""
 
 
+class SentimentAspect(Model):
+    """The label Laya chose, and every label's probability, to threshold again later."""
+
+    answer: str
+    """The label Laya chose."""
+    probabilities: list[LabelProbability]
+    """Every label's probability, in the question's order."""
+
+
+class SentimentAspects(Model):
+    """What Laya read in the message besides the verdict, for whoever learns from the turn."""
+
+    feeling: SentimentAspect
+    """`positive`, `negative` or `neutral`."""
+    gesture: SentimentAspect
+    """`gratitude`, `compliment`, `insult` or `neither`."""
+    intensity: SentimentAspect
+    """`none`, `mild`, `strong` or `angry`."""
+    negative_reason: SentimentAspect
+    """What displeased the person: `wrong_or_incorrect`, `misunderstood_request`, `incomplete`, `ignored_instruction`, `unwanted_action`, `too_slow`, `wrong_length`, `tone`, `refused_or_gave_up` or `other`."""
+    positive_reason: SentimentAspect
+    """What pleased the person: `solved_or_correct`, `fast`, `clear_explanation`, `beyond_expectations` or `other`."""
+    redo_requested: SentimentAspect
+    """Whether the person asks to redo or undo something."""
+    repeat: SentimentAspect
+    """Whether the same problem happened again."""
+    task_done: SentimentAspect
+    """Whether the person says the task is done."""
+
+
 class ServerChoice(Model):
     """The igni server now in use, or why the choice was refused."""
 
@@ -3594,6 +3633,8 @@ class UserMessageReceived(Event):
 class UserSentimentPayload(Model):
     """Channel `user_sentiment`. The person's message was pleased or displeased with igni."""
 
+    aspects: SentimentAspects
+    """Every question Laya answered about the message, with every probability."""
     confidence: float
     """How sure Laya is, from 0 to 1."""
     message_run_id: str | None

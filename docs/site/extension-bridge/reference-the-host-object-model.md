@@ -72,6 +72,9 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 | [`Notice`](#notice) | interface | `hostModel.generated.ts` | An info or error line in a session. |
 | [`ContextUsage`](#contextusage) | interface | `hostModel.generated.ts` | How full the context is, and with what. |
 | [`Sentiment`](#sentiment) | interface | `hostModel.generated.ts` | Laya read the person's message as pleased or displeased with igni. |
+| [`LabelProbability`](#labelprobability) | interface | `hostModel.generated.ts` | One label of a question Laya answered, and its probability. |
+| [`SentimentAspect`](#sentimentaspect) | interface | `hostModel.generated.ts` | The label Laya chose, and every label's probability. |
+| [`SentimentAspects`](#sentimentaspects) | interface | `hostModel.generated.ts` | What Laya read in the message besides the verdict. |
 | [`FileEdited`](#fileedited) | interface | `hostModel.generated.ts` | The agent wrote a file. |
 | [`AgentEvent`](#agentevent) | interface | `hostModel.generated.ts` | Progress of a sub-agent or a team, as the transcript shows it. |
 | [`Retry`](#retry) | interface | `hostModel.generated.ts` | A network call being retried, and whether it recovered. |
@@ -1121,6 +1124,52 @@ Laya read the person's message as pleased or displeased with igni.
 | `confidence` | field | `number` | How sure Laya is, from 0 to 1. |
 | `message_run_id?` | field | `string \| null` | The run the judged message started. |
 | `reply_run_id?` | field | `string \| null` | The run whose reply the message reacts to. |
+| `aspects` | field | `SentimentAspects` | Every question Laya answered about the message. |
+
+## LabelProbability
+
+```typescript
+interface LabelProbability
+```
+
+One label of a question Laya answered, and its probability.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `label` | field | `string` | The option, level, or `yes` / `no`. |
+| `probability` | field | `number` | From 0 to 1. |
+
+## SentimentAspect
+
+```typescript
+interface SentimentAspect
+```
+
+The label Laya chose, and every label's probability.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `answer` | field | `string` |  |
+| `probabilities` | field | `LabelProbability[]` | In the question's order. |
+
+## SentimentAspects
+
+```typescript
+interface SentimentAspects
+```
+
+What Laya read in the message besides the verdict.
+
+| Member | Kind | Type | What it is |
+|---|---|---|---|
+| `feeling` | field | `SentimentAspect` | `positive`, `negative` or `neutral`. |
+| `gesture` | field | `SentimentAspect` | `gratitude`, `compliment`, `insult` or `neither`. |
+| `negative_reason` | field | `SentimentAspect` | What displeased the person. |
+| `positive_reason` | field | `SentimentAspect` | What pleased the person. |
+| `repeat` | field | `SentimentAspect` | Whether the same problem happened again. |
+| `redo_requested` | field | `SentimentAspect` | Whether the person asks to redo or undo. |
+| `task_done` | field | `SentimentAspect` | Whether the person says the task is done. |
+| `intensity` | field | `SentimentAspect` | `none`, `mild`, `strong` or `angry`. |
 
 ## FileEdited
 
