@@ -491,11 +491,17 @@ export interface ContextUsage {
   breakdown: JsonValue;
 }
 
-/** Laya read the person's message as thanks, praise or an insult for igni. */
+/** Laya read the person's message as pleased or displeased with igni. */
 export interface Sentiment {
   session_id: string;
-  /** `gratitude`, `compliment` or `insult`. */
-  kind: string;
+  /** `positive` or `negative`. */
+  sentiment: string;
+  /** How sure Laya is, from 0 to 1. */
+  confidence: number;
+  /** The run the judged message started. */
+  message_run_id?: string | null;
+  /** The run whose reply the message reacts to. */
+  reply_run_id?: string | null;
 }
 
 /** The agent wrote a file. */
@@ -1868,7 +1874,7 @@ export class HostChat extends HostObject {
   readonly retry: Signal<Retry>;
   /** Turns were truncated or discarded. */
   readonly history_changed: Signal<HistoryChange>;
-  /** The person thanked, praised or insulted igni. */
+  /** The person was pleased or displeased with igni. */
   readonly sentiment: Signal<Sentiment>;
 
   /**

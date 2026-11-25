@@ -71,7 +71,7 @@ Read from the source: every name below, its signature, its JSDoc, and — for a 
 | [`Status`](#status) | interface | `hostModel.generated.ts` | A session's status line. |
 | [`Notice`](#notice) | interface | `hostModel.generated.ts` | An info or error line in a session. |
 | [`ContextUsage`](#contextusage) | interface | `hostModel.generated.ts` | How full the context is, and with what. |
-| [`Sentiment`](#sentiment) | interface | `hostModel.generated.ts` | Laya read the person's message as thanks, praise or an insult for igni. |
+| [`Sentiment`](#sentiment) | interface | `hostModel.generated.ts` | Laya read the person's message as pleased or displeased with igni. |
 | [`FileEdited`](#fileedited) | interface | `hostModel.generated.ts` | The agent wrote a file. |
 | [`AgentEvent`](#agentevent) | interface | `hostModel.generated.ts` | Progress of a sub-agent or a team, as the transcript shows it. |
 | [`Retry`](#retry) | interface | `hostModel.generated.ts` | A network call being retried, and whether it recovered. |
@@ -1112,12 +1112,15 @@ How full the context is, and with what.
 interface Sentiment
 ```
 
-Laya read the person's message as thanks, praise or an insult for igni.
+Laya read the person's message as pleased or displeased with igni.
 
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `session_id` | field | `string` |  |
-| `kind` | field | `string` | `gratitude`, `compliment` or `insult`. |
+| `sentiment` | field | `string` | `positive` or `negative`. |
+| `confidence` | field | `number` | How sure Laya is, from 0 to 1. |
+| `message_run_id?` | field | `string \| null` | The run the judged message started. |
+| `reply_run_id?` | field | `string \| null` | The run whose reply the message reacts to. |
 
 ## FileEdited
 
@@ -2639,7 +2642,7 @@ The conversation in the current session. Signals carry the session they happened
 | `agent_event` | field | `Signal<AgentEvent>` | A sub-agent or team moved on. |
 | `retry` | field | `Signal<Retry>` | A network call is being retried. |
 | `history_changed` | field | `Signal<HistoryChange>` | Turns were truncated or discarded. |
-| `sentiment` | field | `Signal<Sentiment>` | The person thanked, praised or insulted igni. |
+| `sentiment` | field | `Signal<Sentiment>` | The person was pleased or displeased with igni. |
 | `constructor` | method | `(link: HostLink, window: string \| null = null, session: string \| null = null)` | The object igni hands a page, bound to a host and to the window or session it was reached through. |
 | `post` | method | `(text: string, attachments?: Record<string, string>) => Promise<void>` | Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. |
 | `queue` | method | `(text: string) => Promise<void>` | Post a message for the next turn, labelled as this extension. |

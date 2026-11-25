@@ -113,8 +113,8 @@ type RpcErrorCode = Literal[
 ]
 
 
-#: What Laya heard in a person's message to igni: thanks, praise or an insult.
-type SentimentKind = Literal["gratitude", "compliment", "insult"]
+#: How the person feels about igni or its last answer, as Laya read their message.
+type SentimentKind = Literal["positive", "negative"]
 
 
 #: Lifecycle of one scheduled task.
@@ -3592,10 +3592,16 @@ class UserMessageReceived(Event):
 
 
 class UserSentimentPayload(Model):
-    """Channel `user_sentiment`. The person's message thanked, praised or insulted igni."""
+    """Channel `user_sentiment`. The person's message was pleased or displeased with igni."""
 
-    kind: SentimentKind
-    """Whether it was thanks, praise or an insult."""
+    confidence: float
+    """How sure Laya is, from 0 to 1."""
+    message_run_id: str | None
+    """The run the judged message started; `null` when none started."""
+    reply_run_id: str | None
+    """The run whose reply the message reacts to; `null` when the session had none."""
+    sentiment: SentimentKind
+    """`positive` or `negative`; neutral is never sent."""
     session_id: str
     """The session the message was sent in."""
 
@@ -4231,7 +4237,7 @@ class TodosUpdatedPush(PushNotification):
 
 
 class UserSentimentPush(PushNotification):
-    """Laya read the person's message as thanks, praise or an insult for igni.
+    """Laya read the person's message as pleased or displeased with igni.
 
     On the wire: ``push_notification`` on the channel ``user_sentiment``.
     """

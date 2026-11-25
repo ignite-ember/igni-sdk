@@ -82,8 +82,8 @@ export type PlanDecision = "approved" | "dismissed";
  */
 export type RpcErrorCode = "unknown_method" | "invalid" | "forbidden" | "not_found" | "refused" | "unavailable" | "cancelled" | "failed";
 
-/** What Laya heard in a person's message to igni: thanks, praise or an insult. */
-export type SentimentKind = "gratitude" | "compliment" | "insult";
+/** How the person feels about igni or its last answer, as Laya read their message. */
+export type SentimentKind = "positive" | "negative";
 
 /**
  * Lifecycle of one scheduled task.
@@ -3413,10 +3413,16 @@ export interface UserMessageReceived {
   type?: "user_message_received";
 }
 
-/** Channel `user_sentiment`. The person's message thanked, praised or insulted igni. */
+/** Channel `user_sentiment`. The person's message was pleased or displeased with igni. */
 export interface UserSentimentPayload {
-  /** Whether it was thanks, praise or an insult. */
-  kind: SentimentKind;
+  /** How sure Laya is, from 0 to 1. */
+  confidence: number;
+  /** The run the judged message started; `null` when none started. */
+  message_run_id: string | null;
+  /** The run whose reply the message reacts to; `null` when the session had none. */
+  reply_run_id: string | null;
+  /** `positive` or `negative`; neutral is never sent. */
+  sentiment: SentimentKind;
   /** The session the message was sent in. */
   session_id: string;
 }
@@ -4025,7 +4031,7 @@ export interface TodosUpdatedPush extends Omit<PushNotification, "channel" | "pa
 }
 
 /**
- * Laya read the person's message as thanks, praise or an insult for igni.
+ * Laya read the person's message as pleased or displeased with igni.
  *
  * On the wire: `push_notification` on the channel `user_sentiment`.
  */

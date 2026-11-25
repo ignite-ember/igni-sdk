@@ -2197,11 +2197,14 @@ A tool call started: a sub-agent began calling a tool.
 
 ### UserSentimentPayload
 
-Channel `user_sentiment`. The person's message thanked, praised or insulted igni.
+Channel `user_sentiment`. The person's message was pleased or displeased with igni.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `kind` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | Whether it was thanks, praise or an insult. |
+| `confidence` | `float` | required | How sure Laya is, from 0 to 1. |
+| `message_run_id` | `str \| None` | required | The run the judged message started; `null` when none started. |
+| `reply_run_id` | `str \| None` | required | The run whose reply the message reacts to; `null` when the session had none. |
+| `sentiment` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | `positive` or `negative`; neutral is never sent. |
 | `session_id` | `str` | required | The session the message was sent in. |
 
 ### VisualizationActionDispatchedEventPayload
@@ -2425,9 +2428,9 @@ One of `'unknown_method'`, `'invalid'`, `'forbidden'`, `'not_found'`, `'refused'
 
 ### SentimentKind
 
-What Laya heard in a person's message to igni: thanks, praise or an insult.
+How the person feels about igni or its last answer, as Laya read their message.
 
-One of `'gratitude'`, `'compliment'`, `'insult'`.
+One of `'positive'`, `'negative'`.
 
 **Part of** [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
 

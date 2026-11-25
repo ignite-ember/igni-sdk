@@ -868,13 +868,16 @@ Channel `todos_updated`; `payload` is [`TodosUpdatedEventPayload`](/docs/sdk/ign
 
 ### UserSentimentPush
 
-Laya read the person's message as thanks, praise or an insult for igni.
+Laya read the person's message as pleased or displeased with igni.
 
 Channel `user_sentiment`; `payload` is [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `kind` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | Whether it was thanks, praise or an insult. |
+| `confidence` | `float` | required | How sure Laya is, from 0 to 1. |
+| `message_run_id` | `str \| None` | required | The run the judged message started; `null` when none started. |
+| `reply_run_id` | `str \| None` | required | The run whose reply the message reacts to; `null` when the session had none. |
+| `sentiment` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | `positive` or `negative`; neutral is never sent. |
 | `session_id` | `str` | required | The session the message was sent in. |
 
 ### VisualizationActionDispatchedPush

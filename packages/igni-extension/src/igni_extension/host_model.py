@@ -671,13 +671,19 @@ class ContextUsage(BaseModel):
 
 
 class Sentiment(BaseModel):
-    """Laya read the person's message as thanks, praise or an insult for igni."""
+    """Laya read the person's message as pleased or displeased with igni."""
 
     model_config = ConfigDict(extra="allow", use_attribute_docstrings=True)
 
     session_id: str
-    kind: str
-    """`gratitude`, `compliment` or `insult`."""
+    sentiment: str
+    """`positive` or `negative`."""
+    confidence: float
+    """How sure Laya is, from 0 to 1."""
+    message_run_id: str | None = None
+    """The run the judged message started."""
+    reply_run_id: str | None = None
+    """The run whose reply the message reacts to."""
 
 
 class FileEdited(BaseModel):
@@ -2108,7 +2114,7 @@ class HostChat(HostObject):
         self.history_changed: Signal[HistoryChange] = Signal("chat.history_changed", HistoryChange)
         """Turns were truncated or discarded."""
         self.sentiment: Signal[Sentiment] = Signal("chat.sentiment", Sentiment)
-        """The person thanked, praised or insulted igni."""
+        """The person was pleased or displeased with igni."""
 
     async def post(self, text: str, attachments: dict[str, str] | None = None) -> None:
         """Post a message in the chat, labelled as this extension. The agent sees it and answers in the chat as usual. In a session that is not on screen it starts a run, or is queued for the run going there (working or waiting on an approval) — then without attachments. In the session on screen a run waiting on an approval ends with it, which refuses the approval, so there it needs `chat.approvals` too.
