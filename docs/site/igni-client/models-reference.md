@@ -2195,13 +2195,13 @@ A tool call started: a sub-agent began calling a tool.
 | `tool_call_id` | `str \| None` | `None` | Identifier of this tool call; matches the `tool_completed` event for the same call. Null when the model did not supply one. |
 | `type` | `Literal['tool_started']` | `'tool_started'` | always `'tool_started'`. Always `tool_started`: what kind of message this is. |
 
-### UserAppreciationPayload
+### UserSentimentPayload
 
-Channel `user_appreciation`. The person's message thanked or praised igni.
+Channel `user_sentiment`. The person's message thanked, praised or insulted igni.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `kind` | [`AppreciationKind`](/docs/sdk/igni-client/models-reference#appreciationkind) | required | Whether it was thanks or praise. |
+| `kind` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | Whether it was thanks, praise or an insult. |
 | `session_id` | `str` | required | The session the message was sent in. |
 
 ### VisualizationActionDispatchedEventPayload
@@ -2339,14 +2339,6 @@ One of `'idle'`, `'waiting'`, `'running'`.
 
 **Part of** [`SessionState`](/docs/sdk/igni-client/models-reference#sessionstate).
 
-### AppreciationKind
-
-What Laya heard in a message that appreciates igni.
-
-One of `'gratitude'`, `'compliment'`.
-
-**Part of** [`UserAppreciationPayload`](/docs/sdk/igni-client/models-reference#userappreciationpayload).
-
 ### CommandAction
 
 What a command result asks the client to do.
@@ -2430,6 +2422,14 @@ it is the sentence for a person.
 One of `'unknown_method'`, `'invalid'`, `'forbidden'`, `'not_found'`, `'refused'`, `'unavailable'`, `'cancelled'`, `'failed'`.
 
 **Part of** [`RpcResponse`](/docs/sdk/igni-client/events-reference#rpcresponse).
+
+### SentimentKind
+
+What Laya heard in a person's message to igni: thanks, praise or an insult.
+
+One of `'gratitude'`, `'compliment'`, `'insult'`.
+
+**Part of** [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
 
 ### TaskStatus
 

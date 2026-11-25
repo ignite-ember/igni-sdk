@@ -491,10 +491,10 @@ export interface ContextUsage {
   breakdown: JsonValue;
 }
 
-/** Laya read the person's message as thanks or praise for igni. */
-export interface Appreciation {
+/** Laya read the person's message as thanks, praise or an insult for igni. */
+export interface Sentiment {
   session_id: string;
-  /** `gratitude` or `compliment`. */
+  /** `gratitude`, `compliment` or `insult`. */
   kind: string;
 }
 
@@ -1868,8 +1868,8 @@ export class HostChat extends HostObject {
   readonly retry: Signal<Retry>;
   /** Turns were truncated or discarded. */
   readonly history_changed: Signal<HistoryChange>;
-  /** The person thanked or praised igni. */
-  readonly appreciated: Signal<Appreciation>;
+  /** The person thanked, praised or insulted igni. */
+  readonly sentiment: Signal<Sentiment>;
 
   /**
    * The object igni hands a page, bound to a host and to the window
@@ -1920,7 +1920,7 @@ export class HostChat extends HostObject {
     this.agent_event = new Signal("chat.agent_event");
     this.retry = new Signal("chat.retry");
     this.history_changed = new Signal("chat.history_changed");
-    this.appreciated = new Signal("chat.appreciated");
+    this.sentiment = new Signal("chat.sentiment");
   }
 
   /**

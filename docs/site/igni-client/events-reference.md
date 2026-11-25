@@ -866,15 +866,15 @@ Channel `todos_updated`; `payload` is [`TodosUpdatedEventPayload`](/docs/sdk/ign
 |---|---|---|---|
 | `todos` | `list[`[`TodoItem`](/docs/sdk/igni-client/models-reference#todoitem)`]` | required | The full checklist, in order. Replaces any list received before; empty when the agent cleared it. |
 
-### UserAppreciationPush
+### UserSentimentPush
 
-Laya read the person's message as thanks or praise for igni.
+Laya read the person's message as thanks, praise or an insult for igni.
 
-Channel `user_appreciation`; `payload` is [`UserAppreciationPayload`](/docs/sdk/igni-client/models-reference#userappreciationpayload).
+Channel `user_sentiment`; `payload` is [`UserSentimentPayload`](/docs/sdk/igni-client/models-reference#usersentimentpayload).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `kind` | [`AppreciationKind`](/docs/sdk/igni-client/models-reference#appreciationkind) | required | Whether it was thanks or praise. |
+| `kind` | [`SentimentKind`](/docs/sdk/igni-client/models-reference#sentimentkind) | required | Whether it was thanks, praise or an insult. |
 | `session_id` | `str` | required | The session the message was sent in. |
 
 ### VisualizationActionDispatchedPush

@@ -16,9 +16,6 @@ export type JsonValue =
 /** What igni, or one of its chats, is doing: running, waiting on a person, or nothing. */
 export type ActivityState = "idle" | "waiting" | "running";
 
-/** What Laya heard in a message that appreciates igni. */
-export type AppreciationKind = "gratitude" | "compliment";
-
 /**
  * What a command result asks the client to do.
  *
@@ -84,6 +81,9 @@ export type PlanDecision = "approved" | "dismissed";
  * it is the sentence for a person.
  */
 export type RpcErrorCode = "unknown_method" | "invalid" | "forbidden" | "not_found" | "refused" | "unavailable" | "cancelled" | "failed";
+
+/** What Laya heard in a person's message to igni: thanks, praise or an insult. */
+export type SentimentKind = "gratitude" | "compliment" | "insult";
 
 /**
  * Lifecycle of one scheduled task.
@@ -3356,14 +3356,6 @@ export interface UploadAttachmentResult {
   size: number;
 }
 
-/** Channel `user_appreciation`. The person's message thanked or praised igni. */
-export interface UserAppreciationPayload {
-  /** Whether it was thanks or praise. */
-  kind: AppreciationKind;
-  /** The session the message was sent in. */
-  session_id: string;
-}
-
 /**
  * The person sends a chat message, starting a run.
  *
@@ -3419,6 +3411,14 @@ export interface UserMessageReceived {
   text?: string;
   /** Always `user_message_received`: what kind of message this is. */
   type?: "user_message_received";
+}
+
+/** Channel `user_sentiment`. The person's message thanked, praised or insulted igni. */
+export interface UserSentimentPayload {
+  /** Whether it was thanks, praise or an insult. */
+  kind: SentimentKind;
+  /** The session the message was sent in. */
+  session_id: string;
 }
 
 /** A message the user sent. */
@@ -4025,13 +4025,13 @@ export interface TodosUpdatedPush extends Omit<PushNotification, "channel" | "pa
 }
 
 /**
- * Laya read the person's message as thanks or praise for igni.
+ * Laya read the person's message as thanks, praise or an insult for igni.
  *
- * On the wire: `push_notification` on the channel `user_appreciation`.
+ * On the wire: `push_notification` on the channel `user_sentiment`.
  */
-export interface UserAppreciationPush extends Omit<PushNotification, "channel" | "payload"> {
-  channel: "user_appreciation";
-  payload: UserAppreciationPayload;
+export interface UserSentimentPush extends Omit<PushNotification, "channel" | "payload"> {
+  channel: "user_sentiment";
+  payload: UserSentimentPayload;
 }
 
 /**
@@ -4177,7 +4177,7 @@ export const PUSH_CHANNELS: ReadonlySet<string> = new Set([
   "session_named",
   "session_states_changed",
   "todos_updated",
-  "user_appreciation",
+  "user_sentiment",
   "visualization_action_dispatched",
   "vm_credential",
   "window_model_changed",

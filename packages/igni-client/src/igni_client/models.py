@@ -20,10 +20,6 @@ from igni_client.wire import Args, Event, Frame, Model, RunEvent
 type ActivityState = Literal["idle", "waiting", "running"]
 
 
-#: What Laya heard in a message that appreciates igni.
-type AppreciationKind = Literal["gratitude", "compliment"]
-
-
 #: What a command result asks the client to do.
 #:
 #: * empty: nothing; just show `content`.
@@ -115,6 +111,10 @@ type RpcErrorCode = Literal[
     "cancelled",
     "failed",
 ]
+
+
+#: What Laya heard in a person's message to igni: thanks, praise or an insult.
+type SentimentKind = Literal["gratitude", "compliment", "insult"]
 
 
 #: Lifecycle of one scheduled task.
@@ -3534,15 +3534,6 @@ class UploadAttachmentResult(Model):
     """Size of the stored file in bytes; `0` on error."""
 
 
-class UserAppreciationPayload(Model):
-    """Channel `user_appreciation`. The person's message thanked or praised igni."""
-
-    kind: AppreciationKind
-    """Whether it was thanks or praise."""
-    session_id: str
-    """The session the message was sent in."""
-
-
 class UserMessage(Frame):
     """The person sends a chat message, starting a run.
 
@@ -3598,6 +3589,15 @@ class UserMessageReceived(Event):
     """The message."""
     type: Literal["user_message_received"] = "user_message_received"
     """Always `user_message_received`: what kind of message this is."""
+
+
+class UserSentimentPayload(Model):
+    """Channel `user_sentiment`. The person's message thanked, praised or insulted igni."""
+
+    kind: SentimentKind
+    """Whether it was thanks, praise or an insult."""
+    session_id: str
+    """The session the message was sent in."""
 
 
 class UserTurn(Model):
@@ -4230,14 +4230,14 @@ class TodosUpdatedPush(PushNotification):
     payload: TodosUpdatedEventPayload  # type: ignore[assignment]
 
 
-class UserAppreciationPush(PushNotification):
-    """Laya read the person's message as thanks or praise for igni.
+class UserSentimentPush(PushNotification):
+    """Laya read the person's message as thanks, praise or an insult for igni.
 
-    On the wire: ``push_notification`` on the channel ``user_appreciation``.
+    On the wire: ``push_notification`` on the channel ``user_sentiment``.
     """
 
-    channel: Literal["user_appreciation"] = "user_appreciation"
-    payload: UserAppreciationPayload  # type: ignore[assignment]
+    channel: Literal["user_sentiment"] = "user_sentiment"
+    payload: UserSentimentPayload  # type: ignore[assignment]
 
 
 class VisualizationActionDispatchedPush(PushNotification):
@@ -4401,7 +4401,7 @@ PUSH_TYPES: dict[str, type[PushNotification]] = {
     "session_named": SessionNamedPush,
     "session_states_changed": SessionStatesChangedPush,
     "todos_updated": TodosUpdatedPush,
-    "user_appreciation": UserAppreciationPush,
+    "user_sentiment": UserSentimentPush,
     "visualization_action_dispatched": VisualizationActionDispatchedPush,
     "vm_credential": VmCredentialPush,
     "window_model_changed": WindowModelChangedPush,

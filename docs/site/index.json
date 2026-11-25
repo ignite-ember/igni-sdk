@@ -2051,8 +2051,8 @@
         },
         {
           "level": 3,
-          "id": "userappreciationpayload",
-          "title": "UserAppreciationPayload"
+          "id": "usersentimentpayload",
+          "title": "UserSentimentPayload"
         },
         {
           "level": 3,
@@ -2131,11 +2131,6 @@
         },
         {
           "level": 3,
-          "id": "appreciationkind",
-          "title": "AppreciationKind"
-        },
-        {
-          "level": 3,
           "id": "commandaction",
           "title": "CommandAction"
         },
@@ -2163,6 +2158,11 @@
           "level": 3,
           "id": "rpcerrorcode",
           "title": "RpcErrorCode"
+        },
+        {
+          "level": 3,
+          "id": "sentimentkind",
+          "title": "SentimentKind"
         },
         {
           "level": 3,
@@ -2467,8 +2467,8 @@
         },
         {
           "level": 3,
-          "id": "userappreciationpush",
-          "title": "UserAppreciationPush"
+          "id": "usersentimentpush",
+          "title": "UserSentimentPush"
         },
         {
           "level": 3,
@@ -6062,8 +6062,8 @@
         },
         {
           "level": 2,
-          "id": "appreciation",
-          "title": "Appreciation"
+          "id": "sentiment",
+          "title": "Sentiment"
         },
         {
           "level": 2,
