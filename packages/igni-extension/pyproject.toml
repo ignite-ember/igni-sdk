@@ -28,7 +28,7 @@ dependencies = [
     "pydantic-settings>=2.8",
     "anyio>=4",
     # The host object model's socket (`ext.host`) and `ext.service.websocket`.
-    "websockets>=15,<17",
+    "websockets>=15,<18",
 ]
 
 [project.urls]
