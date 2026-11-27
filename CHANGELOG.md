@@ -5,6 +5,30 @@ igni's SDKs are released in lockstep under one version
 release; the automated release also writes a one-paragraph GitHub Release and a
 run summary. Releases before 0.2.2 predate this file.
 
+## Unreleased
+
+An extension page can sit under igni's header. igni's app now draws a page's
+frame from the top of the window, so the page scrolls under the header and
+fades there like the chat, and tells the page how much room to leave.
+Nothing is removed.
+
+### `@ignite-ember/extension-bridge` (npm)
+
+- The published `layout` token group: `--inset-top`, how far down a page's
+  scrolling content has to start. A guest bridge before this one drops it.
+- A layout token the host stops sending is removed from the page, rather
+  than kept at its last value.
+
+### `@ignite-ember/ui-css` (npm)
+
+- `.igni-root` pads its top by `--inset-top` (0px standalone), with
+  `scroll-padding-top` to match. `.ui-inset` moves that room onto a scroller
+  that fills the frame from its top, and the root stops padding.
+
+### `@ignite-ember/ui-react` (npm)
+
+- `Scroll` takes `inset`, which gives it `.ui-inset`.
+
 ## 0.2.3
 
 0.2.3 adds one push and one extension signal: Laya's read of whether the

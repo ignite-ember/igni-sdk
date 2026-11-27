@@ -17,6 +17,11 @@ Two things follow from sharing the stylesheet:
   and whatever a group's policy pack has branded, without a line of your
   own. Your layout is written against tokens (`var(--space-4)`), never
   against colours.
+- **The page starts below igni's header.** igni's header is drawn over
+  the top of the frame and the page fades out under it; the stylesheet
+  leaves that room (`--inset-top`) at the top of the page. A `Scroll`
+  that fills the frame from its top takes `inset`, so its list scrolls
+  up under the header instead of stopping below it.
 - **Your own class names still work.** `className` is passed through on
   every component, so you can add your own classes alongside. Write them
   in your own stylesheet; do not edit the published one.

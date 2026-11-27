@@ -222,6 +222,30 @@ With it, the refusal arrives as a `HostError` you can show.
 The first handler of a signal subscribes to it; removing the last one
 unsubscribes.
 
+## Under igni's header
+
+igni draws a page's frame from the top of the window, under its own
+header, so the page scrolls under the header and fades out there like
+igni's chat does. The host cannot reach into the frame to fade or offset
+it, so it tells the page how much room to leave instead: the
+`--inset-top` token, in `hello` and every theme message, applied on
+`:root` with the others (82px in igni's app today; absent where nothing
+is drawn over the frame).
+
+Start the top of your *scrolling* content that far down, so it sits
+clear of the header at rest and slides up under it as it scrolls:
+
+```css
+.my-scroller { padding-top: var(--inset-top, 0px); }
+```
+
+With `@ignite-ember/ui-css` you write nothing: `.igni-root` already
+leaves the room, so a page whose body scrolls, or a shell under it,
+starts below the header. A page whose own scroller sits at the top of
+the frame marks it `.ui-inset` (`<Scroll inset>` in ui-react) and the
+root stops padding, so the room is never left twice. Do not also pad by
+`--inset-top` by hand on a page that uses the stylesheet.
+
 ## Where the page is
 
 `bridge.setLocation(state)` says where inside your extension the person

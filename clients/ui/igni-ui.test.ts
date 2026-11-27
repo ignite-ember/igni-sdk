@@ -167,6 +167,18 @@ describe("layout", () => {
     expect(declsOf(".ui-shell")["height"]).toBe("100%");
   });
 
+  it("leaves the host's inset at the top of the page, once", () => {
+    // igni's frame reaches up under its header: the root starts the page
+    // below it, standalone at 0px, and a scroller marked `.ui-inset`
+    // takes the room in its place so it is never applied twice.
+    const root = RULES.filter((r) => r.selector === ":root" && r.media === "");
+    expect(Object.assign({}, ...root.map((r) => r.decls))["--inset-top"]).toBe("0px");
+    expect(declsOf(".igni-root")["padding-top"]).toBe("var(--inset-top)");
+    expect(declsOf(".ui-inset")["padding-top"]).toBe("var(--inset-top)");
+    expect(declsOf(".igni-root:has(.ui-inset)")["padding-top"]).toBe("0");
+    expect(declsOf("html")["scroll-padding-top"]).toBe("var(--inset-top)");
+  });
+
   it("sizes a split from its own --ui-split-w, 280px by default, on either side", () => {
     expect(declsOf(".ui-split")["grid-template-columns"]).toBe("var(--ui-split-w, 280px) 5px 1fr");
     expect(declsOf(".ui-split-end")["grid-template-columns"]).toBe("1fr 5px var(--ui-split-w, 280px)");

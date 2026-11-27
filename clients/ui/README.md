@@ -44,6 +44,24 @@ Values are pushed rather than baked in, on purpose. `theme.css` defines these ac
 
 The published token list is in `packages/extension-bridge/src/tokens.ts`, and it is **under the compatibility floor**: removing or repurposing one of those is a breaking change. Tokens not on that list — `--rail-width`, `--sidebar-w`, `--crumb-row-h` — describe igni's own chrome and are ours to change. An extension positioning itself against those would break the first time we moved something.
 
+## The top of the page
+
+igni draws an extension page's frame from the top of the window, under
+its header, and fades the page out there as it scrolls, like its chat.
+The bridge sends how much room that header needs as the `--inset-top`
+token (0px when the page is opened on its own), and `.igni-root` pads
+its top by it. So with no code of your own:
+
+- a page whose document scrolls starts below the header and slides up
+  under it;
+- a page built on `.ui-shell` starts its shell below the header.
+
+A scroller of your own that fills the frame from its top and should
+scroll under the header takes the class `.ui-inset`: it pads itself by
+`--inset-top` and the root stops, so the room is left once. Do not also
+write `padding-top: var(--inset-top)` on a page that uses this
+stylesheet; that leaves it twice.
+
 ## The floor
 
 Some of this file is promised, and the rest is not. Knowing which is

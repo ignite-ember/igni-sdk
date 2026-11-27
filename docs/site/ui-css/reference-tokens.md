@@ -56,6 +56,7 @@ Every custom property the stylesheet defines, and the value it falls back to. Th
 | `--text-4xl` | `42px` | nothing here | The title of the welcome screen: the largest step on the scale. |
 | `--font-ui` | `-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif` | `.igni-root` | The sans stack the page and its controls are set in. |
 | `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace` | `.ui-code`, `.dialog-pre`, `.mdi-code`, `.mermaid-error`, `.ui-crash-detail`, `.ui-prose` | The monospace stack, for code and anything that shows source. |
+| `--inset-top` | `0px` | `.igni-root`, `.ui-inset` | The room the host's chrome needs above the page: igni's frame reaches up under its header, where the page scrolls under it and fades. Sent per frame; none on a page opened on its own. |
 
 ## --bg
 
@@ -454,5 +455,13 @@ Values match igni's dark theme. The bridge overwrites them on `:root` at handsha
 `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace`
 
 The monospace stack, for code and anything that shows source.
+
+Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.
+
+## --inset-top
+
+`0px`
+
+The room the host's chrome needs above the page: igni's frame reaches up under its header, where the page scrolls under it and fades. Sent per frame; none on a page opened on its own.
 
 Values match igni's dark theme. The bridge overwrites them on `:root` at handshake; these are what applies before it does, and what applies if your page is opened on its own.

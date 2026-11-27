@@ -58,16 +58,18 @@ What a `Scroll` takes.
 | Member | Kind | Type | What it is |
 |---|---|---|---|
 | `axis?` | field | `"y" \| "x"` | Scroll sideways instead. A wide table, not a long list. |
+| `inset?` | field | `boolean` | This scroller sits at the top of the frame: start its content below the host's header (`--inset-top`) and let it scroll up under it, in place of the page's root leaving that room. |
 
 ## Scroll
 
 ```typescript
-function Scroll({ axis = "y", className, ...rest }: ScrollProps)
+function Scroll({ axis = "y", inset = false, className, ...rest }: ScrollProps)
 ```
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `axis` | `"y" \| "x"` | `"y"` | scroll sideways instead; for a wide table, not a long list. |
+| `inset` | `boolean` | `false` | this scroller sits at the top of the frame: its content starts below the host's header and scrolls up under it, and the page's root stops leaving that room (`.ui-inset`). |
 | `className` | — | optional | added to the element's classes, beside the one the theme gives it. |
 | `rest` | — | optional | the remaining props, spread onto the element. |
 
