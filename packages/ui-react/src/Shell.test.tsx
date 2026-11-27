@@ -74,6 +74,17 @@ describe("Scroll props", () => {
     expect(container.firstElementChild?.className).toBe("ui-scroll-x wide");
   });
 
+  it("takes the host's inset when asked, and only then", () => {
+    const { container, rerender } = render(<Scroll className="list">x</Scroll>);
+    expect(container.firstElementChild?.classList.contains("ui-inset")).toBe(false);
+    rerender(
+      <Scroll inset className="list">
+        x
+      </Scroll>,
+    );
+    expect(container.firstElementChild?.className).toBe("ui-scroll ui-inset list");
+  });
+
   it("spreads the remaining props, and a tabIndex makes it focusable", () => {
     const { container } = render(
       <Scroll tabIndex={0} aria-label="Results" data-x="1">

@@ -23,6 +23,9 @@
  * like ``--rail-width`` and ``--crumb-row-h`` are deliberately absent:
  * they describe this app's chrome, and an extension that positioned
  * itself against them would break the first time we moved something.
+ * The one layout token published, ``--inset-top``, is the opposite: not
+ * where the chrome is, but how much room this frame has to leave for it,
+ * which the host measures and sends.
  */
 
 /**
@@ -109,6 +112,15 @@ export const PUBLISHED_TOKENS = {
     "--space-12",
     "--space-16",
   ],
+  /**
+   * Layout the host asks of the page. `--inset-top` is how far down the
+   * page's scrolling content has to start: the frame reaches up under the
+   * host's fixed chrome, where content scrolls under it and fades like the
+   * chat. Pad the top of your scrolling content by it:
+   * `padding-top: var(--inset-top, 0px)`. Absent when nothing is drawn
+   * over the frame. `@ignite-ember/ui-css` already leaves it at the page root.
+   */
+  layout: ["--inset-top"],
 } as const;
 
 /**
@@ -167,5 +179,10 @@ export function applyThemeTokens(tokens: ThemeTokens, root: HTMLElement): void {
     // Only published names, even though the host is trusted: a typo
     // on our side should not silently define something in theirs.
     if (TOKEN_NAMES.includes(name)) root.style.setProperty(name, value);
+  }
+  // A layout request the host stops sending no longer holds: the page
+  // goes back to its fallback rather than keeping the last one.
+  for (const name of PUBLISHED_TOKENS.layout) {
+    if (!(name in tokens) && root.style.getPropertyValue(name)) root.style.removeProperty(name);
   }
 }

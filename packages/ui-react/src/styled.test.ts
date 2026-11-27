@@ -30,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { starExportFiles, withoutComments } from "../../test-utils/sourceScan";
+import { PUBLISHED_TOKENS } from "../../extension-bridge/src/tokens";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLISHED_CSS = join(here, "..", "..", "..", "clients", "ui", "igni-ui.css");
@@ -166,6 +167,13 @@ describe.skipIf(!existsSync(THEME_CSS) && !process.env.CI)("the published fallba
   // repository the comparison is skipped, not failed.
   const theme = existsSync(THEME_CSS) ? fallbacksIn(THEME_CSS).declared : new Map<string, string>();
   const published = fallbacksIn(PUBLISHED_CSS);
+  // Layout tokens are not theme values: the host measures them per frame
+  // (`--inset-top`), so theme.css has nothing to compare them with.
+  const hostLayout: readonly string[] = PUBLISHED_TOKENS.layout;
+  for (const name of hostLayout) {
+    published.declared.delete(name);
+    published.inline.delete(name);
+  }
 
   it("found igni's theme to compare against", () => {
     // Under CI igni-app is checked out. Without it the comparison

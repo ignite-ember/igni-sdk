@@ -67,6 +67,12 @@ export function AppShell({
 export interface ScrollProps extends HTMLAttributes<HTMLDivElement> {
   /** Scroll sideways instead. A wide table, not a long list. */
   axis?: "y" | "x";
+  /**
+   * This scroller sits at the top of the frame: start its content below
+   * the host's header (`--inset-top`) and let it scroll up under it, in
+   * place of the page's root leaving that room.
+   */
+  inset?: boolean;
 }
 
 /**
@@ -85,15 +91,18 @@ export interface ScrollProps extends HTMLAttributes<HTMLDivElement> {
  *
  * @param axis — scroll sideways instead; for a wide table, not a long
  *   list.
+ * @param inset — this scroller sits at the top of the frame: its content
+ *   starts below the host's header and scrolls up under it, and the
+ *   page's root stops leaving that room (`.ui-inset`).
  * @param className — added to the element's classes, beside the one the
  *   theme gives it.
  * @param rest — the remaining props, spread onto the element.
  */
-export function Scroll({ axis = "y", className, ...rest }: ScrollProps) {
+export function Scroll({ axis = "y", inset = false, className, ...rest }: ScrollProps) {
   return (
     <div
       {...rest}
-      className={cx(axis === "x" ? "ui-scroll-x" : "ui-scroll", className)}
+      className={cx(axis === "x" ? "ui-scroll-x" : "ui-scroll", inset && "ui-inset", className)}
     />
   );
 }

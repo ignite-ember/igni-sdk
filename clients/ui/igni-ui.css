@@ -143,6 +143,9 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
   /* The monospace stack, for code and anything that shows source. */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* The room the host's chrome needs above the page: igni's frame reaches up under its header, where the page scrolls under it and fades. Sent per frame; none on a page opened on its own. */
+  --inset-top: 0px;
 }
 
 /* ── The page ──────────────────────────────────────────────────── */
@@ -1248,6 +1251,35 @@ body {
    shrink below its content and the pane grows instead of scrolling,
    which is the single most-reported layout bug in flexbox and is
    invisible until the content is long. */
+/* The host's chrome over the top of the frame. igni draws its header
+   over a page's frame and fades the page out under it, like its chat,
+   so the page has to start `--inset-top` lower to sit clear of it at
+   rest. The root takes that room, so a document that scrolls (the
+   body) slides up under the header and a shell starts below it,
+   without a line from the extension.
+
+   A page whose own scroller sits at the top of the frame and should
+   scroll under the header gives that scroller `.ui-inset` (`Scroll
+   inset` in ui-react). It takes the room instead and the root drops
+   it, so the inset is never applied twice. `scroll-padding-top` keeps
+   a focused or linked-to element from landing under the header. */
+.igni-root {
+  padding-top: var(--inset-top);
+}
+
+html {
+  scroll-padding-top: var(--inset-top);
+}
+
+.igni-root:has(.ui-inset) {
+  padding-top: 0;
+}
+
+.ui-inset {
+  padding-top: var(--inset-top);
+  scroll-padding-top: var(--inset-top);
+}
+
 .ui-shell {
   display: flex;
   flex-direction: column;

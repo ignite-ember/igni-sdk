@@ -35,6 +35,13 @@ describe("what is published", () => {
     expect(PUBLISHED_TOKENS.form).toContain("--radius-sm");
   });
 
+  it("names the room the host's chrome needs above the page", () => {
+    // The frame reaches up under the host's header, where the page's
+    // content scrolls under it and fades like the chat.
+    expect(TOKEN_NAMES).toContain("--inset-top");
+    expect(PUBLISHED_TOKENS.layout).toEqual(["--inset-top"]);
+  });
+
   it("leaves this app's own chrome out of the floor", () => {
     // An extension that positioned itself against the sidebar's width
     // would break the first time the sidebar moved. These stay ours.
@@ -102,6 +109,28 @@ describe("applying them in the extension", () => {
     applyThemeTokens({ "--not-a-token": "red", "--bg": "#222" }, root);
 
     expect(root.style.getPropertyValue("--not-a-token")).toBe("");
+    expect(root.style.getPropertyValue("--bg")).toBe("#222");
+  });
+
+  it("drops an inset the host no longer sends", () => {
+    const root = document.createElement("div");
+    applyThemeTokens({ "--inset-top": "82px", "--bg": "#222" }, root);
+    expect(root.style.getPropertyValue("--inset-top")).toBe("82px");
+
+    applyThemeTokens({ "--bg": "#333" }, root);
+
+    expect(root.style.getPropertyValue("--inset-top")).toBe("");
+    expect(root.style.getPropertyValue("--bg")).toBe("#333");
+  });
+
+  it("keeps a theme token the host leaves out", () => {
+    // Only layout is a request that lapses; a colour the host omits
+    // stays on what it was, as it always has.
+    const root = document.createElement("div");
+    applyThemeTokens({ "--bg": "#222" }, root);
+
+    applyThemeTokens({ "--fg": "#eee" }, root);
+
     expect(root.style.getPropertyValue("--bg")).toBe("#222");
   });
 
